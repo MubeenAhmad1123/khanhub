@@ -1,419 +1,273 @@
-// src/data/departments.ts
-// ─────────────────────────────────────────────
-// Single source of truth for all department data.
-// Every department page, card, and nav link reads from here.
-// To add a new department: just push a new object to the array.
-// ─────────────────────────────────────────────
+// src/data/departments.ts - WITH IMAGES
 
-export interface DepartmentService {
-  title: string;
-  description: string;
-}
+import { Department, DepartmentCategory } from '@/types/department';
 
-export interface Department {
-  id: number;
-  slug: string;
-  name: string;
-  shortName: string;
-  icon: string;           // Emoji or icon name
-  color: string;          // Tailwind accent color class
-  colorHex: string;       // Hex for dynamic styles
-  category: 'healthcare' | 'education' | 'welfare' | 'services' | 'digital';
-  tagline: string;        // Short one-liner
-  description: string;    // Full description for page
-  services: DepartmentService[];
-  facilities: string[];
-  programs: string[];
-  gallery: string[];      // Image URLs (placeholder for now)
-  contactEmail: string;
-  contactPhone: string;
-}
+export const DEPARTMENT_CATEGORIES: DepartmentCategory[] = [
+  {
+    key: 'social',
+    label: 'Social Services',
+    icon: '🏥',
+    description: 'Health, education, and community welfare'
+  },
+  {
+    key: 'infrastructure',
+    label: 'Infrastructure',
+    icon: '🏗️',
+    description: 'Development and public works'
+  },
+  {
+    key: 'governance',
+    label: 'Governance',
+    icon: '⚖️',
+    description: 'Administration and legal services'
+  },
+  {
+    key: 'economy',
+    label: 'Economy',
+    icon: '💼',
+    description: 'Finance, trade, and employment'
+  }
+];
 
 export const DEPARTMENTS: Department[] = [
   {
-    id: 1,
+    slug: 'institute-health-sciences',
+    name: 'Institute of Health & Sciences',
+    icon: '🏥',
+    image: '/images/institute-health-sciences.webp',
+    category: 'social',
+    tagline: 'Advanced healthcare education and research',
+    description: 'Leading medical institution providing comprehensive healthcare education, research, and training programs.',
+    services: ['Medical Education', 'Research Programs', 'Clinical Training', 'Health Sciences'],
+    stats: [
+      { value: '5,000+', label: 'Students' },
+      { value: '24/7', label: 'Facilities' }
+    ],
+    isActive: true
+  },
+  {
+    slug: 'education',
+    name: 'Education Department',
+    icon: '📚',
+    image: '/images/education.webp',
+    category: 'social',
+    tagline: 'Quality education for every child',
+    description: 'Managing schools, colleges, and educational programs to ensure quality education for all.',
+    services: ['Public Schools', 'Scholarships', 'Teacher Training', 'Curriculum Development'],
+    stats: [
+      { value: '50,000+', label: 'Schools' },
+      { value: '15M+', label: 'Students' }
+    ],
+    isActive: true
+  },
+  {
     slug: 'medical-center',
     name: 'Medical Center',
-    shortName: 'Medical',
     icon: '🏥',
-    color: 'text-red-400',
-    colorHex: '#f87171',
-    category: 'healthcare',
-    tagline: 'Quality healthcare accessible to all',
-    description: 'Khan Hub Medical Center provides comprehensive healthcare services to underprivileged communities. From general consultations to specialized treatments, we are committed to ensuring every individual receives dignified and professional medical care.',
-    services: [
-      { title: 'General Consultation', description: 'Free and subsidized general health checkups by qualified physicians.' },
-      { title: 'Emergency Care', description: '24/7 emergency medical services for critical patients.' },
-      { title: 'Dental Services', description: 'Dental checkups, cleaning, and basic treatment procedures.' },
-      { title: 'Diagnostic Lab', description: 'On-site laboratory for blood tests, X-rays, and ultrasounds.' },
-      { title: 'Pharmacy', description: 'Subsidized medicines and essential healthcare products.' },
+    image: '/images/medical-center.webp',
+    category: 'social',
+    tagline: 'Comprehensive healthcare services',
+    description: 'State-of-the-art medical facilities providing comprehensive healthcare services to communities.',
+    services: ['Emergency Care', 'Specialized Treatment', 'Diagnostics', 'Patient Care'],
+    stats: [
+      { value: '1,000+', label: 'Beds' },
+      { value: '24/7', label: 'Emergency' }
     ],
-    facilities: ['Consultation Rooms', 'Emergency Ward', 'Diagnostic Lab', 'Pharmacy', 'Waiting Area', 'Prayer Room'],
-    programs: ['Free Friday Clinic', 'Women Health Awareness', 'Diabetes Management', 'Vaccination Drives'],
-    gallery: [],
-    contactEmail: 'medical@khanhub.com.pk',
-    contactPhone: '+92-311-0000001',
+    isActive: true
   },
   {
-    id: 2,
-    slug: 'rehabilitation-center',
-    name: 'Rehabilitation Center',
-    shortName: 'Rehabilitation',
-    icon: '🦾',
-    color: 'text-emerald-400',
-    colorHex: '#34d399',
-    category: 'healthcare',
-    tagline: 'Restoring lives, rebuilding hope',
-    description: 'Our Rehabilitation Center offers specialized programs designed to help patients recover from injuries, surgeries, and chronic conditions. Our team of physiotherapists and specialists work alongside patients to restore mobility, strength, and independence.',
-    services: [
-      { title: 'Physiotherapy', description: 'Targeted physical therapy programs for injury and surgery recovery.' },
-      { title: 'Occupational Therapy', description: 'Helping patients regain daily living skills and functional independence.' },
-      { title: 'Speech Therapy', description: 'Speech and language rehabilitation for stroke and neurological patients.' },
-      { title: 'Mental Health Support', description: 'Counseling and psychological support during recovery.' },
+    slug: 'transport',
+    name: 'Transport Department',
+    icon: '🚗',
+    image: '/images/transport.webp',
+    category: 'infrastructure',
+    tagline: 'Safe and efficient transportation',
+    description: 'Regulating transportation, issuing licenses, and managing public transport systems.',
+    services: ['Driving Licenses', 'Vehicle Registration', 'Public Transport', 'Traffic Management'],
+    stats: [
+      { value: '500+', label: 'Routes' },
+      { value: '5M+', label: 'Licenses' }
     ],
-    facilities: ['Physiotherapy Lab', 'Gym & Equipment', 'Counseling Rooms', 'Activity Hall'],
-    programs: ['Post-Surgery Recovery', 'Stroke Rehabilitation', 'Burn Victims Care', 'Youth Mobility Program'],
-    gallery: [],
-    contactEmail: 'rehab@khanhub.com.pk',
-    contactPhone: '+92-311-0000002',
+    isActive: true
   },
   {
-    id: 3,
-    slug: 'education-center',
-    name: 'Education Center',
-    shortName: 'Education',
-    icon: '📚',
-    color: 'text-blue-400',
-    colorHex: '#60a5fa',
-    category: 'education',
-    tagline: 'Empowering minds, shaping futures',
-    description: 'The Khan Hub Education Center believes that quality education is a fundamental right. We provide free and subsidized education programs for underprivileged children and youth, with a focus on academic excellence, critical thinking, and character development.',
-    services: [
-      { title: 'Primary Education', description: 'Structured curriculum for students aged 5–12 years.' },
-      { title: 'Secondary Education', description: 'Academic support and tutoring for grades 6–12.' },
-      { title: 'Scholarship Programs', description: 'Financial support for meritorious students from disadvantaged backgrounds.' },
-      { title: 'Digital Literacy', description: 'Computer and internet skills training for students.' },
-    ],
-    facilities: ['Classrooms', 'Computer Lab', 'Library', 'Sports Ground', 'Auditorium'],
-    programs: ['After-School Tutoring', 'Summer Camp', 'Science Fair', 'Reading Week'],
-    gallery: [],
-    contactEmail: 'education@khanhub.com.pk',
-    contactPhone: '+92-311-0000003',
-  },
-  {
-    id: 4,
-    slug: 'sukoon-center',
-    name: 'Sukoon Center',
-    shortName: 'Sukoon',
-    icon: '🧘',
-    color: 'text-purple-400',
-    colorHex: '#c084fc',
-    category: 'welfare',
-    tagline: 'Peace of mind for every soul',
-    description: 'Sukoon Center is Khan Hub\'s dedicated mental health and wellness hub. We provide confidential counseling, therapy sessions, and awareness programs to address the growing mental health challenges faced by Pakistani communities.',
-    services: [
-      { title: 'Individual Counseling', description: 'One-on-one sessions with trained counselors.' },
-      { title: 'Group Therapy', description: 'Supportive group sessions for shared experiences.' },
-      { title: 'Awareness Workshops', description: 'Public workshops on mental health literacy.' },
-      { title: 'Crisis Support', description: '24/7 helpline for people in emotional distress.' },
-    ],
-    facilities: ['Counseling Rooms', 'Meditation Room', 'Activity Lounge', 'Helpline Center'],
-    programs: ['Mental Health Awareness Week', 'Youth Stress Management', 'Family Counseling', 'Grief Support Circle'],
-    gallery: [],
-    contactEmail: 'sukoon@khanhub.com.pk',
-    contactPhone: '+92-311-0000004',
-  },
-  {
-    id: 5,
-    slug: 'job-center',
-    name: 'Job Center',
-    shortName: 'Jobs',
-    icon: '💼',
-    color: 'text-amber-400',
-    colorHex: '#fbbf24',
-    category: 'services',
-    tagline: 'Your career starts here',
-    description: 'Khan Hub Job Center bridges the gap between talented individuals and employment opportunities. We provide job matching, resume building workshops, and connect candidates directly with hiring partners.',
-    services: [
-      { title: 'Job Matching', description: 'Connecting qualified candidates with verified job openings.' },
-      { title: 'Resume Building', description: 'Professional resume crafting workshops and one-on-one guidance.' },
-      { title: 'Interview Prep', description: 'Mock interviews and preparation coaching.' },
-      { title: 'Career Counseling', description: 'Guidance on career paths and professional development.' },
-    ],
-    facilities: ['Job Portal Terminals', 'Workshop Rooms', 'Interview Suites', 'Career Library'],
-    programs: ['Weekly Job Fairs', 'Skill-to-Job Pathway', 'Women Employment Initiative', 'Fresh Graduate Program'],
-    gallery: [],
-    contactEmail: 'jobs@khanhub.com.pk',
-    contactPhone: '+92-311-0000005',
-  },
-  {
-    id: 6,
-    slug: 'skills-center',
-    name: 'Skills Center',
-    shortName: 'Skills',
-    icon: '🛠️',
-    color: 'text-orange-400',
-    colorHex: '#fb923c',
-    category: 'education',
-    tagline: 'Learn skills. Build a life.',
-    description: 'The Skills Center offers practical, hands-on training programs in high-demand trades and professions. From tailoring and cooking to IT and business management, we equip individuals with marketable skills.',
-    services: [
-      { title: 'IT Training', description: 'Courses in web development, data entry, and digital marketing.' },
-      { title: 'Vocational Trades', description: 'Tailoring, cooking, electrical work, and plumbing.' },
-      { title: 'Business Basics', description: 'Entrepreneurship, accounting, and small business management.' },
-      { title: 'Language Training', description: 'English and Urdu literacy improvement programs.' },
-    ],
-    facilities: ['Training Labs', 'IT Lab', 'Workshop Area', 'Practice Kitchen'],
-    programs: ['3-Month Certification', '6-Month Diploma', 'Women Empowerment Skills', 'Youth Apprenticeship'],
-    gallery: [],
-    contactEmail: 'skills@khanhub.com.pk',
-    contactPhone: '+92-311-0000006',
-  },
-  {
-    id: 7,
-    slug: 'surgical-repair-center',
-    name: 'Medical & Surgical Repair Center',
-    shortName: 'Surgical Repair',
-    icon: '🔧',
-    color: 'text-cyan-400',
-    colorHex: '#22d3ee',
-    category: 'healthcare',
-    tagline: 'Precision repairs, compassionate care',
-    description: 'This center specializes in the repair and maintenance of medical equipment used across Khan Hub\'s healthcare facilities. Our certified technicians ensure all devices function optimally for patient safety.',
-    services: [
-      { title: 'Equipment Maintenance', description: 'Routine servicing of all medical devices and instruments.' },
-      { title: 'Repair & Restoration', description: 'Fixing damaged medical equipment to restore functionality.' },
-      { title: 'Calibration', description: 'Precision calibration of diagnostic and monitoring tools.' },
-      { title: 'Parts Procurement', description: 'Sourcing and fitting genuine replacement parts.' },
-    ],
-    facilities: ['Repair Workshop', 'Parts Storage', 'Calibration Lab', 'Testing Area'],
-    programs: ['Preventive Maintenance Schedule', 'Equipment Audit', 'Technician Training'],
-    gallery: [],
-    contactEmail: 'surgicalrepair@khanhub.com.pk',
-    contactPhone: '+92-311-0000007',
-  },
-  {
-    id: 8,
-    slug: 'transport-services',
-    name: 'Transport Services',
-    shortName: 'Transport',
-    icon: '🚐',
-    color: 'text-teal-400',
-    colorHex: '#2dd4bf',
-    category: 'services',
-    tagline: 'Moving people, changing lives',
-    description: 'Khan Hub Transport Services provides reliable and free transportation for patients, students, and beneficiaries across our departments. Our fleet ensures accessibility for those who cannot afford private transport.',
-    services: [
-      { title: 'Patient Transport', description: 'Door-to-door transport for medical appointments.' },
-      { title: 'School Pickup & Drop', description: 'Safe daily transport for Education Center students.' },
-      { title: 'Event Transport', description: 'Vehicle arrangements for Khan Hub events and programs.' },
-      { title: 'Emergency Transfers', description: 'Rapid transport coordination for medical emergencies.' },
-    ],
-    facilities: ['Fleet Garage', 'Dispatch Center', 'Vehicle Maintenance Bay', 'GPS Tracking Room'],
-    programs: ['Free Patient Rides', 'Student Daily Route', 'Weekend Community Rides'],
-    gallery: [],
-    contactEmail: 'transport@khanhub.com.pk',
-    contactPhone: '+92-311-0000008',
-  },
-  {
-    id: 9,
     slug: 'surgical-services',
-    name: 'Medical & Surgical Services',
-    shortName: 'Surgical Services',
-    icon: '🩺',
-    color: 'text-rose-400',
-    colorHex: '#fb7185',
-    category: 'healthcare',
-    tagline: 'Expert surgical care, compassionate outcomes',
-    description: 'Our Surgical Services department provides life-saving surgical procedures at minimal or no cost to patients. Staffed by experienced surgeons, this department handles both emergency and scheduled surgeries.',
-    services: [
-      { title: 'General Surgery', description: 'Appendectomies, hernia repairs, and other common procedures.' },
-      { title: 'Orthopedic Surgery', description: 'Bone fracture repairs and joint surgeries.' },
-      { title: 'Eye Surgery', description: 'Cataract removal and other ophthalmological procedures.' },
-      { title: 'Minor Procedures', description: 'Biopsies, wound management, and minor surgical interventions.' },
+    name: 'Surgical Services',
+    icon: '⚕️',
+    image: '/images/surgical-services.webp',
+    category: 'social',
+    tagline: 'Expert surgical care',
+    description: 'Advanced surgical facilities with expert medical teams providing specialized surgical services.',
+    services: ['General Surgery', 'Specialized Procedures', 'Post-Op Care', 'Emergency Surgery'],
+    stats: [
+      { value: '10K+', label: 'Surgeries' },
+      { value: '95%', label: 'Success Rate' }
     ],
-    facilities: ['Operating Theaters', 'Pre-Op Ward', 'Post-Op Recovery', 'Surgical ICU'],
-    programs: ['Free Surgery Camps', 'Cataract Drive', 'Orthopedic Outreach'],
-    gallery: [],
-    contactEmail: 'surgical@khanhub.com.pk',
-    contactPhone: '+92-311-0000009',
+    isActive: true
   },
   {
-    id: 10,
-    slug: 'prosthetic-services',
-    name: 'Prosthetic Services',
-    shortName: 'Prosthetics',
-    icon: '🦿',
-    color: 'text-indigo-400',
-    colorHex: '#818cf8',
-    category: 'healthcare',
-    tagline: 'Restoring capability, restoring dignity',
-    description: 'Khan Hub Prosthetic Services fabricates and fits custom prosthetic limbs and orthotics for individuals who have lost limbs due to accidents, surgery, or congenital conditions. We restore mobility and independence.',
-    services: [
-      { title: 'Custom Prosthetics', description: 'Individually designed and fitted prosthetic limbs.' },
-      { title: 'Orthotics', description: 'Support braces and orthotics for mobility assistance.' },
-      { title: 'Fitting & Adjustment', description: 'Professional fitting, alignment, and ongoing adjustment.' },
-      { title: 'Rehabilitation Support', description: 'Post-fitting physiotherapy and training.' },
+    slug: 'surgical-repair',
+    name: 'Surgical Repair Center',
+    icon: '🔧',
+    image: '/images/surgical-repair.webp',
+    category: 'social',
+    tagline: 'Reconstructive and repair surgery',
+    description: 'Specialized center for reconstructive and repair surgical procedures with modern facilities.',
+    services: ['Reconstructive Surgery', 'Plastic Surgery', 'Burn Treatment', 'Trauma Care'],
+    stats: [
+      { value: '5K+', label: 'Procedures' },
+      { value: '24/7', label: 'Available' }
     ],
-    facilities: ['Fabrication Lab', 'Fitting Room', 'Testing Walkway', 'Training Area'],
-    programs: ['Free Prosthetics for Veterans', 'Limb Difference Awareness', 'Children Prosthetics Program'],
-    gallery: [],
-    contactEmail: 'prosthetics@khanhub.com.pk',
-    contactPhone: '+92-311-0000010',
+    isActive: true
   },
   {
-    id: 11,
+    slug: 'social-welfare',
+    name: 'Social Welfare',
+    icon: '🤝',
+    image: '/images/welfare-organization.webp',
+    category: 'social',
+    tagline: 'Supporting communities in need',
+    description: 'Supporting vulnerable communities through welfare programs and financial assistance.',
+    services: ['Pension Programs', 'Disability Support', 'Child Protection', 'Women Empowerment'],
+    stats: [
+      { value: '2M+', label: 'Beneficiaries' },
+      { value: '100+', label: 'Centers' }
+    ],
+    isActive: true
+  },
+  {
+    slug: 'job-placement',
+    name: 'Job Placement Services',
+    icon: '💼',
+    image: '/images/job.webp',
+    category: 'economy',
+    tagline: 'Connecting talent with opportunity',
+    description: 'Facilitating employment opportunities and career development for job seekers across all sectors.',
+    services: ['Job Listings', 'Career Counseling', 'Skill Training', 'Placement Support'],
+    stats: [
+      { value: '50K+', label: 'Jobs/Year' },
+      { value: '85%', label: 'Success Rate' }
+    ],
+    isActive: true
+  },
+  {
+    slug: 'skill-development',
+    name: 'Skill Development',
+    icon: '🎓',
+    image: '/images/skill.webp',
+    category: 'economy',
+    tagline: 'Building skills for tomorrow',
+    description: 'Vocational training and skill development programs to enhance employability and entrepreneurship.',
+    services: ['Technical Training', 'Vocational Courses', 'Certification Programs', 'Apprenticeships'],
+    stats: [
+      { value: '100K+', label: 'Trained' },
+      { value: '200+', label: 'Courses' }
+    ],
+    isActive: true
+  },
+  {
     slug: 'residential-services',
     name: 'Residential Services',
-    shortName: 'Residential',
-    icon: '🏠',
-    color: 'text-yellow-400',
-    colorHex: '#facc15',
-    category: 'welfare',
-    tagline: 'A safe home for everyone',
-    description: 'Residential Services provides safe, clean, and dignified living accommodations for individuals and families in need — including patients during recovery, women in transition, and youth in educational programs.',
-    services: [
-      { title: 'Patient Accommodation', description: 'Affordable rooms for patients undergoing treatment.' },
-      { title: 'Women\'s Shelter', description: 'Safe and supportive housing for women in crisis.' },
-      { title: 'Student Housing', description: 'Dormitory space for students in education programs.' },
-      { title: 'Family Welfare Housing', description: 'Temporary housing for families facing emergencies.' },
+    icon: '🏘️',
+    image: '/images/residential.webp',
+    category: 'infrastructure',
+    tagline: 'Quality housing solutions',
+    description: 'Developing housing schemes and providing affordable residential solutions for citizens.',
+    services: ['Housing Schemes', 'Building Approvals', 'Urban Planning', 'Low-Cost Housing'],
+    stats: [
+      { value: '50+', label: 'Projects' },
+      { value: '200K+', label: 'Units' }
     ],
-    facilities: ['Dormitories', 'Kitchen & Dining Hall', 'Common Areas', 'Security Office', 'Prayer Rooms'],
-    programs: ['Patient Recovery Stay', 'Women Reintegration Program', 'Youth Boarding Scheme'],
-    gallery: [],
-    contactEmail: 'residential@khanhub.com.pk',
-    contactPhone: '+92-311-0000011',
+    isActive: true
   },
   {
-    id: 12,
-    slug: 'travel-tours',
-    name: 'Travel & Tours',
-    shortName: 'Travel',
-    icon: '✈️',
-    color: 'text-sky-400',
-    colorHex: '#38bdf8',
-    category: 'services',
-    tagline: 'Explore, heal, and grow',
-    description: 'Khan Hub Travel & Tours organizes affordable and therapeutic travel experiences for beneficiaries, including healing trips for patients, educational tours for students, and recreational outings for families.',
-    services: [
-      { title: 'Therapeutic Trips', description: 'Nature-based healing trips for patients and trauma survivors.' },
-      { title: 'Educational Tours', description: 'School and college field trips to museums, historical sites.' },
-      { title: 'Family Outings', description: 'Affordable group trips for underprivileged families.' },
-      { title: 'Travel Planning', description: 'Full logistics, bookings, and coordination for all trips.' },
+    slug: 'rehabilitation',
+    name: 'Rehabilitation Center',
+    icon: '♿',
+    image: '/images/rehab.webp',
+    category: 'social',
+    tagline: 'Recovery and rehabilitation support',
+    description: 'Comprehensive rehabilitation services for physical, mental, and social recovery programs.',
+    services: ['Physical Therapy', 'Mental Health', 'Addiction Treatment', 'Counseling'],
+    stats: [
+      { value: '10K+', label: 'Patients' },
+      { value: '90%', label: 'Recovery' }
     ],
-    facilities: ['Planning Office', 'Tour Bus', 'Information Desk'],
-    programs: ['Healing in Nature', 'Student Discovery Tour', 'Eid Family Trip', 'Summer Adventure Camp'],
-    gallery: [],
-    contactEmail: 'travel@khanhub.com.pk',
-    contactPhone: '+92-311-0000012',
+    isActive: true
   },
   {
-    id: 13,
-    slug: 'digital-marketing',
-    name: 'Digital Marketing Agency',
-    shortName: 'Digital Marketing',
-    icon: '📣',
-    color: 'text-pink-400',
-    colorHex: '#f472b6',
-    category: 'digital',
-    tagline: 'Digital solutions for social impact',
-    description: 'Khan Hub\'s in-house Digital Marketing Agency supports both the organization\'s online presence and offers affordable digital marketing services to small businesses and NGOs across Pakistan.',
-    services: [
-      { title: 'Social Media Marketing', description: 'Strategy, content creation, and management for all platforms.' },
-      { title: 'SEO & Content', description: 'Search engine optimization and high-quality content writing.' },
-      { title: 'Website Development', description: 'Building modern websites for NGOs and small businesses.' },
-      { title: 'Branding', description: 'Logo design, brand identity, and visual marketing materials.' },
+    slug: 'tourism',
+    name: 'Travel & Tourism',
+    icon: '🏔️',
+    image: '/images/travel-and-tour.webp',
+    category: 'economy',
+    tagline: 'Explore the beauty of Pakistan',
+    description: 'Promoting tourism, heritage sites, and cultural attractions across Pakistan.',
+    services: ['Tourist Info', 'Heritage Sites', 'Travel Permits', 'Hospitality Training'],
+    stats: [
+      { value: '100+', label: 'Sites' },
+      { value: '2M+', label: 'Visitors' }
     ],
-    facilities: ['Creative Studio', 'Content Lab', 'Meeting Rooms', 'IT Workstations'],
-    programs: ['Free NGO Digital Support', 'SME Growth Program', 'Social Media Masterclass'],
-    gallery: [],
-    contactEmail: 'digital@khanhub.com.pk',
-    contactPhone: '+92-311-0000013',
+    isActive: true
   },
   {
-    id: 14,
+    slug: 'marketing',
+    name: 'Marketing & Promotion',
+    icon: '📢',
+    image: '/images/marketing.webp',
+    category: 'economy',
+    tagline: 'Promoting growth and opportunities',
+    description: 'Strategic marketing and promotional services to support business growth and economic development.',
+    services: ['Business Promotion', 'Trade Support', 'Export Facilitation', 'Market Research'],
+    stats: [
+      { value: '500+', label: 'Campaigns' },
+      { value: '1K+', label: 'Businesses' }
+    ],
+    isActive: true
+  },
+  {
+    slug: 'posthetic-services',
+    name: 'Prosthetic Services',
+    icon: '🦾',
+    image: '/images/prosthetic.webp',
+    category: 'social',
+    tagline: 'Restoring mobility and independence',
+    description: 'Advanced prosthetic and orthotic services to help individuals regain mobility and independence.',
+    services: ['Prosthetic Limbs', 'Orthotic Devices', 'Fitting Services', 'Rehabilitation'],
+    stats: [
+      { value: '5K+', label: 'Devices' },
+      { value: '95%', label: 'Satisfaction' }
+    ],
+    isActive: true
+  },
+  {
     slug: 'enterprises',
-    name: 'Enterprises',
-    shortName: 'Enterprises',
-    icon: '📊',
-    color: 'text-violet-400',
-    colorHex: '#a78bfa',
-    category: 'services',
-    tagline: 'Building sustainable businesses',
-    description: 'Khan Hub Enterprises supports micro-entrepreneurs and startups by providing mentorship, funding guidance, workspace, and business development support. We believe every individual has the potential to build something meaningful.',
-    services: [
-      { title: 'Mentorship', description: 'One-on-one business coaching from experienced entrepreneurs.' },
-      { title: 'Workspace', description: 'Affordable shared office and co-working spaces.' },
-      { title: 'Funding Guidance', description: 'Support in applying for grants, loans, and investor pitches.' },
-      { title: 'Business Planning', description: 'Help building viable business plans and strategies.' },
+    name: 'Enterprise Development',
+    icon: '🏢',
+    image: '/images/enterprises.webp',
+    category: 'economy',
+    tagline: 'Empowering entrepreneurs',
+    description: 'Supporting enterprise development through business incubation, funding, and mentorship programs.',
+    services: ['Business Incubation', 'Funding Support', 'Mentorship', 'Networking'],
+    stats: [
+      { value: '2K+', label: 'Startups' },
+      { value: '80%', label: 'Success Rate' }
     ],
-    facilities: ['Co-Working Space', 'Meeting Pods', 'Resource Library', 'Event Hall'],
-    programs: ['Startup Incubator', 'Pitch Day', 'Women Entrepreneurs Program', 'SME Bootcamp'],
-    gallery: [],
-    contactEmail: 'enterprises@khanhub.com.pk',
-    contactPhone: '+92-311-0000014',
+    isActive: true
   },
   {
-    id: 15,
-    slug: 'welfare-organization',
-    name: 'Welfare Organization',
-    shortName: 'Welfare',
-    icon: '❤️',
-    color: 'text-red-400',
-    colorHex: '#f87171',
-    category: 'welfare',
-    tagline: 'Compassion in action, every single day',
-    description: 'The Welfare Organization is the heart of Khan Hub. It coordinates all social welfare programs, distributes aid, manages donations, and ensures resources reach the people who need them most — with full transparency.',
-    services: [
-      { title: 'Food & Ration Distribution', description: 'Monthly ration distribution to registered families in need.' },
-      { title: 'Clothing & Essentials', description: 'Seasonal distribution of clothing and household essentials.' },
-      { title: 'Education Sponsorship', description: 'Covering school fees, uniforms, and stationery for students.' },
-      { title: 'Emergency Relief', description: 'Rapid response aid during floods, earthquakes, and disasters.' },
+    slug: 'sukoon-center',
+    name: 'Sukoon Mental Health',
+    icon: '🧠',
+    image: '/images/sukoon.webp',
+    category: 'social',
+    tagline: 'Peace of mind, path to wellness',
+    description: 'Comprehensive mental health services providing counseling, therapy, and psychiatric care.',
+    services: ['Counseling', 'Therapy', 'Psychiatric Care', 'Support Groups'],
+    stats: [
+      { value: '20K+', label: 'Patients' },
+      { value: '24/7', label: 'Helpline' }
     ],
-    facilities: ['Distribution Center', 'Donation Storage', 'Registration Office', 'Monitoring Room'],
-    programs: ['Ration Card Program', 'Ramadan Relief', 'Winter Blanket Drive', 'Back-to-School Campaign'],
-    gallery: [],
-    contactEmail: 'welfare@khanhub.com.pk',
-    contactPhone: '+92-311-0000015',
-  },
-  {
-    id: 16,
-    slug: 'institute-health-sciences',
-    name: 'Institute of Health Sciences',
-    shortName: 'Health Sciences',
-    icon: '🎓',
-    color: 'text-green-400',
-    colorHex: '#4ade80',
-    category: 'education',
-    tagline: 'Training the next generation of healers',
-    description: 'The Institute of Health Sciences offers certified training and education programs in healthcare professions. From nursing to medical technology, we prepare students for careers that make a difference.',
-    services: [
-      { title: 'Nursing Programs', description: 'Diploma and certificate courses in nursing.' },
-      { title: 'Medical Technology', description: 'Training in lab technician and medical device operation.' },
-      { title: 'Health Aide Certification', description: 'Certification programs for community health workers.' },
-      { title: 'Continuing Education', description: 'Workshops and seminars for healthcare professionals.' },
-    ],
-    facilities: ['Classrooms', 'Simulation Lab', 'Clinical Practice Area', 'Library', 'Student Lounge'],
-    programs: ['2-Year Nursing Diploma', 'Medical Tech Certificate', 'Health Aide Short Course', 'Internship Placements'],
-    gallery: [],
-    contactEmail: 'healthsciences@khanhub.com.pk',
-    contactPhone: '+92-311-0000016',
-  },
-];
-
-// ─── Helper Functions ───────────────────────────────────
-export function getDepartmentBySlug(slug: string): Department | undefined {
-  return DEPARTMENTS.find((d) => d.slug === slug);
-}
-
-export function getDepartmentsByCategory(category: Department['category']): Department[] {
-  return DEPARTMENTS.filter((d) => d.category === category);
-}
-
-export const DEPARTMENT_CATEGORIES = [
-  { key: 'healthcare' as const, label: 'Healthcare', icon: '🏥' },
-  { key: 'education' as const, label: 'Education', icon: '📚' },
-  { key: 'welfare' as const, label: 'Welfare', icon: '❤️' },
-  { key: 'services' as const, label: 'Services', icon: '⚙️' },
-  { key: 'digital' as const, label: 'Digital', icon: '💻' },
+    isActive: true
+  }
 ];

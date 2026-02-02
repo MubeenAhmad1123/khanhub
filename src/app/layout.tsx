@@ -11,24 +11,24 @@ import Footer from '@/components/layout/Footer';
 import { SITE } from '@/data/site';
 
 export const metadata: Metadata = {
-  title:       `${SITE.name} — ${SITE.tagline}`,
+  title: `${SITE.name} — ${SITE.tagline}`,
   description: SITE.description,
   metadataBase: new URL(SITE.url),
   openGraph: {
-    title:       `${SITE.name} — ${SITE.tagline}`,
+    title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
-    url:         SITE.url,
-    siteName:    SITE.name,
-    type:        'website',
-    locale:      'en_PK',
+    url: SITE.url,
+    siteName: SITE.name,
+    type: 'website',
+    locale: 'en_PK',
   },
   twitter: {
-    card:        'summary_large_image',
-    title:       `${SITE.name} — ${SITE.tagline}`,
+    card: 'summary_large_image',
+    title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
   },
   icons: {
-    icon: '/icons/favicon.ico',
+    icon: '/icons/favicon.webp',
   },
 };
 
