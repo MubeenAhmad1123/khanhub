@@ -77,7 +77,7 @@ export default function DepartmentsSection() {
                     ? 'bg-white/20 text-white'
                     : 'bg-neutral-100 text-neutral-600 group-hover:bg-primary-100 group-hover:text-primary-700'
                     }`}>
-                    {stats[cat.key]}
+                    {stats[cat.key as keyof typeof stats]}
                   </span>
                 </span>
                 {activeCategory !== cat.key && (
