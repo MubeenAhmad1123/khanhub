@@ -2,14 +2,14 @@
 // src/components/forms/ContactForm.tsx
 
 import { useState, FormEvent } from 'react';
-import { submitContact }       from '@/lib/firestore';
-import { Spinner }             from '@/components/ui';
+import { submitContact } from '@/lib/firestore';
+import { Spinner } from '@/components/ui';
 
 export default function ContactForm() {
-  const [form, setForm]       = useState({ name: '', email: '', phone: '', subject: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,7 +35,7 @@ export default function ContactForm() {
       <div className="text-center py-12">
         <div className="text-5xl mb-4">✅</div>
         <h3 className="font-display font-semibold text-white text-xl mb-2">Message Sent!</h3>
-        <p className="text-neutral-500 text-sm">We'll get back to you within 24 hours.</p>
+        <p className="text-neutral-500 text-sm">We&apos;ll get back to you within 24 hours.</p>
         <button onClick={() => setSuccess(false)} className="btn-secondary mt-6 text-sm px-5 py-2">Send Another</button>
       </div>
     );

@@ -109,7 +109,7 @@ export default function HeroSection() {
               </h1>
 
               <p className="text-xl text-neutral-600 leading-relaxed max-w-xl">
-                Leading Pakistan's social welfare transformation with 16+ specialized departments dedicated to healthcare, education, and community development.
+                Leading Pakistan&apos;s social welfare transformation with 16+ specialized departments dedicated to healthcare, education, and community development.
               </p>
             </motion.div>
 

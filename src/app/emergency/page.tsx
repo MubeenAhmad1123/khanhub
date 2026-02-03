@@ -24,7 +24,7 @@ export default function EmergencyPage() {
           </p>
 
           {/* Main helpline */}
-          <a href={`tel:${SITE.emergency.replace(/\D/g,'')}`}
+          <a href={`tel:${SITE.emergency.replace(/\D/g, '')}`}
             className="inline-flex items-center gap-3 bg-red-600 hover:bg-red-500 text-white font-display font-bold text-xl px-8 py-4 rounded-2xl shadow-lg shadow-red-600/30 hover:shadow-red-600/50 transition-all">
             📞 {SITE.emergency}
           </a>
@@ -42,8 +42,8 @@ export default function EmergencyPage() {
             <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
               <div className="text-2xl mb-2">🧠</div>
               <h4 className="font-display font-semibold text-white text-sm">Mental Health Crisis</h4>
-              <p className="text-neutral-500 text-xs mt-1">Sukoon Center's helpline is available for emotional distress support.</p>
-              <a href={`tel:${SITE.phone.replace(/\D/g,'')}`} className="text-primary-400 text-xs font-semibold mt-3 inline-block hover:text-primary-300">{SITE.phone}</a>
+              <p className="text-neutral-500 text-xs mt-1">Sukoon Center&apos;s helpline is available for emotional distress support.</p>
+              <a href={`tel:${SITE.phone.replace(/\D/g, '')}`} className="text-primary-400 text-xs font-semibold mt-3 inline-block hover:text-primary-300">{SITE.phone}</a>
             </div>
             <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
               <div className="text-2xl mb-2">👮</div>
