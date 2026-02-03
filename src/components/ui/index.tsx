@@ -17,21 +17,34 @@ interface SectionHeaderProps {
   title: string;
   titleGradient?: boolean;
   subtitle?: string;
-  align?: 'left' | 'center';
+  align?: 'left' | 'center' | 'right';
+  id?: string;
+  className?: string;
 }
 
-export function SectionHeader({ badge, title, titleGradient, subtitle, align = 'center' }: SectionHeaderProps) {
+export function SectionHeader({
+  badge,
+  title,
+  titleGradient,
+  subtitle,
+  align = 'center',
+  id,
+  className
+}: SectionHeaderProps) {
   return (
-    <div className={cn('mb-14', align === 'center' && 'text-center')}>
+    <div className={cn('mb-14', align === 'center' && 'text-center', align === 'right' && 'text-right', className)}>
       {badge && (
         <span className="badge-primary inline-flex mb-4 animate-fade-in">
           {badge}
         </span>
       )}
-      <h2 className={cn(
-        'font-display font-bold text-3xl md:text-4xl lg:text-5xl text-white leading-tight',
-        titleGradient && 'text-gradient'
-      )}>
+      <h2
+        id={id}
+        className={cn(
+          'font-display font-bold text-3xl md:text-4xl lg:text-5xl leading-tight',
+          titleGradient ? 'text-gradient' : 'text-neutral-900'
+        )}
+      >
         {title}
       </h2>
       {subtitle && (

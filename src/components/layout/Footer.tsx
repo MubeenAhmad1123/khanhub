@@ -5,18 +5,59 @@
 // Features:
 // - Light, elegant design with frosted glass effect
 // - Subtle gradient backgrounds
-// - Smooth hover effects
+// - Smooth hover effects with Lucide React icons
 // - Better visual hierarchy
 // - Mobile-optimized layout
+// - Updated social media links
 // ─────────────────────────────────────────────────────────────────
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { MapPin, Phone, Mail, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter, Heart } from 'lucide-react';
 import { SITE, FOOTER_LINKS } from '@/data/site';
 import { DEPARTMENTS } from '@/data/departments';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+
+  // Updated social media configuration
+  const socialMedia = [
+    {
+      platform: 'facebook',
+      url: 'https://www.facebook.com/khanhub.com.pk/',
+      icon: Facebook,
+      label: 'Facebook',
+      hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600'
+    },
+    {
+      platform: 'instagram',
+      url: 'https://www.instagram.com/khanhub.com.pk/',
+      icon: Instagram,
+      label: 'Instagram',
+      hoverClass: 'hover:bg-pink-50 hover:border-pink-400 hover:text-pink-600'
+    },
+    {
+      platform: 'youtube',
+      url: 'https://www.youtube.com/channel/UC43UJw8xOdkp9y_iJIznINg',
+      icon: Youtube,
+      label: 'YouTube',
+      hoverClass: 'hover:bg-red-50 hover:border-red-400 hover:text-red-600'
+    },
+    {
+      platform: 'linkedin',
+      url: SITE.social.linkedin,
+      icon: Linkedin,
+      label: 'LinkedIn',
+      hoverClass: 'hover:bg-blue-50 hover:border-blue-500 hover:text-blue-700'
+    },
+    {
+      platform: 'twitter',
+      url: SITE.social.twitter,
+      icon: Twitter,
+      label: 'Twitter',
+      hoverClass: 'hover:bg-neutral-100 hover:border-neutral-500 hover:text-neutral-900'
+    }
+  ];
 
   return (
     <footer className="relative bg-gradient-to-b from-neutral-50 via-white to-neutral-50 border-t border-neutral-200 overflow-hidden">
@@ -144,21 +185,24 @@ export default function Footer() {
             </h4>
             <ul className="flex flex-col gap-4">
               <li>
-                <div className="flex items-start gap-3 group">
-                  <span className="text-neutral-400 mt-0.5 group-hover:text-primary-600 transition-colors text-lg">
-                    📍
-                  </span>
+                <a
+                  href="https://maps.app.goo.gl/WMHn4MpwPqEDmVkHA"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 group hover:translate-x-1 transition-transform"
+                >
+                  <MapPin className="w-4 h-4 text-neutral-400 mt-0.5 group-hover:text-primary-600 transition-colors flex-shrink-0" />
                   <span className="text-neutral-600 text-sm leading-relaxed group-hover:text-neutral-900 transition-colors font-medium">
                     {SITE.address}
                   </span>
-                </div>
+                </a>
               </li>
               <li>
                 <a
                   href={`tel:${SITE.phone.replace(/\D/g, '')}`}
                   className="flex items-center gap-3 group hover:translate-x-1 transition-transform"
                 >
-                  <span className="text-neutral-400 group-hover:text-primary-600 transition-colors text-lg">📞</span>
+                  <Phone className="w-4 h-4 text-neutral-400 group-hover:text-primary-600 transition-colors" />
                   <span className="text-neutral-600 hover:text-primary-600 text-sm transition-colors font-semibold">
                     {SITE.phone}
                   </span>
@@ -169,7 +213,7 @@ export default function Footer() {
                   href={`mailto:${SITE.email}`}
                   className="flex items-center gap-3 group hover:translate-x-1 transition-transform"
                 >
-                  <span className="text-neutral-400 group-hover:text-primary-600 transition-colors text-lg">📧</span>
+                  <Mail className="w-4 h-4 text-neutral-400 group-hover:text-primary-600 transition-colors" />
                   <span className="text-neutral-600 hover:text-primary-600 text-sm transition-colors font-semibold break-all">
                     {SITE.email}
                   </span>
@@ -182,7 +226,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 group hover:translate-x-1 transition-transform"
                 >
-                  <span className="text-neutral-400 group-hover:text-success-600 transition-colors text-lg">💬</span>
+                  <MessageCircle className="w-4 h-4 text-neutral-400 group-hover:text-success-600 transition-colors" />
                   <span className="text-neutral-600 hover:text-success-600 text-sm transition-colors font-semibold">
                     WhatsApp Us
                   </span>
@@ -190,39 +234,24 @@ export default function Footer() {
               </li>
             </ul>
 
-            {/* ── Premium Social Icons ── */}
-            <div className="flex items-center gap-3 mt-6">
-              {Object.entries(SITE.social).map(([platform, url]) => {
-                const icons: Record<string, string> = {
-                  facebook: 'f',
-                  twitter: '𝕏',
-                  instagram: 'IG',
-                  youtube: 'YT',
-                  linkedin: 'in',
-                };
-                const colors: Record<string, string> = {
-                  facebook: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600',
-                  twitter: 'hover:bg-neutral-100 hover:border-neutral-500 hover:text-neutral-900',
-                  instagram: 'hover:bg-pink-50 hover:border-pink-400 hover:text-pink-600',
-                  youtube: 'hover:bg-red-50 hover:border-red-400 hover:text-red-600',
-                  linkedin: 'hover:bg-blue-50 hover:border-blue-500 hover:text-blue-700',
-                };
-                return (
-                  <a
-                    key={platform}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      'group relative w-10 h-10 rounded-xl bg-white border-2 border-neutral-200 flex items-center justify-center text-neutral-500 transition-all duration-300 hover:scale-110 hover:-rotate-3 shadow-sm hover:shadow-md',
-                      colors[platform]
-                    )}
-                    aria-label={platform}
-                  >
-                    <span className="text-xs font-bold relative z-10">{icons[platform] || '?'}</span>
-                  </a>
-                );
-              })}
+            {/* ── Premium Social Icons with Lucide React ── */}
+            <div className="flex items-center gap-3 mt-6 flex-wrap">
+              {socialMedia.map(({ platform, url, icon: Icon, label, hoverClass }) => (
+                <a
+                  key={platform}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    'group relative w-10 h-10 rounded-xl bg-white border-2 border-neutral-200 flex items-center justify-center text-neutral-500 transition-all duration-300 hover:scale-110 hover:-rotate-3 shadow-sm hover:shadow-md',
+                    hoverClass
+                  )}
+                  aria-label={label}
+                  title={label}
+                >
+                  <Icon className="w-4 h-4 relative z-10" />
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -231,8 +260,8 @@ export default function Footer() {
       {/* ── Bottom Bar ── */}
       <div className="relative border-t border-neutral-200 bg-white/50 backdrop-blur-sm py-6 px-4">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-neutral-600 text-xs text-center sm:text-left font-medium">
-            Built with <span className="text-red-500 animate-pulse-slow">♥</span> for{' '}
+          <p className="text-neutral-600 text-xs text-center sm:text-left font-medium flex items-center gap-1 flex-wrap justify-center sm:justify-start">
+            Built with <Heart className="w-3 h-3 text-red-500 fill-red-500 animate-pulse inline-block" /> for{' '}
             <span className="text-primary-600 font-bold">{SITE.fullName}</span>
             <span className="hidden sm:inline"> — Empowering Communities Across Pakistan</span>
           </p>

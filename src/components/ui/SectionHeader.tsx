@@ -7,6 +7,7 @@ interface SectionHeaderProps {
     subtitle?: string;
     align?: 'left' | 'center' | 'right';
     className?: string;
+    id?: string;
 }
 
 export default function SectionHeader({
