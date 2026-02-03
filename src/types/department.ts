@@ -1,4 +1,11 @@
-// src/types/department.ts - UPDATED TO MATCH DATA STRUCTURE
+// src/types/department.ts
+
+export interface DepartmentCategory {
+    key: string;
+    label: string;
+    icon: string;
+    description: string;
+}
 
 export interface DepartmentStat {
     value: string;
@@ -15,27 +22,18 @@ export interface Department {
     name: string;
     shortName: string;
     icon: string;
-    image?: string; // Path to department image (e.g., '/images/education.webp')
-    category: 'social' | 'infrastructure' | 'governance' | 'economy';
+    image?: string;
+    category: string;
     tagline: string;
     description: string;
-    services?: string[]; // For listing page (simple array)
-    servicesDetailed?: DepartmentService[]; // For detail page (with descriptions)
-    facilities?: string[];
-    programs?: string[];
-    stats?: DepartmentStat[];
+    services: string[] | DepartmentService[]; // Can be array of strings or service objects
+    stats: DepartmentStat[];
     isActive?: boolean;
-    color?: string; // Tailwind color class (e.g., 'text-blue-400')
-    colorHex?: string; // Hex color for backgrounds (e.g., '#60a5fa')
-    contactEmail?: string;
-    contactPhone?: string;
-    website?: string;
-    gallery?: string[]; // Array of image paths
-}
 
-export interface DepartmentCategory {
-    key: 'social' | 'infrastructure' | 'governance' | 'economy';
-    label: string;
-    icon: string;
-    description?: string;
+    // Additional fields for individual department pages
+    colorHex?: string;
+    programs: string[];
+    facilities: string[];
+    contactPhone: string;
+    contactEmail: string;
 }

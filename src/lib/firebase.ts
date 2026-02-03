@@ -4,28 +4,24 @@
 // Reads config from environment variables.
 // Uses singleton pattern so Firebase only initializes once.
 // ─────────────────────────────────────────────
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore }               from 'firebase/firestore';
-import { getStorage, FirebaseStorage }           from 'firebase/storage';
-import { getAuth, Auth }                         from 'firebase/auth';
-
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey:                process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain:            process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId:             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket:         process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId:     process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId:                 process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+  apiKey: "AIzaSyD31X2_qokpRx4wIRLP99QkzC-9BEndbIs",
+  authDomain: "khanhub-5e552.firebaseapp.com",
+  projectId: "khanhub-5e552",
+  storageBucket: "khanhub-5e552.firebasestorage.app",
+  messagingSenderId: "484860653296",
+  appId: "1:484860653296:web:b80315c175afed96539c35",
+  measurementId: "G-KMPX0DHCL5"
 };
 
-// Singleton: reuse existing app if already initialized (Next.js HMR)
-const app: FirebaseApp = getApps().length === 0
-  ? initializeApp(firebaseConfig)
-  : getApps()[0];
-
-export const db:      Firestore      = getFirestore(app);
-export const storage: FirebaseStorage = getStorage(app);
-export const auth:    Auth           = getAuth(app);
-
-export default app;
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);

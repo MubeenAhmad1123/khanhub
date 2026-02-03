@@ -1,23 +1,28 @@
 'use client';
-// src/components/layout/Navbar.tsx - PREMIUM GLASSMORPHISM VERSION
+// src/components/layout/Navbar.tsx - FIXED VERSION
 // ─────────────────────────────────────────────────────────────────
-// Modern glassmorphism navbar with frosted glass effect
-// Features:
-// - Premium frosted glass background with blur
-// - Elegant light design with dark text
-// - Subtle gradient borders
-// - Smooth hover effects
-// - Adaptive transparency
-// - Mobile-optimized glassmorphism
+// Fixes:
+// 1. Mobile hamburger menu now visible and functional
+// 2. Department dropdown stays open longer (improved UX)
+// 3. All 16 departments with full names
+// 4. Better hover timing and click-to-stay behavior
 // ─────────────────────────────────────────────────────────────────
 
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_LINKS, NAV_CTA, SITE } from '@/data/site';
 import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
 import { cn } from '@/lib/utils';
+
+// Navigation links
+const NAV_LINKS = [
+  { label: 'Home', href: '/', icon: '🏠' },
+  { label: 'Departments', href: '/departments', icon: '🏢' },
+  { label: 'About', href: '/about', icon: 'ℹ️' },
+  { label: 'Media', href: '/media', icon: '📸' },
+  { label: 'Contact', href: '/contact', icon: '📞' },
+];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -25,6 +30,7 @@ export default function Navbar() {
   const [deptOpen, setDeptOpen] = useState(false);
   const [mobileDeptOpen, setMobileDeptOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
 
   // Optimized scroll listener
@@ -72,6 +78,29 @@ export default function Navbar() {
     };
   }, [mobileOpen]);
 
+  // Enhanced hover handlers with delay
+  const handleDeptMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    setDeptOpen(true);
+  };
+
+  const handleDeptMouseLeave = () => {
+    // Add 300ms delay before closing
+    hoverTimeoutRef.current = setTimeout(() => {
+      setDeptOpen(false);
+    }, 300);
+  };
+
+  // Click handler to keep dropdown open
+  const handleDeptClick = () => {
+    setDeptOpen(!deptOpen);
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+  };
+
   return (
     <>
       <nav
@@ -101,7 +130,7 @@ export default function Navbar() {
                 <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-gradient-to-tr from-white/0 via-white/20 to-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
               <span className="font-display font-bold text-base sm:text-lg lg:text-xl text-neutral-900 group-hover:text-primary-600 transition-colors duration-300">
-                Khan<span className="text-primary-600 group-hover:text-primary-700"> Hub</span>
+                Khan<span className="text-primary-600 group-hover:text-primary-700">Hub</span>
               </span>
             </Link>
 
@@ -109,12 +138,12 @@ export default function Navbar() {
             <div className="hidden md:flex items-center gap-0.5 lg:gap-1 flex-1 justify-center max-w-2xl">
               {NAV_LINKS.map((link) =>
                 link.label === 'Departments' ? (
-                  // Enhanced Departments dropdown
+                  // Enhanced Departments dropdown with better UX
                   <div key={link.label} className="relative" ref={dropdownRef}>
                     <button
-                      onMouseEnter={() => setDeptOpen(true)}
-                      onMouseLeave={() => setDeptOpen(false)}
-                      onClick={() => setDeptOpen(!deptOpen)}
+                      onMouseEnter={handleDeptMouseEnter}
+                      onMouseLeave={handleDeptMouseLeave}
+                      onClick={handleDeptClick}
                       className={cn(
                         'flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-neutral-700 hover:text-primary-600 hover:bg-primary-50/50 transition-all duration-300 text-xs sm:text-sm lg:text-base font-semibold group',
                         pathname?.startsWith('/departments') && 'text-primary-600 bg-primary-50/70'
@@ -134,50 +163,56 @@ export default function Navbar() {
                       </svg>
                     </button>
 
-                    {/* Premium Glassmorphism Dropdown */}
+                    {/* Premium Glassmorphism Dropdown - Fixed UX */}
                     {deptOpen && (
                       <div
-                        onMouseEnter={() => setDeptOpen(true)}
-                        onMouseLeave={() => setDeptOpen(false)}
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[90vw] max-w-[680px] lg:max-w-[760px] bg-white/95 backdrop-blur-2xl border border-neutral-200/60 rounded-2xl shadow-2xl shadow-neutral-300/50 p-5 lg:p-7 animate-dropdown-in overflow-hidden"
+                        onMouseEnter={handleDeptMouseEnter}
+                        onMouseLeave={handleDeptMouseLeave}
+                        className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[90vw] max-w-[720px] lg:max-w-[820px] bg-white/95 backdrop-blur-2xl border border-neutral-200/60 rounded-2xl shadow-2xl shadow-neutral-300/50 p-5 lg:p-7 animate-dropdown-in overflow-hidden"
                       >
                         {/* Gradient overlays for depth */}
                         <div className="absolute inset-0 bg-gradient-to-br from-primary-50/30 via-transparent to-success-50/30 pointer-events-none" />
                         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-300/50 to-transparent" />
 
                         <div className="relative z-10">
-                          {DEPARTMENT_CATEGORIES.map((cat, idx) => (
-                            <div
-                              key={cat.key}
-                              className="mb-5 lg:mb-6 last:mb-0 animate-fade-in"
-                              style={{ animationDelay: `${idx * 50}ms` }}
-                            >
-                              <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-sm lg:text-base">{cat.icon}</span>
-                                <span className="text-xs lg:text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                                  {cat.label}
-                                </span>
-                                <div className="flex-1 h-px bg-gradient-to-r from-neutral-300/50 to-transparent ml-2" />
+                          {DEPARTMENT_CATEGORIES.map((cat, idx) => {
+                            const categoryDepts = DEPARTMENTS.filter((d) => d.category === cat.key);
+                            if (categoryDepts.length === 0) return null;
+
+                            return (
+                              <div
+                                key={cat.key}
+                                className="mb-5 lg:mb-6 last:mb-0 animate-fade-in"
+                                style={{ animationDelay: `${idx * 50}ms` }}
+                              >
+                                <div className="flex items-center gap-2 mb-3 px-1">
+                                  <span className="text-sm lg:text-base">{cat.icon}</span>
+                                  <span className="text-xs lg:text-sm font-bold text-neutral-600 uppercase tracking-wider">
+                                    {cat.label}
+                                  </span>
+                                  <span className="text-xs text-neutral-500">({categoryDepts.length})</span>
+                                  <div className="flex-1 h-px bg-gradient-to-r from-neutral-300/50 to-transparent ml-2" />
+                                </div>
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-1.5">
+                                  {categoryDepts.map((dept) => (
+                                    <Link
+                                      key={dept.slug}
+                                      href={`/departments/${dept.slug}`}
+                                      onClick={() => setDeptOpen(false)}
+                                      className="flex items-center gap-2.5 px-3 lg:px-3.5 py-2.5 lg:py-3 rounded-xl hover:bg-primary-50/70 hover:scale-105 transition-all duration-300 group/item border border-transparent hover:border-primary-200/50"
+                                    >
+                                      <span className="text-sm lg:text-base flex-shrink-0 group-hover/item:scale-110 transition-transform">
+                                        {dept.icon}
+                                      </span>
+                                      <span className="text-xs lg:text-sm text-neutral-700 group-hover/item:text-primary-700 transition-colors font-semibold leading-tight">
+                                        {dept.name}
+                                      </span>
+                                    </Link>
+                                  ))}
+                                </div>
                               </div>
-                              <div className="grid grid-cols-2 lg:grid-cols-3 gap-1.5">
-                                {DEPARTMENTS.filter((d) => d.category === cat.key).map((dept) => (
-                                  <Link
-                                    key={dept.slug}
-                                    href={`/departments/${dept.slug}`}
-                                    onClick={() => setDeptOpen(false)}
-                                    className="flex items-center gap-2.5 px-3 lg:px-3.5 py-2.5 lg:py-3 rounded-xl hover:bg-primary-50/70 hover:scale-105 transition-all duration-300 group/item border border-transparent hover:border-primary-200/50"
-                                  >
-                                    <span className="text-sm lg:text-base flex-shrink-0 group-hover/item:scale-110 transition-transform">
-                                      {dept.icon}
-                                    </span>
-                                    <span className="text-xs lg:text-sm text-neutral-700 group-hover/item:text-primary-700 transition-colors truncate font-semibold">
-                                      {dept.shortName}
-                                    </span>
-                                  </Link>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                           <div className="mt-4 pt-4 border-t border-neutral-200/60 text-center">
                             <Link
                               href="/departments"
@@ -226,10 +261,10 @@ export default function Navbar() {
               </Link>
             </div>
 
-            {/* ── Mobile Hamburger ── */}
+            {/* ── Mobile Hamburger - FIXED ── */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden flex flex-col gap-1.5 p-2.5 group relative z-50 hover:bg-primary-50/50 rounded-lg transition-all duration-300"
+              className="md:hidden flex flex-col gap-1.5 p-2.5 group relative z-[60] hover:bg-primary-50/50 rounded-lg transition-all duration-300"
               aria-label="Toggle menu"
               aria-expanded={mobileOpen}
             >
@@ -267,8 +302,8 @@ export default function Navbar() {
       {/* ── Glassmorphism Mobile Menu ── */}
       <div
         className={cn(
-          'md:hidden fixed top-[60px] sm:top-[68px] left-0 right-0 bottom-0 z-40 transition-all duration-500 ease-out',
-          mobileOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+          'md:hidden fixed top-[60px] sm:top-[68px] left-0 right-0 bottom-0 z-[45] transition-all duration-500 ease-out',
+          mobileOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
         )}
       >
         <div className="h-full overflow-y-auto bg-white/95 backdrop-blur-2xl border-t border-neutral-200/60 shadow-2xl shadow-neutral-300/50">
@@ -300,39 +335,44 @@ export default function Navbar() {
                     </svg>
                   </button>
 
-                  {/* Mobile Departments Submenu */}
+                  {/* Mobile Departments Submenu - ALL DEPARTMENTS */}
                   {mobileDeptOpen && (
                     <div className="mt-2 ml-4 pl-4 border-l-2 border-primary-300/50 space-y-1.5 animate-fade-in">
-                      {DEPARTMENT_CATEGORIES.map((cat) => (
-                        <div key={cat.key} className="mb-4">
-                          <div className="flex items-center gap-2 mb-2 px-2">
-                            <span className="text-sm">{cat.icon}</span>
-                            <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
-                              {cat.label}
-                            </span>
+                      {DEPARTMENT_CATEGORIES.map((cat) => {
+                        const categoryDepts = DEPARTMENTS.filter((d) => d.category === cat.key);
+                        if (categoryDepts.length === 0) return null;
+
+                        return (
+                          <div key={cat.key} className="mb-4">
+                            <div className="flex items-center gap-2 mb-2 px-2">
+                              <span className="text-sm">{cat.icon}</span>
+                              <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider">
+                                {cat.label} ({categoryDepts.length})
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {categoryDepts.map((dept) => (
+                                <Link
+                                  key={dept.slug}
+                                  href={`/departments/${dept.slug}`}
+                                  onClick={() => {
+                                    setMobileOpen(false);
+                                    setMobileDeptOpen(false);
+                                  }}
+                                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-primary-50/70 hover:scale-105 transition-all duration-300 group/dept border border-transparent hover:border-primary-200/50"
+                                >
+                                  <span className="text-base group-hover/dept:scale-110 transition-transform flex-shrink-0">
+                                    {dept.icon}
+                                  </span>
+                                  <span className="text-sm text-neutral-700 group-hover/dept:text-primary-700 transition-colors font-semibold leading-tight">
+                                    {dept.name}
+                                  </span>
+                                </Link>
+                              ))}
+                            </div>
                           </div>
-                          <div className="space-y-1">
-                            {DEPARTMENTS.filter((d) => d.category === cat.key).map((dept) => (
-                              <Link
-                                key={dept.slug}
-                                href={`/departments/${dept.slug}`}
-                                onClick={() => {
-                                  setMobileOpen(false);
-                                  setMobileDeptOpen(false);
-                                }}
-                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-primary-50/70 hover:scale-105 transition-all duration-300 group/dept border border-transparent hover:border-primary-200/50"
-                              >
-                                <span className="text-base group-hover/dept:scale-110 transition-transform">
-                                  {dept.icon}
-                                </span>
-                                <span className="text-sm text-neutral-700 group-hover/dept:text-primary-700 transition-colors font-semibold">
-                                  {dept.shortName}
-                                </span>
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       <Link
                         href="/departments"
                         onClick={() => {
