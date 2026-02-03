@@ -1,9 +1,17 @@
 // src/app/certificates/CertificatesContent.tsx
+// ============================================================================
+// CERTIFICATES CONTENT COMPONENT - Interactive certificate gallery
+// Client component with filtering, categorization, and expansion features
+// Optimized for SEO, mobile responsiveness, and code maintainability
+// ============================================================================
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 type CertificateCategory =
   | 'All'
   | 'Registration'
@@ -20,6 +28,15 @@ type CertificateItem = {
   status: 'Active' | 'Renewed' | 'Issued';
 };
 
+type YearFilter = 'All' | 'Latest (2024)' | '2018–2020' | '2015–2017';
+
+type Props = {
+  siteEmail: string;
+};
+
+// ============================================================================
+// DATA CONSTANTS
+// ============================================================================
 const RAW_CERTIFICATES = [
   {
     category: 'Registration' as const,
@@ -100,7 +117,7 @@ const RAW_CERTIFICATES = [
       },
     ],
   },
-];
+] as const;
 
 const CERTIFICATES: CertificateItem[] = RAW_CERTIFICATES.flatMap((group) =>
   group.items.map((item) => ({
@@ -109,32 +126,43 @@ const CERTIFICATES: CertificateItem[] = RAW_CERTIFICATES.flatMap((group) =>
   }))
 );
 
-const CATEGORY_TABS: CertificateCategory[] = [
+const CATEGORY_TABS: readonly CertificateCategory[] = [
   'All',
   'Registration',
   'Approvals & Compliance',
   'Healthcare Accreditation',
-];
+] as const;
 
-const YEAR_FILTERS = ['All', 'Latest (2024)', '2018–2020', '2015–2017'] as const;
-type YearFilter = (typeof YEAR_FILTERS)[number];
+const YEAR_FILTERS: readonly YearFilter[] = [
+  'All',
+  'Latest (2024)',
+  '2018–2020',
+  '2015–2017',
+] as const;
 
-type Props = {
-  siteEmail: string;
-};
-
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 export function CertificatesContent({ siteEmail }: Props) {
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
   const [activeCategory, setActiveCategory] = useState<CertificateCategory>('All');
   const [activeYearFilter, setActiveYearFilter] = useState<YearFilter>('All');
   const [expandedTitle, setExpandedTitle] = useState<string | null>(null);
 
+  // ============================================================================
+  // MEMOIZED FILTERED DATA
+  // ============================================================================
   const filteredCertificates = useMemo(() => {
     let list = [...CERTIFICATES];
 
+    // Category filter
     if (activeCategory !== 'All') {
       list = list.filter((c) => c.category === activeCategory);
     }
 
+    // Year filter
     if (activeYearFilter === 'Latest (2024)') {
       list = list.filter((c) => c.year === 2024);
     } else if (activeYearFilter === '2018–2020') {
@@ -143,6 +171,7 @@ export function CertificatesContent({ siteEmail }: Props) {
       list = list.filter((c) => c.year >= 2015 && c.year <= 2017);
     }
 
+    // Sort: newest first, then core before support, then alphabetically
     list.sort((a, b) => {
       if (b.year !== a.year) return b.year - a.year;
       if (a.type === b.type) return a.title.localeCompare(b.title);
@@ -152,285 +181,411 @@ export function CertificatesContent({ siteEmail }: Props) {
     return list;
   }, [activeCategory, activeYearFilter]);
 
-  const coreCertificates = filteredCertificates.filter((c) => c.type === 'core');
-  const supportCertificates = filteredCertificates.filter((c) => c.type === 'support');
+  const coreCertificates = useMemo(
+    () => filteredCertificates.filter((c) => c.type === 'core'),
+    [filteredCertificates]
+  );
 
-  const toggleExpanded = (title: string) => {
+  const supportCertificates = useMemo(
+    () => filteredCertificates.filter((c) => c.type === 'support'),
+    [filteredCertificates]
+  );
+
+  // ============================================================================
+  // EVENT HANDLERS - Memoized with useCallback
+  // ============================================================================
+  const toggleExpanded = useCallback((title: string) => {
     setExpandedTitle((prev) => (prev === title ? null : title));
-  };
+  }, []);
 
+  const handleCategoryChange = useCallback((category: CertificateCategory) => {
+    setActiveCategory(category);
+  }, []);
+
+  const handleYearFilterChange = useCallback((filter: YearFilter) => {
+    setActiveYearFilter(filter);
+  }, []);
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
   return (
     <>
-      {/* Top band – trust + filters */}
-      <section className="section bg-gradient-light">
+      {/* ============================================================================ */}
+      {/* SECTION 1: Trust Banner & Filter Controls */}
+      {/* ============================================================================ */}
+      <section className="section bg-gradient-light" aria-labelledby="certificates-heading">
         <div className="section-inner relative">
-          <div className="pointer-events-none absolute -top-20 -right-16 h-40 w-40 rounded-full bg-gradient-brand opacity-20 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -left-20 h-48 w-48 rounded-full bg-gradient-success opacity-20 blur-3xl" />
+          {/* Decorative background elements */}
+          <div className="pointer-events-none absolute -top-20 -right-16 h-40 w-40 rounded-full bg-gradient-brand opacity-20 blur-3xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-24 -left-20 h-48 w-48 rounded-full bg-gradient-success opacity-20 blur-3xl" aria-hidden="true" />
 
-          <div className="relative max-w-5xl mx-auto space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white/90 shadow-neutral-sm px-4 py-3 md:px-5 md:py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-success-500 text-white flex items-center justify-center text-lg">
+          <div className="relative max-w-5xl mx-auto space-y-5 sm:space-y-6">
+            {/* Trust & Verification Banner */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 rounded-2xl border border-neutral-200 bg-white/90 shadow-neutral-sm px-4 py-3 sm:px-5 sm:py-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary-500 to-success-500 text-white flex items-center justify-center text-lg sm:text-xl flex-shrink-0" aria-hidden="true">
                   🛡️
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-neutral-900">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-semibold text-neutral-900">
                     Verified welfare & healthcare organization
                   </p>
-                  <p className="text-[11px] text-neutral-600">
+                  <p className="text-[11px] sm:text-xs text-neutral-600 mt-0.5 leading-relaxed">
                     Key registrations and compliance certificates are listed below. Originals are
                     available for view at our head office.
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[11px] text-neutral-700">
-                <span className="inline-flex items-center gap-1 rounded-full bg-success-50 text-success-700 border border-success-100 px-2 py-1 font-semibold">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs text-neutral-700">
+                <span className="inline-flex items-center gap-1 rounded-full bg-success-50 text-success-700 border border-success-100 px-2.5 py-1 font-semibold">
                   ● Up to date
                 </span>
-                <span className="hidden sm:inline text-neutral-500">
+                <span className="hidden sm:inline text-neutral-500 text-[10px] sm:text-[11px]">
                   Last updated: 2024–2025 audit cycle
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex flex-wrap gap-2">
-                {CATEGORY_TABS.map((cat) => {
-                  const isActive = activeCategory === cat;
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setActiveCategory(cat)}
-                      className={`inline-flex items-center justify-center rounded-full text-[11px] font-semibold px-3.5 py-1.5 transition-all border ${
-                        isActive
-                          ? 'bg-primary-500 text-white border-primary-500 shadow-primary-sm'
-                          : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
-                      }`}
-                    >
-                      {cat === 'All' ? 'All certificates' : cat}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="flex flex-wrap gap-2 text-[11px]">
-                {YEAR_FILTERS.map((filter) => {
-                  const isActive = activeYearFilter === filter;
-                  return (
-                    <button
-                      key={filter}
-                      onClick={() => setActiveYearFilter(filter)}
-                      className={`rounded-full px-3 py-1 transition-all border ${
-                        isActive
-                          ? 'bg-neutral-900 text-white border-neutral-900'
-                          : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
-                      }`}
-                    >
-                      {filter}
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Filter Controls - Mobile Optimized */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Category Tabs */}
+              <nav aria-label="Certificate categories">
+                <h2 id="certificates-heading" className="sr-only">Certificate Categories</h2>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORY_TABS.map((cat) => {
+                    const isActive = activeCategory === cat;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => handleCategoryChange(cat)}
+                        className={`inline-flex items-center justify-center rounded-full text-[11px] sm:text-xs font-semibold px-3 sm:px-4 py-1.5 sm:py-2 transition-all border min-h-[36px] sm:min-h-[40px] ${
+                          isActive
+                            ? 'bg-primary-500 text-white border-primary-500 shadow-primary-sm'
+                            : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
+                        }`}
+                        aria-pressed={isActive}
+                        aria-label={cat === 'All' ? 'Show all certificates' : `Filter by ${cat}`}
+                      >
+                        {cat === 'All' ? 'All certificates' : cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
+
+              {/* Year Filters */}
+              <nav aria-label="Year filters">
+                <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs">
+                  {YEAR_FILTERS.map((filter) => {
+                    const isActive = activeYearFilter === filter;
+                    return (
+                      <button
+                        key={filter}
+                        onClick={() => handleYearFilterChange(filter)}
+                        className={`rounded-full px-3 sm:px-3.5 py-1.5 transition-all border min-h-[36px] sm:min-h-[40px] flex items-center ${
+                          isActive
+                            ? 'bg-neutral-900 text-white border-neutral-900'
+                            : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
+                        }`}
+                        aria-pressed={isActive}
+                        aria-label={`Filter certificates by ${filter}`}
+                      >
+                        {filter}
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Main certificate wall */}
-      <section className="section bg-white">
-        <div className="section-inner max-w-6xl mx-auto space-y-10">
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h2 className="font-display font-semibold text-neutral-900 text-base">
-                Core registrations & licenses
-              </h2>
-              <p className="text-[11px] text-neutral-500">
-                These documents establish Khan Hub as a legally registered and licensed entity.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {coreCertificates.map((cert, index) => {
-                const isExpanded = expandedTitle === cert.title;
-                return (
-                  <div
-                    key={cert.title}
-                    className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300"
-                    style={{ animationDelay: `${index * 60}ms` }}
-                  >
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-success-50 opacity-90" />
-                    <div className="relative p-4 sm:p-5 flex flex-col h-full">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-lg bg-white/80 border border-neutral-200 flex items-center justify-center text-xl flex-shrink-0">
-                          {cert.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-display font-semibold text-neutral-900 text-sm leading-snug">
-                            {cert.title}
-                          </h3>
-                          <p className="text-[11px] text-neutral-600 mt-0.5">
-                            {cert.issuer}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                          <span className="inline-flex items-center rounded-lg bg-neutral-900 text-white text-[10px] font-semibold px-2 py-0.5">
-                            {cert.year}
-                          </span>
-                          <span
-                            className={`inline-flex items-center rounded-full text-[10px] px-2 py-0.5 ${
-                              cert.status === 'Active'
-                                ? 'bg-success-50 text-success-700 border border-success-100'
-                                : 'bg-primary-50 text-primary-700 border border-primary-100'
-                            }`}
-                          >
-                            {cert.status}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => toggleExpanded(cert.title)}
-                        className="mt-auto inline-flex items-center gap-1 text-[11px] font-semibold text-primary-700 hover:text-primary-800"
-                      >
-                        {isExpanded ? 'Hide details' : 'View details'}
-                        <span>{isExpanded ? '▲' : '▼'}</span>
-                      </button>
-
-                      {isExpanded && (
-                        <div className="mt-3 border-t border-neutral-200 pt-2 text-[11px] text-neutral-700 space-y-1.5">
-                          <p>
-                            📎 <span className="font-semibold">Document type:</span>{' '}
-                            {cert.category}
-                          </p>
-                          <p>
-                            🕒 <span className="font-semibold">Valid from:</span> {cert.year}{' '}
-                            onwards (subject to renewal)
-                          </p>
-                          <p>
-                            🏛️ <span className="font-semibold">Office copy:</span> Available for
-                            inspection at Khan Hub head office during working hours.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {supportCertificates.length > 0 && (
+      {/* ============================================================================ */}
+      {/* SECTION 2: Certificate Gallery */}
+      {/* ============================================================================ */}
+      <section className="section bg-white" aria-labelledby="core-certificates-heading">
+        <div className="section-inner max-w-6xl mx-auto space-y-8 sm:space-y-10 md:space-y-12">
+          {/* Core Certificates */}
+          {coreCertificates.length > 0 && (
             <div>
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <h2 className="font-display font-semibold text-neutral-900 text-base">
-                  Audits, approvals & compliance
-                </h2>
-                <p className="text-[11px] text-neutral-500">
-                  Ongoing checks and reports that keep us aligned with laws and best practices.
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-3 mb-4 sm:mb-5">
+                <div>
+                  <h2 id="core-certificates-heading" className="font-display font-semibold text-neutral-900 text-base sm:text-lg">
+                    Core registrations & licenses
+                  </h2>
+                  <p className="text-[11px] sm:text-xs text-neutral-600 mt-1">
+                    These documents establish Khan Hub as a legally registered and licensed entity.
+                  </p>
+                </div>
+                <span className="text-[10px] sm:text-[11px] text-neutral-500 font-medium">
+                  {coreCertificates.length} certificate{coreCertificates.length !== 1 ? 's' : ''}
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {supportCertificates.map((cert, index) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {coreCertificates.map((cert, index) => {
                   const isExpanded = expandedTitle === cert.title;
                   return (
-                    <div
+                    <article
                       key={cert.title}
-                      className="relative overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300"
+                      className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300 animate-fade-up"
                       style={{ animationDelay: `${index * 60}ms` }}
+                      itemScope
+                      itemType="https://schema.org/Certification"
                     >
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-success-50 opacity-90" />
                       <div className="relative p-4 sm:p-5 flex flex-col h-full">
+                        {/* Certificate Header */}
                         <div className="flex items-start gap-3 mb-3">
-                          <div className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg flex-shrink-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-white/80 border border-neutral-200 flex items-center justify-center text-xl sm:text-2xl flex-shrink-0" aria-hidden="true">
                             {cert.icon}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-display font-semibold text-neutral-900 text-sm leading-snug">
+                            <h3 className="font-display font-semibold text-neutral-900 text-sm sm:text-base leading-snug" itemProp="name">
                               {cert.title}
                             </h3>
-                            <p className="text-[11px] text-neutral-600 mt-0.5">
+                            <p className="text-[11px] sm:text-xs text-neutral-600 mt-0.5" itemProp="issuedBy">
                               {cert.issuer}
                             </p>
                           </div>
-                          <span className="inline-flex items-center rounded-lg bg-white text-neutral-800 text-[10px] font-semibold px-2 py-0.5 border border-neutral-200 flex-shrink-0">
-                            {cert.year}
-                          </span>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span className="inline-flex items-center rounded-lg bg-neutral-900 text-white text-[10px] sm:text-xs font-semibold px-2 py-0.5" itemProp="dateIssued">
+                              {cert.year}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full text-[10px] px-2 py-0.5 ${
+                                cert.status === 'Active'
+                                  ? 'bg-success-50 text-success-700 border border-success-100'
+                                  : 'bg-primary-50 text-primary-700 border border-primary-100'
+                              }`}
+                            >
+                              {cert.status}
+                            </span>
+                          </div>
                         </div>
 
+                        {/* Expand/Collapse Button */}
                         <button
                           onClick={() => toggleExpanded(cert.title)}
-                          className="mt-auto inline-flex items-center gap-1 text-[11px] font-semibold text-primary-700 hover:text-primary-800"
+                          className="mt-auto inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-primary-700 hover:text-primary-800 transition-colors min-h-[32px]"
+                          aria-expanded={isExpanded}
+                          aria-controls={`details-${cert.title.replace(/\s+/g, '-')}`}
                         >
-                          {isExpanded ? 'Hide details' : 'Why this matters'}
-                          <span>{isExpanded ? '▲' : '▼'}</span>
+                          {isExpanded ? 'Hide details' : 'View details'}
+                          <span aria-hidden="true">{isExpanded ? '▲' : '▼'}</span>
                         </button>
 
+                        {/* Expanded Details */}
                         {isExpanded && (
-                          <div className="mt-3 border-t border-neutral-200 pt-2 text-[11px] text-neutral-700 space-y-1.5">
+                          <div 
+                            id={`details-${cert.title.replace(/\s+/g, '-')}`}
+                            className="mt-3 border-t border-neutral-200 pt-3 text-[11px] sm:text-xs text-neutral-700 space-y-2 animate-fade-in"
+                          >
                             <p>
-                              ✅ <span className="font-semibold">Assurance:</span> Confirms that our
-                              accounts and processes are being reviewed by external professionals.
+                              <span className="font-semibold">📎 Document type:</span>{' '}
+                              {cert.category}
                             </p>
                             <p>
-                              📊 <span className="font-semibold">Scope:</span> Includes financial
-                              records, governance, and core compliance checks.
+                              <span className="font-semibold">🕒 Valid from:</span> {cert.year}{' '}
+                              onwards (subject to renewal)
+                            </p>
+                            <p>
+                              <span className="font-semibold">🏛️ Office copy:</span> Available for
+                              inspection at Khan Hub head office during working hours.
                             </p>
                           </div>
                         )}
                       </div>
-                    </div>
+                    </article>
                   );
                 })}
               </div>
             </div>
           )}
+
+          {/* Support Certificates (Audits & Compliance) */}
+          {supportCertificates.length > 0 && (
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-3 mb-4 sm:mb-5">
+                <div>
+                  <h2 className="font-display font-semibold text-neutral-900 text-base sm:text-lg">
+                    Audits, approvals & compliance
+                  </h2>
+                  <p className="text-[11px] sm:text-xs text-neutral-600 mt-1">
+                    Ongoing checks and reports that keep us aligned with laws and best practices.
+                  </p>
+                </div>
+                <span className="text-[10px] sm:text-[11px] text-neutral-500 font-medium">
+                  {supportCertificates.length} certificate{supportCertificates.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                {supportCertificates.map((cert, index) => {
+                  const isExpanded = expandedTitle === cert.title;
+                  return (
+                    <article
+                      key={cert.title}
+                      className="relative overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300 animate-fade-up"
+                      style={{ animationDelay: `${index * 60}ms` }}
+                      itemScope
+                      itemType="https://schema.org/Certification"
+                    >
+                      <div className="relative p-4 sm:p-5 flex flex-col h-full">
+                        {/* Certificate Header */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg sm:text-xl flex-shrink-0" aria-hidden="true">
+                            {cert.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-display font-semibold text-neutral-900 text-sm sm:text-base leading-snug" itemProp="name">
+                              {cert.title}
+                            </h3>
+                            <p className="text-[11px] sm:text-xs text-neutral-600 mt-0.5" itemProp="issuedBy">
+                              {cert.issuer}
+                            </p>
+                          </div>
+                          <span className="inline-flex items-center rounded-lg bg-white text-neutral-800 text-[10px] sm:text-xs font-semibold px-2 py-0.5 border border-neutral-200 flex-shrink-0" itemProp="dateIssued">
+                            {cert.year}
+                          </span>
+                        </div>
+
+                        {/* Expand/Collapse Button */}
+                        <button
+                          onClick={() => toggleExpanded(cert.title)}
+                          className="mt-auto inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-primary-700 hover:text-primary-800 transition-colors min-h-[32px]"
+                          aria-expanded={isExpanded}
+                          aria-controls={`details-${cert.title.replace(/\s+/g, '-')}`}
+                        >
+                          {isExpanded ? 'Hide details' : 'Why this matters'}
+                          <span aria-hidden="true">{isExpanded ? '▲' : '▼'}</span>
+                        </button>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div 
+                            id={`details-${cert.title.replace(/\s+/g, '-')}`}
+                            className="mt-3 border-t border-neutral-200 pt-3 text-[11px] sm:text-xs text-neutral-700 space-y-2 animate-fade-in"
+                          >
+                            <p>
+                              <span className="font-semibold">✅ Assurance:</span> Confirms that our
+                              accounts and processes are being reviewed by external professionals.
+                            </p>
+                            <p>
+                              <span className="font-semibold">📊 Scope:</span> Includes financial
+                              records, governance, and core compliance checks.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {coreCertificates.length === 0 && supportCertificates.length === 0 && (
+            <div className="text-center py-16 sm:py-20">
+              <div className="text-4xl sm:text-5xl mb-4" aria-hidden="true">📄</div>
+              <h3 className="font-display font-semibold text-neutral-900 text-base sm:text-lg mb-2">
+                No certificates found
+              </h3>
+              <p className="text-neutral-600 text-sm">
+                Try adjusting your filters to see more results
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Verification & contact strip */}
-      <section className="section bg-gradient-subtle">
+      {/* ============================================================================ */}
+      {/* SECTION 3: Verification & Contact Information */}
+      {/* ============================================================================ */}
+      <section className="section bg-gradient-subtle" aria-labelledby="verification-heading">
         <div className="section-inner max-w-5xl mx-auto">
-          <div className="rounded-2xl border border-neutral-200 bg-white shadow-neutral-sm p-5 md:p-6 lg:p-7 grid grid-cols-1 md:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)] gap-6 items-center">
+          <div className="rounded-2xl border border-neutral-200 bg-white shadow-neutral-sm p-5 sm:p-6 md:p-7 lg:p-8 grid grid-cols-1 md:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)] gap-6 sm:gap-8 items-start">
+            {/* Verification Instructions */}
             <div>
-              <h3 className="font-display font-semibold text-neutral-900 text-base mb-2">
+              <h3 id="verification-heading" className="font-display font-semibold text-neutral-900 text-base sm:text-lg mb-3">
                 How to verify our certificates
               </h3>
-              <p className="text-neutral-700 text-sm leading-relaxed mb-3">
+              <p className="text-neutral-700 text-sm sm:text-base leading-relaxed mb-4">
                 We encourage donors, partners, and institutions to verify any document they see on
                 this page directly with the issuing authority.
               </p>
-              <ul className="space-y-1.5 text-[11px] text-neutral-700">
-                <li>
-                  • Match the certificate title, issuer name, and year with the original scan in
-                  our records.
+              <ul className="space-y-2 sm:space-y-2.5 text-[11px] sm:text-xs text-neutral-700" role="list">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-primary-600 flex-shrink-0" aria-hidden="true">•</span>
+                  <span>Match the certificate title, issuer name, and year with the original scan in
+                  our records.</span>
                 </li>
-                <li>
-                  • For SECP, FBR, and health licenses, you can cross‑check using their public
-                  portals or helplines.
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-primary-600 flex-shrink-0" aria-hidden="true">•</span>
+                  <span>For SECP, FBR, and health licenses, you can cross-check using their public
+                  portals or helplines.</span>
                 </li>
-                <li>
-                  • For detailed scans or notarized copies, contact our admin office.
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-primary-600 flex-shrink-0" aria-hidden="true">•</span>
+                  <span>For detailed scans or notarized copies, contact our admin office.</span>
                 </li>
               </ul>
             </div>
-            <div className="rounded-xl border border-dashed border-primary-300 bg-primary-50/60 p-4 text-[11px] text-neutral-800 space-y-2">
-              <p className="font-semibold text-primary-800 text-xs">
+
+            {/* Contact CTA Box */}
+            <div className="rounded-xl border border-dashed border-primary-300 bg-primary-50/60 p-4 sm:p-5 text-[11px] sm:text-xs text-neutral-800 space-y-2.5 sm:space-y-3">
+              <p className="font-semibold text-primary-800 text-xs sm:text-sm">
                 Need a specific certificate copy?
               </p>
-              <p>
+              <p className="leading-relaxed">
                 Email our documentation team at{' '}
-                <span className="text-primary-700 font-semibold underline decoration-primary-300 underline-offset-2">
+                <a 
+                  href={`mailto:${siteEmail}`}
+                  className="text-primary-700 font-semibold underline decoration-primary-300 underline-offset-2 hover:text-primary-800 transition-colors"
+                >
                   {siteEmail}
-                </span>{' '}
+                </a>{' '}
                 with the certificate name, purpose, and your organization details.
               </p>
-              <p>
-                For in‑person verification, please book an appointment so our team can prepare the
+              <p className="leading-relaxed">
+                For in-person verification, please book an appointment so our team can prepare the
                 relevant originals before your visit.
               </p>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Animation styles */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out forwards;
+        }
+        @keyframes fade-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-up {
+          animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+      `}</style>
     </>
   );
 }
