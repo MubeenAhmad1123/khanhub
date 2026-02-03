@@ -77,12 +77,15 @@ export async function submitDonation(data: {
   phone?: string;
   amount: number;
   method: string;
+  currency?: string;
+  message?: string;
+  status?: string;
 }) {
   try {
     const docRef = await addDoc(donationsCollection, {
       ...data,
       timestamp: serverTimestamp(),
-      status: 'pending'
+      status: data.status || 'pending'
     });
     console.log('✅ Donation saved. ID:', docRef.id);
     return { success: true, id: docRef.id };
@@ -99,6 +102,9 @@ export async function submitCertificateRequest(data: {
   fullName: string;
   email: string;
   phone?: string;
+  currency?: string;
+  message?: string;
+  status?: string;
 }) {
   try {
     const docRef = await addDoc(certificatesCollection, {

@@ -196,7 +196,7 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
                   </div>
                   <p className="text-neutral-600 leading-relaxed">
                     {typeof service === 'string'
-                      ? `Comprehensive ${service.toLowerCase()} services tailored to your needs.`
+                      ? `Comprehensive ${(service as string).toLowerCase()} services tailored to your needs.`
                       : service.description
                     }
                   </p>

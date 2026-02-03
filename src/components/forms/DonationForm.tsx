@@ -2,26 +2,26 @@
 // src/components/forms/DonationForm.tsx
 
 import { useState, FormEvent } from 'react';
-import { createDonation }      from '@/lib/firestore';
-import { Spinner }             from '@/components/ui';
+import { submitDonation } from '@/lib/firestore';
+import { Spinner } from '@/components/ui';
 
 const PRESET_AMOUNTS = [500, 1000, 2500, 5000, 10000];
 
 const PAYMENT_METHODS = [
-  { value: 'bank',      label: 'Bank Transfer',  icon: '🏦' },
-  { value: 'jazzcash',  label: 'JazzCash',       icon: '💚' },
-  { value: 'easypaisa', label: 'Easypaisa',      icon: '🟢' },
-  { value: 'payfast',   label: 'PayFast Online', icon: '💳' },
+  { value: 'bank', label: 'Bank Transfer', icon: '🏦' },
+  { value: 'jazzcash', label: 'JazzCash', icon: '💚' },
+  { value: 'easypaisa', label: 'Easypaisa', icon: '🟢' },
+  { value: 'payfast', label: 'PayFast Online', icon: '💳' },
 ];
 
 export default function DonationForm() {
-  const [amount, setAmount]         = useState<number | string>('');
-  const [customAmount, setCustom]   = useState('');
-  const [method, setMethod]         = useState('bank');
-  const [form, setForm]             = useState({ name: '', email: '', phone: '', message: '' });
-  const [loading, setLoading]       = useState(false);
-  const [success, setSuccess]       = useState(false);
-  const [error, setError]           = useState('');
+  const [amount, setAmount] = useState<number | string>('');
+  const [customAmount, setCustom] = useState('');
+  const [method, setMethod] = useState('bank');
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   const finalAmount = amount === 'custom' ? Number(customAmount) : Number(amount);
 
@@ -35,7 +35,7 @@ export default function DonationForm() {
     setLoading(true);
     setError('');
     try {
-      await createDonation({
+      await submitDonation({
         ...form,
         amount: finalAmount,
         currency: 'PKR',
@@ -74,20 +74,18 @@ export default function DonationForm() {
         <div className="flex flex-wrap gap-2">
           {PRESET_AMOUNTS.map((amt) => (
             <button type="button" key={amt} onClick={() => { setAmount(amt); setCustom(''); }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
-                amount === amt
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${amount === amt
                   ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/20'
                   : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-primary-500/40'
-              }`}>
+                }`}>
               {amt.toLocaleString()}
             </button>
           ))}
           <button type="button" onClick={() => setAmount('custom')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
-              amount === 'custom'
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${amount === 'custom'
                 ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/20'
                 : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-primary-500/40'
-            }`}>
+              }`}>
             Custom
           </button>
         </div>
@@ -103,11 +101,10 @@ export default function DonationForm() {
         <div className="grid grid-cols-2 gap-2">
           {PAYMENT_METHODS.map((m) => (
             <button type="button" key={m.value} onClick={() => setMethod(m.value)}
-              className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm transition-all border ${
-                method === m.value
+              className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm transition-all border ${method === m.value
                   ? 'bg-primary-500/10 border-primary-500 text-white'
                   : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:border-neutral-600'
-              }`}>
+                }`}>
               <span className="text-lg">{m.icon}</span>
               <span className="font-medium">{m.label}</span>
             </button>

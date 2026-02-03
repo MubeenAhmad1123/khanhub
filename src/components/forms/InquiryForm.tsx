@@ -3,18 +3,18 @@
 // Receives the department slug as a prop so it auto-fills.
 
 import { useState, FormEvent } from 'react';
-import { submitInquiry }       from '@/lib/firestore';
-import { Spinner }             from '@/components/ui';
+import { submitInquiryForm } from '@/lib/firestore';
+import { Spinner } from '@/components/ui';
 
 interface InquiryFormProps {
   department: string; // slug
 }
 
 export default function InquiryForm({ department }: InquiryFormProps) {
-  const [form, setForm]       = useState({ name: '', email: '', phone: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -25,7 +25,7 @@ export default function InquiryForm({ department }: InquiryFormProps) {
     setLoading(true);
     setError('');
     try {
-      await submitInquiry({ ...form, department });
+      await submitInquiryForm({ ...form, department });
       setSuccess(true);
       setForm({ name: '', email: '', phone: '', message: '' });
     } catch {

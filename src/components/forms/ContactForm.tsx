@@ -2,7 +2,7 @@
 // src/components/forms/ContactForm.tsx
 
 import { useState, FormEvent } from 'react';
-import { submitContact } from '@/lib/firestore';
+import { submitContactForm } from '@/lib/firestore';
 import { Spinner } from '@/components/ui';
 
 export default function ContactForm() {
@@ -20,7 +20,7 @@ export default function ContactForm() {
     setLoading(true);
     setError('');
     try {
-      await submitContact(form);
+      await submitContactForm(form);
       setSuccess(true);
       setForm({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (err) {
