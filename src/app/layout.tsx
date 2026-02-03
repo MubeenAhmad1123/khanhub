@@ -4,7 +4,8 @@
 // Loads global CSS, Navbar, and Footer.
 // ─────────────────────────────────────────────
 
-import type { Metadata, ReactNode } from 'next';
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import '@/styles/globals.css';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
