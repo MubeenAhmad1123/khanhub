@@ -1,16 +1,18 @@
 // src/lib/firestore.ts
-import { db } from './firebase';
 import {
   collection,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  CollectionReference,
+  DocumentData
 } from 'firebase/firestore';
+import { db } from './firebase';
 
 // ─── Collection References ────────────────────────────────────
-export const contactsCollection = collection(db, 'contacts');
-export const inquiriesCollection = collection(db, 'inquiries');
-export const donationsCollection = collection(db, 'donations');
-export const certificatesCollection = collection(db, 'certificates');
+export const contactsCollection: CollectionReference<DocumentData> = collection(db, 'contacts');
+export const inquiriesCollection: CollectionReference<DocumentData> = collection(db, 'inquiries');
+export const donationsCollection: CollectionReference<DocumentData> = collection(db, 'donations');
+export const certificatesCollection: CollectionReference<DocumentData> = collection(db, 'certificates');
 
 
 // ─── Contact Form ──────────────────────────────────────────────
@@ -28,9 +30,10 @@ export async function submitContactForm(data: {
     });
     console.log('✅ Contact saved. ID:', docRef.id);
     return { success: true, id: docRef.id };
-  } catch (error: any) {
-    console.error('❌ Contact error:', error.code, error.message);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error('❌ Contact error:', err.code, err.message);
+    return { success: false, error: err.message || 'Unknown error' };
   }
 }
 
@@ -59,9 +62,10 @@ export async function submitInquiryForm(data: {
     });
     console.log('✅ Inquiry saved. ID:', docRef.id);
     return { success: true, id: docRef.id };
-  } catch (error: any) {
-    console.error('❌ Inquiry error:', error.code, error.message);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error('❌ Inquiry error:', err.code, err.message);
+    return { success: false, error: err.message || 'Unknown error' };
   }
 }
 
@@ -82,9 +86,10 @@ export async function submitDonation(data: {
     });
     console.log('✅ Donation saved. ID:', docRef.id);
     return { success: true, id: docRef.id };
-  } catch (error: any) {
-    console.error('❌ Donation error:', error.code, error.message);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error('❌ Donation error:', err.code, err.message);
+    return { success: false, error: err.message || 'Unknown error' };
   }
 }
 
@@ -103,8 +108,9 @@ export async function submitCertificateRequest(data: {
     });
     console.log('✅ Certificate request saved. ID:', docRef.id);
     return { success: true, id: docRef.id };
-  } catch (error: any) {
-    console.error('❌ Certificate error:', error.code, error.message);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error('❌ Certificate error:', err.code, err.message);
+    return { success: false, error: err.message || 'Unknown error' };
   }
 }
