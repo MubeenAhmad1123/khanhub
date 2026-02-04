@@ -1,0 +1,19 @@
+{
+  "name": "store",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:store": "npm --prefix apps/store run dev",
+    "dev:jobs": "npm --prefix apps/job run dev",
+    "dev:transport": "npm --prefix apps/transport run dev",
+    "build:web": "npm --prefix apps/web run build",
+    "build:store": "npm --prefix apps/store run build",
+    "build:jobs": "npm --prefix apps/job run build",
+    "build:transport": "npm --prefix apps/transport run build"
+  }
+}
