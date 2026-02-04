@@ -117,6 +117,7 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { Toaster } from 'react-hot-toast'
 import '@/styles/globals.css'
+import SocialMediaSidebar from '@/components/SocialMediaSidebar'
 
 const sora = Sora({
   subsets: ['latin'],
@@ -142,6 +143,7 @@ export default function RootLayout({
         <main className="min-h-screen">
           {children}
         </main>
+        <SocialMediaSidebar />
         <Footer />
         <Toaster position="bottom-right" />
       </body>

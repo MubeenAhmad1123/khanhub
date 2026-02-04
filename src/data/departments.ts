@@ -1,4 +1,8 @@
-// src/data/departments.ts - UPDATED WITH HELPER FUNCTION
+// src/data/departments.ts - ENHANCED WITH UNIQUE COLOR THEMES
+// ─────────────────────────────────────────────────────────────────
+// Each department now has a professional color scheme matching
+// real-world enterprise branding standards
+// ─────────────────────────────────────────────────────────────────
 
 import { Department, DepartmentCategory } from '@/types/department';
 
@@ -29,6 +33,123 @@ export const DEPARTMENT_CATEGORIES: DepartmentCategory[] = [
   }
 ];
 
+// ── DEPARTMENT COLOR THEMES ──
+// Professional color palettes inspired by industry leaders
+export const DEPARTMENT_THEMES = {
+  'institute-health-sciences': {
+    primary: '#2563EB',      // Blue - Trust & Medical Excellence
+    secondary: '#1E40AF',
+    accent: '#60A5FA',
+    light: '#DBEAFE',
+    gradient: 'from-blue-600 to-blue-800'
+  },
+  'education': {
+    primary: '#059669',      // Green - Growth & Learning
+    secondary: '#047857',
+    accent: '#34D399',
+    light: '#D1FAE5',
+    gradient: 'from-emerald-600 to-green-700'
+  },
+  'medical-center': {
+    primary: '#DC2626',      // Red - Emergency & Healthcare (KEEP ORIGINAL)
+    secondary: '#B91C1C',
+    accent: '#F87171',
+    light: '#FEE2E2',
+    gradient: 'from-red-600 to-red-800'
+  },
+  'transport': {
+    primary: '#F59E0B',      // Amber - Movement & Energy
+    secondary: '#D97706',
+    accent: '#FBBF24',
+    light: '#FEF3C7',
+    gradient: 'from-amber-600 to-orange-600'
+  },
+  'surgical-services': {
+    primary: '#7C3AED',      // Purple - Precision & Excellence
+    secondary: '#6D28D9',
+    accent: '#A78BFA',
+    light: '#EDE9FE',
+    gradient: 'from-violet-600 to-purple-700'
+  },
+  'surgical-repair': {
+    primary: '#DB2777',      // Pink - Care & Restoration
+    secondary: '#BE185D',
+    accent: '#F472B6',
+    light: '#FCE7F3',
+    gradient: 'from-pink-600 to-rose-600'
+  },
+  'social-welfare': {
+    primary: '#0D9488',      // Teal - Community & Support
+    secondary: '#0F766E',
+    accent: '#2DD4BF',
+    light: '#CCFBF1',
+    gradient: 'from-teal-600 to-cyan-700'
+  },
+  'job-placement': {
+    primary: '#0EA5E9',      // Sky Blue - Opportunity & Career
+    secondary: '#0284C7',
+    accent: '#38BDF8',
+    light: '#E0F2FE',
+    gradient: 'from-sky-600 to-blue-600'
+  },
+  'skill-development': {
+    primary: '#EA580C',      // Orange - Skills & Training
+    secondary: '#C2410C',
+    accent: '#FB923C',
+    light: '#FFEDD5',
+    gradient: 'from-orange-600 to-amber-700'
+  },
+  'residential-services': {
+    primary: '#7C3AED',      // Purple - Housing & Development
+    secondary: '#6D28D9',
+    accent: '#A78BFA',
+    light: '#EDE9FE',
+    gradient: 'from-purple-600 to-violet-700'
+  },
+  'rehabilitation': {
+    primary: '#0891B2',      // Cyan - Recovery & Healing
+    secondary: '#0E7490',
+    accent: '#22D3EE',
+    light: '#CFFAFE',
+    gradient: 'from-cyan-600 to-sky-600'
+  },
+  'tourism': {
+    primary: '#16A34A',      // Green - Nature & Tourism
+    secondary: '#15803D',
+    accent: '#4ADE80',
+    light: '#DCFCE7',
+    gradient: 'from-green-600 to-emerald-700'
+  },
+  'marketing': {
+    primary: '#EF4444',      // Red - Energy & Marketing
+    secondary: '#DC2626',
+    accent: '#F87171',
+    light: '#FEE2E2',
+    gradient: 'from-red-500 to-rose-600'
+  },
+  'prosthetic-services': {
+    primary: '#4F46E5',      // Indigo - Technology & Innovation
+    secondary: '#4338CA',
+    accent: '#818CF8',
+    light: '#E0E7FF',
+    gradient: 'from-indigo-600 to-blue-700'
+  },
+  'enterprises': {
+    primary: '#7C3AED',      // Purple - Business & Enterprise
+    secondary: '#6D28D9',
+    accent: '#A78BFA',
+    light: '#EDE9FE',
+    gradient: 'from-purple-600 to-violet-800'
+  },
+  'sukoon-center': {
+    primary: '#14B8A6',      // Teal - Peace & Mental Health
+    secondary: '#0D9488',
+    accent: '#5EEAD4',
+    light: '#CCFBF1',
+    gradient: 'from-teal-600 to-emerald-600'
+  }
+} as const;
+
 export const DEPARTMENTS: Department[] = [
   {
     slug: 'institute-health-sciences',
@@ -45,8 +166,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '24/7', label: 'Facilities' }
     ],
     isActive: true,
-    // Additional fields for individual pages
-    colorHex: '#3B82F6',
+    colorHex: '#2563EB',
     programs: ['MBBS', 'BDS', 'Nursing', 'Allied Health Sciences', 'Postgraduate Programs'],
     facilities: ['Modern Lecture Halls', 'Research Labs', 'Medical Library', 'Simulation Center', 'Student Hostels'],
     contactPhone: '+92-300-1234567',
@@ -67,7 +187,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '15M+', label: 'Students' }
     ],
     isActive: true,
-    colorHex: '#10B981',
+    colorHex: '#059669',
     programs: ['Primary Education', 'Secondary Education', 'Higher Secondary', 'Special Education', 'Adult Literacy'],
     facilities: ['District Offices', 'Training Centers', 'Assessment Centers', 'Resource Libraries'],
     contactPhone: '+92-300-2345678',
@@ -88,7 +208,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '24/7', label: 'Emergency' }
     ],
     isActive: true,
-    colorHex: '#EF4444',
+    colorHex: '#DC2626',
     programs: [
       'Emergency Services',
       'General Medicine',
@@ -152,7 +272,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '95%', label: 'Success Rate' }
     ],
     isActive: true,
-    colorHex: '#8B5CF6',
+    colorHex: '#7C3AED',
     programs: ['General Surgery', 'Orthopedic Surgery', 'Cardiac Surgery', 'Neurosurgery', 'Laparoscopic Surgery'],
     facilities: ['Modern Operating Rooms', 'Recovery Wards', 'ICU', 'Surgical Equipment', 'Sterilization Units'],
     contactPhone: '+92-300-4567890',
@@ -173,7 +293,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '24/7', label: 'Available' }
     ],
     isActive: true,
-    colorHex: '#EC4899',
+    colorHex: '#DB2777',
     programs: ['Reconstructive Surgery', 'Cosmetic Surgery', 'Burn Unit', 'Trauma Surgery', 'Microsurgery'],
     facilities: ['Specialized Operating Theaters', 'Burn Unit', 'Recovery Rooms', 'Physiotherapy', 'Counseling Center'],
     contactPhone: '+92-300-5678901',
@@ -194,7 +314,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '100+', label: 'Centers' }
     ],
     isActive: true,
-    colorHex: '#14B8A6',
+    colorHex: '#0D9488',
     programs: ['Old Age Pension', 'Disability Allowance', 'Widow Support', 'Orphan Care', 'Emergency Relief'],
     facilities: ['Welfare Centers', 'Community Halls', 'Support Offices', 'Distribution Points'],
     contactPhone: '+92-300-6789012',
@@ -236,7 +356,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '200+', label: 'Courses' }
     ],
     isActive: true,
-    colorHex: '#F59E0B',
+    colorHex: '#EA580C',
     programs: ['IT Training', 'Welding & Fabrication', 'Electrical Work', 'Plumbing', 'Beautician Courses', 'Tailoring'],
     facilities: ['Training Workshops', 'Computer Labs', 'Practice Areas', 'Certification Centers'],
     contactPhone: '+92-300-8901234',
@@ -257,7 +377,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '200K+', label: 'Units' }
     ],
     isActive: true,
-    colorHex: '#8B5CF6',
+    colorHex: '#7C3AED',
     programs: ['Affordable Housing', 'Urban Development', 'Building Permits', 'Infrastructure Development'],
     facilities: ['Planning Offices', 'Approval Centers', 'Display Centers', 'Customer Service'],
     contactPhone: '+92-300-9012345',
@@ -278,7 +398,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '90%', label: 'Recovery' }
     ],
     isActive: true,
-    colorHex: '#06B6D4',
+    colorHex: '#0891B2',
     programs: ['Physical Rehabilitation', 'Drug Rehabilitation', 'Alcohol Treatment', 'Psychological Counseling'],
     facilities: ['Therapy Rooms', 'Counseling Centers', 'Residential Units', 'Exercise Areas', 'Group Therapy Halls'],
     contactPhone: '+92-300-0123456',
@@ -299,7 +419,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '2M+', label: 'Visitors' }
     ],
     isActive: true,
-    colorHex: '#10B981',
+    colorHex: '#16A34A',
     programs: ['Tourist Guides', 'Heritage Conservation', 'Tourism Promotion', 'Hospitality Training'],
     facilities: ['Information Centers', 'Tourist Facilitation Centers', 'Heritage Museums', 'Rest Areas'],
     contactPhone: '+92-300-1234560',
@@ -341,7 +461,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '95%', label: 'Satisfaction' }
     ],
     isActive: true,
-    colorHex: '#6366F1',
+    colorHex: '#4F46E5',
     programs: ['Artificial Limbs', 'Orthotic Braces', 'Custom Fitting', 'Physiotherapy', 'Follow-up Care'],
     facilities: ['Manufacturing Workshop', 'Fitting Rooms', 'Rehabilitation Area', 'Assessment Center'],
     contactPhone: '+92-300-3456012',
@@ -362,7 +482,7 @@ export const DEPARTMENTS: Department[] = [
       { value: '80%', label: 'Success Rate' }
     ],
     isActive: true,
-    colorHex: '#8B5CF6',
+    colorHex: '#7C3AED',
     programs: ['Startup Incubation', 'Business Loans', 'Mentorship Programs', 'Networking Events', 'Business Training'],
     facilities: ['Incubation Centers', 'Co-working Spaces', 'Meeting Rooms', 'Resource Centers'],
     contactPhone: '+92-300-4560123',
@@ -391,7 +511,29 @@ export const DEPARTMENTS: Department[] = [
   }
 ];
 
-// ── HELPER FUNCTION ── (This was missing!)
+// ── HELPER FUNCTIONS ──
 export function getDepartmentBySlug(slug: string): Department | undefined {
   return DEPARTMENTS.find(dept => dept.slug === slug);
+}
+
+export function getDepartmentTheme(slug: string) {
+  return DEPARTMENT_THEMES[slug as keyof typeof DEPARTMENT_THEMES] || DEPARTMENT_THEMES['medical-center'];
+}
+
+export function getDepartmentsByCategory(category: string): Department[] {
+  if (category === 'all') return DEPARTMENTS;
+  return DEPARTMENTS.filter(dept => dept.category === category);
+}
+
+// For dynamic Tailwind class generation
+export function getDepartmentTailwindClasses(slug: string) {
+  const theme = getDepartmentTheme(slug);
+  return {
+    bgPrimary: `bg-[${theme.primary}]`,
+    textPrimary: `text-[${theme.primary}]`,
+    borderPrimary: `border-[${theme.primary}]`,
+    gradient: theme.gradient,
+    bgLight: `bg-[${theme.light}]`,
+    bgAccent: `bg-[${theme.accent}]`
+  };
 }

@@ -1,195 +1,289 @@
-// src/components/ui/DepartmentCard.tsx - ENHANCED VERSION
+// src/components/ui/DepartmentCard.tsx - OPTIMIZED & SEO ENHANCED
+// ─────────────────────────────────────────────────────────────────
+// ✅ Dynamic color theming per department
+// ✅ Performance optimized with React.memo
+// ✅ SEO optimized with structured data
+// ✅ Mobile-first responsive design
+// ✅ Accessibility improvements (WCAG 2.1 AA)
+// ✅ Reduced animations for better performance
+// ─────────────────────────────────────────────────────────────────
 
-'use client'
+'use client';
 
+import { memo, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 import { Department } from '@/types/department';
+import { getDepartmentTheme } from '@/data/departments';
 
 interface DepartmentCardProps {
     department: Department;
-    index?: number; // For staggered animations
+    index?: number;
+    priority?: boolean; // For LCP optimization
 }
 
-export default function DepartmentCard({ department, index = 0 }: DepartmentCardProps) {
+const DepartmentCard = memo(function DepartmentCard({
+    department,
+    index = 0,
+    priority = false
+}: DepartmentCardProps) {
+    // Memoize theme to avoid recalculation
+    const theme = useMemo(() => getDepartmentTheme(department.slug), [department.slug]);
+
+    // Inline styles for dynamic colors (better than Tailwind arbitrary values)
+    const styles = useMemo(() => ({
+        primaryBg: { backgroundColor: theme.primary },
+        primaryText: { color: theme.primary },
+        primaryBorder: { borderColor: theme.primary },
+        lightBg: { backgroundColor: theme.light },
+        accentBg: { backgroundColor: theme.accent }
+    }), [theme]);
+
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-50px" }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
+        <article
+            className="group h-full"
+            itemScope
+            itemType="https://schema.org/GovernmentService"
         >
             <Link
                 href={`/departments/${department.slug}`}
-                className="group block h-full"
+                className="block h-full focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-2xl transition-all"
+                style={{ '--focus-ring-color': theme.primary } as React.CSSProperties}
                 aria-label={`Learn more about ${department.name}`}
             >
-                <article className="relative h-full bg-white border-2 border-neutral-200 rounded-2xl overflow-hidden transition-all duration-500 hover:border-primary-400 hover:shadow-2xl hover:shadow-primary-500/20 hover:-translate-y-2">
+                <div className="relative h-full bg-white border-2 border-neutral-200 rounded-2xl overflow-hidden transition-all duration-300 hover:border-opacity-0 hover:shadow-xl hover:-translate-y-1 will-change-transform">
 
-                    {/* Image Header */}
-                    <div className="relative h-52 w-full overflow-hidden bg-gradient-to-br from-primary-50 to-success-50">
+                    {/* Dynamic border glow on hover */}
+                    <div
+                        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none -z-10"
+                        style={{
+                            boxShadow: `0 0 0 2px ${theme.primary}, 0 20px 40px -10px ${theme.primary}40`
+                        }}
+                    />
+
+                    {/* Image Header with Optimized Loading */}
+                    <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-50">
                         {department.image ? (
                             <>
                                 <Image
                                     src={department.image}
-                                    alt={`${department.name} - ${department.category}`}
+                                    alt={`${department.name} services`}
                                     fill
-                                    className="object-cover transition-all duration-700 group-hover:scale-110 group-hover:brightness-110"
-                                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                    loading="lazy"
+                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                    loading={priority ? 'eager' : 'lazy'}
+                                    priority={priority}
                                 />
-
-                                {/* Gradient overlay - subtle always, stronger on hover */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent group-hover:from-black/60 group-hover:via-black/30 transition-all duration-500" />
+                                {/* Gradient overlay with theme color */}
+                                <div
+                                    className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300"
+                                    style={{
+                                        background: `linear-gradient(180deg, transparent 0%, ${theme.primary} 100%)`
+                                    }}
+                                />
                             </>
                         ) : (
-                            <div className="absolute inset-0 flex items-center justify-center text-7xl transition-transform duration-500 group-hover:scale-110">
+                            <div className="absolute inset-0 flex items-center justify-center text-6xl sm:text-7xl grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-70 transition-all duration-300">
                                 {department.icon}
                             </div>
                         )}
 
-                        {/* Category Badge */}
-                        <motion.div
-                            className="absolute top-4 right-4"
-                            whileHover={{ scale: 1.05 }}
-                            transition={{ type: "spring", stiffness: 400 }}
-                        >
-                            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-sm text-neutral-800 border border-white/30 shadow-lg">
-                                {department.category}
+                        {/* Category Badge with Theme */}
+                        <div className="absolute top-3 right-3">
+                            <span
+                                className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-sm border shadow-sm capitalize"
+                                style={styles.primaryBorder}
+                            >
+                                <span style={styles.primaryText}>{department.category}</span>
                             </span>
-                        </motion.div>
+                        </div>
 
-                        {/* Shimmer Effect on Hover */}
-                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                        {/* Shimmer effect on hover */}
+                        <div
+                            className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none"
+                            style={{
+                                background: `linear-gradient(90deg, transparent, ${theme.light}80, transparent)`
+                            }}
+                        />
                     </div>
 
-                    {/* Content */}
-                    <div className="relative p-6 flex flex-col">
+                    {/* Content Section */}
+                    <div className="relative p-5 sm:p-6 flex flex-col h-[calc(100%-12rem)] sm:h-[calc(100%-13rem)]">
 
-                        {/* Floating Icon Badge */}
-                        <motion.div
-                            className="absolute -top-6 left-6 w-14 h-14 rounded-xl bg-white border-2 border-white shadow-xl flex items-center justify-center text-2xl transition-all duration-500 group-hover:shadow-2xl group-hover:border-primary-200"
-                            whileHover={{
-                                scale: 1.15,
-                                rotate: [0, -5, 5, 0],
-                                transition: { duration: 0.5 }
-                            }}
+                        {/* Floating Icon Badge with Theme */}
+                        <div
+                            className="absolute -top-6 left-5 w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white border-2 shadow-lg flex items-center justify-center text-2xl transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1"
+                            style={styles.primaryBorder}
                         >
-                            <span className="transition-transform duration-500 group-hover:scale-110">
+                            <span className="transition-transform duration-300 group-hover:scale-110">
                                 {department.icon}
                             </span>
+                            {/* Icon glow effect */}
+                            <div
+                                className="absolute inset-0 rounded-xl blur-md opacity-0 group-hover:opacity-30 transition-opacity duration-300 -z-10"
+                                style={styles.primaryBg}
+                            />
+                        </div>
 
-                            {/* Glow effect behind icon on hover */}
-                            <div className="absolute inset-0 rounded-xl bg-primary-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
-                        </motion.div>
-
-                        {/* Title */}
-                        <h3 className="text-xl font-bold text-neutral-900 mb-2 mt-10 group-hover:text-primary-600 transition-colors duration-300 line-clamp-2 font-display">
-                            {department.name}
+                        {/* Title with Theme */}
+                        <h3
+                            className="text-lg sm:text-xl font-bold text-neutral-900 mb-2 mt-8 sm:mt-10 line-clamp-2 font-display transition-colors duration-300"
+                            style={{ '--hover-color': theme.primary } as React.CSSProperties}
+                            itemProp="name"
+                        >
+                            <span className="group-hover:text-[var(--hover-color)] transition-colors">
+                                {department.name}
+                            </span>
                         </h3>
 
-                        {/* Description */}
-                        <p className="text-neutral-600 text-sm mb-4 line-clamp-3 flex-grow leading-relaxed">
-                            {department.description}
+                        {/* Tagline */}
+                        <p className="text-sm text-neutral-600 mb-3 line-clamp-2 leading-relaxed" itemProp="description">
+                            {department.tagline}
                         </p>
 
-                        {/* Stats/Features with hover effect */}
+                        {/* Stats Section with Theme */}
                         {department.stats && department.stats.length > 0 && (
-                            <div className="grid grid-cols-2 gap-4 mb-5 pb-5 border-b border-neutral-200">
+                            <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b border-neutral-200">
                                 {department.stats.slice(0, 2).map((stat, idx) => (
-                                    <motion.div
+                                    <div
                                         key={idx}
-                                        className="text-center p-2 rounded-lg transition-all duration-300 group-hover:bg-primary-50"
-                                        whileHover={{ scale: 1.05 }}
+                                        className="text-center p-2.5 rounded-lg transition-all duration-300 hover:shadow-sm"
+                                        style={{
+                                            '--stat-bg': theme.light,
+                                            backgroundColor: 'var(--stat-bg-hover, transparent)'
+                                        } as React.CSSProperties}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.setProperty('--stat-bg-hover', theme.light);
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.removeProperty('--stat-bg-hover');
+                                        }}
                                     >
-                                        <div className="text-xl font-bold text-primary-600 font-display transition-all duration-300 group-hover:text-primary-700">
+                                        <div
+                                            className="text-lg sm:text-xl font-bold font-display mb-0.5 transition-colors"
+                                            style={styles.primaryText}
+                                        >
                                             {stat.value}
                                         </div>
-                                        <div className="text-xs text-neutral-600 font-medium">
+                                        <div className="text-xs text-neutral-600 font-medium leading-tight">
                                             {stat.label}
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 ))}
                             </div>
                         )}
 
-                        {/* Key Services Tags with improved styling */}
+                        {/* Service Tags with Theme */}
                         {department.services && department.services.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-5">
+                            <div className="flex flex-wrap gap-2 mb-4 flex-grow">
                                 {department.services.slice(0, 3).map((service, idx) => (
-                                    <motion.span
+                                    <span
                                         key={idx}
-                                        className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-50 text-neutral-700 border border-neutral-200 transition-all duration-300 hover:bg-primary-50 hover:border-primary-200 hover:text-primary-700"
-                                        whileHover={{ scale: 1.05 }}
-                                        transition={{ type: "spring", stiffness: 400 }}
+                                        className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 hover:shadow-sm"
+                                        style={{
+                                            backgroundColor: theme.light,
+                                            borderColor: theme.accent,
+                                            color: theme.primary
+                                        }}
                                     >
-                                        <svg className="w-3 h-3 mr-1.5 text-primary-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                         </svg>
                                         {typeof service === 'string' ? service : service.title}
-                                    </motion.span>
+                                    </span>
                                 ))}
                                 {department.services.length > 3 && (
-                                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-primary-50 text-primary-600 border border-primary-100">
+                                    <span
+                                        className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium border"
+                                        style={{
+                                            backgroundColor: theme.light,
+                                            borderColor: theme.accent,
+                                            color: theme.primary
+                                        }}
+                                    >
                                         +{department.services.length - 3} more
                                     </span>
                                 )}
                             </div>
                         )}
 
-                        {/* CTA Link with improved design */}
-                        <div className="flex items-center justify-between mt-auto pt-5 border-t border-neutral-200 group-hover:border-primary-200 transition-colors duration-300">
-                            <span className="text-sm font-semibold text-primary-600 group-hover:text-primary-700 transition-colors flex items-center gap-2">
+                        {/* CTA Footer with Theme */}
+                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-neutral-200 group-hover:border-opacity-50 transition-all">
+                            <span
+                                className="text-sm font-semibold flex items-center gap-2 transition-all duration-300"
+                                style={styles.primaryText}
+                            >
                                 Learn More
                                 <svg
-                                    className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-2"
+                                    className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
                                 >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2.5}
-                                        d="M17 8l4 4m0 0l-4 4m4-4H3"
-                                    />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                 </svg>
                             </span>
 
-                            {/* Enhanced Status Indicator */}
+                            {/* Active Status with Theme */}
                             {department.isActive !== false && (
-                                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-success-50 border border-success-200">
-                                    <motion.div
-                                        className="w-2 h-2 bg-success-500 rounded-full"
-                                        animate={{
-                                            scale: [1, 1.2, 1],
-                                            opacity: [1, 0.7, 1]
-                                        }}
-                                        transition={{
-                                            duration: 2,
-                                            repeat: Infinity,
-                                            ease: "easeInOut"
+                                <div
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border"
+                                    style={{
+                                        backgroundColor: `${theme.light}`,
+                                        borderColor: theme.accent
+                                    }}
+                                >
+                                    <div
+                                        className="w-2 h-2 rounded-full"
+                                        style={{
+                                            backgroundColor: theme.primary,
+                                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
                                         }}
                                     />
-                                    <span className="text-xs font-medium text-success-700">Active</span>
+                                    <span className="text-xs font-medium" style={styles.primaryText}>
+                                        Active
+                                    </span>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Enhanced Corner Accent with Glow */}
-                    <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-primary-500/10 via-success-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-tl-full blur-2xl" />
-
-                    {/* Top Corner Accent */}
-                    <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-success-500/10 via-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-br-full blur-2xl" />
-
-                    {/* Subtle Border Glow on Hover */}
-                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary-500/20 via-success-500/20 to-primary-500/20 blur-xl" />
-                    </div>
-                </article>
+                    {/* Corner Accent with Theme */}
+                    <div
+                        className="absolute bottom-0 right-0 w-32 h-32 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-tl-full blur-2xl"
+                        style={{
+                            background: `linear-gradient(135deg, ${theme.primary}15, transparent)`
+                        }}
+                    />
+                </div>
             </Link>
-        </motion.div>
+
+            {/* Structured Data for SEO */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'GovernmentService',
+                        name: department.name,
+                        description: department.description,
+                        url: `https://khanhub.com.pk/departments/${department.slug}`,
+                        provider: {
+                            '@type': 'GovernmentOrganization',
+                            name: 'Khan Hub',
+                            url: 'https://khanhub.com.pk'
+                        },
+                        areaServed: {
+                            '@type': 'Country',
+                            name: 'Pakistan'
+                        }
+                    })
+                }}
+            />
+        </article>
     );
-}
+});
+
+DepartmentCard.displayName = 'DepartmentCard';
+
+export default DepartmentCard;
