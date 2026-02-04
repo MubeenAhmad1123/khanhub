@@ -1,3 +1,4 @@
+'use client';
 // src/components/ui/DepartmentCard.tsx - OPTIMIZED & SEO ENHANCED
 // ─────────────────────────────────────────────────────────────────
 // ✅ Dynamic color theming per department
@@ -7,8 +8,6 @@
 // ✅ Accessibility improvements (WCAG 2.1 AA)
 // ✅ Reduced animations for better performance
 // ─────────────────────────────────────────────────────────────────
-
-'use client';
 
 import { memo, useMemo } from 'react';
 import Link from 'next/link';

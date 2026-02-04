@@ -8,6 +8,8 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { Metadata } from 'next';
+import { Suspense } from 'react';
+import DepartmentsListingClient from './DepartmentsListingClient';
 
 export const metadata: Metadata = {
     title: 'All Departments - Khan Hub | Serving Communities Across Pakistan',
@@ -24,4 +26,10 @@ export const metadata: Metadata = {
     }
 };
 
-export { default } from './DepartmentsListingClient';
+export default function DepartmentsPage() {
+    return (
+        <Suspense>
+            <DepartmentsListingClient />
+        </Suspense>
+    );
+}
