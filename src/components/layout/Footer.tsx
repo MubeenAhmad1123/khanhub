@@ -104,7 +104,7 @@ export default function Footer() {
               <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30 group-hover:shadow-primary-500/50 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
                 <Image
                   src="/logo.webp"
-                  alt="KhanHub Logo"
+                  alt={`${SITE.fullName} - Leading Pakistan's Welfare`}
                   width={44}
                   height={44}
                   className="w-full h-full object-cover rounded-xl"

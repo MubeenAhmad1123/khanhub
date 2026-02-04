@@ -103,6 +103,47 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+
+      {/* Structured Data for local NGO search results */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'LocalBusiness',
+            name: SITE.fullName,
+            image: `${SITE.url}/logo.png`,
+            '@id': `${SITE.url}/contact`,
+            url: `${SITE.url}/contact`,
+            telephone: SITE.phone,
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: SITE.address,
+              addressLocality: 'Lahore',
+              addressRegion: 'Punjab',
+              addressCountry: 'PK'
+            },
+            openingHoursSpecification: {
+              '@type': 'OpeningHoursSpecification',
+              dayOfWeek: [
+                'Monday',
+                'Tuesday',
+                'Wednesday',
+                'Thursday',
+                'Friday',
+                'Saturday',
+                'Sunday'
+              ],
+              opens: '00:00',
+              closes: '23:59'
+            },
+            sameAs: [
+              'https://www.facebook.com/khanhub.com.pk/',
+              'https://www.instagram.com/khanhub.com.pk/'
+            ]
+          })
+        }}
+      />
     </>
   );
 }

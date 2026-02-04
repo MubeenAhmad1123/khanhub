@@ -59,6 +59,7 @@ const SocialMediaSidebar: React.FC = () => {
           target="_blank"
           rel="noopener noreferrer"
           style={{ backgroundColor: social.bgColor }}
+          aria-label={`Visit our ${social.name} page`}
         >
           {social.label}
           <span className="social-icon">{social.icon}</span>

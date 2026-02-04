@@ -1,21 +1,22 @@
 // src/app/donate/page.tsx
 
-import { PageHero }        from '@/components/ui';
+import { PageHero } from '@/components/ui';
 import { generateMetadata } from '@/lib/utils';
-import DonationForm         from '@/components/forms/DonationForm';
+import DonationForm from '@/components/forms/DonationForm';
+import { SITE } from '@/data/site';
 
 export const metadata = generateMetadata({
-  title:       'Donate',
+  title: 'Donate',
   description: 'Make a donation to Khan Hub and help us provide healthcare, education, and welfare services to communities in need.',
-  slug:        'donate',
+  slug: 'donate',
 });
 
 const IMPACT_EXAMPLES = [
-  { amount: 'PKR 500',   impact: 'Provides medicine for one patient for a week.',       icon: '💊' },
-  { amount: 'PKR 1,000', impact: 'Covers one student\'s school supplies for a month.',  icon: '📒' },
-  { amount: 'PKR 2,500', impact: 'Funds one day of free medical consultation.',         icon: '🩺' },
-  { amount: 'PKR 5,000', impact: 'Supports a family\'s ration for one month.',          icon: '🍚' },
-  { amount: 'PKR 10,000',impact: 'Sponsors one child\'s education for an entire year.', icon: '🎓' },
+  { amount: 'PKR 500', impact: 'Provides medicine for one patient for a week.', icon: '💊' },
+  { amount: 'PKR 1,000', impact: 'Covers one student\'s school supplies for a month.', icon: '📒' },
+  { amount: 'PKR 2,500', impact: 'Funds one day of free medical consultation.', icon: '🩺' },
+  { amount: 'PKR 5,000', impact: 'Supports a family\'s ration for one month.', icon: '🍚' },
+  { amount: 'PKR 10,000', impact: 'Sponsors one child\'s education for an entire year.', icon: '🎓' },
 ];
 
 export default function DonatePage() {
@@ -77,6 +78,25 @@ export default function DonatePage() {
           </div>
         </div>
       </section>
+
+      {/* Structured Data for Donate Action */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'DonateAction',
+            name: 'Donate to Khan Hub',
+            description: 'Support Pakistan\'s leading social welfare organization',
+            recipient: {
+              '@type': 'NGO',
+              name: SITE.fullName,
+              url: SITE.url
+            },
+            url: `${SITE.url}/donate`
+          })
+        }}
+      />
     </>
   );
 }

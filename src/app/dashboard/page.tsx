@@ -140,7 +140,7 @@ export default function DashboardPage() {
                                     {user?.photoURL ? (
                                         <Image
                                             src={user.photoURL}
-                                            alt={user.displayName || 'User'}
+                                            alt={`${user.displayName || 'User'}'s Profile Account Avatar`}
                                             fill
                                             className="object-cover"
                                         />

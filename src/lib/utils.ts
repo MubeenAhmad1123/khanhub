@@ -13,26 +13,35 @@ export function generateMetadata(overrides: {
   description?: string;
   slug?: string;
 } = {}) {
-  const title       = overrides.title       ? `${overrides.title} | ${SITE.name}` : `${SITE.name} — ${SITE.tagline}`;
+  const fullTitle = overrides.title ? `${overrides.title} | ${SITE.name}` : `${SITE.name} — ${SITE.tagline}`;
   const description = overrides.description || SITE.description;
-  const url         = overrides.slug        ? `${SITE.url}/${overrides.slug}` : SITE.url;
+  const url = overrides.slug ? `${SITE.url}/${overrides.slug}` : SITE.url;
 
   return {
-    title,
+    title: fullTitle,
     description,
     metadataBase: new URL(SITE.url),
     openGraph: {
-      title,
+      title: fullTitle,
       description,
       url,
       siteName: SITE.name,
       type: 'website',
       locale: 'en_PK',
+      images: [
+        {
+          url: '/og-image.jpg',
+          width: 1200,
+          height: 630,
+          alt: SITE.fullName,
+        }
+      ],
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: fullTitle,
       description,
+      images: ['/twitter-image.jpg'],
     },
     alternates: {
       canonical: url,

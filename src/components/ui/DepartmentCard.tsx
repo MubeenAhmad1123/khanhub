@@ -66,7 +66,7 @@ const DepartmentCard = memo(function DepartmentCard({
                             <>
                                 <Image
                                     src={department.image}
-                                    alt={`${department.name} services`}
+                                    alt={`Khan Hub ${department.name} - Professional Welfare Services`}
                                     fill
                                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -146,17 +146,10 @@ const DepartmentCard = memo(function DepartmentCard({
                                 {department.stats.slice(0, 2).map((stat, idx) => (
                                     <div
                                         key={idx}
-                                        className="text-center p-2.5 rounded-lg transition-all duration-300 hover:shadow-sm"
+                                        className="text-center p-2.5 rounded-lg transition-all duration-300 hover:shadow-sm hover:bg-[var(--stat-bg-hover)]"
                                         style={{
-                                            '--stat-bg': theme.light,
-                                            backgroundColor: 'var(--stat-bg-hover, transparent)'
+                                            '--stat-bg-hover': theme.light,
                                         } as React.CSSProperties}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.setProperty('--stat-bg-hover', theme.light);
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.removeProperty('--stat-bg-hover');
-                                        }}
                                     >
                                         <div
                                             className="text-lg sm:text-xl font-bold font-display mb-0.5 transition-colors"

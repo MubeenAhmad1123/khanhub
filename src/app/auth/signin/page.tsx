@@ -71,7 +71,7 @@ export default function SignInPage() {
                             <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
                                 <Image
                                     src="/logo.webp"
-                                    alt="KhanHub Logo"
+                                    alt="Khan Hub - Empowering Communities Through Social Welfare"
                                     width={56}
                                     height={56}
                                     className="w-full h-full object-cover rounded-2xl"

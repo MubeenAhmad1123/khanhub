@@ -20,7 +20,7 @@ export default function ProfilePage() {
                                 {user?.photoURL ? (
                                     <Image
                                         src={user.photoURL}
-                                        alt={user.displayName || 'User'}
+                                        alt={`${user.displayName || 'User'}'s Profile Account Picture`}
                                         fill
                                         className="object-cover"
                                     />

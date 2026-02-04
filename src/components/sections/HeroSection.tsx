@@ -123,10 +123,11 @@ const ImageCarousel = memo(function ImageCarousel() {
         >
           <Image
             src={DEPARTMENT_IMAGES[currentIndex].src}
-            alt={DEPARTMENT_IMAGES[currentIndex].alt}
+            alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
             fill
             className="object-contain drop-shadow-2xl"
             priority={currentIndex === 0}
+            loading={currentIndex === 0 ? 'eager' : 'lazy'}
             sizes="(max-width: 640px) 256px, (max-width: 1024px) 320px, 384px"
           />
         </motion.div>
@@ -139,8 +140,8 @@ const ImageCarousel = memo(function ImageCarousel() {
             key={idx}
             onClick={() => setCurrentIndex(idx)}
             className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex
-                ? 'w-8 bg-primary-500'
-                : 'w-1.5 bg-neutral-300 hover:bg-primary-300'
+              ? 'w-8 bg-primary-500'
+              : 'w-1.5 bg-neutral-300 hover:bg-primary-300'
               }`}
             aria-label={`Go to slide ${idx + 1}`}
           />

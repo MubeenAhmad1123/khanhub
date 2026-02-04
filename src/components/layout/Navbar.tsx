@@ -18,6 +18,7 @@ import { usePathname } from 'next/navigation';
 import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
 import { cn } from '@/lib/utils';
 import { Menu, X, ChevronDown } from 'lucide-react';
+import { SITE } from '@/data/site';
 
 // Navigation links - memoized constant
 const NAV_LINKS = [
@@ -35,7 +36,7 @@ const Logo = memo(function Logo() {
       <div className="relative w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30 group-hover:shadow-primary-500/50 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
         <Image
           src="/logo.webp"
-          alt="KhanHub Logo"
+          alt={`${SITE.name} Foundation Logo`}
           width={44}
           height={44}
           className="w-full h-full object-cover rounded-lg sm:rounded-xl"
