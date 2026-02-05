@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@import "@khanhub/config/tailwind.css";
+
+/* Base styles */
+body {
+    @apply antialiased text-slate-900 bg-slate-50;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Utility Gradients */
+.bg-mesh-medical {
+    background-color: #f8fafc;
+    background-image:
+        radial-gradient(at 0% 0%, hsla(199, 89%, 48%, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(187, 92%, 45%, 0.1) 0px, transparent 50%);
+}
+
+.bg-mesh-enterprise {
+    background-color: #f8fafc;
+    background-image:
+        radial-gradient(at 0% 100%, hsla(221, 83%, 53%, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(262, 83%, 58%, 0.08) 0px, transparent 50%);
+}
+
+.scroll-smooth {
+    scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}

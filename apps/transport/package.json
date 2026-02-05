@@ -2,18 +2,27 @@
   "name": "transport",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "dev:web": "npm --prefix apps/web run dev",
-    "dev:store": "npm --prefix apps/store run dev",
-    "dev:jobs": "npm --prefix apps/job run dev",
-    "dev:transport": "npm --prefix apps/transport run dev",
-    "build:web": "npm --prefix apps/web run build",
-    "build:store": "npm --prefix apps/store run build",
-    "build:jobs": "npm --prefix apps/job run build",
-    "build:transport": "npm --prefix apps/transport run build"
+    "dev": "next dev -p 3003",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@khanhub/shared-ui": "*",
+    "@khanhub/firebase": "*",
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18",
+    "lucide-react": "^0.300.0",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "postcss": "^8.5.6",
+    "typescript": "^5"
   }
 }

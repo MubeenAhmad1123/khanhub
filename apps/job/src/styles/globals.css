@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@khanhub/config/tailwind.css";
+
+@layer base {
+    body {
+        @apply antialiased text-slate-900 bg-slate-50;
+    }
+}

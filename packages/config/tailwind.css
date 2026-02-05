@@ -1,0 +1,53 @@
+@theme {
+    /* Medical Brand Colors */
+    --color-medical-50: #f0f9ff;
+    --color-medical-100: #e0f2fe;
+    --color-medical-200: #bae6fd;
+    --color-medical-300: #7dd3fc;
+    --color-medical-400: #38bdf8;
+    --color-medical-500: #0ea5e9;
+    --color-medical-600: #0284c7;
+    --color-medical-700: #0369a1;
+    --color-medical-800: #075985;
+    --color-medical-900: #0c4a6e;
+
+    /* Enterprise Brand Colors */
+    --color-enterprise-50: #f5f3ff;
+    --color-enterprise-100: #ede9fe;
+    --color-enterprise-200: #ddd6fe;
+    --color-enterprise-300: #c4b5fd;
+    --color-enterprise-400: #a78bfa;
+    --color-enterprise-500: #8b5cf6;
+    --color-enterprise-600: #7c3aed;
+    --color-enterprise-700: #6d28d9;
+    --color-enterprise-800: #5b21b6;
+    --color-enterprise-900: #4c1d95;
+
+    /* Animations */
+    --animate-float: float 3s ease-in-out infinite;
+    --animate-pulse-subtle: pulse-subtle 2s ease-in-out infinite;
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    @keyframes pulse-subtle {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.8;
+        }
+    }
+}
