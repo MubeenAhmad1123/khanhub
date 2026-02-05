@@ -11,6 +11,7 @@
   "dependencies": {
     "@khanhub/shared-ui": "file:../../packages/shared-ui",
     "@khanhub/firebase": "file:../../packages/firebase",
+    "@khanhub/config": "file:../../packages/config",
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.2",
     "next": "14.2.35",

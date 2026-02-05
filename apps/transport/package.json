@@ -11,6 +11,7 @@
   "dependencies": {
     "@khanhub/shared-ui": "file:../../packages/shared-ui",
     "@khanhub/firebase": "file:../../packages/firebase",
+    "@khanhub/config": "file:../../packages/config",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
