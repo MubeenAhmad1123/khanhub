@@ -19,7 +19,6 @@ export default function SurgicalNavbar() {
 
     const categories = [
         { name: 'Surgical Equipment', href: '/surgical', icon: '🏥' },
-        { name: 'Enterprise Products', href: '/enterprise', icon: '🏢' },
     ];
 
     const handleSearch = (e: React.FormEvent) => {
@@ -46,7 +45,7 @@ export default function SurgicalNavbar() {
                             </a>
                         </div>
                         <div className="hidden sm:flex items-center">
-                            <span className="text-blue-100 italic">Quality Surgical & Enterprise Solutions</span>
+                            <span className="text-blue-100 italic">Premium Surgical Solutions</span>
                         </div>
                     </div>
                 </div>
@@ -67,7 +66,7 @@ export default function SurgicalNavbar() {
                             />
                             <div className="hidden sm:block">
                                 <h1 className="text-xl font-bold text-blue-600">Khanhub Surgical</h1>
-                                <p className="text-xs text-gray-600">Medical & Enterprise Solutions</p>
+                                <p className="text-xs text-gray-600">Premium Surgical Solutions</p>
                             </div>
                         </Link>
 
@@ -76,7 +75,7 @@ export default function SurgicalNavbar() {
                             <form onSubmit={handleSearch} className="relative">
                                 <input
                                     type="text"
-                                    placeholder="Search surgical equipment, office supplies..."
+                                    placeholder="Search surgical equipment..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

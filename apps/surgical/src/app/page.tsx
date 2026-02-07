@@ -16,24 +16,18 @@ export default function HomePage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
                         <div>
                             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                                Premium Medical & Enterprise Solutions
+                                Premium Medical Solutions
                             </h1>
                             <p className="text-xl mb-6 text-blue-100">
-                                Quality surgical equipment and office supplies for professionals across Pakistan
+                                Quality surgical equipment and medical instruments for professionals across Pakistan
                             </p>
                             <div className="flex gap-4">
                                 <Link
                                     href="/surgical"
                                     className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors inline-flex items-center gap-2"
                                 >
-                                    Shop Surgical
+                                    Shop Now
                                     <ArrowRight className="h-5 w-5" />
-                                </Link>
-                                <Link
-                                    href="/enterprise"
-                                    className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors"
-                                >
-                                    Shop Enterprise
                                 </Link>
                             </div>
                         </div>
@@ -54,10 +48,10 @@ export default function HomePage() {
             {/* Categories */}
             <section className="py-12 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="max-w-3xl mx-auto">
                         <Link
                             href="/surgical"
-                            className="group relative overflow-hidden rounded-xl bg-white border-2 hover:border-blue-600 transition-all p-8"
+                            className="group relative overflow-hidden rounded-xl bg-white border-2 hover:border-blue-600 transition-all p-8 flex"
                         >
                             <div className="flex items-center gap-6">
                                 <div className="p-4 bg-blue-100 rounded-full group-hover:bg-blue-600 transition-colors">
@@ -69,27 +63,7 @@ export default function HomePage() {
                                         Professional medical instruments and hospital furniture
                                     </p>
                                     <span className="text-blue-600 font-semibold flex items-center gap-2">
-                                        Shop Now <ArrowRight className="h-5 w-5" />
-                                    </span>
-                                </div>
-                            </div>
-                        </Link>
-
-                        <Link
-                            href="/enterprise"
-                            className="group relative overflow-hidden rounded-xl bg-white border-2 hover:border-blue-600 transition-all p-8"
-                        >
-                            <div className="flex items-center gap-6">
-                                <div className="p-4 bg-purple-100 rounded-full group-hover:bg-purple-600 transition-colors">
-                                    <Building2 className="h-12 w-12 text-purple-600 group-hover:text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-2xl font-bold mb-2">Enterprise Products</h3>
-                                    <p className="text-gray-600 mb-3">
-                                        Office equipment and business supplies for your company
-                                    </p>
-                                    <span className="text-blue-600 font-semibold flex items-center gap-2">
-                                        Shop Now <ArrowRight className="h-5 w-5" />
+                                        Explore Catalog <ArrowRight className="h-5 w-5" />
                                     </span>
                                 </div>
                             </div>

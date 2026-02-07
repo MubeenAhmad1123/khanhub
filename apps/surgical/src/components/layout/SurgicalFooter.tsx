@@ -48,21 +48,17 @@ export default function SurgicalFooter() {
                             </div>
                         </div>
                         <p className="text-sm text-gray-400 mb-4">
-                            Your trusted partner for surgical equipment and enterprise solutions in Pakistan.
+                            Professional medical equipment and surgical instruments for healthcare providers across Pakistan.
                         </p>
                     </div>
 
                     {/* Quick Links */}
                     <div>
-                        <h4 className="text-white font-semibold mb-4">Quick Links</h4>
-                        <ul className="space-y-2">
-                            {quickLinks.map((link) => (
-                                <li key={link.href}>
-                                    <Link href={link.href} className="text-sm hover:text-white transition-colors">
-                                        {link.name}
-                                    </Link>
-                                </li>
-                            ))}
+                        <h3 className="text-lg font-bold mb-4">Quick Links</h3>
+                        <ul className="space-y-2 text-blue-100">
+                            <li><Link href="/surgical" className="hover:text-white transition-colors">Our Catalog</Link></li>
+                            <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
+                            <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
                         </ul>
                     </div>
 
