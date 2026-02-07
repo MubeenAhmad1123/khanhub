@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
+import { OrderProvider } from '@/context/OrderContext';
 import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 import EnterpriseNavbar from '@/components/layout/EnterpriseNavbar';
 import EnterpriseFooter from '@/components/layout/EnterpriseFooter';
@@ -24,9 +25,11 @@ export default function RootLayout({
             <body className={inter.className}>
                 <AuthProviderWrapper>
                     <CartProvider>
-                        <EnterpriseNavbar />
-                        <main className="min-h-screen">{children}</main>
-                        <EnterpriseFooter />
+                        <OrderProvider>
+                            <EnterpriseNavbar />
+                            <main className="min-h-screen">{children}</main>
+                            <EnterpriseFooter />
+                        </OrderProvider>
                     </CartProvider>
                 </AuthProviderWrapper>
             </body>

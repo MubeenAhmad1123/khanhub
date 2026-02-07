@@ -4,11 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, ArrowRight, ShieldCheck, Loader2, Phone } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@khanhub/auth';
 
 export default function RegisterPage() {
     const router = useRouter();
-    const { register } = useAuth();
+    const { signUpWithEmail } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -30,13 +30,13 @@ export default function RegisterPage() {
         setIsLoading(true);
         setError('');
 
-        const result = await register(formData.name, formData.email, formData.password);
-        setIsLoading(false);
-
-        if (result.success) {
+        try {
+            await signUpWithEmail(formData.email, formData.password, formData.name);
             router.push('/surgical');
-        } else {
-            setError(result.error || 'Registration failed.');
+        } catch (err: any) {
+            setError(err.message || 'Registration failed.');
+        } finally {
+            setIsLoading(false);
         }
     };
 

@@ -4,11 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@khanhub/auth';
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login } = useAuth();
+    const { signInWithEmail } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -22,13 +22,13 @@ export default function LoginPage() {
         setIsLoading(true);
         setError('');
 
-        const result = await login(formData.email, formData.password);
-        setIsLoading(false);
-
-        if (result.success) {
+        try {
+            await signInWithEmail(formData.email, formData.password);
             router.push('/surgical'); // Redirect to products after login
-        } else {
-            setError(result.error || 'Login failed. Please check your credentials.');
+        } catch (err: any) {
+            setError(err.message || 'Login failed. Please check your credentials.');
+        } finally {
+            setIsLoading(false);
         }
     };
 

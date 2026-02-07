@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { Order, OrderResponse, CheckoutFormData } from '@/types/order';
 import { Cart } from '@/types/cart';
 import { useCart } from './CartContext';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@khanhub/auth';
 
 interface OrderContextType {
     orders: Order[];
@@ -19,7 +19,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const [orders, setOrders] = useState<Order[]>([]);
     const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
     const { cart, clearCart } = useCart();
-    const { user, isAuthenticated } = useAuth();
+    const { user } = useAuth(); // isAuthenticated checks are done via user presence
 
     // Load orders from localStorage
     useEffect(() => {
@@ -42,7 +42,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     // Filtered orders for the current user
     const userOrders = orders.filter(o =>
-        (isAuthenticated && o.userId === user?.id) || (!isAuthenticated && !o.userId)
+        (user && o.userId === user.uid) || (!user && !o.userId)
     );
 
     const getOrderById = useCallback((id: string) => {
@@ -57,7 +57,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             const orderId = `ORD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
             const newOrder: Order = {
                 id: orderId,
-                userId: user?.id, // Link to current user if logged in
+                userId: user?.uid, // Link to current user if logged in
                 orderNumber: orderId,
                 items: [...cart.items],
                 shippingAddress: formData.shippingAddress,

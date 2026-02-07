@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@khanhub/auth": "file:../../packages/auth",
+    "clsx": "^2.1.0",
     "firebase": "^10.8.0",
     "framer-motion": "^11.0.0",
     "lucide-react": "^0.344.0",
+    "tailwind-merge": "^2.2.1",
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
