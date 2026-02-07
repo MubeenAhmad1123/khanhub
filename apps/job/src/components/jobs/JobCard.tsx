@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Briefcase, Clock, DollarSign, Bookmark, Building2 } from 'lucide-react';
+import { MapPin, Briefcase, Clock, DollarSign, Bookmark, Building2, Mail, Phone } from 'lucide-react';
 import { Job } from '@/types/job';
 import {
     formatSalaryRange,
@@ -12,18 +12,30 @@ import {
     getCategoryLabel,
     getDeadlineUrgency,
 } from '@/lib/utils';
+import BlurredContent from '@/components/premium/BlurredContent';
+import MatchScoreBadge from './MatchScoreBadge';
+import PremiumBadge from '@/components/premium/PremiumBadge';
 
 interface JobCardProps {
     job: Job;
     onSave?: (jobId: string) => void;
     isSaved?: boolean;
+    isPremium?: boolean;
+    matchScore?: number;
 }
 
-export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) {
+export default function JobCard({ job, onSave, isSaved = false, isPremium = false, matchScore }: JobCardProps) {
     const urgency = getDeadlineUrgency(job.deadline);
 
     return (
-        <div className="bg-white border rounded-lg p-6 hover:shadow-lg transition-all duration-300 group">
+        <div className="bg-white border rounded-lg p-6 hover:shadow-lg transition-all duration-300 group relative">
+            {/* Premium Badge */}
+            {job.featured && (
+                <div className="absolute top-4 right-4">
+                    <PremiumBadge />
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start gap-4 flex-1">
@@ -52,11 +64,13 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
                                 {job.title}
                             </h3>
                         </Link>
-                        <Link href={`/companies/${job.company.id}`}>
-                            <p className="text-jobs-dark/60 font-bold text-sm hover:text-jobs-primary transition-colors">
-                                {job.company.name}
-                            </p>
-                        </Link>
+                        <BlurredContent isPremium={isPremium}>
+                            <Link href={`/companies/${job.company.id}`}>
+                                <p className="text-jobs-dark/60 font-bold text-sm hover:text-jobs-primary transition-colors">
+                                    {job.company.name}
+                                </p>
+                            </Link>
+                        </BlurredContent>
                     </div>
                 </div>
 
@@ -72,7 +86,7 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
                 </button>
             </div>
 
-            {/* Badges */}
+            {/* Badges & Match Score */}
             <div className="flex flex-wrap gap-2 mb-4">
                 <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getJobTypeBadge(job.type)}`}>
                     {job.type.replace('-', ' ').toUpperCase()}
@@ -80,9 +94,12 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
                 <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
                     {getCategoryLabel(job.category)}
                 </span>
-                {job.isFeatured && (
-                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                        ⭐ FEATURED
+                {matchScore !== undefined && (
+                    <MatchScoreBadge score={matchScore} />
+                )}
+                {job.locationType === 'remote' && (
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                        🏠 REMOTE
                     </span>
                 )}
             </div>
@@ -93,7 +110,7 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
             </p>
 
             {/* Details */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-jobs-dark/60">
                     <MapPin className="h-4 w-4 flex-shrink-0 text-jobs-primary" />
                     <span className="truncate uppercase tracking-tight">{job.city}, {job.province}</span>
@@ -111,6 +128,20 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
                     </div>
                 )}
             </div>
+
+            {/* Contact Info (Blurred for non-premium) */}
+            <BlurredContent isPremium={isPremium}>
+                <div className="bg-gray-50 p-3 rounded-xl mb-4 space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-jobs-dark/70">
+                        <Mail className="h-4 w-4 text-jobs-primary" />
+                        <span>{job.companyEmail}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-jobs-dark/70">
+                        <Phone className="h-4 w-4 text-jobs-primary" />
+                        <span>{job.companyPhone}</span>
+                    </div>
+                </div>
+            </BlurredContent>
 
             {/* Footer */}
             <div className="flex items-center justify-between pt-4 border-t">

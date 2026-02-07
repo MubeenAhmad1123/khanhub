@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+    
+    function isJobSeeker() {
+      return isAuthenticated() && getUserRole() == 'job_seeker';
+    }
+    
+    function isEmployer() {
+      return isAuthenticated() && getUserRole() == 'employer';
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Jobs Collection
+    match /jobs/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isEmployer();
+      allow update: if isAdmin() || 
+                       (isEmployer() && resource.data.employerId == request.auth.uid);
+      allow delete: if isAdmin() || 
+                       (isEmployer() && resource.data.employerId == request.auth.uid);
+    }
+    
+    // Applications Collection
+    match /applications/{applicationId} {
+      allow read: if isAdmin() || 
+                     isOwner(resource.data.jobSeekerId) || 
+                     isOwner(resource.data.employerId);
+      allow create: if isJobSeeker() && request.auth.uid == request.resource.data.jobSeekerId;
+      allow update: if isAdmin() || 
+                       isOwner(resource.data.employerId) ||
+                       isOwner(resource.data.jobSeekerId);
+      allow delete: if isAdmin();
+    }
+    
+    // Payments Collection
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Placements Collection (Admin only)
+    match /placements/{placementId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Saved Jobs Collection
+    match /saved_jobs/{userId}/{jobId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Points History Collection
+    match /points_history/{pointId} {
+      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

@@ -1,47 +1,55 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Search, MapPin, Filter, SlidersHorizontal, ChevronDown, Bookmark, Building2, Clock, DollarSign, TrendingUp, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, MapPin, Filter, SlidersHorizontal, ChevronDown, Bookmark, Building2, Clock, DollarSign, TrendingUp, Users, Loader2 } from 'lucide-react';
 import { Button } from '@khanhub/shared-ui';
+import { getApprovedJobs } from '@/lib/firebase/firestore';
+import { Job } from '@/types/job';
 
 export default function JobSearchPage() {
-    const [activeView, setActiveView] = useState('list');
+    const router = useRouter();
+    const [jobs, setJobs] = useState<Job[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [locationTerm, setLocationTerm] = useState('');
 
-    const jobs = [
-        {
-            id: 1,
-            title: 'Senior Registered Nurse',
-            company: 'Indus Hospital',
-            location: 'Multan Road, Vehari',
-            type: 'Full-time',
-            salary: 'PKR 85,000 - 120,000',
-            posted: '2 hours ago',
-            logo: '🏥',
-            category: 'Healthcare'
-        },
-        {
-            id: 2,
-            title: 'Frontend Developer (Next.js)',
-            company: 'TechFlow Solutions',
-            location: 'Gulberg, Lahore',
-            type: 'Remote',
-            salary: 'PKR 150,000 - 250,000',
-            posted: '5 hours ago',
-            logo: '💻',
-            category: 'Technology'
-        },
-        {
-            id: 3,
-            title: 'Administrative Officer',
-            company: 'Khanhub Enterprise',
-            location: 'Peer Murad, Vehari',
-            type: 'Full-time',
-            salary: 'PKR 45,000 - 60,000',
-            posted: '1 day ago',
-            logo: '🏢',
-            category: 'Services'
-        }
-    ];
+    useEffect(() => {
+        const loadJobs = async () => {
+            try {
+                const approvedJobs = await getApprovedJobs();
+                setJobs(approvedJobs);
+                setLoading(false);
+            } catch (err) {
+                console.error('Error loading jobs:', err);
+                setLoading(false);
+            }
+        };
+
+        loadJobs();
+    }, []);
+
+    const filteredJobs = jobs.filter(job => {
+        const matchesSearch = searchTerm === '' ||
+            job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            job.company.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesLocation = locationTerm === '' ||
+            job.city.toLowerCase().includes(locationTerm.toLowerCase()) ||
+            job.province.toLowerCase().includes(locationTerm.toLowerCase());
+
+        return matchesSearch && matchesLocation;
+    });
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-jobs-primary" />
+            </div>
+        );
+    }
+
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -55,7 +63,8 @@ export default function JobSearchPage() {
                                 type="text"
                                 placeholder="Job title, keywords, or company"
                                 className="w-full pl-12 pr-4 py-3 bg-jobs-neutral border border-gray-100 rounded-xl focus:ring-2 focus:ring-jobs-primary focus:bg-white transition-all font-bold text-jobs-dark"
-                                defaultValue="Nursing"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <div className="w-full md:w-64 relative">
@@ -64,7 +73,8 @@ export default function JobSearchPage() {
                                 type="text"
                                 placeholder="City or region"
                                 className="w-full pl-12 pr-4 py-3 bg-jobs-neutral border border-gray-100 rounded-xl focus:ring-2 focus:ring-jobs-primary focus:bg-white transition-all font-bold text-jobs-dark"
-                                defaultValue="Vehari, Pakistan"
+                                value={locationTerm}
+                                onChange={(e) => setLocationTerm(e.target.value)}
                             />
                         </div>
                         <Button variant="primary" className="md:w-32 !bg-jobs-primary !text-white font-black rounded-xl shadow-lg shadow-jobs-primary/20">Find Jobs</Button>
@@ -93,43 +103,73 @@ export default function JobSearchPage() {
                     {/* Main Results */}
                     <div className="flex-1 space-y-4">
                         <div className="flex items-center justify-between mb-2">
-                            <p className="text-gray-500 font-medium">Found <span className="font-black text-gray-900">42</span> jobs matching your criteria</p>
+                            <p className="text-gray-500 font-medium">Found <span className="font-black text-gray-900">{filteredJobs.length}</span> jobs matching your criteria</p>
                         </div>
 
-                        {jobs.map((job) => (
-                            <div key={job.id} className="bg-white p-6 rounded-2xl border border-gray-100 hover:border-jobs-primary/30 hover:shadow-xl hover:shadow-jobs-primary/5 transition-all group relative">
-                                <button className="absolute top-6 right-6 p-2 text-gray-400 hover:text-jobs-primary hover:bg-jobs-primary/5 rounded-xl transition-all">
-                                    <Bookmark className="h-5 w-5" />
-                                </button>
+                        {filteredJobs.length === 0 ? (
+                            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-16 text-center">
+                                <h3 className="text-2xl font-bold text-jobs-dark mb-2">No Jobs Found</h3>
+                                <p className="text-jobs-dark/60 mb-6">
+                                    {jobs.length === 0
+                                        ? "No jobs have been posted yet. Employers can post jobs to get started!"
+                                        : "Try adjusting your search criteria"}
+                                </p>
+                            </div>
+                        ) : (
+                            filteredJobs.map((job) => (
+                                <div
+                                    key={job.id}
+                                    className="bg-white p-6 rounded-2xl border border-gray-100 hover:border-jobs-primary/30 hover:shadow-xl hover:shadow-jobs-primary/5 transition-all group relative cursor-pointer"
+                                    onClick={() => router.push(`/job/${job.id}`)}
+                                >
+                                    <button
+                                        className="absolute top-6 right-6 p-2 text-gray-400 hover:text-jobs-primary hover:bg-jobs-primary/5 rounded-xl transition-all"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // TODO: Add save job functionality
+                                        }}
+                                    >
+                                        <Bookmark className="h-5 w-5" />
+                                    </button>
 
-                                <div className="flex gap-6">
-                                    <div className="w-16 h-16 bg-jobs-neutral rounded-2xl flex items-center justify-center text-3xl group-hover:bg-jobs-primary/10 transition-colors">
-                                        {job.logo}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-xl font-black text-jobs-dark group-hover:text-jobs-primary transition-colors tracking-tight">{job.title}</h3>
-                                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500 font-medium">
-                                            <div className="flex items-center gap-1">
-                                                <Building2 className="h-4 w-4" /> {job.company}
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <MapPin className="h-4 w-4" /> {job.location}
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Clock className="h-4 w-4" /> {job.posted}
-                                            </div>
+                                    <div className="flex gap-6">
+                                        <div className="w-16 h-16 bg-jobs-neutral rounded-2xl flex items-center justify-center text-3xl group-hover:bg-jobs-primary/10 transition-colors">
+                                            {job.company.logo ? (
+                                                <img src={job.company.logo} alt={job.company.name} className="w-full h-full object-cover rounded-2xl" />
+                                            ) : (
+                                                <Building2 className="h-8 w-8 text-gray-400" />
+                                            )}
                                         </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-xl font-black text-jobs-dark group-hover:text-jobs-primary transition-colors tracking-tight">{job.title}</h3>
+                                            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500 font-medium">
+                                                <div className="flex items-center gap-1">
+                                                    <Building2 className="h-4 w-4" /> {job.company.name}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <MapPin className="h-4 w-4" /> {job.city}, {job.province}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Clock className="h-4 w-4" /> {new Date(job.postedAt).toLocaleDateString()}
+                                                </div>
+                                            </div>
 
-                                        <div className="flex items-center gap-3 mt-4">
-                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-bold uppercase tracking-wide">{job.type}</span>
-                                            <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-                                                <DollarSign className="h-3 w-3" /> {job.salary}
-                                            </span>
+                                            <div className="flex items-center gap-3 mt-4">
+                                                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-bold uppercase tracking-wide capitalize">{job.type.replace('-', ' ')}</span>
+                                                {job.salary && (
+                                                    <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1">
+                                                        <DollarSign className="h-3 w-3" /> Rs. {job.salary.min.toLocaleString()} - {job.salary.max.toLocaleString()}
+                                                    </span>
+                                                )}
+                                                {job.isRemote && (
+                                                    <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wide">Remote</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
 
                     {/* Sidebar */}

@@ -23,11 +23,35 @@ export default function LoginPage() {
         setError('');
 
         try {
-            await signInWithEmail(formData.email, formData.password);
+            const userCredential = await signInWithEmail(formData.email, formData.password);
+
+            if (!userCredential || !userCredential.user) {
+                throw new Error('Failed to sign in. Please try again.');
+            }
+
+            // Fetch user profile to determine role
+            const { getUserProfile } = await import('@/lib/firebase/auth');
+            const profile = await getUserProfile(userCredential.user.uid);
+
             setIsLoading(false);
-            router.push('/');
+
+            // Redirect based on role and payment status
+            if (profile?.role === 'admin') {
+                router.push('/admin/dashboard');
+            } else if (profile?.role === 'employer') {
+                router.push('/employer/dashboard');
+            } else if (profile?.role === 'job_seeker') {
+                if (!profile.registrationApproved) {
+                    router.push('/auth/verify-payment');
+                } else {
+                    router.push('/dashboard');
+                }
+            } else {
+                router.push('/');
+            }
         } catch (err: any) {
             setIsLoading(false);
+            console.error('Login error:', err);
             setError(err.message || 'Login failed. Please check your credentials.');
         }
     };
@@ -36,12 +60,37 @@ export default function LoginPage() {
         setIsLoading(true);
         setError('');
         try {
-            await signInWithGoogle();
+            const userCredential = await signInWithGoogle();
+
+            if (!userCredential || !userCredential.user) {
+                throw new Error('Google sign-in failed. Please try again.');
+            }
+
+            // Fetch user profile to determine role
+            const { getUserProfile } = await import('@/lib/firebase/auth');
+            const profile = await getUserProfile(userCredential.user.uid);
+
             setIsLoading(false);
-            router.push('/');
+
+            // Redirect based on role and payment status
+            if (profile?.role === 'admin') {
+                router.push('/admin/dashboard');
+            } else if (profile?.role === 'employer') {
+                router.push('/employer/dashboard');
+            } else if (profile?.role === 'job_seeker') {
+                if (!profile.registrationApproved) {
+                    router.push('/auth/verify-payment');
+                } else {
+                    router.push('/dashboard');
+                }
+            } else {
+                // New user without profile, redirect to register
+                router.push('/auth/register');
+            }
         } catch (err: any) {
             setIsLoading(false);
-            setError(err.message || 'Google sign-in failed.');
+            console.error('Google sign-in error:', err);
+            setError(err.message || 'Google sign-in failed. Please try again.');
         }
     };
 
