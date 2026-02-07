@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { surgicalProducts } from '@/data/surgical-products';
-import { enterpriseProducts } from '@/data/enterprise-products';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -11,7 +10,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ products: [] });
     }
 
-    const allProducts = [...surgicalProducts, ...enterpriseProducts];
+    const allProducts = [...surgicalProducts];
 
     const results = allProducts
         .filter(product =>
@@ -23,7 +22,7 @@ export async function GET(request: NextRequest) {
         .map(product => ({
             id: product.id,
             name: product.name,
-            category: product.category === 'surgical' ? 'Medical Supplies' : 'Enterprise Equipment',
+            category: 'Medical Supplies',
         }));
 
     return NextResponse.json({ products: results });

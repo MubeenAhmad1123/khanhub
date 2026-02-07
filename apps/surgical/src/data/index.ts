@@ -1,17 +1,15 @@
 // Product Data Index - Khanhub Store
 
 import { surgicalProducts } from './surgical-products';
-import { enterpriseProducts } from './enterprise-products';
 import { Product } from '@/types/product';
 
 // All products combined
 export const allProducts: Product[] = [
     ...surgicalProducts,
-    ...enterpriseProducts,
 ];
 
 // Export individual categories
-export { surgicalProducts, enterpriseProducts };
+export { surgicalProducts };
 
 // Get products by category
 export function getProductsByCategory(category: 'surgical' | 'enterprise'): Product[] {
@@ -96,7 +94,7 @@ export function getAllBrands(): string[] {
 }
 
 // Get all subcategories by category
-export function getSubcategoriesByCategory(category: 'surgical' | 'enterprise'): string[] {
+export function getSubcategoriesByCategory(category: 'surgical'): string[] {
     const products = getProductsByCategory(category);
     const subcategories = products.map(p => p.subcategory);
     return [...new Set(subcategories)];
