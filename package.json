@@ -8,11 +8,13 @@
   ],
   "scripts": {
     "dev:web": "npm --prefix apps/web run dev",
-    "dev:store": "npm --prefix apps/store run dev",
+    "dev:surgical": "npm --prefix apps/surgical run dev",
+    "dev:enterprise": "npm --prefix apps/enterprise run dev",
     "dev:jobs": "npm --prefix apps/job run dev",
     "dev:transport": "npm --prefix apps/transport run dev",
     "build:web": "npm --prefix apps/web run build",
-    "build:store": "npm --prefix apps/store run build",
+    "build:surgical": "npm --prefix apps/surgical run build",
+    "build:enterprise": "npm --prefix apps/enterprise run build",
     "build:jobs": "npm --prefix apps/job run build",
     "build:transport": "npm --prefix apps/transport run build"
   }

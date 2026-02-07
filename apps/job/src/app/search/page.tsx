@@ -54,7 +54,7 @@ export default function JobSearchPage() {
                             <input
                                 type="text"
                                 placeholder="Job title, keywords, or company"
-                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium"
+                                className="w-full pl-12 pr-4 py-3 bg-jobs-neutral border border-gray-100 rounded-xl focus:ring-2 focus:ring-jobs-primary focus:bg-white transition-all font-bold text-jobs-dark"
                                 defaultValue="Nursing"
                             />
                         </div>
@@ -63,15 +63,15 @@ export default function JobSearchPage() {
                             <input
                                 type="text"
                                 placeholder="City or region"
-                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium"
+                                className="w-full pl-12 pr-4 py-3 bg-jobs-neutral border border-gray-100 rounded-xl focus:ring-2 focus:ring-jobs-primary focus:bg-white transition-all font-bold text-jobs-dark"
                                 defaultValue="Vehari, Pakistan"
                             />
                         </div>
-                        <Button variant="primary" className="md:w-32">Find Jobs</Button>
+                        <Button variant="primary" className="md:w-32 !bg-jobs-primary !text-white font-black rounded-xl shadow-lg shadow-jobs-primary/20">Find Jobs</Button>
                     </div>
 
                     <div className="flex flex-wrap items-center mt-6 gap-4 text-sm">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100 font-bold">
+                        <button className="flex items-center gap-2 px-5 py-2.5 bg-jobs-primary/10 text-jobs-primary rounded-xl border border-jobs-primary/10 font-black transition-all hover:bg-jobs-primary/20">
                             <Filter className="h-4 w-4" /> Filter by Type <ChevronDown className="h-4 w-4" />
                         </button>
                         <button className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 rounded-lg border border-transparent font-bold text-gray-600 transition-colors">
@@ -97,17 +97,17 @@ export default function JobSearchPage() {
                         </div>
 
                         {jobs.map((job) => (
-                            <div key={job.id} className="bg-white p-6 rounded-2xl border border-gray-100 hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/5 transition-all group relative">
-                                <button className="absolute top-6 right-6 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                            <div key={job.id} className="bg-white p-6 rounded-2xl border border-gray-100 hover:border-jobs-primary/30 hover:shadow-xl hover:shadow-jobs-primary/5 transition-all group relative">
+                                <button className="absolute top-6 right-6 p-2 text-gray-400 hover:text-jobs-primary hover:bg-jobs-primary/5 rounded-xl transition-all">
                                     <Bookmark className="h-5 w-5" />
                                 </button>
 
                                 <div className="flex gap-6">
-                                    <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl group-hover:bg-blue-50 transition-colors">
+                                    <div className="w-16 h-16 bg-jobs-neutral rounded-2xl flex items-center justify-center text-3xl group-hover:bg-jobs-primary/10 transition-colors">
                                         {job.logo}
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{job.title}</h3>
+                                        <h3 className="text-xl font-black text-jobs-dark group-hover:text-jobs-primary transition-colors tracking-tight">{job.title}</h3>
                                         <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500 font-medium">
                                             <div className="flex items-center gap-1">
                                                 <Building2 className="h-4 w-4" /> {job.company}
@@ -134,16 +134,17 @@ export default function JobSearchPage() {
 
                     {/* Sidebar */}
                     <div className="w-full lg:w-80 space-y-6">
-                        <div className="bg-blue-600 rounded-2xl p-6 text-white overflow-hidden relative">
+                        <div className="bg-jobs-primary rounded-3xl p-8 text-white overflow-hidden relative shadow-2xl">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,111,97,0.15),transparent)]"></div>
                             <div className="relative z-10">
-                                <h4 className="text-xl font-black mb-2">Job Alerts</h4>
-                                <p className="text-blue-100 text-sm mb-6">Get notified as soon as new nursing jobs are posted in Vehari.</p>
+                                <h4 className="text-2xl font-black mb-2 tracking-tight">Job Alerts</h4>
+                                <p className="text-white/70 text-sm mb-6 font-medium leading-relaxed">Get notified as soon as new nursing jobs are posted in Vehari.</p>
                                 <input
                                     type="email"
                                     placeholder="Enter your email"
-                                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl mb-3 text-white placeholder:text-blue-200 focus:outline-none focus:bg-white/20 transition-all"
+                                    className="w-full px-4 py-4 bg-white/10 border border-white/20 rounded-xl mb-4 text-white placeholder:text-white/40 focus:outline-none focus:bg-white/20 transition-all font-bold"
                                 />
-                                <Button variant="primary" className="w-full !bg-white !text-blue-600">Activate Alert</Button>
+                                <Button variant="primary" className="w-full !bg-jobs-accent !text-white font-black rounded-xl py-4 shadow-xl shadow-jobs-accent/30 hover:opacity-90 transition-all active:scale-95 border-none">Activate Alert</Button>
                             </div>
                             <div className="absolute -bottom-4 -right-4 text-white opacity-10">
                                 <TrendingUp className="h-24 w-24" />
@@ -151,14 +152,14 @@ export default function JobSearchPage() {
                         </div>
 
                         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <h4 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
-                                <Users className="h-5 w-5 text-blue-600" /> Featured Companies
+                            <h4 className="text-lg font-black text-jobs-dark mb-4 flex items-center gap-2">
+                                <Users className="h-5 w-5 text-jobs-primary" /> Featured Companies
                             </h4>
                             <div className="space-y-4">
                                 {['Punjab Health', 'Indus Bank', 'Orient Electronics'].map((comp) => (
-                                    <div key={comp} className="flex items-center justify-between group cursor-pointer">
-                                        <span className="font-bold text-gray-600 group-hover:text-blue-600 transition-colors">{comp}</span>
-                                        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-400 font-bold group-hover:bg-blue-100 group-hover:text-blue-600">12 Jobs</span>
+                                    <div key={comp} className="flex items-center justify-between group cursor-pointer p-2 hover:bg-jobs-neutral rounded-xl transition-all">
+                                        <span className="font-bold text-jobs-dark/60 group-hover:text-jobs-primary transition-colors">{comp}</span>
+                                        <span className="text-xs bg-jobs-neutral px-2 py-0.5 rounded text-jobs-dark/40 font-black group-hover:bg-jobs-primary/10 group-hover:text-jobs-primary transition-colors">12 Jobs</span>
                                     </div>
                                 ))}
                             </div>

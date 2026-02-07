@@ -26,49 +26,50 @@ export default function JobHomePage() {
     return (
         <div>
             {/* Hero Section */}
-            <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+            <section className="bg-jobs-primary relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,111,97,0.1),transparent)]"></div>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
                     <div className="text-center max-w-3xl mx-auto">
-                        <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                        <h1 className="text-4xl md:text-5xl font-black mb-6 text-white tracking-tight">
                             Find Your Dream Career in Pakistan
                         </h1>
-                        <p className="text-xl mb-8 text-blue-100">
+                        <p className="text-xl mb-8 text-white/80 font-medium">
                             Thousands of jobs from leading companies across Pakistan. Start your journey today.
                         </p>
 
                         {/* Search Bar */}
-                        <div className="bg-white rounded-lg shadow-xl p-2 flex flex-col md:flex-row gap-2">
-                            <div className="flex-1 flex items-center gap-2 px-4 py-2">
+                        <div className="bg-white rounded-2xl shadow-2xl p-2 flex flex-col md:flex-row gap-2 border border-white/10 backdrop-blur-md">
+                            <div className="flex-1 flex items-center gap-2 px-4 py-3">
                                 <Search className="h-5 w-5 text-gray-400" />
                                 <input
                                     type="text"
                                     placeholder="Job title, keywords..."
-                                    className="flex-1 outline-none text-gray-900"
+                                    className="flex-1 outline-none text-jobs-dark font-medium"
                                 />
                             </div>
-                            <div className="flex-1 flex items-center gap-2 px-4 py-2 border-t md:border-t-0 md:border-l">
+                            <div className="flex-1 flex items-center gap-2 px-4 py-3 border-t md:border-t-0 md:border-l border-gray-100">
                                 <MapPin className="h-5 w-5 text-gray-400" />
                                 <input
                                     type="text"
                                     placeholder="City or location..."
-                                    className="flex-1 outline-none text-gray-900"
+                                    className="flex-1 outline-none text-jobs-dark font-medium"
                                 />
                             </div>
                             <Link
                                 href="/search"
-                                className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
+                                className="bg-jobs-accent text-white px-8 py-4 rounded-xl font-black hover:opacity-90 transition-all text-center shadow-lg shadow-jobs-accent/30 active:scale-95"
                             >
                                 Search Jobs
                             </Link>
                         </div>
 
                         {/* Quick Links */}
-                        <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm">
-                            <span className="text-blue-200">Popular:</span>
-                            <Link href="/search?q=nurse" className="text-white hover:underline">Nurse</Link>
-                            <Link href="/search?q=developer" className="text-white hover:underline">Developer</Link>
-                            <Link href="/search?q=engineer" className="text-white hover:underline">Engineer</Link>
-                            <Link href="/search?q=accountant" className="text-white hover:underline">Accountant</Link>
+                        <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm font-medium">
+                            <span className="text-white/50">Popular:</span>
+                            <Link href="/search?q=nurse" className="text-white hover:text-jobs-accent transition-colors">Nurse</Link>
+                            <Link href="/search?q=developer" className="text-white hover:text-jobs-accent transition-colors">Developer</Link>
+                            <Link href="/search?q=engineer" className="text-white hover:text-jobs-accent transition-colors">Engineer</Link>
+                            <Link href="/search?q=accountant" className="text-white hover:text-jobs-accent transition-colors">Accountant</Link>
                         </div>
                     </div>
                 </div>
@@ -79,10 +80,10 @@ export default function JobHomePage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {stats.map((stat) => (
-                            <div key={stat.label} className="bg-white rounded-lg p-6 text-center">
-                                <stat.icon className="h-8 w-8 mx-auto mb-3 text-blue-600" />
-                                <p className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</p>
-                                <p className="text-gray-600 text-sm">{stat.label}</p>
+                            <div key={stat.label} className="bg-white rounded-2xl p-6 text-center border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                <stat.icon className="h-8 w-8 mx-auto mb-3 text-jobs-primary" />
+                                <p className="text-3xl font-black text-jobs-primary mb-1">{stat.value}</p>
+                                <p className="text-jobs-dark/60 text-sm font-bold uppercase tracking-wider">{stat.label}</p>
                             </div>
                         ))}
                     </div>
@@ -102,13 +103,14 @@ export default function JobHomePage() {
                             <Link
                                 key={category.name}
                                 href={category.href}
-                                className="bg-white border rounded-lg p-6 text-center hover:shadow-lg hover:border-blue-600 transition-all group"
+                                className="bg-white border border-gray-100 rounded-2xl p-6 text-center hover:shadow-xl hover:border-jobs-primary transition-all group relative overflow-hidden"
                             >
-                                <div className="text-4xl mb-3">{category.icon}</div>
-                                <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-jobs-primary/5 rounded-bl-[4rem] group-hover:bg-jobs-primary/10 transition-colors"></div>
+                                <div className="text-4xl mb-3 relative z-10">{category.icon}</div>
+                                <h3 className="font-bold text-jobs-dark mb-2 group-hover:text-jobs-primary relative z-10">
                                     {category.name}
                                 </h3>
-                                <p className="text-sm text-gray-600">{category.count} jobs</p>
+                                <p className="text-sm text-jobs-dark/50 font-medium relative z-10">{category.count} jobs</p>
                             </Link>
                         ))}
                     </div>
@@ -116,7 +118,7 @@ export default function JobHomePage() {
                     <div className="text-center mt-8">
                         <Link
                             href="/search"
-                            className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700"
+                            className="inline-flex items-center gap-2 text-jobs-primary font-bold hover:gap-3 transition-all"
                         >
                             View All Categories
                             <span>→</span>
@@ -135,7 +137,7 @@ export default function JobHomePage() {
                         </div>
                         <Link
                             href="/search"
-                            className="text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-2"
+                            className="text-jobs-primary font-bold hover:opacity-80 flex items-center gap-2 transition-all"
                         >
                             View All
                             <span>→</span>
@@ -156,7 +158,7 @@ export default function JobHomePage() {
                         </div>
                         <Link
                             href="/search?sort=newest"
-                            className="text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-2"
+                            className="text-jobs-primary font-bold hover:opacity-80 flex items-center gap-2 transition-all"
                         >
                             View All
                             <span>→</span>
@@ -168,25 +170,26 @@ export default function JobHomePage() {
             </section>
 
             {/* CTA Section */}
-            <section className="py-16 bg-blue-600 text-white">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <Award className="h-16 w-16 mx-auto mb-6" />
-                    <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <section className="py-20 bg-jobs-primary text-white relative overflow-hidden rounded-t-[4rem]">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(255,111,97,0.1),transparent)]"></div>
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+                    <Award className="h-16 w-16 mx-auto mb-6 text-jobs-accent" />
+                    <h2 className="text-3xl md:text-4xl font-black mb-4 tracking-tight">
                         Ready to Take the Next Step?
                     </h2>
-                    <p className="text-xl mb-8 text-blue-100">
+                    <p className="text-xl mb-10 text-white/80 font-medium font-medium">
                         Join thousands of professionals who found their dream job through Khanhub
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <Link
                             href="/search"
-                            className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
+                            className="bg-white text-jobs-primary px-10 py-4 rounded-xl font-black hover:bg-jobs-neutral transition-all shadow-xl active:scale-95"
                         >
                             Browse Jobs
                         </Link>
                         <Link
                             href="/post-job"
-                            className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                            className="bg-jobs-accent text-white px-10 py-4 rounded-xl font-black hover:opacity-90 transition-all shadow-xl shadow-jobs-accent/20 active:scale-95"
                         >
                             Post a Job
                         </Link>

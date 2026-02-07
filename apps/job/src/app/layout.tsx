@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import JobNavbar from '@/components/layout/JobNavbar';
 import JobFooter from '@/components/layout/JobFooter';
+import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 import '@/styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -19,10 +20,12 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={inter.className}>
-                <JobNavbar />
-                <main className="min-h-screen">{children}</main>
-                <JobFooter />
+            <body className={`${inter.className} min-h-screen flex flex-col`}>
+                <AuthProviderWrapper>
+                    <JobNavbar />
+                    <main className="flex-grow flex flex-col">{children}</main>
+                    <JobFooter />
+                </AuthProviderWrapper>
             </body>
         </html>
     );

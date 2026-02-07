@@ -23,6 +23,12 @@
     --color-enterprise-800: #5b21b6;
     --color-enterprise-900: #4c1d95;
 
+    /* Job Brand Colors */
+    --color-jobs-primary: #005F69;
+    --color-jobs-accent: #FF6F61;
+    --color-jobs-neutral: #F4F7F6;
+    --color-jobs-dark: #2C3E50;
+
     /* Animations */
     --animate-float: float 3s ease-in-out infinite;
     --animate-pulse-subtle: pulse-subtle 2s ease-in-out infinite;

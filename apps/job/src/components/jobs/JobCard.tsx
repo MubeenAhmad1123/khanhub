@@ -48,12 +48,12 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
                     {/* Job Info */}
                     <div className="flex-1 min-w-0">
                         <Link href={`/job/${job.id}`}>
-                            <h3 className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 transition-colors line-clamp-2">
+                            <h3 className="text-lg font-extrabold text-jobs-dark mb-1 hover:text-jobs-primary transition-colors line-clamp-2">
                                 {job.title}
                             </h3>
                         </Link>
                         <Link href={`/companies/${job.company.id}`}>
-                            <p className="text-gray-600 font-medium hover:text-blue-600 transition-colors">
+                            <p className="text-jobs-dark/60 font-bold text-sm hover:text-jobs-primary transition-colors">
                                 {job.company.name}
                             </p>
                         </Link>
@@ -63,9 +63,9 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
                 {/* Save Button */}
                 <button
                     onClick={() => onSave?.(job.id)}
-                    className={`p-2 rounded-full transition-colors ${isSaved
-                            ? 'text-blue-600 bg-blue-50'
-                            : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                    className={`p-2 rounded-full transition-all ${isSaved
+                        ? 'text-jobs-primary bg-jobs-primary/10 shadow-sm'
+                        : 'text-gray-300 hover:text-jobs-primary hover:bg-jobs-primary/5'
                         }`}
                 >
                     <Bookmark className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
@@ -88,24 +88,24 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
             </div>
 
             {/* Description */}
-            <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+            <p className="text-jobs-dark/70 text-sm mb-4 line-clamp-2 leading-relaxed">
                 {job.shortDescription}
             </p>
 
             {/* Details */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{job.city}, {job.province}</span>
+            <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="flex items-center gap-2 text-xs font-bold text-jobs-dark/60">
+                    <MapPin className="h-4 w-4 flex-shrink-0 text-jobs-primary" />
+                    <span className="truncate uppercase tracking-tight">{job.city}, {job.province}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Briefcase className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{job.experienceLevel} level</span>
+                <div className="flex items-center gap-2 text-xs font-bold text-jobs-dark/60">
+                    <Briefcase className="h-4 w-4 flex-shrink-0 text-jobs-primary" />
+                    <span className="truncate uppercase tracking-tight">{job.experienceLevel} level</span>
                 </div>
                 {job.salary && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 col-span-2">
+                    <div className="flex items-center gap-2 text-sm font-black text-jobs-primary col-span-2 bg-jobs-primary/5 p-2 rounded-xl border border-jobs-primary/10">
                         <DollarSign className="h-4 w-4 flex-shrink-0" />
-                        <span className="font-medium text-green-600">
+                        <span>
                             {formatSalaryRange(job.salary.min, job.salary.max, job.salary.period)}
                         </span>
                     </div>
@@ -127,10 +127,10 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
                 <div className="flex items-center gap-2">
                     <span
                         className={`text-xs font-semibold ${urgency === 'urgent'
-                                ? 'text-red-600'
-                                : urgency === 'moderate'
-                                    ? 'text-orange-600'
-                                    : 'text-gray-600'
+                            ? 'text-red-600'
+                            : urgency === 'moderate'
+                                ? 'text-orange-600'
+                                : 'text-gray-600'
                             }`}
                     >
                         {formatDeadline(job.deadline)}
@@ -141,7 +141,7 @@ export default function JobCard({ job, onSave, isSaved = false }: JobCardProps) 
             {/* View Details Button - Shows on Hover */}
             <Link
                 href={`/job/${job.id}`}
-                className="mt-4 w-full py-2 bg-blue-600 text-white text-center font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block"
+                className="mt-4 w-full py-3 bg-jobs-accent text-white text-center font-black rounded-xl opacity-0 group-hover:opacity-100 transition-all shadow-lg shadow-jobs-accent/30 active:scale-95 hidden sm:block"
             >
                 View Details & Apply
             </Link>

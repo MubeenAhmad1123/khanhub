@@ -1,0 +1,30 @@
+{
+  "name": "@khanhub/enterprise",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3005",
+    "build": "next build",
+    "start": "next start -p 3005",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@khanhub/auth": "file:../../packages/auth",
+    "firebase": "^10.8.0",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.344.0",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-intersection-observer": "^9.8.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5"
+  }
+}

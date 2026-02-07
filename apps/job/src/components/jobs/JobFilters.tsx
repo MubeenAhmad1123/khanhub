@@ -3,7 +3,7 @@
 import { Job } from '@/types/job';
 import JobCard from './JobCard';
 
-interface JobGridProps {
+interface JobFiltersProps {
     jobs: Job[];
     isLoading?: boolean;
     emptyMessage?: string;
@@ -11,13 +11,13 @@ interface JobGridProps {
     savedJobIds?: string[];
 }
 
-export default function JobGrid({
+export default function JobFilters({
     jobs,
     isLoading = false,
     emptyMessage = 'No jobs found',
     onSaveJob,
     savedJobIds = [],
-}: JobGridProps) {
+}: JobFiltersProps) {
     // Loading State
     if (isLoading) {
         return (

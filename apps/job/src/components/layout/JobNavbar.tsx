@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Menu, X, Briefcase, Building2, User, Plus } from 'lucide-react';
+import { Search, Menu, X, Briefcase, Building2, Plus } from 'lucide-react';
+import { AuthButton } from '@khanhub/auth';
 
 export default function JobNavbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -30,8 +31,8 @@ export default function JobNavbar() {
                             className="rounded-lg"
                         />
                         <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-blue-600">Khanhub Jobs</h1>
-                            <p className="text-xs text-gray-600">Find Your Dream Career</p>
+                            <h1 className="text-xl font-bold text-jobs-primary">Khanhub Jobs</h1>
+                            <p className="text-xs text-jobs-dark/60">Find Your Dream Career</p>
                         </div>
                     </Link>
 
@@ -47,7 +48,7 @@ export default function JobNavbar() {
                             />
                             <button
                                 type="submit"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-blue-600 hover:text-blue-700"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-jobs-primary hover:text-jobs-primary/80"
                             >
                                 <Search className="h-5 w-5" />
                             </button>
@@ -58,31 +59,27 @@ export default function JobNavbar() {
                     <div className="hidden md:flex items-center space-x-4">
                         <Link
                             href="/search"
-                            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 text-jobs-dark hover:text-jobs-primary font-medium transition-colors"
                         >
                             <Briefcase className="h-5 w-5" />
                             Find Jobs
                         </Link>
                         <Link
                             href="/companies"
-                            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 text-jobs-dark hover:text-jobs-primary font-medium transition-colors"
                         >
                             <Building2 className="h-5 w-5" />
                             Companies
                         </Link>
                         <Link
                             href="/post-job"
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 bg-jobs-accent text-white rounded-lg hover:opacity-90 font-medium transition-all shadow-lg shadow-jobs-accent/20"
                         >
                             <Plus className="h-5 w-5" />
                             Post Job
                         </Link>
-                        <Link
-                            href="/dashboard"
-                            className="p-2 text-gray-700 hover:text-blue-600 transition-colors"
-                        >
-                            <User className="h-6 w-6" />
-                        </Link>
+
+                        <AuthButton />
                     </div>
 
                     {/* Mobile Menu Button */}
@@ -115,7 +112,7 @@ export default function JobNavbar() {
                             <Link
                                 href="/search"
                                 onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center gap-2 py-2 text-gray-700 hover:text-blue-600"
+                                className="flex items-center gap-2 py-2 text-jobs-dark hover:text-jobs-primary"
                             >
                                 <Briefcase className="h-5 w-5" />
                                 <span className="font-medium">Find Jobs</span>
@@ -123,7 +120,7 @@ export default function JobNavbar() {
                             <Link
                                 href="/companies"
                                 onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center gap-2 py-2 text-gray-700 hover:text-blue-600"
+                                className="flex items-center gap-2 py-2 text-jobs-dark hover:text-jobs-primary"
                             >
                                 <Building2 className="h-5 w-5" />
                                 <span className="font-medium">Companies</span>
@@ -131,19 +128,14 @@ export default function JobNavbar() {
                             <Link
                                 href="/post-job"
                                 onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center gap-2 py-2 text-blue-600 font-bold"
+                                className="flex items-center gap-2 py-2 text-jobs-accent font-bold"
                             >
                                 <Plus className="h-5 w-5" />
                                 <span>Post a Job</span>
                             </Link>
-                            <Link
-                                href="/dashboard"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center gap-2 py-2 text-gray-700 hover:text-blue-600"
-                            >
-                                <User className="h-5 w-5" />
-                                <span className="font-medium">My Account</span>
-                            </Link>
+                            <div className="border-t pt-4">
+                                <AuthButton />
+                            </div>
                         </div>
                     </div>
                 )}
