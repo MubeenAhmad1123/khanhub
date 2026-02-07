@@ -1,321 +1,365 @@
-// FILE: apps/transport/src/app/page.tsx
-// DESCRIPTION: Home (Rider) page for Khanhub Transport with Premium Animations
-// Path: C:\Users\abc\Documents\Khanhub\khanhub\apps\transport\src\app
+'use client';
 
-'use client'
-
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState, useRef } from 'react';
+import { ArrowRight, Shield, MapPin, Award } from 'lucide-react';
+import Link from 'next/link';
 
 const VEHICLES = [
-  { 
-    id: 1, 
-    name: 'Toyota Corolla', 
-    capacity: 4, 
-    description: 'Comfortable sedan for city rides and hospital visits. Perfect for individual patients and small families.',
-    image: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=800'
-  },
-  { 
-    id: 2, 
-    name: 'Honda Civic', 
-    capacity: 4, 
-    description: 'Premium comfort for your medical journeys with advanced safety features and luxurious interiors.',
-    image: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=800'
-  },
-  { 
-    id: 3, 
-    name: 'Toyota Hiace', 
-    capacity: 8, 
-    description: 'Spacious van for small group transport with wheelchair accessibility and medical equipment support.',
-    image: 'https://images.unsplash.com/photo-1527186763489-b257f6b4a0a8?q=80&w=800'
-  },
-  { 
-    id: 4, 
-    name: 'Toyota Coaster', 
-    capacity: 16, 
-    description: 'Ideal for medium group hospital transfers with professional medical attendant support.',
-    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=800'
-  },
-]
-
-const FEATURES = [
   {
     id: 1,
-    title: 'Medical-Grade Safety',
-    description: 'All vehicles equipped with advanced medical monitoring systems, emergency equipment, and trained medical staff for your peace of mind.',
-    image: 'https://images.unsplash.com/photo-1584515933487-779824d29309?q=80&w=800'
+    name: 'Executive Sedan',
+    capacity: 4,
+    description:
+      'Optimal for city transit and professional medical commutes with premium comfort.',
+    image:
+      'https://images.unsplash.com/photo-1550355291-bbee04a92027?q=80&w=800&auto=format',
   },
   {
     id: 2,
-    title: '24/7 Availability',
-    description: 'Round-the-clock service ensures premium medical transport day or night.',
-    image: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=800'
+    name: 'Premium SUV',
+    capacity: 5,
+    description:
+      'High-end comfort for patient transfers and long-distance medical travel.',
+    image:
+      'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=800&auto=format',
   },
   {
     id: 3,
-    title: 'Door-to-Door Service',
-    description: 'Seamless transfers from home to hospital with personalized care.',
-    image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?q=80&w=800'
+    name: 'Medical Van',
+    capacity: 8,
+    description:
+      'Spacious and accessible for small groups with wheelchair support.',
+    image:
+      'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=800&auto=format',
   },
-]
+];
+
+const FEATURES = [
+  {
+    icon: <Shield className="w-12 h-12" />,
+    title: 'Medical-Grade Safety',
+    description:
+      'All vehicles strictly sanitized with hospital-grade protocols after every journey for maximum patient protection.',
+  },
+  {
+    icon: <MapPin className="w-12 h-12" />,
+    title: 'Real-Time Tracking',
+    description:
+      'Hospitals and families can track patient locations in real-time with complete journey transparency.',
+  },
+  {
+    icon: <Award className="w-12 h-12" />,
+    title: 'Trained Professionals',
+    description:
+      'Our drivers undergo specialized training in medical etiquette and emergency response procedures.',
+  },
+];
 
 export default function HomePage() {
   return (
-    <>
-      <HeroSection />
-      <CarAnimationSection />
-      <VehiclesSection />
+    <div className="bg-white">
+      <HeroWithStats />
       <FeaturesSection />
+      <FleetSection />
       <CTASection />
-    </>
-  )
+    </div>
+  );
 }
 
-function HeroSection() {
-  const [showCTA, setShowCTA] = useState(false)
+// Count‑up hook
+function useCountUp(end: number, duration: number = 2000, start: number = 0) {
+  const [count, setCount] = useState(start);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowCTA(true)
-    }, 1200)
-    return () => clearTimeout(timer)
-  }, [])
+    let startTimestamp: number | null = null;
 
-  return (
-    <section className="hero">
-      <img 
-        src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?q=80&w=2000" 
-        alt="Premium medical transport at night" 
-        className="hero-image"
-      />
-      <div className="hero-overlay"></div>
-      <div className="hero-content">
-        <div className="container">
-          <div className="hero-text">
-            <h1>Journey to Wellness Begins Here</h1>
-            <p>
-              Experience the pinnacle of medical travel excellence. Our dedicated fleet 
-              combines hospital-grade safety standards with the comfort of premium transport. 
-              From your doorstep to our world-class facilities, every mile is designed around 
-              your wellbeing.
-            </p>
-            <div className={`hero-cta ${showCTA ? 'show' : ''}`}>
-              <a href="/book" className="btn btn-primary">Book Your Journey</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function CarAnimationSection() {
-  const [scrollProgress, setScrollProgress] = useState(0)
-  const [showContent, setShowContent] = useState(false)
-  const sectionRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!sectionRef.current) return
-
-      const rect = sectionRef.current.getBoundingClientRect()
-      const windowHeight = window.innerHeight
-      const sectionTop = rect.top
-      const sectionHeight = rect.height
-
-      if (sectionTop < windowHeight && sectionTop + sectionHeight > 0) {
-        const progress = Math.max(
-          0,
-          Math.min(1, (windowHeight - sectionTop) / (windowHeight + sectionHeight / 2))
-        )
-        setScrollProgress(progress)
-
-        if (progress > 0.4 && !showContent) {
-          setShowContent(true)
-        }
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      setCount(progress * (end - start) + start);
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
       }
-    }
+    };
 
-    window.addEventListener('scroll', handleScroll)
-    handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [showContent])
+    setCount(start);
+    window.requestAnimationFrame(step);
 
-  const carPosition = scrollProgress * 100
+    return () => {
+      startTimestamp = null;
+    };
+  }, [end, duration, start]);
 
-  return (
-    <section ref={sectionRef} className="car-animation-section">
-      <div className="container">
-        <div className="car-animation-wrapper">
-          <div 
-            className="car-moving" 
-            style={{ 
-              left: `${carPosition}%`,
-              transform: `translateX(-50%) translateY(-50%)`
-            }}
-          >
-            <img 
-              src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=400" 
-              alt="Medical transport vehicle"
-              style={{ width: '280px', height: 'auto', filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.3))' }}
-            />
-          </div>
-
-          <div className={`car-animation-content ${showContent ? 'visible' : ''}`}>
-            <h2>Your Health, Our Priority</h2>
-            <p>
-              Every journey with Khanhub Transport is more than just a ride—it's a commitment 
-              to your wellbeing. Our medical-grade vehicles and trained professionals ensure 
-              that your comfort and safety are never compromised.
-            </p>
-            <a href="/book" className="btn btn-primary">Schedule Your Ride</a>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
+  return count;
 }
 
-function VehiclesSection() {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const currentVehicle = VEHICLES[currentIndex]
+function HeroWithStats() {
+  const [showCTA, setShowCTA] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
+  const [statsInView, setStatsInView] = useState(false);
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % VEHICLES.length)
-  }
-
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + VEHICLES.length) % VEHICLES.length)
-  }
-
-  return (
-    <section className="vehicles-premium-section">
-      <div className="container">
-        <div className="section-header">
-          <h2>Our Premium Fleet</h2>
-          <p>Choose the perfect vehicle for your medical journey</p>
-        </div>
-
-        <div className="vehicle-showcase">
-          {/* Left: Details box (30%) */}
-          <div className="vehicle-showcase-details">
-            <h3>{currentVehicle.name}</h3>
-            <div className="vehicle-showcase-capacity">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              Capacity: {currentVehicle.capacity} passengers
-            </div>
-            <p>{currentVehicle.description}</p>
-
-            <div className="vehicle-showcase-actions">
-              <button type="button" className="btn btn-outline" onClick={handlePrev}>
-                Previous
-              </button>
-              <button type="button" className="btn btn-outline" onClick={handleNext}>
-                Next
-              </button>
-              <a href="/book" className="btn btn-primary">
-                Book This Vehicle
-              </a>
-            </div>
-
-            <div className="vehicle-showcase-indicator">
-              {currentIndex + 1} / {VEHICLES.length}
-            </div>
-          </div>
-
-          {/* Right: Image (70%) */}
-          <div className="vehicle-showcase-image-wrapper">
-            <div className="vehicle-showcase-image">
-              <img src={currentVehicle.image} alt={currentVehicle.name} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-
-function FeaturesSection() {
-  const [visibleFeatures, setVisibleFeatures] = useState<number[]>([])
-  const featureRefs = useRef<(HTMLDivElement | null)[]>([]) // <-- missing ) fixed
+  useEffect(() => {
+    const timer = setTimeout(() => setShowCTA(true), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = featureRefs.current.indexOf(entry.target as HTMLDivElement)
-            if (index !== -1 && !visibleFeatures.includes(index)) {
-              setVisibleFeatures((prev) => [...prev, index])
-            }
-          }
-        })
+      ([entry]) => {
+        if (entry.isIntersecting && !statsInView) {
+          setStatsInView(true);
+        }
       },
-      { threshold: 0.2 }
-    )
+      { threshold: 0.1 }
+    );
 
-    featureRefs.current.forEach((ref) => {
-      if (ref) observer.observe(ref)
-    })
+    if (statsRef.current) observer.observe(statsRef.current);
+    return () => observer.disconnect();
+  }, [statsInView]);
 
-    return () => observer.disconnect()
-  }, [visibleFeatures])
+  useEffect(() => {
+    const timer = setTimeout(() => setStatsInView(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Your desired values: 10, 50, 36, 4.2
+  const ridesCount = useCountUp(statsInView ? 10 : 0, 2500);
+  const driversCount = useCountUp(statsInView ? 50 : 0, 2500);
+  const hospitalsCount = useCountUp(statsInView ? 36 : 0, 2500);
+  const ratingCount = useCountUp(statsInView ? 4.2 : 0, 2500);
 
   return (
-    <section className="features-premium-section">
-      <div className="container">
-        <div className="section-header">
-          <h2>Why Choose Khanhub Transport</h2>
-          <p>Premium medical transport with uncompromising safety</p>
+    <>
+      {/* Hero Section */}
+      <section className="relative h-[75vh] min-h-[650px] flex items-center overflow-hidden bg-gradient-to-br from-[#1a362e] via-[#2F5D50] to-[#1a362e]">
+        <div className="absolute inset-0 z-0 opacity-20">
+          <img
+            src="https://images.unsplash.com/photo-1516550893923-42d28e5677af?q=80&w=2000&auto=format"
+            alt="Professional Healthcare Transit"
+            className="w-full h-full object-cover"
+          />
         </div>
 
-        <div className="features-premium-grid">
-          {FEATURES.map((feature, index) => (
+        <div className="container mx-auto px-6 md:px-12 relative z-10 pb-32">
+          <div className="max-w-4xl">
+            <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-[#3FA58E] text-sm font-bold mb-10">
+              <Shield className="w-5 h-5" />
+              <span>Pakistan&apos;s Most Trusted Medical Transport Platform</span>
+            </div>
+
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 text-white leading-[1.05] tracking-tight">
+              Care That <span className="text-gradient">Moves</span> You
+            </h1>
+
+            <p className="text-xl md:text-2xl mb-12 text-white/90 leading-relaxed max-w-2xl font-medium">
+              Bridging the gap between home and healthcare with premium, hospital-grade transport solutions.
+            </p>
+
             <div
-              key={feature.id}
-              ref={(el) => { featureRefs.current[index] = el }}
-              className={`feature-premium-item ${
-                index % 2 === 0 ? 'text-left' : 'text-right'
-              } ${visibleFeatures.includes(index) ? 'visible' : ''}`}
+              className={`flex flex-col sm:flex-row gap-5 transition-all duration-1000 transform ${
+                showCTA ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+              }`}
             >
-              <div className="feature-premium-text">
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
+              <Link
+                href="/book"
+                className="group px-10 py-5 bg-[#3FA58E] hover:bg-white text-white hover:text-[#2F5D50] font-bold rounded-lg transition-all duration-300 text-center text-lg flex items-center justify-center gap-3"
+              >
+                Book Your Ride
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+
+              <Link
+                href="/auth/register"
+                className="px-10 py-5 bg-white/10 backdrop-blur-md hover:bg-white text-white hover:text-[#2F5D50] font-bold rounded-lg transition-all duration-300 text-center text-lg border border-white/30"
+              >
+                Get Started
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section ref={statsRef} className="relative z-20 -mt-10 pb-20">
+        <div className="container mx-auto px-6 md:px-12">
+          <div className="bg-white border border-gray-100 px-6 py-8 md:px-10 md:py-10 rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 premium-shadow">
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-black text-[#2F5D50] mb-3">
+                {ridesCount.toFixed(0)}k+
               </div>
-              <div className="feature-premium-image">
-                <img src={feature.image} alt={feature.title} />
+              <div className="text-gray-500 font-semibold uppercase tracking-wider text-xs md:text-sm">
+                Total Rides
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-black text-[#2F5D50] mb-3">
+                {driversCount.toFixed(0)}+
+              </div>
+              <div className="text-gray-500 font-semibold uppercase tracking-wider text-xs md:text-sm">
+                Expert Drivers
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-black text-[#2F5D50] mb-3">
+                {hospitalsCount.toFixed(0)}+
+              </div>
+              <div className="text-gray-500 font-semibold uppercase tracking-wider text-xs md:text-sm">
+                Hospitals Linked
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-black text-[#2F5D50] mb-3">
+                {ratingCount.toFixed(1)}
+              </div>
+              <div className="text-gray-500 font-semibold uppercase tracking-wider text-xs md:text-sm">
+                Patient Rating
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function FeaturesSection() {
+  return (
+    <section className="py-32 bg-white">
+      <div className="container mx-auto px-6 md:px-12">
+        <div className="text-center mb-20 max-w-3xl mx-auto">
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-[#2F5D50] mb-6 tracking-tight">
+            Standard of Excellence
+          </h2>
+          <div className="w-24 h-1.5 bg-[#3FA58E] mx-auto rounded-full mb-6"></div>
+          <p className="text-lg md:text-xl text-gray-600 font-medium">
+            Every journey is backed by our commitment to safety, reliability, and professional care.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-12 lg:gap-16">
+          {FEATURES.map((item, i) => (
+            <div
+              key={i}
+              className="bg-gray-50 p-10 md:p-12 rounded-xl border border-gray-100 hover:border-[#3FA58E]/30 transition-all duration-300 group"
+            >
+              <div className="text-[#3FA58E] mb-8 group-hover:scale-110 transition-transform duration-300">
+                {item.icon}
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black text-[#2F5D50] mb-5">
+                {item.title}
+              </h3>
+              <p className="text-gray-600 font-medium leading-relaxed text-base md:text-lg">
+                {item.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FleetSection() {
+  return (
+    <section className="py-32 bg-gray-50">
+      <div className="container mx-auto px-6 md:px-12">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-20 gap-8">
+          <div className="max-w-xl text-center md:text-left">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-[#2F5D50] mb-6 tracking-tight">
+              Our Premium Fleet
+            </h2>
+            <p className="text-gray-600 text-lg md:text-xl font-medium leading-relaxed">
+              Choose the perfect vehicle for your medical journey with comfort, safety, and professionalism.
+            </p>
+          </div>
+
+          <Link
+            href="/book"
+            className="px-10 py-5 bg-[#2F5D50] text-white font-bold rounded-lg hover:bg-[#3FA58E] transition-all duration-300 text-lg whitespace-nowrap"
+          >
+            View All Vehicles
+          </Link>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-12">
+          {VEHICLES.map((vehicle) => (
+            <div
+              key={vehicle.id}
+              className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:border-[#3FA58E]/40 transition-all duration-300 group"
+            >
+              <div className="relative h-64 overflow-hidden">
+                <img
+                  src={vehicle.image}
+                  alt={vehicle.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+
+              <div className="p-8">
+                <div className="flex justify-between items-start mb-5">
+                  <h3 className="text-2xl md:text-3xl font-black text-[#2F5D50]">
+                    {vehicle.name}
+                  </h3>
+                  <div className="bg-[#E6F1EC] text-[#2F5D50] px-3 py-1.5 rounded-lg text-xs font-bold">
+                    {vehicle.capacity} SEATS
+                  </div>
+                </div>
+
+                <p className="text-gray-600 font-medium mb-8 leading-relaxed">
+                  {vehicle.description}
+                </p>
+
+                <Link
+                  href="/book"
+                  className="flex items-center justify-between text-[#2F5D50] font-bold uppercase tracking-wide pt-6 border-t border-gray-100 group-hover:text-[#3FA58E] transition-colors"
+                >
+                  <span>Book This Ride</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </div>
             </div>
           ))}
         </div>
       </div>
     </section>
-  )
+  );
 }
-
 
 function CTASection() {
   return (
-    <section className="cta-section">
-      <div className="container">
-        <div className="cta-content">
-          <h2>Ready to Book Your Ride?</h2>
-          <p>
-            Experience premium medical transport. Our team is ready to coordinate your personalized journey.
-          </p>
-          <div className="cta-buttons">
-            <a href="/book" className="btn btn-primary">Book Now</a>
-            <a href="/auth/login" className="btn btn-outline">Login</a>
+    <section className="py-32 bg-white">
+      <div className="container mx-auto px-6 md:px-12">
+        <div className="bg-[#E6F1EC] p-16 md:p-24 rounded-2xl text-center border border-[#2F5D50]/10">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-[#2F5D50] mb-8 leading-tight tracking-tight">
+              Your Journey to Wellness Starts Here
+            </h2>
+
+            <p className="text-xl md:text-2xl text-[#2F5D50]/70 mb-12 font-medium italic">
+              &quot;We aren&apos;t just a transport service. We are your partner in healing.&quot;
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Link
+                href="/book"
+                className="px-12 py-6 bg-[#2F5D50] hover:bg-[#3FA58E] text-white font-bold rounded-lg transition-all duration-300 text-lg"
+              >
+                Schedule Appointment
+              </Link>
+
+              <Link
+                href="/auth/register"
+                className="px-12 py-6 bg-white text-[#2F5D50] border-2 border-[#2F5D50]/20 font-bold rounded-lg transition-all duration-300 hover:border-[#3FA58E] text-lg"
+              >
+                Open Account
+              </Link>
+            </div>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }
