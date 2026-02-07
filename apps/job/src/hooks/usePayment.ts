@@ -23,7 +23,7 @@ export function usePayment(userId: string | null) {
 
         try {
             // Upload screenshot
-            const screenshotUrl = await uploadPaymentScreenshot(userId, screenshot File);
+            const screenshotUrl = await uploadPaymentScreenshot(userId, screenshotFile);
 
             // Create payment record
             const paymentId = await createPayment({

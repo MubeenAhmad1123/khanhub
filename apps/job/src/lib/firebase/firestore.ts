@@ -1,9 +1,11 @@
+// Firestore Database Helpers
+// CRUD operations and queries for Firestore collections
+
 import {
     collection,
     doc,
     getDoc,
     getDocs,
-    addDoc,
     setDoc,
     updateDoc,
     deleteDoc,
@@ -11,331 +13,532 @@ import {
     where,
     orderBy,
     limit,
+    startAfter,
+    QueryConstraint,
+    DocumentData,
+    QueryDocumentSnapshot,
     serverTimestamp,
     Timestamp,
+    increment,
+    arrayUnion,
+    arrayRemove,
+    WriteBatch,
+    writeBatch,
 } from 'firebase/firestore';
 import { db } from './config';
-import { Job } from '@/types/job';
-import { JobApplication } from '@/types/application';
-import { Payment } from '@/types/payment';
-import { Placement } from '@/types/admin';
 
-// ==================== JOBS ====================
+// ==================== GENERIC CRUD OPERATIONS ====================
 
-export async function createJob(jobData: Omit<Job, 'id'>): Promise<string> {
-    const jobsRef = collection(db, 'jobs');
-    const docRef = await addDoc(jobsRef, {
-        ...jobData,
-        postedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-    });
-    return docRef.id;
-}
-
-export async function getJobById(jobId: string): Promise<Job | null> {
-    const jobRef = doc(db, 'jobs', jobId);
-    const jobSnap = await getDoc(jobRef);
-
-    if (jobSnap.exists()) {
-        const data = jobSnap.data();
-        return {
-            id: jobSnap.id,
+/**
+ * Create a new document
+ */
+export const createDocument = async <T extends DocumentData>(
+    collectionName: string,
+    id: string,
+    data: T
+): Promise<void> => {
+    try {
+        const docRef = doc(db, collectionName, id);
+        await setDoc(docRef, {
             ...data,
-            deadline: data.deadline?.toDate(),
-            postedAt: data.postedAt?.toDate(),
-            expiresAt: data.expiresAt?.toDate(),
-            createdAt: data.createdAt?.toDate(),
-            updatedAt: data.updatedAt?.toDate(),
-        } as Job;
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error(`Error creating document in ${collectionName}:`, error);
+        throw error;
     }
+};
 
-    return null;
-}
+/**
+ * Get a single document by ID
+ */
+export const getDocument = async <T>(
+    collectionName: string,
+    id: string
+): Promise<T | null> => {
+    try {
+        const docRef = doc(db, collectionName, id);
+        const docSnap = await getDoc(docRef);
 
-export async function getJobsByEmployer(employerId: string): Promise<Job[]> {
-    const jobsRef = collection(db, 'jobs');
-    const q = query(jobsRef, where('employerId', '==', employerId), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+        if (docSnap.exists()) {
+            return {
+                id: docSnap.id,
+                ...docSnap.data(),
+            } as T;
+        }
 
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        deadline: doc.data().deadline?.toDate(),
-        postedAt: doc.data().postedAt?.toDate(),
-        expiresAt: doc.data().expiresAt?.toDate(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-    } as Job));
-}
-
-export async function getApprovedJobs(limitCount?: number): Promise<Job[]> {
-    const jobsRef = collection(db, 'jobs');
-    let q = query(jobsRef, where('status', '==', 'approved'), orderBy('postedAt', 'desc'));
-
-    if (limitCount) {
-        q = query(q, limit(limitCount));
+        return null;
+    } catch (error) {
+        console.error(`Error getting document from ${collectionName}:`, error);
+        throw error;
     }
+};
 
-    const querySnapshot = await getDocs(q);
-
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        deadline: doc.data().deadline?.toDate(),
-        postedAt: doc.data().postedAt?.toDate(),
-        expiresAt: doc.data().expiresAt?.toDate(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-    } as Job));
-}
-
-export async function updateJob(jobId: string, data: Partial<Job>): Promise<void> {
-    const jobRef = doc(db, 'jobs', jobId);
-    await updateDoc(jobRef, {
-        ...data,
-        updatedAt: serverTimestamp(),
-    });
-}
-
-export async function deleteJob(jobId: string): Promise<void> {
-    const jobRef = doc(db, 'jobs', jobId);
-    await deleteDoc(jobRef);
-}
-
-export async function getJobsByStatus(status: string): Promise<Job[]> {
-    const jobsRef = collection(db, 'jobs');
-    const q = query(jobsRef, where('status', '==', status), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        deadline: doc.data().deadline?.toDate(),
-        postedAt: doc.data().postedAt?.toDate(),
-        expiresAt: doc.data().expiresAt?.toDate(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-    } as Job));
-}
-
-
-// ==================== APPLICATIONS ====================
-
-export async function createApplication(appData: Omit<JobApplication, 'id'>): Promise<string> {
-    const appsRef = collection(db, 'applications');
-    const docRef = await addDoc(appsRef, {
-        ...appData,
-        appliedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-    });
-    return docRef.id;
-}
-
-export async function getApplicationById(appId: string): Promise<JobApplication | null> {
-    const appRef = doc(db, 'applications', appId);
-    const appSnap = await getDoc(appRef);
-
-    if (appSnap.exists()) {
-        const data = appSnap.data();
-        return {
-            id: appSnap.id,
+/**
+ * Update a document
+ */
+export const updateDocument = async <T extends Partial<DocumentData>>(
+    collectionName: string,
+    id: string,
+    data: T
+): Promise<void> => {
+    try {
+        const docRef = doc(db, collectionName, id);
+        await updateDoc(docRef, {
             ...data,
-            appliedAt: data.appliedAt?.toDate(),
-            updatedAt: data.updatedAt?.toDate(),
-        } as JobApplication;
+            updatedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error(`Error updating document in ${collectionName}:`, error);
+        throw error;
     }
+};
 
-    return null;
-}
-
-export async function getApplicationsByJobSeeker(jobSeekerId: string): Promise<JobApplication[]> {
-    const appsRef = collection(db, 'applications');
-    const q = query(appsRef, where('candidateId', '==', jobSeekerId), orderBy('appliedAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        appliedAt: doc.data().appliedAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-    } as JobApplication));
-}
-
-export async function getApplicationsByEmployer(employerId: string): Promise<JobApplication[]> {
-    const appsRef = collection(db, 'applications');
-    const q = query(appsRef, where('employerId', '==', employerId), orderBy('appliedAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        appliedAt: doc.data().appliedAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-    } as JobApplication));
-}
-
-export async function getApplicationsByJob(jobId: string): Promise<JobApplication[]> {
-    const appsRef = collection(db, 'applications');
-    const q = query(appsRef, where('jobId', '==', jobId), orderBy('appliedAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        appliedAt: doc.data().appliedAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-    } as JobApplication));
-}
-
-export async function updateApplication(appId: string, data: Partial<JobApplication>): Promise<void> {
-    const appRef = doc(db, 'applications', appId);
-    await updateDoc(appRef, {
-        ...data,
-        updatedAt: serverTimestamp(),
-    });
-}
-
-// Alias for consistency
-export const getApplicationsByCandidate = getApplicationsByJobSeeker;
-
-
-// ==================== PAYMENTS ====================
-
-export async function createPayment(paymentData: Omit<Payment, 'id'>): Promise<string> {
-    const paymentsRef = collection(db, 'payments');
-    const docRef = await addDoc(paymentsRef, {
-        ...paymentData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-    });
-    return docRef.id;
-}
-
-export async function getPaymentById(paymentId: string): Promise<Payment | null> {
-    const paymentRef = doc(db, 'payments', paymentId);
-    const paymentSnap = await getDoc(paymentRef);
-
-    if (paymentSnap.exists()) {
-        const data = paymentSnap.data();
-        return {
-            id: paymentSnap.id,
-            ...data,
-            reviewedAt: data.reviewedAt?.toDate(),
-            createdAt: data.createdAt?.toDate(),
-            updatedAt: data.updatedAt?.toDate(),
-        } as Payment;
+/**
+ * Delete a document
+ */
+export const deleteDocument = async (
+    collectionName: string,
+    id: string
+): Promise<void> => {
+    try {
+        const docRef = doc(db, collectionName, id);
+        await deleteDoc(docRef);
+    } catch (error) {
+        console.error(`Error deleting document from ${collectionName}:`, error);
+        throw error;
     }
+};
 
-    return null;
-}
+/**
+ * Check if document exists
+ */
+export const documentExists = async (
+    collectionName: string,
+    id: string
+): Promise<boolean> => {
+    try {
+        const docRef = doc(db, collectionName, id);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists();
+    } catch (error) {
+        console.error(`Error checking document existence in ${collectionName}:`, error);
+        return false;
+    }
+};
 
-export async function getPendingPayments(): Promise<Payment[]> {
-    const paymentsRef = collection(db, 'payments');
-    const q = query(paymentsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+// ==================== QUERY OPERATIONS ====================
 
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        reviewedAt: doc.data().reviewedAt?.toDate(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-    } as Payment));
-}
+/**
+ * Get all documents from a collection
+ */
+export const getAllDocuments = async <T>(
+    collectionName: string
+): Promise<T[]> => {
+    try {
+        const querySnapshot = await getDocs(collection(db, collectionName));
+        return querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        })) as T[];
+    } catch (error) {
+        console.error(`Error getting all documents from ${collectionName}:`, error);
+        throw error;
+    }
+};
 
-export async function updatePayment(paymentId: string, data: Partial<Payment>): Promise<void> {
-    const paymentRef = doc(db, 'payments', paymentId);
-    await updateDoc(paymentRef, {
-        ...data,
-        updatedAt: serverTimestamp(),
-    });
-}
+/**
+ * Query documents with conditions
+ */
+export const queryDocuments = async <T>(
+    collectionName: string,
+    constraints: QueryConstraint[]
+): Promise<T[]> => {
+    try {
+        const q = query(collection(db, collectionName), ...constraints);
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        })) as T[];
+    } catch (error) {
+        console.error(`Error querying documents from ${collectionName}:`, error);
+        throw error;
+    }
+};
 
-// ==================== PLACEMENTS ====================
+/**
+ * Query documents with pagination
+ */
+export const queryDocumentsPaginated = async <T>(
+    collectionName: string,
+    constraints: QueryConstraint[],
+    pageSize: number,
+    lastDoc?: QueryDocumentSnapshot
+): Promise<{ documents: T[]; lastDoc: QueryDocumentSnapshot | null }> => {
+    try {
+        const baseConstraints = [...constraints, limit(pageSize)];
 
-export async function createPlacement(placementData: Omit<Placement, 'id'>): Promise<string> {
-    const placementsRef = collection(db, 'placements');
-    const docRef = await addDoc(placementsRef, {
-        ...placementData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-    });
-    return docRef.id;
-}
+        if (lastDoc) {
+            baseConstraints.push(startAfter(lastDoc));
+        }
 
-export async function getAllPlacements(): Promise<Placement[]> {
-    const placementsRef = collection(db, 'placements');
-    const q = query(placementsRef, orderBy('hiredAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+        const q = query(collection(db, collectionName), ...baseConstraints);
+        const querySnapshot = await getDocs(q);
 
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        hiredAt: doc.data().hiredAt?.toDate(),
-        commissionDueDate: doc.data().commissionDueDate?.toDate(),
-        commissionPaidAt: doc.data().commissionPaidAt?.toDate(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-    } as Placement));
-}
+        const documents = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        })) as T[];
 
-export async function updatePlacement(placementId: string, data: Partial<Placement>): Promise<void> {
-    const placementRef = doc(db, 'placements', placementId);
-    await updateDoc(placementRef, {
-        ...data,
-        updatedAt: serverTimestamp(),
-    });
-}
+        const newLastDoc =
+            querySnapshot.docs.length > 0
+                ? querySnapshot.docs[querySnapshot.docs.length - 1]
+                : null;
 
-// ==================== SAVED JOBS ====================
+        return { documents, lastDoc: newLastDoc };
+    } catch (error) {
+        console.error(`Error querying paginated documents from ${collectionName}:`, error);
+        throw error;
+    }
+};
 
-export async function saveJob(userId: string, jobId: string): Promise<void> {
-    const savedJobRef = doc(db, 'saved_jobs', userId, 'jobs', jobId);
-    await setDoc(savedJobRef, {
-        jobId,
-        savedAt: serverTimestamp(),
-    });
-}
+/**
+ * Count documents matching query
+ */
+export const countDocuments = async (
+    collectionName: string,
+    constraints: QueryConstraint[] = []
+): Promise<number> => {
+    try {
+        const q = query(collection(db, collectionName), ...constraints);
+        const snapshot = await getDocs(q);
+        return snapshot.size;
+    } catch (error) {
+        console.error(`Error counting documents in ${collectionName}:`, error);
+        throw error;
+    }
+};
 
-export async function unsaveJob(userId: string, jobId: string): Promise<void> {
-    const savedJobRef = doc(db, 'saved_jobs', userId, 'jobs', jobId);
-    await deleteDoc(savedJobRef);
-}
+// ==================== BATCH OPERATIONS ====================
 
-export async function getSavedJobs(userId: string): Promise<string[]> {
-    const savedJobsRef = collection(db, 'saved_jobs', userId, 'jobs');
-    const querySnapshot = await getDocs(savedJobsRef);
+/**
+ * Create a batch for multiple operations
+ */
+export const createBatch = (): WriteBatch => {
+    return writeBatch(db);
+};
 
-    return querySnapshot.docs.map(doc => doc.data().jobId as string);
-}
+/**
+ * Batch create multiple documents
+ */
+export const batchCreateDocuments = async <T extends DocumentData>(
+    collectionName: string,
+    documents: { id: string; data: T }[]
+): Promise<void> => {
+    try {
+        const batch = writeBatch(db);
 
-// ==================== POINTS HISTORY ====================
+        documents.forEach(({ id, data }) => {
+            const docRef = doc(db, collectionName, id);
+            batch.set(docRef, {
+                ...data,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+        });
 
-export async function addPointsHistory(
+        await batch.commit();
+    } catch (error) {
+        console.error(`Error batch creating documents in ${collectionName}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Batch update multiple documents
+ */
+export const batchUpdateDocuments = async <T extends Partial<DocumentData>>(
+    collectionName: string,
+    updates: { id: string; data: T }[]
+): Promise<void> => {
+    try {
+        const batch = writeBatch(db);
+
+        updates.forEach(({ id, data }) => {
+            const docRef = doc(db, collectionName, id);
+            batch.update(docRef, {
+                ...data,
+                updatedAt: serverTimestamp(),
+            });
+        });
+
+        await batch.commit();
+    } catch (error) {
+        console.error(`Error batch updating documents in ${collectionName}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Batch delete multiple documents
+ */
+export const batchDeleteDocuments = async (
+    collectionName: string,
+    ids: string[]
+): Promise<void> => {
+    try {
+        const batch = writeBatch(db);
+
+        ids.forEach((id) => {
+            const docRef = doc(db, collectionName, id);
+            batch.delete(docRef);
+        });
+
+        await batch.commit();
+    } catch (error) {
+        console.error(`Error batch deleting documents from ${collectionName}:`, error);
+        throw error;
+    }
+};
+
+// ==================== FIELD OPERATIONS ====================
+
+/**
+ * Increment a numeric field
+ */
+export const incrementField = async (
+    collectionName: string,
+    id: string,
+    field: string,
+    value: number = 1
+): Promise<void> => {
+    try {
+        const docRef = doc(db, collectionName, id);
+        await updateDoc(docRef, {
+            [field]: increment(value),
+            updatedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error(`Error incrementing field in ${collectionName}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Add item to array field
+ */
+export const addToArrayField = async <T>(
+    collectionName: string,
+    id: string,
+    field: string,
+    value: T
+): Promise<void> => {
+    try {
+        const docRef = doc(db, collectionName, id);
+        await updateDoc(docRef, {
+            [field]: arrayUnion(value),
+            updatedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error(`Error adding to array field in ${collectionName}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Remove item from array field
+ */
+export const removeFromArrayField = async <T>(
+    collectionName: string,
+    id: string,
+    field: string,
+    value: T
+): Promise<void> => {
+    try {
+        const docRef = doc(db, collectionName, id);
+        await updateDoc(docRef, {
+            [field]: arrayRemove(value),
+            updatedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error(`Error removing from array field in ${collectionName}:`, error);
+        throw error;
+    }
+};
+
+// ==================== HELPER FUNCTIONS ====================
+
+/**
+ * Convert Firestore Timestamp to Date
+ */
+export const timestampToDate = (timestamp: Timestamp | Date): Date => {
+    if (timestamp instanceof Date) {
+        return timestamp;
+    }
+    return timestamp.toDate();
+};
+
+/**
+ * Build query constraints from filters
+ */
+export const buildQueryConstraints = (filters: {
+    field: string;
+    operator: any;
+    value: any;
+}[]): QueryConstraint[] => {
+    return filters.map((filter) =>
+        where(filter.field, filter.operator, filter.value)
+    );
+};
+
+/**
+ * Build order by constraints
+ */
+export const buildOrderByConstraints = (
+    orderByFields: { field: string; direction: 'asc' | 'desc' }[]
+): QueryConstraint[] => {
+    return orderByFields.map((orderByField) =>
+        orderBy(orderByField.field, orderByField.direction)
+    );
+};
+
+// ==================== COLLECTION NAMES ====================
+
+export const COLLECTIONS = {
+    USERS: 'users',
+    JOBS: 'jobs',
+    APPLICATIONS: 'applications',
+    PAYMENTS: 'payments',
+    PLACEMENTS: 'placements',
+    SAVED_JOBS: 'saved_jobs',
+    ADMIN_ACTIONS: 'admin_actions',
+    NOTIFICATIONS: 'notifications',
+    REPORTS: 'reports',
+    SETTINGS: 'settings',
+} as const;
+
+// ==================== SPECIFIC COLLECTION HELPERS ====================
+
+/**
+ * Get user by ID
+ */
+export const getUserById = async (userId: string) => {
+    return getDocument(COLLECTIONS.USERS, userId);
+};
+
+/**
+ * Get user by email
+ */
+export const getUserByEmail = async (email: string) => {
+    const users = await queryDocuments(COLLECTIONS.USERS, [
+        where('email', '==', email),
+    ]);
+    return users[0] || null;
+};
+
+/**
+ * Get job by ID
+ */
+export const getJobById = async (jobId: string) => {
+    return getDocument(COLLECTIONS.JOBS, jobId);
+};
+
+/**
+ * Get active jobs
+ */
+export const getActiveJobs = async (limitCount: number = 20) => {
+    return queryDocuments(COLLECTIONS.JOBS, [
+        where('status', '==', 'active'),
+        orderBy('postedAt', 'desc'),
+        limit(limitCount),
+    ]);
+};
+
+/**
+ * Get pending jobs (for admin)
+ */
+export const getPendingJobs = async () => {
+    return queryDocuments(COLLECTIONS.JOBS, [
+        where('status', '==', 'pending'),
+        orderBy('postedAt', 'desc'),
+    ]);
+};
+
+/**
+ * Get applications for a job
+ */
+export const getApplicationsByJob = async (jobId: string) => {
+    return queryDocuments(COLLECTIONS.APPLICATIONS, [
+        where('jobId', '==', jobId),
+        orderBy('appliedAt', 'desc'),
+    ]);
+};
+
+/**
+ * Get applications by candidate
+ */
+export const getApplicationsByCandidate = async (candidateId: string) => {
+    return queryDocuments(COLLECTIONS.APPLICATIONS, [
+        where('candidateId', '==', candidateId),
+        orderBy('appliedAt', 'desc'),
+    ]);
+};
+
+/**
+ * Get pending payments (for admin)
+ */
+export const getPendingPayments = async () => {
+    return queryDocuments(COLLECTIONS.PAYMENTS, [
+        where('status', '==', 'pending'),
+        orderBy('submittedAt', 'desc'),
+    ]);
+};
+
+/**
+ * Get user's saved jobs
+ */
+export const getSavedJobs = async (userId: string) => {
+    return queryDocuments(COLLECTIONS.SAVED_JOBS, [
+        where('userId', '==', userId),
+        orderBy('savedAt', 'desc'),
+    ]);
+};
+
+/**
+ * Check if job is saved by user
+ */
+export const isJobSaved = async (
     userId: string,
-    action: string,
-    points: number,
-    description: string
-): Promise<void> {
-    const pointsRef = collection(db, 'points_history');
-    await addDoc(pointsRef, {
-        userId,
-        action,
-        points,
-        description,
-        createdAt: serverTimestamp(),
-    });
-}
+    jobId: string
+): Promise<boolean> => {
+    const savedJobs = await queryDocuments(COLLECTIONS.SAVED_JOBS, [
+        where('userId', '==', userId),
+        where('jobId', '==', jobId),
+    ]);
+    return savedJobs.length > 0;
+};
 
-export async function getPointsHistory(userId: string): Promise<any[]> {
-    const pointsRef = collection(db, 'points_history');
-    const q = query(pointsRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+// ==================== EXPORT ALL ====================
 
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-    }));
-}
+export {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    query,
+    where,
+    orderBy,
+    limit,
+    startAfter,
+    serverTimestamp,
+    increment,
+    arrayUnion,
+    arrayRemove,
+    writeBatch,
+    Timestamp,
+};

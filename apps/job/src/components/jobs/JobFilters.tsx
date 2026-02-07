@@ -86,9 +86,21 @@ export default function JobFilters({
                 {jobs.map((job) => (
                     <JobCard
                         key={job.id}
-                        job={job}
-                        onSave={onSaveJob}
-                        isSaved={savedJobIds.includes(job.id)}
+                        job={{
+                            id: job.id,
+                            title: job.title,
+                            companyName: job.company.name,
+                            companyLogo: job.company.logo || undefined,
+                            location: job.location,
+                            employmentType: job.type,
+                            salaryMin: job.salary?.min || 0,
+                            salaryMax: job.salary?.max || 0,
+                            category: job.category,
+                            requiredSkills: job.requiredSkills || job.skills,
+                            createdAt: job.createdAt,
+                            applicationsCount: job.applicationCount,
+                            featured: job.featured,
+                        }}
                     />
                 ))}
             </div>

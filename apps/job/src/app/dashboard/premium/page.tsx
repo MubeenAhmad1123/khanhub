@@ -9,7 +9,7 @@ import PremiumBadge from '@/components/premium/PremiumBadge';
 export default function PremiumUpgradePage() {
     const router = useRouter();
     const { user, profile } = useAuth();
-    const { submitPayment, uploading, success } = usePayment();
+    const { submitPayment, submitting, error } = usePayment(user?.uid || null);
 
     if (profile?.isPremium) {
         return (

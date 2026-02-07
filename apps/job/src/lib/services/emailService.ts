@@ -204,7 +204,8 @@ export async function sendJobApprovalEmail(
     to: string,
     employerName: string,
     jobTitle: string,
-    approved: boolean
+    approved: boolean,
+    reason?: string
 ): Promise<void> {
     await resend.emails.send({
         from: FROM_EMAIL,
@@ -222,6 +223,7 @@ export async function sendJobApprovalEmail(
                 <h2>Job Posting Needs Revision</h2>
                 <p>Hi ${employerName},</p>
                 <p>Your job posting for <strong>${jobTitle}</strong> requires some changes before it can be published.</p>
+                ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
                 <p>Please review and resubmit your job posting.</p>
                 <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/employer/jobs" style="background:#3b82f6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">Edit Job Posting</a></p>
                 <p>Best regards,<br>Khanhub Team</p>

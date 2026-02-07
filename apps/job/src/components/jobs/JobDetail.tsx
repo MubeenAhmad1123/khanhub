@@ -99,7 +99,7 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                                 <div className="flex items-center gap-2 text-jobs-dark/70 font-medium">
                                     <DollarSign className="h-5 w-5 text-jobs-primary flex-shrink-0" />
                                     <span className="font-black text-jobs-primary">
-                                        {formatSalaryRange(job.salary.min, job.salary.max, job.salary.period)}
+                                        {formatSalaryRange(job.salary.min, job.salary.max, job.salary.period as 'month' | 'year')}
                                     </span>
                                 </div>
                             )}
@@ -276,9 +276,11 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                     <div className="bg-white border rounded-lg p-6 sticky top-6">
                         <h2 className="text-xl font-bold text-gray-900 mb-4">About the Company</h2>
 
-                        <div className="mb-4">
-                            <p className="text-gray-700 leading-relaxed">{job.company.description}</p>
-                        </div>
+                        {(job.company as any).description && (
+                            <div className="mb-4">
+                                <p className="text-gray-700 leading-relaxed">{(job.company as any).description}</p>
+                            </div>
+                        )}
 
                         <div className="space-y-3 mb-6">
                             <div className="flex items-start gap-2">
@@ -288,36 +290,40 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                                     <p className="font-semibold text-gray-900">{job.company.industry}</p>
                                 </div>
                             </div>
-                            <div className="flex items-start gap-2">
-                                <Users className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-sm text-gray-500">Company Size</p>
-                                    <p className="font-semibold text-gray-900">{job.company.size} employees</p>
+                            {(job.company as any).size && (
+                                <div className="flex items-start gap-2">
+                                    <Users className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm text-gray-500">Company Size</p>
+                                        <p className="font-semibold text-gray-900">{(job.company as any).size} employees</p>
+                                    </div>
                                 </div>
-                            </div>
-                            {job.company.founded && (
+                            )}
+                            {(job.company as any).founded && (
                                 <div className="flex items-start gap-2">
                                     <Calendar className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
                                     <div>
                                         <p className="text-sm text-gray-500">Founded</p>
-                                        <p className="font-semibold text-gray-900">{job.company.founded}</p>
+                                        <p className="font-semibold text-gray-900">{(job.company as any).founded}</p>
                                     </div>
                                 </div>
                             )}
-                            <div className="flex items-start gap-2">
-                                <MapPin className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-sm text-gray-500">Location</p>
-                                    <p className="font-semibold text-gray-900">{job.company.location}</p>
+                            {(job.company as any).location && (
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm text-gray-500">Location</p>
+                                        <p className="font-semibold text-gray-900">{(job.company as any).location}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            {job.company.website && (
+                            )}
+                            {(job.company as any).website && (
                                 <div className="flex items-start gap-2">
                                     <Globe className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
                                     <div>
                                         <p className="text-sm text-gray-500">Website</p>
                                         <a
-                                            href={job.company.website}
+                                            href={(job.company as any).website}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="font-semibold text-blue-600 hover:underline"
@@ -329,11 +335,11 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                             )}
                         </div>
 
-                        {job.company.benefits && job.company.benefits.length > 0 && (
+                        {(job.company as any).benefits && (job.company as any).benefits.length > 0 && (
                             <>
                                 <h3 className="font-bold text-gray-900 mb-2">Company Benefits</h3>
                                 <ul className="space-y-1">
-                                    {job.company.benefits.map((benefit, index) => (
+                                    {(job.company as any).benefits.map((benefit: string, index: number) => (
                                         <li key={index} className="flex items-start gap-2 text-sm">
                                             <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                                             <span className="text-gray-700">{benefit}</span>

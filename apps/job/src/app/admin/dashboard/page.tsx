@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { DollarSign, Clock, Briefcase, Users, CheckCircle, XCircle, Loader2, TrendingUp } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { updatePayment } from '@/lib/firebase/firestore';
-import { updateUserProfile } from '@/lib/firebase/auth';
+import { updateUserProfile, getUserProfile } from '@/lib/firebase/auth';
 import { sendPaymentApprovalEmail, sendPaymentRejectionEmail } from '@/lib/services/emailService';
 
 export default function AdminDashboardPage() {
@@ -42,8 +43,12 @@ export default function AdminDashboardPage() {
                 registrationPaid: true,
             });
 
-            // Send approval email
-            await sendPaymentApprovalEmail(userEmail, userName, amount);
+            // Fetch user info for email
+            const userProfile = await getUserProfile(userId);
+            if (userProfile) {
+                // Send approval email
+                await sendPaymentApprovalEmail(userProfile.email, userProfile.displayName, amount);
+            }
 
             // Refresh data
             refresh();
@@ -53,7 +58,7 @@ export default function AdminDashboardPage() {
         }
     };
 
-    const handleRejectPayment = async (paymentId: string, userEmail: string, userName: string) => {
+    const handleRejectPayment = async (paymentId: string, userId: string) => {
         const reason = prompt('Enter rejection reason:');
         if (!reason) return;
 
@@ -66,8 +71,12 @@ export default function AdminDashboardPage() {
                 rejectionReason: reason,
             });
 
-            // Send rejection email
-            await sendPaymentRejectionEmail(userEmail, userName, reason);
+            // Fetch user info for email
+            const userProfile = await getUserProfile(userId);
+            if (userProfile) {
+                // Send rejection email
+                await sendPaymentRejectionEmail(userProfile.email, userProfile.displayName, reason);
+            }
 
             // Refresh data
             refresh();
@@ -220,11 +229,14 @@ export default function AdminDashboardPage() {
                                             rel="noopener noreferrer"
                                             className="block"
                                         >
-                                            <img
-                                                src={payment.screenshotUrl}
-                                                alt="Payment screenshot"
-                                                className="w-full max-w-md rounded-xl border-2 border-gray-100 hover:border-jobs-primary transition-colors cursor-pointer"
-                                            />
+                                            <div className="relative w-full max-w-md h-64">
+                                                <Image
+                                                    src={payment.screenshotUrl}
+                                                    alt="Payment screenshot"
+                                                    fill
+                                                    className="object-contain rounded-xl border-2 border-gray-100 hover:border-jobs-primary transition-colors cursor-pointer"
+                                                />
+                                            </div>
                                         </a>
                                     </div>
 
@@ -245,8 +257,7 @@ export default function AdminDashboardPage() {
                                         <button
                                             onClick={() => handleRejectPayment(
                                                 payment.id,
-                                                '', // userEmail
-                                                ''  // userName
+                                                payment.userId
                                             )}
                                             className="flex items-center gap-2 bg-red-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-600 transition-colors"
                                         >
@@ -308,6 +319,6 @@ export default function AdminDashboardPage() {
                     </Link>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

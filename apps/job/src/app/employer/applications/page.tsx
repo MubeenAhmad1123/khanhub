@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Eye, Download, CheckCircle, XCircle, Clock, Star, Loader2, Mail, Phone, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getApplicationsByEmployer, updateApplication } from '@/lib/firebase/firestore';
+import { getApplicationsByEmployer, updateApplication, createPlacement } from '@/lib/firebase/firestore';
 import { JobApplication } from '@/types/application';
 import MatchScoreBadge from '@/components/jobs/MatchScoreBadge';
 
@@ -51,6 +51,33 @@ export default function EmployerApplicationsPage() {
                 status: newStatus,
                 updatedAt: new Date(),
             });
+
+            // If hired, create a placement record
+            if (newStatus === 'hired') {
+                const app = applications.find(a => a.id === applicationId);
+                if (app) {
+                    // Extract salary - this is a simplified version
+                    // In a real app, you'd have the actual agreed salary
+                    const salary = app.salary || 50000; // Fallback
+
+                    await createPlacement({
+                        jobId: app.jobId,
+                        jobTitle: app.jobTitle,
+                        employerId: app.employerId,
+                        employerName: profile?.companyName || 'Employer',
+                        jobSeekerId: app.candidateId,
+                        jobSeekerName: app.candidateName,
+                        firstMonthSalary: salary,
+                        commissionAmount: salary * 0.5,
+                        commissionStatus: 'pending',
+                        hiredAt: new Date(),
+                        commissionDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+                        commissionPaidAt: null,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    });
+                }
+            }
 
             // Update local state
             setApplications(apps =>
@@ -99,8 +126,8 @@ export default function EmployerApplicationsPage() {
                             key={status}
                             onClick={() => setFilter(status)}
                             className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition ${filter === status
-                                    ? 'bg-jobs-primary text-white shadow-md'
-                                    : 'text-jobs-dark/60 hover:bg-gray-50'
+                                ? 'bg-jobs-primary text-white shadow-md'
+                                : 'text-jobs-dark/60 hover:bg-gray-50'
                                 }`}
                         >
                             {status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Filter, SlidersHorizontal, ChevronDown, Bookmark, Building2, Clock, DollarSign, TrendingUp, Users, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@khanhub/shared-ui';
 import { getApprovedJobs } from '@/lib/firebase/firestore';
 import { Job } from '@/types/job';
@@ -135,7 +136,13 @@ export default function JobSearchPage() {
                                     <div className="flex gap-6">
                                         <div className="w-16 h-16 bg-jobs-neutral rounded-2xl flex items-center justify-center text-3xl group-hover:bg-jobs-primary/10 transition-colors">
                                             {job.company.logo ? (
-                                                <img src={job.company.logo} alt={job.company.name} className="w-full h-full object-cover rounded-2xl" />
+                                                <Image
+                                                    src={job.company.logo}
+                                                    alt={job.company.name}
+                                                    width={64}
+                                                    height={64}
+                                                    className="w-full h-full object-cover rounded-2xl"
+                                                />
                                             ) : (
                                                 <Building2 className="h-8 w-8 text-gray-400" />
                                             )}

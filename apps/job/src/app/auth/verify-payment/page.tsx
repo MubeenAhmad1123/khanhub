@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Upload, CheckCircle, Clock, XCircle, Loader2, Image as ImageIcon } from 'lucide-react';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { usePayment } from '@/hooks/usePayment';
 import { validateImage } from '@/lib/firebase/storage';
@@ -147,8 +148,8 @@ export default function VerifyPaymentPage() {
                                     type="button"
                                     onClick={() => setAmount(1000)}
                                     className={`p-4 rounded-2xl border-2 transition-all ${amount === 1000
-                                            ? 'border-jobs-primary bg-jobs-primary/5 font-black'
-                                            : 'border-gray-100 hover:border-jobs-primary/30'
+                                        ? 'border-jobs-primary bg-jobs-primary/5 font-black'
+                                        : 'border-gray-100 hover:border-jobs-primary/30'
                                         }`}
                                 >
                                     <div className="text-2xl font-black text-jobs-primary">Rs. 1,000</div>
@@ -158,8 +159,8 @@ export default function VerifyPaymentPage() {
                                     type="button"
                                     onClick={() => setAmount(10000)}
                                     className={`p-4 rounded-2xl border-2 transition-all ${amount === 10000
-                                            ? 'border-jobs-accent bg-jobs-accent/5 font-black'
-                                            : 'border-gray-100 hover:border-jobs-accent/30'
+                                        ? 'border-jobs-accent bg-jobs-accent/5 font-black'
+                                        : 'border-gray-100 hover:border-jobs-accent/30'
                                         }`}
                                 >
                                     <div className="text-2xl font-black text-jobs-accent">Rs. 10,000</div>
@@ -193,11 +194,13 @@ export default function VerifyPaymentPage() {
                                     </div>
                                 </label>
                             ) : (
-                                <div className="relative">
-                                    <img
+                                <div className="relative w-full h-96">
+                                    <Image
                                         src={previewUrl}
                                         alt="Payment screenshot"
-                                        className="w-full rounded-2xl border-2 border-gray-100"
+                                        fill
+                                        unoptimized
+                                        className="object-contain rounded-2xl border-2 border-gray-100"
                                     />
                                     <button
                                         type="button"
@@ -205,7 +208,7 @@ export default function VerifyPaymentPage() {
                                             setScreenshot(null);
                                             setPreviewUrl(null);
                                         }}
-                                        className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                                        className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-10"
                                     >
                                         <XCircle className="h-5 w-5" />
                                     </button>

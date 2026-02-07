@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
     Briefcase,
     MapPin,
@@ -103,7 +104,13 @@ export default function JobDetailPage() {
                         {/* Company Logo */}
                         <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
                             {job.company.logo ? (
-                                <img src={job.company.logo} alt={job.company.name} className="w-full h-full rounded-2xl object-cover" />
+                                <Image
+                                    src={job.company.logo}
+                                    alt={job.company.name}
+                                    width={80}
+                                    height={80}
+                                    className="w-full h-full rounded-2xl object-cover"
+                                />
                             ) : (
                                 <Building2 className="h-10 w-10 text-gray-400" />
                             )}

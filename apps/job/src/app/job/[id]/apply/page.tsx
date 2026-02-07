@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import { Briefcase, MapPin, Building2, FileText, Video, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { getJobById, createApplication } from '@/lib/firebase/firestore';
 import { calculateMatchScore } from '@/lib/services/matchingAlgorithm';
@@ -82,7 +83,7 @@ export default function ApplyJobPage() {
                 jobId: job.id,
                 jobTitle: job.title,
                 employerId: job.employerId,
-                companyName: job.company.name,
+                companyName: job.companyName,
                 candidateId: user.uid,
                 candidateName: profile.displayName,
                 candidateEmail: profile.email,
@@ -95,10 +96,24 @@ export default function ApplyJobPage() {
                 appliedAt: new Date(),
                 createdAt: new Date(),
                 updatedAt: new Date(),
+                salary: job.salaryMax, // Initial salary value
             });
 
             // Award points
             await awardPoints(user.uid, 'JOB_APPLICATION', `Applied to ${job.title}`);
+
+            // Send confirmation email
+            try {
+                const { sendApplicationConfirmationEmail } = await import('@/lib/services/emailService');
+                await sendApplicationConfirmationEmail(
+                    profile.email,
+                    profile.displayName,
+                    job.title,
+                    job.companyName
+                );
+            } catch (err) {
+                console.warn('Failed to send application confirmation email:', err);
+            }
 
             setSuccess(true);
             setTimeout(() => {
@@ -146,7 +161,7 @@ export default function ApplyJobPage() {
                     </div>
                     <h2 className="text-3xl font-black text-jobs-dark mb-4">Application Submitted!</h2>
                     <p className="text-jobs-dark/70 mb-6">
-                        Your application for <strong>{job.title}</strong> has been sent to {job.company.name}.
+                        Your application for <strong>{job.title}</strong> has been sent to {job.companyName}.
                     </p>
                     <p className="text-sm text-jobs-dark/60 mb-6">
                         Redirecting to your applications...
@@ -165,23 +180,29 @@ export default function ApplyJobPage() {
                 <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 mb-6">
                     <div className="flex items-start gap-6 mb-6">
                         <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            {job.company.logo ? (
-                                <img src={job.company.logo} alt={job.company.name} className="w-full h-full rounded-xl" />
+                            {job.companyLogo ? (
+                                <Image
+                                    src={job.companyLogo}
+                                    alt={job.companyName}
+                                    width={64}
+                                    height={64}
+                                    className="w-full h-full rounded-xl"
+                                />
                             ) : (
                                 <Building2 className="h-8 w-8 text-gray-400" />
                             )}
                         </div>
                         <div className="flex-1">
                             <h1 className="text-3xl font-black text-jobs-dark mb-2">{job.title}</h1>
-                            <p className="text-lg font-bold text-jobs-dark/70">{job.company.name}</p>
+                            <p className="text-lg font-bold text-jobs-dark/70">{job.companyName}</p>
                             <div className="flex items-center gap-4 mt-3 text-sm text-jobs-dark/60">
                                 <div className="flex items-center gap-1">
                                     <MapPin className="h-4 w-4" />
-                                    <span>{job.city}, {job.province}</span>
+                                    <span>{job.city}, {job.location}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <Briefcase className="h-4 w-4" />
-                                    <span>{job.type.replace('-', ' ').toUpperCase()}</span>
+                                    <span>{job.employmentType.replace('-', ' ').toUpperCase()}</span>
                                 </div>
                             </div>
                         </div>
@@ -190,7 +211,7 @@ export default function ApplyJobPage() {
                         )}
                     </div>
 
-                    <p className="text-jobs-dark/80 leading-relaxed">{job.description}</p>
+                    <p className="text-jobs-dark/80 leading-relaxed text-sm line-clamp-3">{job.description}</p>
                 </div>
 
                 {/* Application Form */}
@@ -285,7 +306,7 @@ export default function ApplyJobPage() {
                                 rows={8}
                                 value={coverLetter}
                                 onChange={(e) => setCoverLetter(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary resize-none"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary resize-none sm:text-sm"
                                 placeholder="Explain why you're a great fit for this role..."
                             />
                             <p className="text-xs text-jobs-dark/50 mt-1">
@@ -310,7 +331,7 @@ export default function ApplyJobPage() {
                             <button
                                 type="submit"
                                 disabled={submitting || !applicationCheck.can}
-                                className="flex-1 bg-jobs-accent text-white py-4 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="flex-1 bg-jobs-accent text-white py-4 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-jobs-accent/20"
                             >
                                 {submitting ? (
                                     <>

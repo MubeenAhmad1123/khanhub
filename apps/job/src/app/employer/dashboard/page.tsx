@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'use';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Briefcase, Users, Clock, TrendingUp, Plus, FileText, CheckCircle, XCircle, Loader2 } from 'lucide-react';

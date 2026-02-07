@@ -1,291 +1,434 @@
-'use client';
+// CV Parser Service
+// Extract text and parse CV data from PDF and DOCX files
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Upload, FileText, Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { uploadCV, validateCV } from '@/lib/firebase/storage';
-import { parseResume } from '@/lib/services/cvParser';
-import { updateUserProfile } from '@/lib/firebase/auth';
-import { awardPoints, POINTS_CONFIG } from '@/lib/services/pointsSystem';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
 
-export default function CVUploadPage() {
-    const router = useRouter();
-    const { user, profile } = useAuth();
-    const [file, setFile] = useState<File | null>(null);
-    const [uploading, setUploading] = useState(false);
-    const [parsing, setParsing] = useState(false);
-    const [error, setError] = useState('');
-    const [extractedData, setExtractedData] = useState<any>(null);
+// ==================== TYPES ====================
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0];
-        if (!selectedFile) return;
-
-        const validation = validateCV(selectedFile);
-        if (!validation.valid) {
-            setError(validation.error || 'Invalid file');
-            return;
-        }
-
-        setFile(selectedFile);
-        setError('');
+export interface ParsedCVData {
+    rawText: string;
+    extractedData: {
+        email?: string;
+        phone?: string;
+        skills: string[];
+        experience: ParsedExperience[];
+        education: ParsedEducation[];
+        linkedin?: string;
+        github?: string;
+        portfolio?: string;
     };
-
-    const handleParse = async () => {
-        if (!file) return;
-
-        setParsing(true);
-        setError('');
-
-        try {
-            const data = await parseResume(file);
-            setExtractedData(data);
-            setParsing(false);
-        } catch (err) {
-            setError('Failed to parse CV. Please try again.');
-            setParsing(false);
-        }
-    };
-
-    const handleUpload = async () => {
-        if (!file || !user) return;
-
-        setUploading(true);
-        setError('');
-
-        try {
-            // Upload CV to Firebase Storage
-            const cvUrl = await uploadCV(user.uid, file);
-
-            // Update user profile with CV URL
-            await updateUserProfile(user.uid, {
-                profile: {
-                    ...profile?.profile,
-                    cvUrl,
-                    // Auto-fill extracted data
-                    email: extractedData?.email || profile?.email,
-                    phone: extractedData?.phone || profile?.profile?.phone,
-                    skills: extractedData?.skills || profile?.profile?.skills || [],
-                    experience: extractedData?.experience || profile?.profile?.experience || [],
-                    education: extractedData?.education || profile?.profile?.education || [],
-                },
-            });
-
-            // Award points
-            await awardPoints(user.uid, 'CV_UPLOADED', 'CV uploaded successfully');
-
-            setUploading(false);
-            router.push('/dashboard');
-        } catch (err) {
-            console.error('Upload error:', err);
-            setError('Failed to upload CV. Please try again.');
-            setUploading(false);
-        }
-    };
-
-    return (
-        <div className="min-h-screen bg-jobs-neutral py-8 px-4">
-            <div className="max-w-4xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-black text-jobs-dark mb-2">Upload Your CV</h1>
-                    <p className="text-jobs-dark/60">
-                        Upload your resume and we'll automatically extract your information
-                    </p>
-                </div>
-
-                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
-                    {/* Upload Section */}
-                    {!file && (
-                        <label className="block cursor-pointer">
-                            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center hover:border-jobs-primary hover:bg-jobs-primary/5 transition-all">
-                                <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                                <p className="text-sm font-bold text-jobs-dark mb-1">
-                                    Click to upload or drag and drop
-                                </p>
-                                <p className="text-xs text-jobs-dark/50">
-                                    PDF or DOCX (max. 5MB)
-                                </p>
-                                <input
-                                    type="file"
-                                    accept=".pdf,.docx"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                />
-                            </div>
-                        </label>
-                    )}
-
-                    {/* File Selected */}
-                    {file && !extractedData && (
-                        <div className="space-y-6">
-                            <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center gap-4">
-                                <FileText className="h-10 w-10 text-blue-600" />
-                                <div className="flex-1">
-                                    <div className="font-bold text-jobs-dark">{file.name}</div>
-                                    <div className="text-sm text-jobs-dark/60">
-                                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setFile(null)}
-                                    className="text-red-600 hover:bg-red-50 p-2 rounded-full transition"
-                                >
-                                    <XCircle className="h-6 w-6" />
-                                </button>
-                            </div>
-
-                            <button
-                                onClick={handleParse}
-                                disabled={parsing}
-                                className="w-full bg-jobs-primary text-white py-4 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {parsing ? (
-                                    <>
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Parsing CV...
-                                    </>
-                                ) : (
-                                    <>
-                                        <FileText className="h-5 w-5" />
-                                        Parse CV
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Extracted Data Preview */}
-                    {extractedData && (
-                        <div className="space-y-6">
-                            <div className="bg-green-50 p-4 rounded-xl border border-green-100 flex items-center gap-3">
-                                <CheckCircle className="h-6 w-6 text-green-600" />
-                                <div>
-                                    <div className="font-bold text-green-900">CV Parsed Successfully!</div>
-                                    <div className="text-sm text-green-700">Review the extracted information below</div>
-                                </div>
-                            </div>
-
-                            <div className="bg-gray-50 p-6 rounded-2xl space-y-4">
-                                <h3 className="font-black text-jobs-dark mb-4">Extracted Information</h3>
-
-                                {extractedData.name && (
-                                    <div>
-                                        <div className="text-xs font-bold text-jobs-dark/60 mb-1">Name</div>
-                                        <div className="text-jobs-dark">{extractedData.name}</div>
-                                    </div>
-                                )}
-
-                                {extractedData.email && (
-                                    <div>
-                                        <div className="text-xs font-bold text-jobs-dark/60 mb-1">Email</div>
-                                        <div className="text-jobs-dark">{extractedData.email}</div>
-                                    </div>
-                                )}
-
-                                {extractedData.phone && (
-                                    <div>
-                                        <div className="text-xs font-bold text-jobs-dark/60 mb-1">Phone</div>
-                                        <div className="text-jobs-dark">{extractedData.phone}</div>
-                                    </div>
-                                )}
-
-                                {extractedData.skills.length > 0 && (
-                                    <div>
-                                        <div className="text-xs font-bold text-jobs-dark/60 mb-2">Skills ({extractedData.skills.length})</div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {extractedData.skills.map((skill: string, index: number) => (
-                                                <span key={index} className="px-3 py-1 bg-jobs-primary/10 text-jobs-primary text-xs font-bold rounded-full">
-                                                    {skill}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {extractedData.experience.length > 0 && (
-                                    <div>
-                                        <div className="text-xs font-bold text-jobs-dark/60 mb-2">Experience ({extractedData.experience.length})</div>
-                                        <div className="space-y-2">
-                                            {extractedData.experience.slice(0, 3).map((exp: any, index: number) => (
-                                                <div key={index} className="bg-white p-3 rounded-xl">
-                                                    <div className="font-bold text-jobs-dark">{exp.title}</div>
-                                                    <div className="text-sm text-jobs-dark/60">{exp.company}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {extractedData.education.length > 0 && (
-                                    <div>
-                                        <div className="text-xs font-bold text-jobs-dark/60 mb-2">Education ({extractedData.education.length})</div>
-                                        <div className="space-y-2">
-                                            {extractedData.education.map((edu: any, index: number) => (
-                                                <div key={index} className="bg-white p-3 rounded-xl">
-                                                    <div className="font-bold text-jobs-dark">{edu.degree}</div>
-                                                    <div className="text-sm text-jobs-dark/60">{edu.institution}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                <p className="text-sm text-blue-800">
-                                    <strong>Note:</strong> This information will be added to your profile. You can edit it later from your dashboard.
-                                </p>
-                            </div>
-
-                            <div className="flex gap-4">
-                                <button
-                                    onClick={() => {
-                                        setFile(null);
-                                        setExtractedData(null);
-                                    }}
-                                    className="flex-1 bg-gray-200 text-jobs-dark py-4 rounded-xl font-bold hover:bg-gray-300 transition"
-                                >
-                                    Upload Different CV
-                                </button>
-                                <button
-                                    onClick={handleUpload}
-                                    disabled={uploading}
-                                    className="flex-1 bg-jobs-accent text-white py-4 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {uploading ? (
-                                        <>
-                                            <Loader2 className="h-5 w-5 animate-spin" />
-                                            Uploading...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle className="h-5 w-5" />
-                                            Save & Continue
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {error && (
-                        <div className="mt-4 bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100">
-                            {error}
-                        </div>
-                    )}
-                </div>
-
-                <div className="mt-8 bg-yellow-50 p-6 rounded-2xl border border-yellow-100">
-                    <h3 className="font-black text-yellow-900 mb-3">💡 Tips for Best Results</h3>
-                    <ul className="space-y-2 text-sm text-yellow-800">
-                        <li>✓ Use a well-formatted PDF or DOCX file</li>
-                        <li>✓ Include clear sections for education, experience, and skills</li>
-                        <li>✓ Make sure contact information is visible</li>
-                        <li>✓ Review extracted data before saving</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    );
+    parseSuccess: boolean;
+    errors: string[];
 }
+
+export interface ParsedExperience {
+    title: string;
+    company: string;
+    startDate?: string;
+    endDate?: string;
+    description?: string;
+}
+
+export interface ParsedEducation {
+    degree: string;
+    institution: string;
+    year?: string;
+    field?: string;
+}
+
+// ==================== MAIN PARSER FUNCTION ====================
+
+/**
+ * Parse CV file and extract data
+ */
+export const parseCV = async (file: File): Promise<ParsedCVData> => {
+    try {
+        // Extract text based on file type
+        let rawText: string;
+
+        if (file.type === 'application/pdf') {
+            rawText = await extractTextFromPDF(file);
+        } else if (
+            file.type ===
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ) {
+            rawText = await extractTextFromDOCX(file);
+        } else {
+            return {
+                rawText: '',
+                extractedData: {
+                    skills: [],
+                    experience: [],
+                    education: [],
+                },
+                parseSuccess: false,
+                errors: ['Unsupported file type'],
+            };
+        }
+
+        // Parse the extracted text
+        const extractedData = parseTextData(rawText);
+
+        return {
+            rawText,
+            extractedData,
+            parseSuccess: true,
+            errors: [],
+        };
+    } catch (error: any) {
+        console.error('CV parsing error:', error);
+        return {
+            rawText: '',
+            extractedData: {
+                skills: [],
+                experience: [],
+                education: [],
+            },
+            parseSuccess: false,
+            errors: [error.message || 'Failed to parse CV'],
+        };
+    }
+};
+
+// ==================== TEXT EXTRACTION ====================
+
+/**
+ * Extract text from PDF file
+ */
+const extractTextFromPDF = async (file: File): Promise<string> => {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const data = await pdfParse(buffer);
+        return data.text;
+    } catch (error) {
+        console.error('PDF extraction error:', error);
+        throw new Error('Failed to extract text from PDF');
+    }
+};
+
+/**
+ * Extract text from DOCX file
+ */
+const extractTextFromDOCX = async (file: File): Promise<string> => {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        return result.value;
+    } catch (error) {
+        console.error('DOCX extraction error:', error);
+        throw new Error('Failed to extract text from DOCX');
+    }
+};
+
+// ==================== DATA PARSING ====================
+
+/**
+ * Parse extracted text to find structured data
+ */
+const parseTextData = (text: string): ParsedCVData['extractedData'] => {
+    return {
+        email: extractEmail(text),
+        phone: extractPhone(text),
+        skills: extractSkills(text),
+        experience: extractExperience(text),
+        education: extractEducation(text),
+        linkedin: extractLinkedIn(text),
+        github: extractGitHub(text),
+        portfolio: extractPortfolio(text),
+    };
+};
+
+/**
+ * Extract email address
+ */
+const extractEmail = (text: string): string | undefined => {
+    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+    const match = text.match(emailRegex);
+    return match ? match[0] : undefined;
+};
+
+/**
+ * Extract phone number (Pakistani format)
+ */
+const extractPhone = (text: string): string | undefined => {
+    // Match Pakistani phone numbers: +92, 0092, or 0 followed by 10 digits
+    const phoneRegex = /(\+92|0092|0)\s?3[0-9]{2}\s?[0-9]{7}|\+92\s?[0-9]{10}/;
+    const match = text.match(phoneRegex);
+    if (match) {
+        // Normalize phone number
+        return match[0].replace(/\s/g, '');
+    }
+    return undefined;
+};
+
+/**
+ * Extract skills from text
+ */
+const extractSkills = (text: string): string[] => {
+    const skills: string[] = [];
+    const lowerText = text.toLowerCase();
+
+    // Common skill keywords
+    const skillKeywords = [
+        // Programming Languages
+        'javascript', 'typescript', 'python', 'java', 'c++', 'c#', 'php', 'ruby',
+        'go', 'rust', 'swift', 'kotlin', 'scala', 'r', 'matlab',
+
+        // Web Technologies
+        'html', 'css', 'react', 'angular', 'vue', 'next.js', 'node.js', 'express',
+        'django', 'flask', 'spring', 'laravel', 'asp.net', 'jquery',
+
+        // Databases
+        'sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'oracle', 'firebase',
+        'dynamodb', 'cassandra', 'elasticsearch',
+
+        // Cloud & DevOps
+        'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'git',
+        'ci/cd', 'terraform', 'ansible',
+
+        // Mobile
+        'android', 'ios', 'react native', 'flutter', 'xamarin',
+
+        // Design
+        'figma', 'adobe xd', 'photoshop', 'illustrator', 'sketch', 'ui/ux',
+
+        // Data Science & AI
+        'machine learning', 'deep learning', 'data analysis', 'tensorflow',
+        'pytorch', 'scikit-learn', 'pandas', 'numpy',
+
+        // Other
+        'agile', 'scrum', 'project management', 'leadership', 'communication',
+        'problem solving', 'teamwork',
+    ];
+
+    skillKeywords.forEach((skill) => {
+        if (lowerText.includes(skill)) {
+            // Capitalize first letter of each word
+            const capitalizedSkill = skill
+                .split(' ')
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            skills.push(capitalizedSkill);
+        }
+    });
+
+    // Remove duplicates
+    return [...new Set(skills)];
+};
+
+/**
+ * Extract work experience
+ */
+const extractExperience = (text: string): ParsedExperience[] => {
+    const experiences: ParsedExperience[] = [];
+
+    // Look for patterns like "Software Engineer at Google" or "2020-2022"
+    const lines = text.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Check if line contains job title keywords
+        const jobTitleKeywords = [
+            'engineer', 'developer', 'designer', 'manager', 'analyst',
+            'consultant', 'specialist', 'coordinator', 'director', 'lead',
+            'senior', 'junior', 'intern',
+        ];
+
+        const hasJobTitle = jobTitleKeywords.some((keyword) =>
+            line.toLowerCase().includes(keyword)
+        );
+
+        if (hasJobTitle && line.length < 100) {
+            // Likely a job title line
+            const experience: ParsedExperience = {
+                title: line,
+                company: '',
+            };
+
+            // Try to extract company from next line or same line
+            if (line.includes(' at ')) {
+                const parts = line.split(' at ');
+                experience.title = parts[0].trim();
+                experience.company = parts[1].trim();
+            } else if (i + 1 < lines.length) {
+                experience.company = lines[i + 1].trim();
+            }
+
+            // Try to extract dates
+            const dateMatch = line.match(/(\d{4})\s?-\s?(\d{4}|present)/i);
+            if (dateMatch) {
+                experience.startDate = dateMatch[1];
+                experience.endDate = dateMatch[2].toLowerCase() === 'present'
+                    ? 'Present'
+                    : dateMatch[2];
+            }
+
+            if (experience.title && experience.company) {
+                experiences.push(experience);
+            }
+        }
+    }
+
+    return experiences.slice(0, 5); // Limit to 5 experiences
+};
+
+/**
+ * Extract education
+ */
+const extractEducation = (text: string): ParsedEducation[] => {
+    const education: ParsedEducation[] = [];
+
+    const degreeKeywords = [
+        "bachelor's", 'bachelors', 'bs', 'ba', 'bsc', 'bba', 'btech',
+        "master's", 'masters', 'ms', 'ma', 'msc', 'mba', 'mtech',
+        'phd', 'doctorate', 'diploma', 'associate',
+    ];
+
+    const lines = text.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim().toLowerCase();
+
+        const hasDegree = degreeKeywords.some((keyword) =>
+            line.includes(keyword)
+        );
+
+        if (hasDegree && line.length < 150) {
+            const edu: ParsedEducation = {
+                degree: lines[i].trim(),
+                institution: '',
+            };
+
+            // Try to extract institution from next line
+            if (i + 1 < lines.length) {
+                edu.institution = lines[i + 1].trim();
+            }
+
+            // Try to extract year
+            const yearMatch = line.match(/(\d{4})/);
+            if (yearMatch) {
+                edu.year = yearMatch[1];
+            }
+
+            if (edu.degree && edu.institution) {
+                education.push(edu);
+            }
+        }
+    }
+
+    return education.slice(0, 3); // Limit to 3 education entries
+};
+
+/**
+ * Extract LinkedIn URL
+ */
+const extractLinkedIn = (text: string): string | undefined => {
+    const linkedinRegex = /linkedin\.com\/in\/[\w-]+/i;
+    const match = text.match(linkedinRegex);
+    return match ? `https://${match[0]}` : undefined;
+};
+
+/**
+ * Extract GitHub URL
+ */
+const extractGitHub = (text: string): string | undefined => {
+    const githubRegex = /github\.com\/[\w-]+/i;
+    const match = text.match(githubRegex);
+    return match ? `https://${match[0]}` : undefined;
+};
+
+/**
+ * Extract portfolio URL
+ */
+const extractPortfolio = (text: string): string | undefined => {
+    // Look for URLs that might be portfolios
+    const urlRegex = /https?:\/\/[\w.-]+\.[\w]{2,}\/?\S*/gi;
+    const matches = text.match(urlRegex);
+
+    if (matches) {
+        // Filter out common social media and exclude LinkedIn/GitHub
+        const portfolio = matches.find(
+            (url) =>
+                !url.includes('linkedin.com') &&
+                !url.includes('github.com') &&
+                !url.includes('facebook.com') &&
+                !url.includes('twitter.com') &&
+                !url.includes('instagram.com')
+        );
+        return portfolio;
+    }
+
+    return undefined;
+};
+
+// ==================== UTILITY FUNCTIONS ====================
+
+/**
+ * Calculate years of experience from text
+ */
+export const calculateYearsOfExperience = (
+    experiences: ParsedExperience[]
+): number => {
+    let totalMonths = 0;
+
+    experiences.forEach((exp) => {
+        if (exp.startDate && exp.endDate) {
+            const start = parseInt(exp.startDate);
+            const end =
+                exp.endDate.toLowerCase() === 'present'
+                    ? new Date().getFullYear()
+                    : parseInt(exp.endDate);
+
+            if (!isNaN(start) && !isNaN(end)) {
+                totalMonths += (end - start) * 12;
+            }
+        }
+    });
+
+    return Math.round(totalMonths / 12);
+};
+
+/**
+ * Get highest degree level
+ */
+export const getHighestDegree = (education: ParsedEducation[]): string => {
+    const degreeLevels = {
+        phd: 5,
+        doctorate: 5,
+        masters: 4,
+        master: 4,
+        mba: 4,
+        bachelors: 3,
+        bachelor: 3,
+        diploma: 2,
+        associate: 1,
+    };
+
+    let highestLevel = 0;
+    let highestDegree = '';
+
+    education.forEach((edu) => {
+        const degreeLower = edu.degree.toLowerCase();
+        Object.entries(degreeLevels).forEach(([key, level]) => {
+            if (degreeLower.includes(key) && level > highestLevel) {
+                highestLevel = level;
+                highestDegree = edu.degree;
+            }
+        });
+    });
+
+    return highestDegree || 'Not specified';
+};
+
+/**
+ * Clean and format text
+ */
+export const cleanText = (text: string): string => {
+    return text
+        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+        .replace(/\n+/g, '\n') // Replace multiple newlines with single newline
+        .trim();
+};

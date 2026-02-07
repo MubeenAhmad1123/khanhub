@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { FileText, CheckCircle, XCircle, Clock, Eye, Loader2, Building2 } from 'lucide-react';
 import { getJobsByStatus, updateJob } from '@/lib/firebase/firestore';
 import { sendJobApprovalEmail } from '@/lib/services/emailService';
@@ -43,17 +44,18 @@ export default function AdminJobApprovalsPage() {
         try {
             await updateJob(job.id, {
                 status: 'approved',
-                isActive: true,
                 updatedAt: new Date(),
             });
 
             // Send approval email
-            await sendJobApprovalEmail(
-                job.companyEmail,
-                job.company.name,
-                job.title,
-                true
-            );
+            if (job.contactEmail) {
+                await sendJobApprovalEmail(
+                    job.contactEmail,
+                    job.companyName,
+                    job.title,
+                    true
+                );
+            }
 
             // Refresh list
             loadJobs();
@@ -70,11 +72,20 @@ export default function AdminJobApprovalsPage() {
         try {
             await updateJob(job.id, {
                 status: 'rejected',
-                isActive: false,
+                rejectionReason: reason,
                 updatedAt: new Date(),
             });
 
-            // TODO: Send rejection email with reason
+            // Send rejection email with reason
+            if (job.contactEmail) {
+                await sendJobApprovalEmail(
+                    job.contactEmail,
+                    job.companyName,
+                    job.title,
+                    false,
+                    reason
+                );
+            }
 
             // Refresh list
             loadJobs();
@@ -158,32 +169,35 @@ export default function AdminJobApprovalsPage() {
                             <div key={job.id} className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
                                 <div className="flex items-start gap-6 mb-6">
                                     <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                        {job.company.logo ? (
-                                            <img src={job.company.logo} alt={job.company.name} className="w-full h-full rounded-xl" />
+                                        {job.companyLogo ? (
+                                            <Image
+                                                src={job.companyLogo}
+                                                alt={job.companyName}
+                                                width={64}
+                                                height={64}
+                                                className="w-full h-full rounded-xl"
+                                            />
                                         ) : (
                                             <Building2 className="h-8 w-8 text-gray-400" />
                                         )}
                                     </div>
                                     <div className="flex-1">
                                         <h3 className="text-2xl font-black text-jobs-dark mb-2">{job.title}</h3>
-                                        <p className="text-lg font-bold text-jobs-dark/70 mb-3">{job.company.name}</p>
+                                        <p className="text-lg font-bold text-jobs-dark/70 mb-3">{job.companyName}</p>
 
                                         <div className="flex flex-wrap gap-2 mb-4">
                                             <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full">
-                                                {job.type.toUpperCase()}
+                                                {job.employmentType.toUpperCase()}
                                             </span>
                                             <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">
                                                 {job.category}
                                             </span>
                                             <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs font-bold rounded-full">
-                                                {job.city}, {job.province}
-                                            </span>
-                                            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">
-                                                {job.vacancies} {job.vacancies === 1 ? 'position' : 'positions'}
+                                                {job.city}, {job.location}
                                             </span>
                                         </div>
 
-                                        <p className="text-jobs-dark/80 mb-4 leading-relaxed">{job.description}</p>
+                                        <p className="text-jobs-dark/80 mb-4 leading-relaxed line-clamp-3">{job.description}</p>
 
                                         {/* Job Details Grid */}
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl">
@@ -192,21 +206,21 @@ export default function AdminJobApprovalsPage() {
                                                 <div className="text-sm font-bold text-jobs-dark">{job.experienceLevel}</div>
                                             </div>
                                             <div>
-                                                <div className="text-xs font-bold text-gray-500 mb-1">Required Experience</div>
-                                                <div className="text-sm font-bold text-jobs-dark">{job.requiredExperience} years</div>
+                                                <div className="text-xs font-bold text-gray-500 mb-1">Min Experience</div>
+                                                <div className="text-sm font-bold text-jobs-dark">{job.minExperience} years</div>
                                             </div>
                                             <div>
                                                 <div className="text-xs font-bold text-gray-500 mb-1">Salary Range</div>
                                                 <div className="text-sm font-bold text-jobs-dark">
-                                                    {job.salary
-                                                        ? `Rs. ${job.salary.min.toLocaleString()} - ${job.salary.max.toLocaleString()}`
-                                                        : 'Not specified'}
+                                                    Rs. {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
                                                 </div>
                                             </div>
                                             <div>
                                                 <div className="text-xs font-bold text-gray-500 mb-1">Deadline</div>
                                                 <div className="text-sm font-bold text-jobs-dark">
-                                                    {job.deadline.toLocaleDateString()}
+                                                    {job.applicationDeadline instanceof Date
+                                                        ? job.applicationDeadline.toLocaleDateString()
+                                                        : (job.applicationDeadline as any)?.toDate?.().toLocaleDateString() || 'N/A'}
                                                 </div>
                                             </div>
                                         </div>
@@ -229,9 +243,9 @@ export default function AdminJobApprovalsPage() {
                                         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-100 rounded-xl">
                                             <div className="text-xs font-bold text-yellow-700 mb-2">Company Contact</div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-yellow-900">
-                                                <div>Email: {job.companyEmail}</div>
-                                                <div>Phone: {job.companyPhone}</div>
-                                                <div>Address: {job.companyAddress}</div>
+                                                <div>Email: {job.contactEmail || 'N/A'}</div>
+                                                <div>Phone: {job.contactPhone || 'N/A'}</div>
+                                                <div>Location: {job.location}</div>
                                             </div>
                                         </div>
                                     </div>

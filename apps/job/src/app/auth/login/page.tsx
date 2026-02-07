@@ -23,15 +23,15 @@ export default function LoginPage() {
         setError('');
 
         try {
-            const userCredential = await signInWithEmail(formData.email, formData.password);
+            const user = await signInWithEmail(formData.email, formData.password);
 
-            if (!userCredential || !userCredential.user) {
+            if (!user) {
                 throw new Error('Failed to sign in. Please try again.');
             }
 
             // Fetch user profile to determine role
             const { getUserProfile } = await import('@/lib/firebase/auth');
-            const profile = await getUserProfile(userCredential.user.uid);
+            const profile = await getUserProfile(user.uid);
 
             setIsLoading(false);
 
@@ -60,15 +60,15 @@ export default function LoginPage() {
         setIsLoading(true);
         setError('');
         try {
-            const userCredential = await signInWithGoogle();
+            const user = await signInWithGoogle();
 
-            if (!userCredential || !userCredential.user) {
+            if (!user) {
                 throw new Error('Google sign-in failed. Please try again.');
             }
 
             // Fetch user profile to determine role
             const { getUserProfile } = await import('@/lib/firebase/auth');
-            const profile = await getUserProfile(userCredential.user.uid);
+            const profile = await getUserProfile(user.uid);
 
             setIsLoading(false);
 
@@ -90,7 +90,13 @@ export default function LoginPage() {
         } catch (err: any) {
             setIsLoading(false);
             console.error('Google sign-in error:', err);
-            setError(err.message || 'Google sign-in failed. Please try again.');
+
+            // Handle permission errors specifically
+            if (err.message?.includes('permission') || err.code === 'permission-denied') {
+                setError('Authentication successful, but could not access your profile. Please contact support.');
+            } else {
+                setError(err.message || 'Google sign-in failed. Please try again.');
+            }
         }
     };
 

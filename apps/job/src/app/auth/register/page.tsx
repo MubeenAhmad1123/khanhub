@@ -49,15 +49,23 @@ export default function RegisterPage() {
         setError('');
 
         try {
-            const userCredential = await signUpWithEmail(formData.email, formData.password, formData.name);
+            const user = await signUpWithEmail(formData.email, formData.password, formData.name);
 
             // Create user profile in Firestore
             await createUserProfile(
-                userCredential.user.uid,
+                user.uid,
                 selectedRole,
                 formData.email,
                 formData.name
             );
+
+            // Send welcome email
+            try {
+                const { sendWelcomeEmail } = await import('@/lib/services/emailService');
+                await sendWelcomeEmail(formData.email, formData.name);
+            } catch (err) {
+                console.warn('Failed to send welcome email:', err);
+            }
 
             setIsLoading(false);
 
@@ -69,7 +77,11 @@ export default function RegisterPage() {
             }
         } catch (err: any) {
             setIsLoading(false);
-            setError(err.message || 'Registration failed.');
+            if (err.message?.includes('permission') || err.code === 'permission-denied') {
+                setError('Registration successful, but could not create your profile due to permission limits. Please contact support.');
+            } else {
+                setError(err.message || 'Registration failed.');
+            }
         }
     };
 
@@ -82,14 +94,14 @@ export default function RegisterPage() {
         setIsLoading(true);
         setError('');
         try {
-            const userCredential = await signInWithGoogle();
+            const user = await signInWithGoogle();
 
             // Create user profile with selected role
             await createUserProfile(
-                userCredential.user.uid,
+                user.uid,
                 selectedRole,
-                userCredential.user.email || '',
-                userCredential.user.displayName || 'User'
+                user.email || '',
+                user.displayName || 'User'
             );
 
             setIsLoading(false);
@@ -102,7 +114,12 @@ export default function RegisterPage() {
             }
         } catch (err: any) {
             setIsLoading(false);
-            setError(err.message || 'Google sign-in failed.');
+            console.error('Google sign-in error:', err);
+            if (err.message?.includes('permission') || err.code === 'permission-denied') {
+                setError('Authentication successful, but could not create your profile. Please contact support.');
+            } else {
+                setError(err.message || 'Google sign-in failed. Please try again.');
+            }
         }
     };
 
