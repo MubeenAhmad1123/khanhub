@@ -6,22 +6,9 @@ import { Search, Briefcase, Building2, TrendingUp, Users, Award, MapPin, ArrowRi
 import JobGrid from '@/components/jobs/JobGrid';
 import { getActiveJobs, getJobsByCategory } from '@/lib/firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { Job } from '@/types/job';
 
-interface Job {
-    id: string;
-    title: string;
-    companyName: string;
-    companyLogo?: string;
-    location: string;
-    employmentType: string;
-    salaryMin: number;
-    salaryMax: number;
-    category: string;
-    requiredSkills: string[];
-    createdAt: any;
-    applicationsCount: number;
-    featured?: boolean;
-}
+
 
 export default function JobHomePage() {
     const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
@@ -29,7 +16,7 @@ export default function JobHomePage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchLocation, setSearchLocation] = useState('');
-    const { user, profile } = useAuth();
+    const { user } = useAuth();
 
     useEffect(() => {
         loadJobs();
@@ -40,11 +27,11 @@ export default function JobHomePage() {
             setLoading(true);
 
             // Get featured and recent jobs from Firestore
-            const jobs = await getActiveJobs(20);
+            const jobs = await getActiveJobs(20) as Job[];
 
             // Separate featured vs recent
-            const featured = jobs.filter((job: Job) => job.featured).slice(0, 6);
-            const recent = jobs.filter((job: Job) => !job.featured).slice(0, 4);
+            const featured = jobs.filter((job) => job.isFeatured).slice(0, 6);
+            const recent = jobs.filter((job) => !job.isFeatured).slice(0, 4);
 
             setFeaturedJobs(featured);
             setRecentJobs(recent);
@@ -93,10 +80,10 @@ export default function JobHomePage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative z-10">
                     <div className="text-center max-w-4xl mx-auto">
                         {/* Welcome Message for Logged In Users */}
-                        {user && profile && (
+                        {user && user.displayName && (
                             <div className="mb-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-white/90 text-sm font-medium border border-white/20">
                                 <Sparkles className="h-4 w-4" />
-                                Welcome back, {profile.displayName}!
+                                Welcome back, {user.displayName}!
                             </div>
                         )}
 
@@ -355,7 +342,7 @@ export default function JobHomePage() {
                                     Find Your Next Job
                                     <ArrowRight className="h-5 w-5" />
                                 </Link>
-                                {profile?.role === 'employer' && (
+                                {user && (
                                     <Link
                                         href="/employer/post-job"
                                         className="bg-jobs-accent text-white px-10 py-4 rounded-xl font-black hover:opacity-90 transition-all shadow-xl shadow-jobs-accent/20 active:scale-95"

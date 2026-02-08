@@ -28,7 +28,8 @@ interface JobCardProps {
 export default function JobCard({ job, showMatchScore = false }: JobCardProps) {
     const [isSaved, setIsSaved] = useState(false);
     const [saving, setSaving] = useState(false);
-    const { user, isPremium } = useAuth();
+    const { user } = useAuth();
+    const isPremium = user?.isPremium;
 
     // Format salary
     const formatSalary = (min: number, max: number) => {

@@ -1,49 +1,101 @@
+// ==========================================
+// CUSTOM HOOKS - AUTHENTICATION (FIXED)
+// ==========================================
+
 'use client';
 
-import { useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
-import { getUserProfile } from '@/lib/firebase/auth';
-import { UserProfile } from '@/types/user';
+import { useState, useEffect } from 'react';
+import { auth, db } from '@/lib/firebase/firebase-config'; // ✅ Correct path
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { User, COLLECTIONS } from '@/types/DATABASE_SCHEMA'; // ✅ Updated path
 
-export function useAuth() {
+interface UseAuthReturn {
+    user: User | null;
+    loading: boolean;
+    error: string | null;
+}
+
+/**
+ * Custom hook for authentication
+ * Returns current user with role and profile data
+ */
+export function useAuth(): UseAuthReturn {
     const [user, setUser] = useState<User | null>(null);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            setUser(firebaseUser);
-
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
             if (firebaseUser) {
                 try {
-                    const userProfile = await getUserProfile(firebaseUser.uid);
-                    setProfile(userProfile);
+                    // Fetch user document from Firestore
+                    const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, firebaseUser.uid));
+
+                    if (userDoc.exists()) {
+                        setUser({ id: userDoc.id, ...userDoc.data() } as unknown as User);
+                    } else {
+                        setError('User profile not found');
+                        setUser(null);
+                    }
                 } catch (err) {
-                    console.error('Error fetching user profile:', err);
-                    setError('Failed to load user profile');
+                    console.error('Error fetching user data:', err);
+                    setError('Failed to load user data');
+                    setUser(null);
                 }
             } else {
-                setProfile(null);
+                setUser(null);
             }
-
             setLoading(false);
         });
 
         return () => unsubscribe();
     }, []);
 
-    return {
-        user,
-        profile,
-        loading,
-        error,
-        isAuthenticated: !!user,
-        isJobSeeker: profile?.role === 'job_seeker',
-        isEmployer: profile?.role === 'employer',
-        isAdmin: profile?.role === 'admin',
-        isPremium: profile?.isPremium || false,
-        registrationApproved: profile?.registrationApproved || false,
-    };
+    return { user, loading, error };
+}
+
+/**
+ * Hook to check if user has paid registration fee
+ */
+export function usePaymentStatus() {
+    const { user, loading } = useAuth();
+
+    if (loading) return { paymentApproved: false, loading: true };
+
+    if (user && 'paymentStatus' in user) {
+        return { paymentApproved: user.paymentStatus === 'approved', loading: false };
+    }
+
+    return { paymentApproved: false, loading: false };
+}
+
+/**
+ * Hook to check if user has active premium membership
+ */
+export function usePremiumStatus() {
+    const { user, loading } = useAuth();
+
+    if (loading) return { isPremium: false, loading: true };
+
+    if (user && 'isPremium' in user) {
+        // Check if premium is active and not expired
+        const isPremium = user.isPremium && user.premiumEndDate && (
+            user.premiumEndDate instanceof Date ? user.premiumEndDate : user.premiumEndDate.toDate()
+        ) > new Date();
+        return { isPremium, loading: false };
+    }
+
+    return { isPremium: false, loading: false };
+}
+
+/**
+ * Hook to check if user is admin
+ */
+export function useIsAdmin() {
+    const { user, loading } = useAuth();
+
+    if (loading) return { isAdmin: false, loading: true };
+
+    return { isAdmin: user?.role === 'admin', loading: false };
 }

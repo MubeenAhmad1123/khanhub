@@ -1,7 +1,7 @@
 'use client';
 
 import { AuthProvider, initializeFirebase } from '@khanhub/auth';
-import { firebaseConfig } from '@/lib/firebase/config';
+import { firebaseConfig } from '@/lib/firebase/firebase-config';
 
 // Initialize Firebase once on the client side
 if (typeof window !== 'undefined') {

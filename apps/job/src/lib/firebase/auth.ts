@@ -15,9 +15,9 @@ import {
     User as FirebaseUser,
     UserCredential,
 } from 'firebase/auth';
-import { auth } from './config';
+import { auth } from './firebase-config';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from './config';
+import { db } from './firebase-config';
 import { User, UserRole, CreateUserData } from '@/types/user';
 
 // ==================== SIGN UP ====================

@@ -19,7 +19,7 @@ export default function SavedJobsPage() {
             if (!user) return;
             try {
                 const jobIds = await getSavedJobs(user.uid);
-                const jobPromises = jobIds.map(id => getJobById(id));
+                const jobPromises = jobIds.map((id: string) => getJobById(id));
                 const jobResults = await Promise.all(jobPromises);
                 setSavedJobs(jobResults.filter(j => j !== null) as Job[]);
             } catch (error) {
@@ -74,10 +74,10 @@ export default function SavedJobsPage() {
                         >
                             <div className="flex gap-4">
                                 <div className="w-16 h-16 bg-jobs-neutral rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
-                                    {job.company.logo ? (
+                                    {job.companyLogo ? (
                                         <Image
-                                            src={job.company.logo}
-                                            alt={job.company.name}
+                                            src={job.companyLogo}
+                                            alt={job.companyName}
                                             width={64}
                                             height={64}
                                             className="w-full h-full object-cover"
@@ -92,24 +92,24 @@ export default function SavedJobsPage() {
                                     </h3>
                                     <div className="flex flex-wrap items-center gap-y-1 gap-x-4 mt-1 text-sm text-gray-500 font-medium">
                                         <div className="flex items-center gap-1">
-                                            <Building2 className="h-3.5 w-3.5" /> {job.company.name}
+                                            <Building2 className="h-3.5 w-3.5" /> {job.companyName}
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <MapPin className="h-3.5 w-3.5" /> {job.city}
                                         </div>
                                         <div className="flex items-center gap-1">
-                                            <Clock className="h-3.5 w-3.5" /> Posted {new Date(job.postedAt).toLocaleDateString()}
+                                            <Clock className="h-3.5 w-3.5" /> Posted {job.postedAt && (typeof job.postedAt === 'object' && 'toDate' in job.postedAt ? job.postedAt.toDate() : new Date(job.postedAt as any)).toLocaleDateString()}
                                         </div>
                                     </div>
 
                                     <div className="flex items-center justify-between mt-6">
                                         <div className="flex items-center gap-2">
                                             <span className="px-3 py-1 bg-jobs-primary/5 text-jobs-primary rounded-full text-[10px] font-black uppercase tracking-wider">
-                                                {job.type}
+                                                {job.employmentType.replace('-', ' ')}
                                             </span>
-                                            {job.salary && (
+                                            {job.salaryMin > 0 && (
                                                 <span className="text-sm font-black text-green-600">
-                                                    Rs. {job.salary.min.toLocaleString()} - {job.salary.max.toLocaleString()}
+                                                    Rs. {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
                                                 </span>
                                             )}
                                         </div>

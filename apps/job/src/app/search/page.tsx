@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, MapPin, Filter, SlidersHorizontal, ChevronDown, Bookmark, Building2, Clock, DollarSign, TrendingUp, Users, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@khanhub/shared-ui';
-import { getApprovedJobs } from '@/lib/firebase/firestore';
+import { getActiveJobs } from '@/lib/firebase/firestore';
 import { Job } from '@/types/job';
 
 export default function JobSearchPage() {
@@ -18,7 +18,7 @@ export default function JobSearchPage() {
     useEffect(() => {
         const loadJobs = async () => {
             try {
-                const approvedJobs = await getApprovedJobs();
+                const approvedJobs = await getActiveJobs() as Job[];
                 setJobs(approvedJobs);
                 setLoading(false);
             } catch (err) {
@@ -34,11 +34,11 @@ export default function JobSearchPage() {
         const matchesSearch = searchTerm === '' ||
             job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.company.name.toLowerCase().includes(searchTerm.toLowerCase());
+            job.companyName.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesLocation = locationTerm === '' ||
             job.city.toLowerCase().includes(locationTerm.toLowerCase()) ||
-            job.province.toLowerCase().includes(locationTerm.toLowerCase());
+            job.location.toLowerCase().includes(locationTerm.toLowerCase());
 
         return matchesSearch && matchesLocation;
     });
@@ -135,10 +135,10 @@ export default function JobSearchPage() {
 
                                     <div className="flex gap-6">
                                         <div className="w-16 h-16 bg-jobs-neutral rounded-2xl flex items-center justify-center text-3xl group-hover:bg-jobs-primary/10 transition-colors">
-                                            {job.company.logo ? (
+                                            {job.companyLogo ? (
                                                 <Image
-                                                    src={job.company.logo}
-                                                    alt={job.company.name}
+                                                    src={job.companyLogo}
+                                                    alt={job.companyName}
                                                     width={64}
                                                     height={64}
                                                     className="w-full h-full object-cover rounded-2xl"
@@ -151,21 +151,21 @@ export default function JobSearchPage() {
                                             <h3 className="text-xl font-black text-jobs-dark group-hover:text-jobs-primary transition-colors tracking-tight">{job.title}</h3>
                                             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500 font-medium">
                                                 <div className="flex items-center gap-1">
-                                                    <Building2 className="h-4 w-4" /> {job.company.name}
+                                                    <Building2 className="h-4 w-4" /> {job.companyName}
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <MapPin className="h-4 w-4" /> {job.city}, {job.province}
+                                                    <MapPin className="h-4 w-4" /> {job.location}
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <Clock className="h-4 w-4" /> {new Date(job.postedAt).toLocaleDateString()}
+                                                    <Clock className="h-4 w-4" /> {new Date(job.postedAt as any).toLocaleDateString()}
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center gap-3 mt-4">
-                                                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-bold uppercase tracking-wide capitalize">{job.type.replace('-', ' ')}</span>
-                                                {job.salary && (
+                                                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-bold uppercase tracking-wide capitalize">{job.employmentType.replace('-', ' ')}</span>
+                                                {job.salaryMin && (
                                                     <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-                                                        <DollarSign className="h-3 w-3" /> Rs. {job.salary.min.toLocaleString()} - {job.salary.max.toLocaleString()}
+                                                        <DollarSign className="h-3 w-3" /> Rs. {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
                                                     </span>
                                                 )}
                                                 {job.isRemote && (

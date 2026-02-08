@@ -1,160 +1,217 @@
-import { UserProfile } from '@/types/user';
-import { Job } from '@/types/job';
+// ==========================================
+// MATCH SCORE ALGORITHM (FIXED IMPORTS)
+// ==========================================
+// Calculate how well a job seeker matches a job posting (0-100%)
+
+import { JobSeeker, Job } from '@/types/DATABASE_SCHEMA'; // ✅ Fixed path
+
+const MATCH_SCORE_WEIGHTS = {
+    SKILLS: 40,
+    EXPERIENCE: 30,
+    LOCATION: 15,
+    EDUCATION: 15,
+};
 
 /**
- * Calculate job match score based on candidate profile and job requirements
- * 
- * Scoring breakdown:
- * - Skills matching: 40%
- * - Experience years: 30%
- * - Location matching: 15%
- * - Education matching: 15%
+ * Calculate match score between a job seeker and a job posting
+ * @param jobSeeker - The job seeker's profile
+ * @param job - The job posting
+ * @returns Match score (0-100)
  */
-export function calculateMatchScore(
-    candidateProfile: UserProfile,
-    job: Job
-): number {
-    let score = 0;
+export function calculateMatchScore(jobSeeker: JobSeeker, job: Job): number {
+    let totalScore = 0;
 
-    // 1. Skills Matching (40 points)
-    const candidateSkills = candidateProfile.profile.skills.map(s => s.toLowerCase());
-    const requiredSkills = job.requiredSkills.map(s => s.toLowerCase());
+    // 1. SKILLS MATCHING (40%)
+    const skillsScore = calculateSkillsMatch(jobSeeker.profile.skills, job.requiredSkills);
+    totalScore += skillsScore * (MATCH_SCORE_WEIGHTS.SKILLS / 100);
 
-    if (requiredSkills.length > 0) {
-        const matchedSkills = requiredSkills.filter(skill =>
-            candidateSkills.some(cs => cs.includes(skill) || skill.includes(cs))
-        );
-        const skillsMatchPercentage = matchedSkills.length / requiredSkills.length;
-        score += skillsMatchPercentage * 40;
-    } else {
-        // If no required skills specified, give full points
-        score += 40;
-    }
+    // 2. EXPERIENCE MATCHING (30%)
+    const experienceScore = calculateExperienceMatch(jobSeeker.profile.experience, job.minExperience);
+    totalScore += experienceScore * (MATCH_SCORE_WEIGHTS.EXPERIENCE / 100);
 
-    // 2. Experience Years Matching (30 points)
-    const totalExperienceYears = candidateProfile.profile.experience.reduce((total, exp) => {
-        const years = calculateYearsOfExperience(exp.startDate, exp.endDate, exp.current);
+    // 3. LOCATION MATCHING (15%)
+    const locationScore = calculateLocationMatch(
+        jobSeeker.profile.location,
+        job.city,
+        job.isRemote,
+        jobSeeker.profile.remoteOnly || jobSeeker.profile.desiredLocations.some(l => l.toLowerCase() === 'remote')
+    );
+    totalScore += locationScore * (MATCH_SCORE_WEIGHTS.LOCATION / 100);
+
+    // 4. EDUCATION MATCHING (15%)
+    // Map requiredQualifications array to a single level for comparison if possible, or iterate
+    const educationalRequirement = job.requiredQualifications.find(q =>
+        ['bachelor', 'master', 'phd', 'doctorate', 'associate', 'diploma'].some(level => q.toLowerCase().includes(level))
+    );
+    const educationScore = calculateEducationMatch(jobSeeker.profile.education, educationalRequirement);
+    totalScore += educationScore * (MATCH_SCORE_WEIGHTS.EDUCATION / 100);
+
+    return Math.round(totalScore);
+}
+
+/**
+ * Calculate skills match percentage
+ * @param candidateSkills - Array of candidate's skills
+ * @param requiredSkills - Array of job's required skills
+ * @returns Percentage (0-100)
+ */
+function calculateSkillsMatch(candidateSkills: string[], requiredSkills: string[]): number {
+    if (requiredSkills.length === 0) return 100; // No skills required = perfect match
+
+    // Normalize skills to lowercase for comparison
+    const normalizedCandidateSkills = candidateSkills.map((s) => s.toLowerCase().trim());
+    const normalizedRequiredSkills = requiredSkills.map((s) => s.toLowerCase().trim());
+
+    // Count how many required skills the candidate has
+    const matchingSkills = normalizedRequiredSkills.filter((skill) =>
+        normalizedCandidateSkills.some((candidateSkill) => candidateSkill.includes(skill) || skill.includes(candidateSkill))
+    );
+
+    const matchPercentage = (matchingSkills.length / normalizedRequiredSkills.length) * 100;
+    return Math.min(matchPercentage, 100);
+}
+
+/**
+ * Calculate experience match percentage
+ * @param candidateExperience - Array of candidate's work experiences
+ * @param minimumExperience - Minimum years required by job
+ * @returns Percentage (0-100)
+ */
+function calculateExperienceMatch(candidateExperience: any[], minimumExperience: number): number {
+    // Calculate total years of experience
+    const totalYears = candidateExperience.reduce((total, exp) => {
+        const startDate = new Date(exp.startDate + '-01');
+        const endDate = exp.isCurrent ? new Date() : new Date(exp.endDate + '-01');
+        const years = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
         return total + years;
     }, 0);
 
-    if (job.requiredExperience > 0) {
-        if (totalExperienceYears >= job.requiredExperience) {
-            score += 30;
+    if (minimumExperience === 0) return 100; // No experience required
+
+    // Score based on how close candidate's experience is to required
+    if (totalYears >= minimumExperience) {
+        // Candidate meets or exceeds requirement
+        const excessYears = totalYears - minimumExperience;
+        if (excessYears <= 2) {
+            return 100; // Perfect match
         } else {
-            const experiencePercentage = totalExperienceYears / job.requiredExperience;
-            score += experiencePercentage * 30;
+            // Slight penalty for being over-qualified (diminishing returns)
+            return Math.max(100 - (excessYears - 2) * 5, 70);
         }
     } else {
-        // If no experience required, give full points
-        score += 30;
+        // Candidate has less experience than required
+        const shortfall = minimumExperience - totalYears;
+        return Math.max(100 - shortfall * 20, 0);
     }
-
-    // 3. Location Matching (15 points)
-    if (candidateProfile.profile.location) {
-        const candidateLocation = candidateProfile.profile.location.toLowerCase();
-        const jobLocation = job.location.toLowerCase();
-        const jobCity = job.city.toLowerCase();
-
-        if (
-            candidateLocation.includes(jobCity) ||
-            jobCity.includes(candidateLocation) ||
-            candidateLocation.includes(jobLocation) ||
-            job.locationType === 'remote'
-        ) {
-            score += 15;
-        }
-    }
-
-    // 4. Education Matching (15 points)
-    if (job.requiredEducation && candidateProfile.profile.education.length > 0) {
-        const requiredEduLower = job.requiredEducation.toLowerCase();
-        const hasMatchingEducation = candidateProfile.profile.education.some(edu =>
-            edu.degree.toLowerCase().includes(requiredEduLower) ||
-            requiredEduLower.includes(edu.degree.toLowerCase())
-        );
-
-        if (hasMatchingEducation) {
-            score += 15;
-        }
-    } else if (!job.requiredEducation) {
-        // If no education requirement, give full points
-        score += 15;
-    }
-
-    return Math.round(score);
 }
 
 /**
- * Calculate years of experience from date range
+ * Calculate location match percentage
+ * @param candidateCity - Candidate's city
+ * @param jobCity - Job's city
+ * @param isRemote - Whether job is remote
+ * @param openToRemote - Whether candidate is open to remote
+ * @returns Percentage (0-100)
  */
-function calculateYearsOfExperience(
-    startDate: string,
-    endDate: string | null,
-    current: boolean
+function calculateLocationMatch(
+    candidateCity: string | undefined,
+    jobCity: string,
+    isRemote: boolean,
+    openToRemote: boolean
 ): number {
-    try {
-        const start = new Date(startDate);
-        const end = current ? new Date() : (endDate ? new Date(endDate) : new Date());
+    // Remote jobs
+    if (isRemote && openToRemote) return 100; // Perfect match
+    if (isRemote && !openToRemote) return 70; // Job is remote but candidate prefers on-site
 
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+    // On-site jobs
+    if (!candidateCity) return 50; // Candidate hasn't specified city
 
-        return diffYears;
-    } catch (error) {
-        return 0;
+    const normalizedCandidateCity = candidateCity.toLowerCase().trim();
+    const normalizedJobCity = jobCity.toLowerCase().trim();
+
+    if (normalizedCandidateCity === normalizedJobCity) return 100; // Same city
+    if (normalizedCandidateCity.includes(normalizedJobCity) || normalizedJobCity.includes(normalizedCandidateCity)) {
+        return 80; // Partial match (e.g., "Lahore" vs "Lahore Cantt")
     }
+
+    return 30; // Different cities
 }
 
 /**
- * Get match score category
+ * Calculate education match percentage
+ * @param candidateEducation - Array of candidate's education entries
+ * @param requiredEducation - Required education level (e.g., "Bachelor's degree")
+ * @returns Percentage (0-100)
  */
-export function getMatchCategory(score: number): {
-    label: string;
-    color: string;
-    description: string;
-} {
-    if (score >= 80) {
-        return {
-            label: 'Excellent Match',
-            color: 'text-green-600',
-            description: 'Your profile strongly matches this job',
-        };
-    } else if (score >= 60) {
-        return {
-            label: 'Good Match',
-            color: 'text-blue-600',
-            description: 'Your profile matches most requirements',
-        };
-    } else if (score >= 40) {
-        return {
-            label: 'Fair Match',
-            color: 'text-yellow-600',
-            description: 'Some of your qualifications match',
-        };
+function calculateEducationMatch(candidateEducation: any[], requiredEducation: string | undefined): number {
+    if (!requiredEducation) return 100; // No education requirement
+
+    if (candidateEducation.length === 0) return 30; // No education data
+
+    // Education level hierarchy
+    const educationLevels: { [key: string]: number } = {
+        'high school': 1,
+        'diploma': 2,
+        'associate': 3,
+        "bachelor's": 4,
+        "master's": 5,
+        'mba': 5,
+        'phd': 6,
+        'doctorate': 6,
+    };
+
+    // Find candidate's highest education level
+    const candidateHighestLevel = candidateEducation.reduce((highest, edu) => {
+        const degreeNormalized = edu.degree.toLowerCase();
+        for (const [level, rank] of Object.entries(educationLevels)) {
+            if (degreeNormalized.includes(level)) {
+                return Math.max(highest, rank);
+            }
+        }
+        return highest;
+    }, 0);
+
+    // Find required education level
+    const requiredNormalized = requiredEducation.toLowerCase();
+    let requiredLevel = 0;
+    for (const [level, rank] of Object.entries(educationLevels)) {
+        if (requiredNormalized.includes(level)) {
+            requiredLevel = rank;
+            break;
+        }
+    }
+
+    if (requiredLevel === 0) return 100; // Couldn't parse requirement
+
+    // Score based on comparison
+    if (candidateHighestLevel >= requiredLevel) {
+        return 100; // Meets or exceeds requirement
     } else {
-        return {
-            label: 'Low Match',
-            color: 'text-gray-600',
-            description: 'Consider building more relevant experience',
-        };
+        const gap = requiredLevel - candidateHighestLevel;
+        return Math.max(100 - gap * 25, 0);
     }
 }
 
 /**
- * Get recommended jobs based on candidate profile
+ * Get match score badge color based on score
+ * @param score - Match score (0-100)
+ * @returns Tailwind color class
  */
-export function getRecommendedJobs(
-    candidateProfile: UserProfile,
-    availableJobs: Job[],
-    limit: number = 10
-): Array<{ job: Job; matchScore: number }> {
-    const jobsWithScores = availableJobs.map(job => ({
-        job,
-        matchScore: calculateMatchScore(candidateProfile, job),
-    }));
+export function getMatchScoreBadgeColor(score: number): string {
+    if (score >= 80) return 'bg-green-100 text-green-800';
+    if (score >= 60) return 'bg-blue-100 text-blue-800';
+    if (score >= 40) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-gray-100 text-gray-800';
+}
 
-    // Sort by match score descending
-    jobsWithScores.sort((a, b) => b.matchScore - a.matchScore);
-
-    return jobsWithScores.slice(0, limit);
+/**
+ * Get match score label
+ * @param score - Match score (0-100)
+ * @returns Label string
+ */
+export function getMatchScoreLabel(score: number): string {
+    if (score >= 80) return 'Excellent Match';
+    if (score >= 60) return 'Good Match';
+    if (score >= 40) return 'Fair Match';
+    return 'Low Match';
 }

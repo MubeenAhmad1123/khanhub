@@ -1,149 +1,213 @@
+// ==========================================
+// CV PARSER SERVICE
+// ==========================================
+// Extract text from PDF and DOCX files and parse relevant information
+
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 
-export interface ExtractedData {
-    name?: string;
+/**
+ * Parsed CV data structure
+ */
+export interface ParsedCVData {
     email?: string;
     phone?: string;
     skills: string[];
-    experience: Array<{
-        title: string;
-        company: string;
-        startDate?: string;
-        endDate?: string;
-        description?: string;
-    }>;
-    education: Array<{
-        degree: string;
-        institution: string;
-        year?: string;
-    }>;
     rawText: string;
 }
 
 /**
- * Parse PDF resume
+ * Extract text from PDF file
+ * @param file - File object or Buffer
+ * @returns Extracted text
  */
-export async function parsePDF(file: File): Promise<ExtractedData> {
-    const arrayBuffer = await file.arrayBuffer();
-    const data = await pdf(Buffer.from(arrayBuffer));
-    return extractDataFromText(data.text);
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+    try {
+        const data = await pdf(buffer);
+        return data.text;
+    } catch (error) {
+        console.error('❌ Error extracting text from PDF:', error);
+        throw new Error('Failed to extract text from PDF');
+    }
 }
 
 /**
- * Parse DOCX resume
+ * Extract text from DOCX file
+ * @param buffer - File buffer
+ * @returns Extracted text
  */
-export async function parseDOCX(file: File): Promise<ExtractedData> {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return extractDataFromText(result.value);
+async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
+    try {
+        const result = await mammoth.extractRawText({ buffer });
+        return result.value;
+    } catch (error) {
+        console.error('❌ Error extracting text from DOCX:', error);
+        throw new Error('Failed to extract text from DOCX');
+    }
 }
 
 /**
- * Extract structured data from resume text
+ * Extract email from text using regex
+ * @param text - Text to search
+ * @returns Email address or undefined
  */
-function extractDataFromText(text: string): ExtractedData {
-    const extractedData: ExtractedData = {
-        skills: [],
-        experience: [],
-        education: [],
-        rawText: text,
-    };
+function extractEmail(text: string): string | undefined {
+    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+    const match = text.match(emailRegex);
+    return match ? match[0] : undefined;
+}
 
-    // Extract email
-    const emailRegex = /[\w.-]+@[\w.-]+\.\w+/g;
-    const emailMatch = text.match(emailRegex);
-    if (emailMatch && emailMatch.length > 0) {
-        extractedData.email = emailMatch[0];
-    }
+/**
+ * Extract Pakistani phone number from text using regex
+ * @param text - Text to search
+ * @returns Phone number or undefined
+ */
+function extractPhone(text: string): string | undefined {
+    // Pakistani phone patterns:
+    // +92 300 1234567
+    // 0300 1234567
+    // 03001234567
+    const phoneRegex = /(\+92|0)?[\s-]?3[0-9]{2}[\s-]?[0-9]{7}/;
+    const match = text.match(phoneRegex);
+    return match ? match[0].replace(/[\s-]/g, '') : undefined;
+}
 
-    // Extract phone (Pakistan format)
-    const phoneRegex = /(\+92|0)?3\d{9}|(\+92|0)?(\d{2,3})[-\s]?\d{7,8}/g;
-    const phoneMatch = text.match(phoneRegex);
-    if (phoneMatch && phoneMatch.length > 0) {
-        extractedData.phone = phoneMatch[0];
-    }
+/**
+ * Extract skills from text using common keywords
+ * @param text - Text to search
+ * @returns Array of skills
+ */
+function extractSkills(text: string): string[] {
+    const commonSkills = [
+        // Programming Languages
+        'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin',
 
-    // Extract name (usually first line or after "CV" or "Resume")
-    const lines = text.split('\n').filter(line => line.trim().length > 0);
-    if (lines.length > 0) {
-        // Simple heuristic: first line that's not too long and has title case
-        for (const line of lines.slice(0, 5)) {
-            const trimmed = line.trim();
-            if (trimmed.length > 5 && trimmed.length < 50 && /^[A-Z]/.test(trimmed)) {
-                extractedData.name = trimmed;
-                break;
-            }
-        }
-    }
+        // Web Technologies
+        'HTML', 'CSS', 'React', 'Angular', 'Vue', 'Next.js', 'Node.js', 'Express', 'Django', 'Flask', 'Laravel',
+        'Tailwind CSS', 'Bootstrap', 'jQuery', 'Redux', 'GraphQL', 'REST API',
 
-    // Extract skills - look for common skill keywords
-    const skillKeywords = [
-        'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'Java', 'C++', 'SQL',
-        'HTML', 'CSS', 'MongoDB', 'PostgreSQL', 'AWS', 'Docker', 'Kubernetes',
-        'Git', 'Agile', 'Scrum', 'Leadership', 'Management', 'Communication',
-        'Microsoft Office', 'Excel', 'PowerPoint', 'Photoshop', 'Marketing',
-        'Sales', 'Customer Service', 'Nursing', 'Patient Care', 'Medical Equipment',
+        // Mobile Development
+        'React Native', 'Flutter', 'iOS', 'Android', 'Xamarin',
+
+        // Databases
+        'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Firebase', 'Firestore', 'SQL', 'NoSQL', 'DynamoDB',
+
+        // Cloud & DevOps
+        'AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes', 'CI/CD', 'Jenkins', 'Git', 'GitHub', 'GitLab',
+
+        // Tools & Frameworks
+        'Figma', 'Adobe XD', 'Photoshop', 'Illustrator', 'Sketch', 'InVision',
+        'Jira', 'Trello', 'Slack', 'Asana',
+
+        // Data Science & AI
+        'Machine Learning', 'Deep Learning', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'Scikit-learn',
+        'Data Analysis', 'Data Visualization', 'Tableau', 'Power BI',
+
+        // Business & Soft Skills
+        'Project Management', 'Agile', 'Scrum', 'Team Leadership', 'Communication', 'Problem Solving',
+        'Time Management', 'Critical Thinking', 'Collaboration',
+
+        // Healthcare (Pakistan-specific)
+        'Nursing', 'Patient Care', 'Medical Coding', 'Pharmacy', 'Surgery', 'Radiology',
+
+        // Other
+        'MS Office', 'Excel', 'PowerPoint', 'Word', 'Google Workspace', 'SEO', 'SEM', 'Digital Marketing',
+        'Content Writing', 'Copywriting', 'Social Media Marketing', 'Accounting', 'Bookkeeping',
     ];
 
     const textLower = text.toLowerCase();
-    extractedData.skills = skillKeywords.filter(skill =>
-        textLower.includes(skill.toLowerCase())
-    );
+    const foundSkills: string[] = [];
 
-    // Extract experience - look for common job title patterns
-    const jobTitlePatterns = [
-        /(?:Software|Senior|Junior|Lead)\s+(?:Engineer|Developer|Designer|Manager|Analyst)/gi,
-        /(?:Project|Product|Marketing|Sales)\s+Manager/gi,
-        /(?:Nurse|Doctor|Medical Officer|Staff Nurse)/gi,
-        /(?:Accountant|Financial Analyst|HR Manager)/gi,
-    ];
-
-    jobTitlePatterns.forEach(pattern => {
-        const matches = text.match(pattern);
-        if (matches) {
-            matches.forEach(match => {
-                extractedData.experience.push({
-                    title: match,
-                    company: 'Unknown', // Hard to extract company names reliably
-                });
-            });
+    for (const skill of commonSkills) {
+        const skillLower = skill.toLowerCase();
+        // Check if skill appears as a whole word (with word boundaries)
+        const regex = new RegExp(`\\b${skillLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        if (regex.test(textLower)) {
+            foundSkills.push(skill);
         }
-    });
+    }
 
-    // Extract education - look for degree keywords
-    const degreeKeywords = [
-        'MBBS', 'B.Sc', 'BSc', 'M.Sc', 'MSc', 'Bachelor', 'Master', 'PhD',
-        'B.Tech', 'M.Tech', 'BBA', 'MBA', 'B.Com', 'M.Com',
-    ];
-
-    degreeKeywords.forEach(degree => {
-        const regex = new RegExp(degree + '.*?(?:from|in|at)\\s+([^\\n]{10,50})', 'gi');
-        const matches = text.match(regex);
-        if (matches) {
-            matches.forEach(match => {
-                extractedData.education.push({
-                    degree: degree,
-                    institution: match.substring(degree.length).trim(),
-                });
-            });
-        }
-    });
-
-    return extractedData;
+    // Remove duplicates and return
+    return Array.from(new Set(foundSkills));
 }
 
 /**
- * Parse resume file (auto-detect PDF or DOCX)
+ * Parse CV file and extract relevant information
+ * @param file - File object (PDF or DOCX)
+ * @returns Parsed CV data
  */
-export async function parseResume(file: File): Promise<ExtractedData> {
-    const extension = file.name.split('.').pop()?.toLowerCase();
+export async function parseCV(file: File): Promise<ParsedCVData> {
+    try {
+        // Convert File to Buffer (for server-side processing)
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
-    if (extension === 'pdf') {
-        return parsePDF(file);
-    } else if (extension === 'docx') {
-        return parseDOCX(file);
-    } else {
-        throw new Error('Unsupported file format. Please upload PDF or DOCX.');
+        let text = '';
+
+        // Extract text based on file type
+        if (file.type === 'application/pdf') {
+            text = await extractTextFromPDF(buffer);
+        } else if (
+            file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+            file.type === 'application/msword'
+        ) {
+            text = await extractTextFromDOCX(buffer);
+        } else {
+            throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
+        }
+
+        // Parse information from text
+        const email = extractEmail(text);
+        const phone = extractPhone(text);
+        const skills = extractSkills(text);
+
+        return {
+            email,
+            phone,
+            skills,
+            rawText: text,
+        };
+    } catch (error) {
+        console.error('❌ Error parsing CV:', error);
+        throw error;
+    }
+}
+
+/**
+ * Parse CV from buffer (for API routes)
+ * @param buffer - File buffer
+ * @param fileType - MIME type of the file
+ * @returns Parsed CV data
+ */
+export async function parseCVFromBuffer(buffer: Buffer, fileType: string): Promise<ParsedCVData> {
+    try {
+        let text = '';
+
+        // Extract text based on file type
+        if (fileType === 'application/pdf') {
+            text = await extractTextFromPDF(buffer);
+        } else if (
+            fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+            fileType === 'application/msword'
+        ) {
+            text = await extractTextFromDOCX(buffer);
+        } else {
+            throw new Error('Unsupported file type. Please upload a PDF or DOCX file.');
+        }
+
+        // Parse information from text
+        const email = extractEmail(text);
+        const phone = extractPhone(text);
+        const skills = extractSkills(text);
+
+        return {
+            email,
+            phone,
+            skills,
+            rawText: text,
+        };
+    } catch (error) {
+        console.error('❌ Error parsing CV from buffer:', error);
+        throw error;
     }
 }

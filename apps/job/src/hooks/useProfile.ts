@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { UserProfile } from '@/types/user';
-import { updateUserProfile } from '@/lib/firebase/auth';
+import { JobSeekerProfile } from '@/types/user';
+import { updateDocument, COLLECTIONS } from '@/lib/firebase/firestore';
 import { calculateProfileStrength, getProfileImprovementSteps } from '@/lib/services/pointsSystem';
 
-export function useProfile(userId: string | null, initialProfile: UserProfile | null) {
-    const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
+export function useProfile(userId: string | null, initialProfile: JobSeekerProfile | null) {
+    const [profile, setProfile] = useState<JobSeekerProfile | null>(initialProfile);
     const [updating, setUpdating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const profileStrength = profile ? calculateProfileStrength(profile) : 0;
     const improvementSteps = profile ? getProfileImprovementSteps(profile) : [];
 
-    const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    const updateProfile = useCallback(async (updates: Partial<JobSeekerProfile>) => {
         if (!userId) {
             setError('User not authenticated');
             return;
@@ -23,7 +23,8 @@ export function useProfile(userId: string | null, initialProfile: UserProfile | 
         setError(null);
 
         try {
-            await updateUserProfile(userId, updates);
+            // Update Firestore directly for full profile updates
+            await updateDocument(COLLECTIONS.USERS, userId, updates);
 
             // Update local state
             setProfile(prev => prev ? { ...prev, ...updates } : null);

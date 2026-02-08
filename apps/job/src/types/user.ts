@@ -4,8 +4,10 @@ import { Timestamp } from 'firebase/firestore';
 
 // ==================== BASE USER TYPES ====================
 
+import { PaymentStatus } from './payment';
+
 export type UserRole = 'job_seeker' | 'employer' | 'admin';
-export type PaymentStatus = 'pending' | 'approved' | 'rejected';
+// PaymentStatus imported from ./payment
 export type DegreeLevel = 'high_school' | 'bachelors' | 'masters' | 'phd';
 
 // ==================== USER PROFILE ====================

@@ -89,17 +89,17 @@ export default function JobFilters({
                         job={{
                             id: job.id,
                             title: job.title,
-                            companyName: job.company.name,
-                            companyLogo: job.company.logo || undefined,
+                            companyName: job.companyName, // Fixed
+                            companyLogo: job.companyLogo || undefined, // Fixed
                             location: job.location,
-                            employmentType: job.type,
-                            salaryMin: job.salary?.min || 0,
-                            salaryMax: job.salary?.max || 0,
+                            employmentType: job.employmentType, // Fixed
+                            salaryMin: job.salaryMin || 0, // Fixed
+                            salaryMax: job.salaryMax || 0, // Fixed
                             category: job.category,
-                            requiredSkills: job.requiredSkills || job.skills,
+                            requiredSkills: job.requiredSkills || [], // Fixed
                             createdAt: job.createdAt,
-                            applicationsCount: job.applicationCount,
-                            featured: job.featured,
+                            applicationsCount: job.applicantCount, // Fixed
+                            featured: job.isFeatured, // Fixed
                         }}
                     />
                 ))}

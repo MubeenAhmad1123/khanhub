@@ -12,7 +12,7 @@ import {
     UploadTask,
     UploadMetadata,
 } from 'firebase/storage';
-import { storage } from './config';
+import { storage } from './firebase-config';
 
 // ==================== FILE UPLOAD ====================
 

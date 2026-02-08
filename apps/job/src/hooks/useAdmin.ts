@@ -21,8 +21,8 @@ export function useAdmin() {
 
         try {
             const [payments, placementsData] = await Promise.all([
-                getPendingPayments(),
-                getAllPlacements(),
+                getPendingPayments() as Promise<Payment[]>,
+                getAllPlacements() as Promise<Placement[]>,
             ]);
 
             setPendingPayments(payments);

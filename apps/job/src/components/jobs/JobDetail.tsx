@@ -36,7 +36,10 @@ interface JobDetailProps {
 }
 
 export default function JobDetail({ job, onSave, isSaved = false }: JobDetailProps) {
-    const urgency = getDeadlineUrgency(job.deadline);
+    const deadlineDate = job.applicationDeadline instanceof Date
+        ? job.applicationDeadline
+        : job.applicationDeadline?.toDate() || new Date();
+    const urgency = getDeadlineUrgency(deadlineDate);
 
     return (
         <div className="max-w-5xl mx-auto">
@@ -45,10 +48,10 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                 <div className="flex flex-col md:flex-row md:items-start gap-6">
                     {/* Company Logo */}
                     <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        {job.company.logo ? (
+                        {job.companyLogo ? (
                             <Image
-                                src={job.company.logo}
-                                alt={job.company.name}
+                                src={job.companyLogo}
+                                alt={job.companyName}
                                 width={80}
                                 height={80}
                                 className="rounded-lg"
@@ -64,16 +67,70 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                     {/* Job Title and Company Info */}
                     <div className="flex-1">
                         <h1 className="text-3xl font-black text-jobs-dark mb-2 tracking-tight">{job.title}</h1>
-                        <Link href={`/companies/${job.company.id}`}>
+                        <Link href={`/companies/${job.employerId}`}>
                             <p className="text-xl text-jobs-dark/60 font-bold hover:text-jobs-primary transition-colors mb-4">
-                                {job.company.name}
+                                {job.companyName}
                             </p>
                         </Link>
 
+                        {/* ... (omitted code) */}
+                        {/* Right Column - Company Information */}
+                        <div className="space-y-6">
+                            <div className="bg-white border rounded-lg p-6 sticky top-6">
+                                <h2 className="text-xl font-bold text-gray-900 mb-4">About the Company</h2>
+
+                                {/* Company details not available in Job type currently
+                        {(job.company as any).description && (
+                            <div className="mb-4">
+                                <p className="text-gray-700 leading-relaxed">{(job.company as any).description}</p>
+                            </div>
+                        )}
+                        */}
+
+                                <div className="space-y-3 mb-6">
+                                    <div className="flex items-start gap-2">
+                                        <Building2 className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm text-gray-500">Industry</p>
+                                            <p className="font-semibold text-gray-900">N/A {/* job.company.industry */}</p>
+                                        </div>
+                                    </div>
+                                    {/* 
+                            {(job.company as any).size && (
+                                <div className="flex items-start gap-2">
+                                    <Users className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm text-gray-500">Company Size</p>
+                                        <p className="font-semibold text-gray-900">{(job.company as any).size} employees</p>
+                                    </div>
+                                </div>
+                            )}
+                            */}
+                                    {job.companyWebsite && (
+                                        <div className="flex items-start gap-2">
+                                            <Globe className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm text-gray-500">Website</p>
+                                                <a
+                                                    href={job.companyWebsite}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="font-semibold text-blue-600 hover:underline"
+                                                >
+                                                    Visit Website
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+
                         {/* Badges */}
                         <div className="flex flex-wrap gap-2 mb-4">
-                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getJobTypeBadge(job.type)}`}>
-                                {job.type.replace('-', ' ').toUpperCase()}
+                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getJobTypeBadge(job.employmentType)}`}>
+                                {job.employmentType.replace('-', ' ').toUpperCase()}
                             </span>
                             <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
                                 {getCategoryLabel(job.category)}
@@ -95,17 +152,17 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                                 <span>{job.location}</span>
                                 {job.isRemote && <span className="text-jobs-accent font-bold">(Remote)</span>}
                             </div>
-                            {job.salary && (
+                            {job.salaryMin && (
                                 <div className="flex items-center gap-2 text-jobs-dark/70 font-medium">
                                     <DollarSign className="h-5 w-5 text-jobs-primary flex-shrink-0" />
                                     <span className="font-black text-jobs-primary">
-                                        {formatSalaryRange(job.salary.min, job.salary.max, job.salary.period as 'month' | 'year')}
+                                        {formatSalaryRange(job.salaryMin, job.salaryMax, job.salaryPeriod === 'monthly' ? 'month' : 'year')}
                                     </span>
                                 </div>
                             )}
                             <div className="flex items-center gap-2 text-gray-700">
                                 <Clock className="h-5 w-5 text-gray-600 flex-shrink-0" />
-                                <span>Posted {formatPostedDate(job.postedAt)}</span>
+                                <span>Posted {formatPostedDate(job.postedAt instanceof Date ? job.postedAt : job.postedAt.toDate())}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Calendar className="h-5 w-5 text-red-600 flex-shrink-0" />
@@ -117,17 +174,19 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                                             : 'text-gray-700'
                                         }`}
                                 >
-                                    Deadline: {formatDeadline(job.deadline)}
+                                    Deadline: {formatDeadline(deadlineDate)}
                                 </span>
                             </div>
+                            {/* Vacancies not available in Job type
                             <div className="flex items-center gap-2 text-gray-700">
                                 <Users className="h-5 w-5 text-gray-600 flex-shrink-0" />
                                 <span>{job.vacancies} {job.vacancies === 1 ? 'position' : 'positions'} available</span>
                             </div>
-                            {job.applicationCount !== undefined && (
+                            */}
+                            {job.applicantCount !== undefined && (
                                 <div className="flex items-center gap-2 text-gray-700">
                                     <Briefcase className="h-5 w-5 text-gray-600 flex-shrink-0" />
-                                    <span>{job.applicationCount} applicants so far</span>
+                                    <span>{job.applicantCount} applicants so far</span>
                                 </div>
                             )}
                         </div>
@@ -160,7 +219,7 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                         Apply Now
                     </button>
                     <Link
-                        href={`/companies/${job.company.id}`}
+                        href={`/companies/${job.employerId}`}
                         className="px-8 py-4 border-2 border-jobs-primary text-jobs-primary font-black rounded-xl hover:bg-jobs-primary hover:text-white transition-all active:scale-95 text-center"
                     >
                         View Company
@@ -173,7 +232,7 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                         <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                         <div>
                             <p className="text-red-800 font-semibold">Application Deadline Approaching!</p>
-                            <p className="text-red-700 text-sm">This job closes on {job.deadline.toLocaleDateString()}. Apply soon!</p>
+                            <p className="text-red-700 text-sm">This job closes on {deadlineDate.toLocaleDateString()}. Apply soon!</p>
                         </div>
                     </div>
                 )}
@@ -205,21 +264,7 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                         </ul>
                     </div>
 
-                    {/* Requirements */}
-                    <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Award className="h-6 w-6 text-jobs-primary" />
-                            <h2 className="text-2xl font-black text-jobs-dark tracking-tight">Requirements</h2>
-                        </div>
-                        <ul className="space-y-2">
-                            {job.requirements.map((requirement, index) => (
-                                <li key={index} className="flex items-start gap-3">
-                                    <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                                    <span className="text-gray-700">{requirement}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+
 
                     {/* Qualifications */}
                     <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
@@ -228,7 +273,7 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                             <h2 className="text-2xl font-black text-jobs-dark tracking-tight">Qualifications</h2>
                         </div>
                         <ul className="space-y-3">
-                            {job.qualifications.map((qualification, index) => (
+                            {job.requiredQualifications.map((qualification, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <CheckCircle className="h-5 w-5 text-jobs-accent flex-shrink-0 mt-0.5" />
                                     <span className="text-jobs-dark/70 font-medium">{qualification}</span>
@@ -259,7 +304,7 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                     <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
                         <h2 className="text-2xl font-black text-jobs-dark mb-6 tracking-tight">Required Skills</h2>
                         <div className="flex flex-wrap gap-3">
-                            {job.skills.map((skill, index) => (
+                            {job.requiredSkills.map((skill, index) => (
                                 <span
                                     key={index}
                                     className="px-4 py-2 bg-jobs-primary/5 text-jobs-primary font-black rounded-xl text-sm border border-jobs-primary/10"
@@ -272,58 +317,19 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                 </div>
 
                 {/* Right Column - Company Information */}
+                {/* Right Column - Company Information */}
                 <div className="space-y-6">
                     <div className="bg-white border rounded-lg p-6 sticky top-6">
                         <h2 className="text-xl font-bold text-gray-900 mb-4">About the Company</h2>
-
-                        {(job.company as any).description && (
-                            <div className="mb-4">
-                                <p className="text-gray-700 leading-relaxed">{(job.company as any).description}</p>
-                            </div>
-                        )}
-
-                        <div className="space-y-3 mb-6">
-                            <div className="flex items-start gap-2">
-                                <Building2 className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-sm text-gray-500">Industry</p>
-                                    <p className="font-semibold text-gray-900">{job.company.industry}</p>
-                                </div>
-                            </div>
-                            {(job.company as any).size && (
-                                <div className="flex items-start gap-2">
-                                    <Users className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm text-gray-500">Company Size</p>
-                                        <p className="font-semibold text-gray-900">{(job.company as any).size} employees</p>
-                                    </div>
-                                </div>
-                            )}
-                            {(job.company as any).founded && (
-                                <div className="flex items-start gap-2">
-                                    <Calendar className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm text-gray-500">Founded</p>
-                                        <p className="font-semibold text-gray-900">{(job.company as any).founded}</p>
-                                    </div>
-                                </div>
-                            )}
-                            {(job.company as any).location && (
-                                <div className="flex items-start gap-2">
-                                    <MapPin className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm text-gray-500">Location</p>
-                                        <p className="font-semibold text-gray-900">{(job.company as any).location}</p>
-                                    </div>
-                                </div>
-                            )}
-                            {(job.company as any).website && (
-                                <div className="flex items-start gap-2">
+                        <div className="text-gray-600">
+                            <p>{job.companyName}</p>
+                            {job.companyWebsite && (
+                                <div className="mt-4 flex items-start gap-2">
                                     <Globe className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" />
                                     <div>
                                         <p className="text-sm text-gray-500">Website</p>
                                         <a
-                                            href={(job.company as any).website}
+                                            href={job.companyWebsite}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="font-semibold text-blue-600 hover:underline"
@@ -334,20 +340,6 @@ export default function JobDetail({ job, onSave, isSaved = false }: JobDetailPro
                                 </div>
                             )}
                         </div>
-
-                        {(job.company as any).benefits && (job.company as any).benefits.length > 0 && (
-                            <>
-                                <h3 className="font-bold text-gray-900 mb-2">Company Benefits</h3>
-                                <ul className="space-y-1">
-                                    {(job.company as any).benefits.map((benefit: string, index: number) => (
-                                        <li key={index} className="flex items-start gap-2 text-sm">
-                                            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-gray-700">{benefit}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </>
-                        )}
                     </div>
                 </div>
             </div>

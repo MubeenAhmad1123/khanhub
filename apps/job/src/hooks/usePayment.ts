@@ -22,21 +22,31 @@ export function usePayment(userId: string | null) {
         setError(null);
 
         try {
-            // Upload screenshot
-            const screenshotUrl = await uploadPaymentScreenshot(userId, screenshotFile);
-
-            // Create payment record
+            // 1. Create payment record with placeholder screenshot URL
             const paymentId = await createPayment({
                 userId,
                 type,
                 amount,
-                screenshotUrl,
+                screenshotUrl: '', // Will update after upload
+                screenshotFileName: screenshotFile.name,
                 status: 'pending',
+                method: 'bank_transfer', // Default or passed generic method
+                transactionId: 'PENDING', // Will update if needed or passed
                 reviewedBy: null,
                 reviewedAt: null,
                 rejectionReason: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
+                isFlagged: false,
+            });
+
+            // 2. Upload screenshot
+            const uploadResult = await uploadPaymentScreenshot(screenshotFile, paymentId);
+
+            // 3. Update payment with actual URL
+            await updatePayment(paymentId, {
+                screenshotUrl: uploadResult.url,
+                transactionId: paymentId.substring(0, 8).toUpperCase(), // Generate temp ID or usage generic
             });
 
             return paymentId;
