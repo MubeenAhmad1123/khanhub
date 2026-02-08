@@ -89,6 +89,7 @@ export interface JobSeekerProfile {
     desiredLocations: string[];
     remoteOnly: boolean;
     willingToRelocate: boolean;
+    onboardingCompleted: boolean;
 }
 
 // ==================== COMPANY PROFILE ====================
@@ -169,6 +170,7 @@ export interface User {
     isFeatured: boolean; // For premium job seekers
     isBanned: boolean;
     banReason?: string;
+    onboardingCompleted: boolean;
 }
 
 // ==================== POINTS SYSTEM ====================

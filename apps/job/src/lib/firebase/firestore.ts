@@ -422,6 +422,21 @@ export const COLLECTIONS = {
 // ==================== SPECIFIC COLLECTION HELPERS ====================
 
 /**
+ * Create a new job
+ */
+export const createJob = async (jobData: any) => {
+    const jobsRef = collection(db, COLLECTIONS.JOBS);
+    const newJobRef = doc(jobsRef);
+    await setDoc(newJobRef, {
+        id: newJobRef.id,
+        ...jobData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    });
+    return newJobRef.id;
+};
+
+/**
  * Get user by ID
  */
 export const getUserById = async (userId: string) => {

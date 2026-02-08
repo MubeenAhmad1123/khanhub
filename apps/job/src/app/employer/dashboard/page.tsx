@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function EmployerDashboardPage() {
     const router = useRouter();
-    const { user, profile, loading, isEmployer } = useAuth();
+    const { user, loading, isEmployer } = useAuth();
 
     useEffect(() => {
         if (!loading) {
@@ -20,7 +20,7 @@ export default function EmployerDashboardPage() {
         }
     }, [loading, user, isEmployer, router]);
 
-    if (loading || !profile) {
+    if (loading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-jobs-primary" />
@@ -34,11 +34,25 @@ export default function EmployerDashboardPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-black text-jobs-dark mb-2">
-                        Welcome, {profile.companyName || profile.displayName}! 🏢
+                        Welcome to your Company Dashboard, {user.company?.name || user.displayName}! 🏢
                     </h1>
                     <p className="text-jobs-dark/60">
-                        Manage your job postings and applications
+                        Manage your HR profile, post jobs, and find top talent.
                     </p>
+                    {(!user.company?.name || !user.company?.description) && (
+                        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">📋</span>
+                                <div>
+                                    <p className="font-bold text-blue-900">Complete your HR Profile</p>
+                                    <p className="text-sm text-blue-700">Add company details to attract more candidates.</p>
+                                </div>
+                            </div>
+                            <Link href="/employer/profile" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                                Setup Now
+                            </Link>
+                        </div>
+                    )}
                 </div>
 
                 {/* Quick Post Button */}

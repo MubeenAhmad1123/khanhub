@@ -75,7 +75,7 @@ export default function AdminAnalyticsPage() {
         <div className="min-h-screen bg-jobs-neutral p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center gap-4 mb-8">
-                    <Link href="/admin/dashboard" className="p-3 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                    <Link href="/admin" className="p-3 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
                         <ArrowLeft className="h-6 w-6 text-jobs-dark" />
                     </Link>
                     <div>

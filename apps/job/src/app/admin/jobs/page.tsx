@@ -149,7 +149,7 @@ export default function AdminJobApprovalsPage() {
                         <p className="text-jobs-dark/60">Review and approve pending job postings</p>
                     </div>
                     <Link
-                        href="/admin/dashboard"
+                        href="/admin"
                         className="bg-gray-200 text-jobs-dark px-6 py-3 rounded-xl font-bold hover:bg-gray-300 transition"
                     >
                         Back to Dashboard

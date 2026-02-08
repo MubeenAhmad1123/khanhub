@@ -7,20 +7,20 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
     function isAdmin() {
-      return isAuthenticated() && getUserRole() == 'admin';
+      return isAuthenticated() && 
+             (request.auth.token.role == 'admin' || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
     
     function isJobSeeker() {
-      return isAuthenticated() && getUserRole() == 'job_seeker';
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'job_seeker';
     }
     
     function isEmployer() {
-      return isAuthenticated() && getUserRole() == 'employer';
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employer';
     }
     
     function isOwner(userId) {

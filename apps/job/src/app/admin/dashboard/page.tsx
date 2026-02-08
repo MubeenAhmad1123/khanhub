@@ -12,10 +12,18 @@ import { sendPaymentApprovalEmail, sendPaymentRejectionEmail } from '@/lib/servi
 
 export default function AdminDashboardPage() {
     const router = useRouter();
-    const [password, setPassword] = useState('');
-    const [authenticated, setAuthenticated] = useState(false);
-    const [error, setError] = useState('');
-    const { pendingPayments, placements, loading, refresh } = useAdmin();
+
+    // Redirect to parent /admin to consolidate dashboards
+    useEffect(() => {
+        router.replace('/admin');
+    }, [router]);
+
+    return null; // Don't render anything, just redirect
+}
+
+/* Original Component Logic Kept Below in case needed, but route is now deprecated */
+function DeprecatedAdminDashboard() {
+    const router = useRouter();
 
     const handlePasswordSubmit = (e: React.FormEvent) => {
         e.preventDefault();

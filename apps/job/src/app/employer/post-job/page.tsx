@@ -3,15 +3,21 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Briefcase, MapPin, DollarSign, Calendar, FileText, Loader2 } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, Calendar, FileText, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
 import { createJob } from '@/lib/firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase/config';
 import { PAKISTANI_CITIES, PAKISTANI_PROVINCES } from '@/types/job';
 
 export default function PostJobPage() {
     const router = useRouter();
-    const { user, profile } = useAuth();
+    const { user } = useAuth();
     const [submitting, setSubmitting] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [error, setError] = useState('');
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [jobImageUrl, setJobImageUrl] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -33,21 +39,47 @@ export default function PostJobPage() {
         benefits: '',
         vacancies: '1',
         deadline: '',
-        companyEmail: profile?.companyName ? profile.email : '',
+        companyEmail: user?.email || '',
         companyPhone: '',
         companyAddress: '',
     });
 
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Preview
+        const reader = new FileReader();
+        reader.onloadend = () => setImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+
+        // Upload
+        setUploadingImage(true);
+        try {
+            const storageRef = ref(storage, `job-images/${Date.now()}-${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(snapshot.ref);
+            setJobImageUrl(url);
+        } catch (err) {
+            console.error('Image upload error:', err);
+            setError('Failed to upload image. Please try again.');
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!user || !profile) {
+        if (!user) {
             setError('You must be logged in to post a job');
             return;
         }
 
         setSubmitting(true);
         setError('');
+
+        const is_admin = user.role === 'admin';
 
         try {
             const deadlineDate = new Date(formData.deadline);
@@ -58,10 +90,11 @@ export default function PostJobPage() {
                 title: formData.title,
                 company: {
                     id: user.uid,
-                    name: profile.companyName || 'Company',
-                    logo: profile.companyLogo || null,
-                    industry: profile.industry || null,
+                    name: user.company?.name || (is_admin ? 'Admin Posted' : 'Company'),
+                    logo: user.company?.logo || null,
+                    industry: user.company?.industry || null,
                 },
+                jobImage: jobImageUrl,
                 shortDescription: formData.shortDescription,
                 description: formData.description,
                 category: formData.category,
@@ -90,8 +123,8 @@ export default function PostJobPage() {
                 companyEmail: formData.companyEmail,
                 companyPhone: formData.companyPhone,
                 companyAddress: formData.companyAddress,
-                status: 'pending',
-                featured: false,
+                status: is_admin ? 'approved' : 'pending',
+                featured: is_admin,
                 vacancies: parseInt(formData.vacancies),
                 deadline: deadlineDate,
                 expiresAt,
@@ -104,13 +137,14 @@ export default function PostJobPage() {
             });
 
             setSubmitting(false);
-            router.push('/employer/dashboard');
+            router.push(is_admin ? '/admin' : '/employer/dashboard');
         } catch (err) {
             console.error('Error posting job:', err);
             setError('Failed to post job. Please try again.');
             setSubmitting(false);
         }
     };
+
 
     return (
         <div className="min-h-screen bg-jobs-neutral py-8 px-4">

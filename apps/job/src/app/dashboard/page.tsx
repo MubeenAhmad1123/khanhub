@@ -3,285 +3,180 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-    Briefcase,
-    FileText,
-    Video,
-    Award,
-    TrendingUp,
-    CheckCircle,
-    Clock,
-    BookmarkPlus,
-    Loader2
-} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
+import { useRecentJobs } from '@/hooks/useJobs';
+import JobCard from '@/components/jobs/JobCard';
 
-export default function DashboardPage() {
+export default function JobSeekerDashboard() {
     const router = useRouter();
-    const { user, profile: authProfile, loading, isJobSeeker, registrationApproved } = useAuth();
-    const { profile, profileStrength, improvementSteps } = useProfile(user?.uid || null, authProfile);
+    const { user, loading, isAuthenticated, hasPaymentApproved } = useAuth();
+    const { jobs, loading: jobsLoading } = useRecentJobs(6);
 
     useEffect(() => {
-        if (!loading) {
-            if (!user) {
-                router.push('/auth/login');
-            } else if (!isJobSeeker) {
-                // Redirect non-job seekers
-                if (authProfile?.role === 'employer') {
-                    router.push('/employer/dashboard');
-                } else if (authProfile?.role === 'admin') {
-                    router.push('/admin/dashboard');
-                }
-            } else if (!registrationApproved) {
-                router.push('/auth/verify-payment');
-            }
+        if (!loading && !isAuthenticated) {
+            router.push('/auth/login');
         }
-    }, [loading, user, isJobSeeker, registrationApproved, authProfile, router]);
+    }, [loading, isAuthenticated, router]);
 
-    if (loading || !profile) {
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-jobs-primary" />
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading...</p>
+                </div>
             </div>
         );
     }
 
-    const getStrengthColor = (strength: number) => {
-        if (strength >= 80) return 'bg-green-500';
-        if (strength >= 60) return 'bg-blue-500';
-        if (strength >= 40) return 'bg-yellow-500';
-        return 'bg-red-500';
-    };
+    if (!user) return null;
 
-    const getStrengthLabel = (strength: number) => {
-        if (strength >= 80) return 'Excellent';
-        if (strength >= 60) return 'Good';
-        if (strength >= 40) return 'Fair';
-        return 'Needs Work';
-    };
+    if (user.role === 'employer') {
+        router.push('/employer/dashboard');
+        return null;
+    }
+
+    if (user.role === 'admin') {
+        router.push('/admin');
+        return null;
+    }
+
+    if (!hasPaymentApproved) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center">
+                    <div className="text-6xl mb-4">⏳</div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Payment Pending</h2>
+                    <p className="text-gray-600 mb-6">We're reviewing your payment (usually &lt; 30 min)</p>
+                    <Link
+                        href="/auth/verify-payment"
+                        className="inline-block bg-teal-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-teal-700"
+                    >
+                        Check Status
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    const profileStrength = user.profile?.profileStrength || 0;
 
     return (
-        <div className="min-h-screen bg-jobs-neutral py-8 px-4">
-            <div className="max-w-7xl mx-auto">
-                {/* Header */}
+        <div className="min-h-screen bg-gray-50">
+            <div className="bg-white border-b">
+                <div className="max-w-7xl mx-auto px-4 py-6">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-800">Welcome back, {user.displayName}! 👋</h1>
+                            <p className="text-gray-600 mt-1">
+                                {user.isPremium ? '💎 Premium Member' : `🎁 Free Plan: ${10 - (user.applicationsUsed || 0)} applications remaining`}
+                            </p>
+                        </div>
+                        {!user.isPremium && (
+                            <Link
+                                href="/dashboard/premium"
+                                className="bg-gradient-to-r from-amber-400 to-amber-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:scale-105 transition-transform"
+                            >
+                                ✨ Upgrade for Unlimited
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                <div className="grid md:grid-cols-4 gap-6 mb-8">
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="text-gray-600 text-sm mb-1">Profile Strength</div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-3xl font-bold text-teal-600">{profileStrength}%</div>
+                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div className="bg-teal-600 h-2 rounded-full" style={{ width: `${profileStrength}%` }}></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="text-gray-600 text-sm mb-1">Applications</div>
+                        <div className="text-3xl font-bold text-gray-800">{user.applicationsUsed}</div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="text-gray-600 text-sm mb-1">Points</div>
+                        <div className="text-3xl font-bold text-purple-600">{user.points}</div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="text-gray-600 text-sm mb-1">Status</div>
+                        <div className="text-xl font-bold">
+                            {user.isPremium ? (
+                                <span className="text-amber-600">✨ Premium</span>
+                            ) : (
+                                <span className="text-gray-600">Free</span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {profileStrength < 80 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+                        <div className="flex items-start gap-4">
+                            <div className="text-3xl">💡</div>
+                            <div>
+                                <h3 className="font-bold text-yellow-800 mb-2">Complete your profile!</h3>
+                                <p className="text-yellow-700 text-sm mb-4">Employers prefer complete profiles.</p>
+                                <Link
+                                    href="/dashboard/profile"
+                                    className="inline-block bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-700"
+                                >
+                                    Complete Profile
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="mb-8">
-                    <h1 className="text-3xl font-black text-jobs-dark mb-2">
-                        Welcome back, {profile.displayName}! 👋
-                    </h1>
-                    <p className="text-jobs-dark/60">
-                        Here's your job search dashboard
-                    </p>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800">Recommended Jobs</h2>
+                        <Link href="/search" className="text-teal-600 hover:text-teal-700 font-semibold">
+                            View All →
+                        </Link>
+                    </div>
+
+                    {jobsLoading ? (
+                        <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+                        </div>
+                    ) : jobs.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500">No jobs found</div>
+                    ) : (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {jobs.map((job) => (
+                                <JobCard key={job.id} job={job} />
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="bg-blue-100 p-3 rounded-xl">
-                                <Briefcase className="h-6 w-6 text-blue-600" />
-                            </div>
-                        </div>
-                        <div className="text-3xl font-black text-jobs-dark">{profile.freeApplicationsUsed}</div>
-                        <div className="text-sm text-jobs-dark/60">Applications Sent</div>
-                        <div className="text-xs text-jobs-dark/50 mt-1">
-                            {profile.isPremium ? 'Unlimited' : `${10 - profile.freeApplicationsUsed} free left`}
-                        </div>
-                    </div>
+                <div className="grid md:grid-cols-3 gap-6">
+                    <Link href="/dashboard/profile" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                        <div className="text-4xl mb-4">👤</div>
+                        <h3 className="font-bold text-gray-800 mb-2">My Profile</h3>
+                        <p className="text-gray-600 text-sm">Update CV, skills & experience</p>
+                    </Link>
 
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="bg-green-100 p-3 rounded-xl">
-                                <TrendingUp className="h-6 w-6 text-green-600" />
-                            </div>
-                        </div>
-                        <div className="text-3xl font-black text-jobs-dark">{profileStrength}%</div>
-                        <div className="text-sm text-jobs-dark/60">Profile Strength</div>
-                        <div className="text-xs text-jobs-dark/50 mt-1">{getStrengthLabel(profileStrength)}</div>
-                    </div>
+                    <Link href="/dashboard/applications" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                        <div className="text-4xl mb-4">📋</div>
+                        <h3 className="font-bold text-gray-800 mb-2">Applications</h3>
+                        <p className="text-gray-600 text-sm">Track your job applications</p>
+                    </Link>
 
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="bg-yellow-100 p-3 rounded-xl">
-                                <Award className="h-6 w-6 text-yellow-600" />
-                            </div>
-                        </div>
-                        <div className="text-3xl font-black text-jobs-dark">{profile.points}</div>
-                        <div className="text-sm text-jobs-dark/60">Points Earned</div>
-                        <div className="text-xs text-jobs-dark/50 mt-1">Keep completing tasks!</div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="bg-purple-100 p-3 rounded-xl">
-                                <BookmarkPlus className="h-6 w-6 text-purple-600" />
-                            </div>
-                        </div>
-                        <div className="text-3xl font-black text-jobs-dark">0</div>
-                        <div className="text-sm text-jobs-dark/60">Saved Jobs</div>
-                        <div className="text-xs text-jobs-dark/50 mt-1">Your wishlist</div>
-                    </div>
-                </div>
-
-                {/* Main Content Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column - Profile Strength */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Profile Strength Card */}
-                        <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-black text-jobs-dark">Profile Strength</h2>
-                                <span className={`px-4 py-2 rounded-full text-white text-sm font-bold ${getStrengthColor(profileStrength)
-                                    }`}>
-                                    {profileStrength}%
-                                </span>
-                            </div>
-
-                            <div className="mb-6">
-                                <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full transition-all duration-500 ${getStrengthColor(profileStrength)
-                                            }`}
-                                        style={{ width: `${profileStrength}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-
-                            {improvementSteps.length > 0 && (
-                                <>
-                                    <h3 className="font-bold text-jobs-dark mb-4">Next Steps to Improve:</h3>
-                                    <div className="space-y-3">
-                                        {improvementSteps.map((step, index) => (
-                                            <div key={index} className="flex items-start gap-3">
-                                                <div className="bg-jobs-primary/10 p-2 rounded-lg mt-0.5">
-                                                    <CheckCircle className="h-4 w-4 text-jobs-primary" />
-                                                </div>
-                                                <span className="text-jobs-dark/80">{step}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
-
-                            {profileStrength === 100 && (
-                                <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                                    <p className="text-green-800 font-bold flex items-center gap-2">
-                                        <CheckCircle className="h-5 w-5" />
-                                        Perfect! Your profile is 100% complete
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Quick Actions */}
-                        <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
-                            <h2 className="text-xl font-black text-jobs-dark mb-6">Quick Actions</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <Link
-                                    href="/dashboard/profile/cv"
-                                    className="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-jobs-primary hover:bg-jobs-primary/5 transition-all group"
-                                >
-                                    <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-jobs-primary group-hover:text-white transition-colors">
-                                        <FileText className="h-6 w-6 text-blue-600 group-hover:text-white" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="font-bold text-jobs-dark">Upload CV</div>
-                                        <div className="text-xs text-jobs-dark/60">PDF or DOCX</div>
-                                    </div>
-                                </Link>
-
-                                <Link
-                                    href="/dashboard/profile/video"
-                                    className="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-jobs-accent hover:bg-jobs-accent/5 transition-all group"
-                                >
-                                    <div className="bg-orange-100 p-3 rounded-xl group-hover:bg-jobs-accent group-hover:text-white transition-colors">
-                                        <Video className="h-6 w-6 text-orange-600 group-hover:text-white" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="font-bold text-jobs-dark">Intro Video</div>
-                                        <div className="text-xs text-jobs-dark/60">Record or upload</div>
-                                    </div>
-                                </Link>
-
-                                <Link
-                                    href="/search"
-                                    className="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-green-500 hover:bg-green-50 transition-all group"
-                                >
-                                    <div className="bg-green-100 p-3 rounded-xl group-hover:bg-green-500 group-hover:text-white transition-colors">
-                                        <Briefcase className="h-6 w-6 text-green-600 group-hover:text-white" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="font-bold text-jobs-dark">Browse Jobs</div>
-                                        <div className="text-xs text-jobs-dark/60">Find opportunities</div>
-                                    </div>
-                                </Link>
-
-                                <Link
-                                    href="/dashboard/applications"
-                                    className="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-purple-500 hover:bg-purple-50 transition-all group"
-                                >
-                                    <div className="bg-purple-100 p-3 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                                        <Clock className="h-6 w-6 text-purple-600 group-hover:text-white" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="font-bold text-jobs-dark">My Applications</div>
-                                        <div className="text-xs text-jobs-dark/60">Track status</div>
-                                    </div>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column - Premium & Tips */}
-                    <div className="space-y-6">
-                        {/* Premium Upgrade */}
-                        {!profile.isPremium && (
-                            <div className="bg-gradient-to-br from-jobs-accent to-orange-600 p-8 rounded-3xl shadow-lg text-white">
-                                <div className="bg-white/20 p-3 rounded-xl w-fit mb-4">
-                                    <Award className="h-8 w-8" />
-                                </div>
-                                <h3 className="text-2xl font-black mb-2">Upgrade to Premium</h3>
-                                <p className="text-white/90 mb-6 text-sm">
-                                    Unlock unlimited applications, see full company details, and get priority support
-                                </p>
-                                <div className="text-3xl font-black mb-4">Rs. 10,000<span className="text-lg font-normal">/month</span></div>
-                                <Link
-                                    href="/dashboard/premium"
-                                    className="block w-full bg-white text-jobs-accent py-3 rounded-xl font-bold text-center hover:bg-white/90 transition-all"
-                                >
-                                    Upgrade Now
-                                </Link>
-                            </div>
-                        )}
-
-                        {profile.isPremium && (
-                            <div className="bg-gradient-to-br from-green-500 to-green-600 p-8 rounded-3xl shadow-lg text-white">
-                                <div className="bg-white/20 p-3 rounded-xl w-fit mb-4">
-                                    <CheckCircle className="h-8 w-8" />
-                                </div>
-                                <h3 className="text-2xl font-black mb-2">Premium Active!</h3>
-                                <p className="text-white/90 mb-4 text-sm">
-                                    Enjoy unlimited applications and full job details
-                                </p>
-                                {profile.premiumExpiresAt && (
-                                    <div className="text-sm">
-                                        Expires: {new Date(profile.premiumExpiresAt).toLocaleDateString()}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Tips Card */}
-                        <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
-                            <h3 className="font-black text-jobs-dark mb-4">💡 Pro Tips</h3>
-                            <div className="space-y-3 text-sm text-jobs-dark/80">
-                                <p>✓ Complete your profile to increase visibility</p>
-                                <p>✓ Upload a professional CV and intro video</p>
-                                <p>✓ Apply to jobs that match your skills</p>
-                                <p>✓ Check your match score before applying</p>
-                            </div>
-                        </div>
-                    </div>
+                    <Link href="/dashboard/saved-jobs" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                        <div className="text-4xl mb-4">❤️</div>
+                        <h3 className="font-bold text-gray-800 mb-2">Saved Jobs</h3>
+                        <p className="text-gray-600 text-sm">Your wishlist</p>
+                    </Link>
                 </div>
             </div>
         </div>

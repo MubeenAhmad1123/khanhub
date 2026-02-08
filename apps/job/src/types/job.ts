@@ -415,6 +415,16 @@ export const PAKISTANI_CITIES = [
     'Rahim Yar Khan',
 ];
 
+export const PAKISTANI_PROVINCES = [
+    'Punjab',
+    'Sindh',
+    'Khyber Pakhtunkhwa',
+    'Balochistan',
+    'Azad Kashmir',
+    'Gilgit-Baltistan',
+    'Islamabad Capital Territory',
+];
+
 // ==================== DEFAULT VALUES ====================
 
 export const DEFAULT_JOB_FILTERS: JobFilters = {

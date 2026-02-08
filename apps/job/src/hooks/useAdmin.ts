@@ -1,45 +1,430 @@
-'use client';
-
+// useAdmin Hook - Admin Operations
 import { useState, useEffect } from 'react';
-import { getPendingPayments, getAllPlacements } from '@/lib/firebase/firestore';
+import {
+    collection,
+    query,
+    where,
+    orderBy,
+    getDocs,
+    doc,
+    updateDoc,
+    getDoc,
+    addDoc,
+    serverTimestamp,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 import { Payment } from '@/types/payment';
-import { Placement } from '@/types/admin';
+import { Job } from '@/types/job';
+import { User } from '@/types/user';
+import { AdminDashboardData } from '@/types/admin';
+import { sendPaymentApprovalEmail, sendPaymentRejectionEmail, sendJobApprovalEmail } from '@/lib/services/emailService';
 
 export function useAdmin() {
-    const [pendingPayments, setPendingPayments] = useState<Payment[]>([]);
-    const [placements, setPlacements] = useState<Placement[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const loadData = async () => {
-        setLoading(true);
-        setError(null);
-
+    /**
+     * Approve payment
+     */
+    const approvePayment = async (
+        paymentId: string,
+        adminId: string,
+        adminNotes?: string
+    ): Promise<void> => {
         try {
-            const [payments, placementsData] = await Promise.all([
-                getPendingPayments(),
-                getAllPlacements(),
-            ]);
+            setLoading(true);
+            setError(null);
 
-            setPendingPayments(payments);
-            setPlacements(placementsData);
-        } catch (err) {
-            console.error('Error loading admin data:', err);
-            setError('Failed to load data');
+            const paymentRef = doc(db, 'payments', paymentId);
+            const paymentSnap = await getDoc(paymentRef);
+
+            if (!paymentSnap.exists()) {
+                throw new Error('Payment not found');
+            }
+
+            const payment = paymentSnap.data() as Payment;
+
+            // Update payment status
+            await updateDoc(paymentRef, {
+                status: 'approved',
+                reviewedBy: adminId,
+                reviewedAt: serverTimestamp(),
+                adminNotes: adminNotes || '',
+            });
+
+            // Update user status
+            const userRef = doc(db, 'users', payment.userId);
+
+            if (payment.type === 'registration') {
+                await updateDoc(userRef, {
+                    paymentStatus: 'approved',
+                });
+            } else if (payment.type === 'premium') {
+                const premiumStart = new Date();
+                const premiumEnd = new Date();
+                premiumEnd.setDate(premiumEnd.getDate() + 30);
+
+                await updateDoc(userRef, {
+                    isPremium: true,
+                    premiumStartDate: premiumStart,
+                    premiumEndDate: premiumEnd,
+                    premiumJobsViewed: 0,
+                });
+
+                await updateDoc(paymentRef, {
+                    premiumStartDate: premiumStart,
+                    premiumEndDate: premiumEnd,
+                });
+            }
+
+            // Send approval email
+            await sendPaymentApprovalEmail(
+                payment.userEmail,
+                payment.userName,
+                payment.amount
+            );
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to approve payment');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Reject payment
+     */
+    const rejectPayment = async (
+        paymentId: string,
+        adminId: string,
+        rejectionReason: string,
+        adminNotes?: string
+    ): Promise<void> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const paymentRef = doc(db, 'payments', paymentId);
+            const paymentSnap = await getDoc(paymentRef);
+
+            if (!paymentSnap.exists()) {
+                throw new Error('Payment not found');
+            }
+
+            const payment = paymentSnap.data() as Payment;
+
+            // Update payment status
+            await updateDoc(paymentRef, {
+                status: 'rejected',
+                reviewedBy: adminId,
+                reviewedAt: serverTimestamp(),
+                rejectionReason,
+                adminNotes: adminNotes || '',
+            });
+
+            // Send rejection email
+            await sendPaymentRejectionEmail(
+                payment.userEmail,
+                payment.userName,
+                rejectionReason
+            );
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to reject payment');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Approve job posting
+     */
+    const approveJob = async (
+        jobId: string,
+        adminId: string,
+        isFeatured: boolean = false
+    ): Promise<void> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const jobRef = doc(db, 'jobs', jobId);
+            const jobSnap = await getDoc(jobRef);
+
+            if (!jobSnap.exists()) {
+                throw new Error('Job not found');
+            }
+
+            const job = jobSnap.data() as Job;
+
+            await updateDoc(jobRef, {
+                status: 'active',
+                approvedAt: serverTimestamp(),
+                isFeatured,
+            });
+
+            // Get employer email
+            const employerRef = doc(db, 'users', job.employerId);
+            const employerSnap = await getDoc(employerRef);
+
+            if (employerSnap.exists()) {
+                const employer = employerSnap.data() as User;
+                await sendJobApprovalEmail(
+                    employer.email,
+                    employer.displayName,
+                    job.title,
+                    true
+                );
+            }
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to approve job');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Reject job posting
+     */
+    const rejectJob = async (
+        jobId: string,
+        adminId: string,
+        rejectionReason: string
+    ): Promise<void> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const jobRef = doc(db, 'jobs', jobId);
+            const jobSnap = await getDoc(jobRef);
+
+            if (!jobSnap.exists()) {
+                throw new Error('Job not found');
+            }
+
+            const job = jobSnap.data() as Job;
+
+            await updateDoc(jobRef, {
+                status: 'rejected',
+                rejectionReason,
+            });
+
+            // Get employer email
+            const employerRef = doc(db, 'users', job.employerId);
+            const employerSnap = await getDoc(employerRef);
+
+            if (employerSnap.exists()) {
+                const employer = employerSnap.data() as User;
+                await sendJobApprovalEmail(
+                    employer.email,
+                    employer.displayName,
+                    job.title,
+                    false,
+                    rejectionReason
+                );
+            }
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to reject job');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Create placement record (when candidate is hired)
+     */
+    const createPlacement = async (
+        applicationId: string,
+        jobId: string,
+        candidateId: string,
+        employerId: string,
+        firstMonthSalary: number,
+        adminId: string
+    ): Promise<void> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const commissionRate = 0.5; // 50%
+            const commissionAmount = firstMonthSalary * commissionRate;
+
+            // Get job and candidate details
+            const jobSnap = await getDoc(doc(db, 'jobs', jobId));
+            const candidateSnap = await getDoc(doc(db, 'users', candidateId));
+
+            if (!jobSnap.exists() || !candidateSnap.exists()) {
+                throw new Error('Job or candidate not found');
+            }
+
+            const job = jobSnap.data() as Job;
+            const candidate = candidateSnap.data() as User;
+
+            // Create placement record
+            await addDoc(collection(db, 'placements'), {
+                applicationId,
+                jobId,
+                candidateId,
+                employerId,
+                candidateName: candidate.displayName,
+                jobTitle: job.title,
+                companyName: job.companyName,
+                firstMonthSalary,
+                commissionRate,
+                commissionAmount,
+                isPaid: false,
+                createdBy: adminId,
+                createdAt: serverTimestamp(),
+                hiredAt: serverTimestamp(),
+            });
+
+            // Update application status
+            await updateDoc(doc(db, 'applications', applicationId), {
+                status: 'hired',
+                hiredAt: serverTimestamp(),
+                firstMonthSalary,
+            });
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to create placement');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Mark commission as paid
+     */
+    const markCommissionPaid = async (
+        placementId: string,
+        paymentMethod: string,
+        paymentReference: string,
+        notes?: string
+    ): Promise<void> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            await updateDoc(doc(db, 'placements', placementId), {
+                isPaid: true,
+                paidAt: serverTimestamp(),
+                paymentMethod,
+                paymentReference,
+                notes: notes || '',
+            });
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to mark commission as paid');
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Get admin dashboard data
+     */
+    const getDashboardData = async (): Promise<AdminDashboardData> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Get all users
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            const users = usersSnapshot.docs.map(doc => doc.data() as User);
+
+            // Get all jobs
+            const jobsSnapshot = await getDocs(collection(db, 'jobs'));
+            const jobs = jobsSnapshot.docs.map(doc => doc.data() as Job);
+
+            // Get all applications
+            const applicationsSnapshot = await getDocs(collection(db, 'applications'));
+            const applications = applicationsSnapshot.size;
+
+            // Get all placements
+            const placementsSnapshot = await getDocs(collection(db, 'placements'));
+            const placements = placementsSnapshot.docs;
+
+            // Get pending payments
+            const pendingPaymentsQuery = query(
+                collection(db, 'payments'),
+                where('status', '==', 'pending')
+            );
+            const pendingPayments = await getDocs(pendingPaymentsQuery);
+
+            // Get pending jobs
+            const pendingJobsQuery = query(
+                collection(db, 'jobs'),
+                where('status', '==', 'pending')
+            );
+            const pendingJobs = await getDocs(pendingJobsQuery);
+
+            // Calculate metrics
+            const totalRevenue = placements.reduce((sum, doc) => {
+                const placement = doc.data();
+                return sum + (placement.commissionAmount || 0);
+            }, 0);
+
+            const dashboardData: AdminDashboardData = {
+                summary: {
+                    totalUsers: users.length,
+                    totalJobSeekers: users.filter(u => u.role === 'job_seeker').length,
+                    totalEmployers: users.filter(u => u.role === 'employer').length,
+                    totalPremiumUsers: users.filter(u => u.isPremium).length,
+                    totalJobs: jobs.length,
+                    activeJobs: jobs.filter(j => j.status === 'active').length,
+                    pendingJobs: jobs.filter(j => j.status === 'pending').length,
+                    totalApplications: applications,
+                    totalPlacements: placements.length,
+                    totalRevenue,
+                    monthlyRevenue: 0, // Calculate based on current month
+                },
+                pendingActions: {
+                    paymentsToReview: pendingPayments.size,
+                    jobsToReview: pendingJobs.size,
+                    flaggedApplications: 0,
+                    reportedUsers: 0,
+                },
+                recentPayments: 0,
+                recentJobs: 0,
+                recentApplications: 0,
+                recentPlacements: 0,
+                growth: {
+                    usersThisMonth: 0,
+                    jobsThisMonth: 0,
+                    applicationsThisMonth: 0,
+                    revenueThisMonth: 0,
+                    usersGrowthRate: 0,
+                    jobsGrowthRate: 0,
+                    applicationsGrowthRate: 0,
+                    revenueGrowthRate: 0,
+                },
+            };
+
+            return dashboardData;
+        } catch (err: any) {
+            setError(err.message || 'Failed to load dashboard data');
+            throw err;
         } finally {
             setLoading(false);
         }
     };
 
     return {
-        pendingPayments,
-        placements,
         loading,
         error,
-        refresh: loadData,
+        approvePayment,
+        rejectPayment,
+        approveJob,
+        rejectJob,
+        createPlacement,
+        markCommissionPaid,
+        getDashboardData,
     };
 }

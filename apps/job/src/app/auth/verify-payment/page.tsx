@@ -2,253 +2,225 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Upload, CheckCircle, Clock, XCircle, Loader2, Image as ImageIcon } from 'lucide-react';
-import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { usePayment } from '@/hooks/usePayment';
-import { validateImage } from '@/lib/firebase/storage';
+import { PaymentMethod } from '@/types/payment';
 
 export default function VerifyPaymentPage() {
     const router = useRouter();
-    const { user, profile, loading: authLoading } = useAuth();
-    const { submitPayment, submitting } = usePayment(user?.uid || null);
+    const { user, refreshProfile } = useAuth();
+    const { submitPayment, submitting } = usePayment();
 
     const [screenshot, setScreenshot] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [amount, setAmount] = useState<number>(1000);
+    const [transactionId, setTransactionId] = useState('');
+    const [method, setMethod] = useState<PaymentMethod>('jazzcash');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
-        // Redirect if not authenticated
-        if (!authLoading && !user) {
+        if (!user) {
             router.push('/auth/login');
-        }
-
-        // Redirect if already approved
-        if (profile?.registrationApproved) {
-            router.push('/dashboard');
-        }
-    }, [authLoading, user, profile, router]);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Validate file
-        const validation = validateImage(file);
-        if (!validation.valid) {
-            setError(validation.error || 'Invalid file');
             return;
         }
+        if (user.paymentStatus === 'approved') {
+            router.push('/dashboard');
+        }
+    }, [user, router]);
 
-        setScreenshot(file);
-        setError('');
-
-        // Create preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setPreviewUrl(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+    const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setScreenshot(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setPreviewUrl(reader.result as string);
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
 
         if (!screenshot) {
             setError('Please upload payment screenshot');
             return;
         }
 
+        if (!transactionId.trim()) {
+            setError('Please enter transaction ID');
+            return;
+        }
+
         try {
-            await submitPayment('registration', amount, screenshot);
+            await submitPayment(screenshot, transactionId, 1000, 'registration', method);
             setSuccess(true);
-        } catch (err) {
-            setError('Failed to submit payment. Please try again.');
+            setTimeout(() => router.push('/dashboard'), 3000);
+        } catch (err: any) {
+            setError(err.message || 'Failed to submit payment');
         }
     };
 
-    if (authLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-jobs-primary" />
-            </div>
-        );
-    }
-
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-jobs-neutral px-4">
-                <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-2xl text-center">
-                    <div className="bg-green-100 p-4 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                        <CheckCircle className="h-10 w-10 text-green-600" />
-                    </div>
-                    <h2 className="text-2xl font-black text-jobs-dark mb-4">Payment Submitted!</h2>
-                    <p className="text-jobs-dark/60 mb-8">
-                        Your payment is under review. You'll receive an email once it's approved (usually within 24 hours).
+            <div className="min-h-screen bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
+                    <div className="text-6xl mb-4">✅</div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Payment Submitted!</h2>
+                    <p className="text-gray-600 mb-6">
+                        Your payment proof has been submitted. We'll review it within 30 minutes.
                     </p>
-                    <Link
-                        href="/"
-                        className="inline-block bg-jobs-primary text-white px-8 py-3 rounded-xl font-bold hover:opacity-90 transition-all"
-                    >
-                        Back to Home
-                    </Link>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-yellow-800">You'll receive an email once approved.</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-jobs-neutral py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-2xl w-full">
+        <div className="min-h-screen bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8">
                 <div className="text-center mb-8">
-                    <div className="bg-jobs-primary p-3 rounded-2xl w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                        <Upload className="h-8 w-8 text-white" />
-                    </div>
-                    <h2 className="text-3xl font-black text-jobs-dark">Verify Your Payment</h2>
-                    <p className="mt-2 text-jobs-dark/60 font-medium">
-                        Upload proof of payment to activate your account
-                    </p>
+                    <h1 className="text-3xl font-bold text-teal-700 mb-2">Payment Verification</h1>
+                    <p className="text-gray-600">Rs. 1,000 Registration Fee | Approved within 30 minutes</p>
                 </div>
 
-                <div className="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100">
-                    {/* Payment Instructions */}
-                    <div className="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-100">
-                        <h3 className="font-black text-blue-900 mb-3">Payment Instructions</h3>
-                        <ol className="space-y-2 text-sm text-blue-800">
-                            <li className="flex gap-2">
-                                <span className="font-bold">1.</span>
-                                <span>Transfer <strong>Rs. 1,000</strong> to JazzCash: <strong>03XX-XXXXXXX</strong></span>
-                            </li>
-                            <li className="flex gap-2">
-                                <span className="font-bold">2.</span>
-                                <span>Take a screenshot of the successful transaction</span>
-                            </li>
-                            <li className="flex gap-2">
-                                <span className="font-bold">3.</span>
-                                <span>Upload the screenshot below</span>
-                            </li>
-                            <li className="flex gap-2">
-                                <span className="font-bold">4.</span>
-                                <span>Wait for admin approval (usually within 24 hours)</span>
-                            </li>
-                        </ol>
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                        {error}
+                    </div>
+                )}
+
+                <div className="bg-teal-50 border border-teal-200 rounded-lg p-6 mb-8">
+                    <h3 className="font-bold text-teal-800 mb-3">Payment Instructions:</h3>
+
+                    {method === 'jazzcash' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
+                            <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                                <div className="text-3xl">📱</div>
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase font-black">JazzCash Number</p>
+                                    <p className="text-xl font-black text-teal-600">0322-4467554</p>
+                                    <p className="text-xs text-gray-400">Title: Mubeen Ahmad</p>
+                                </div>
+                            </div>
+                            <ol className="space-y-2 text-sm text-teal-700">
+                                <li>1. Open JazzCash App or dial *786#</li>
+                                <li>2. Send <strong>Rs. 1,000</strong> to the number above</li>
+                                <li>3. Take a screenshot of the digital receipt</li>
+                                <li>4. Enter your Transaction ID and upload screenshot below</li>
+                            </ol>
+                        </div>
+                    )}
+
+                    {method === 'easypaisa' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
+                            <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                                <div className="text-3xl">💳</div>
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase font-black">EasyPaisa Number</p>
+                                    <p className="text-xl font-black text-teal-600">0322-4467554</p>
+                                    <p className="text-xs text-gray-400">Title: Mubeen Ahmad</p>
+                                </div>
+                            </div>
+                            <ol className="space-y-2 text-sm text-teal-700">
+                                <li>1. Open EasyPaisa App or dial *786#</li>
+                                <li>2. Send <strong>Rs. 1,000</strong> to the number above</li>
+                                <li>3. Take a screenshot of the digital receipt</li>
+                                <li>4. Enter your Transaction ID and upload screenshot below</li>
+                            </ol>
+                        </div>
+                    )}
+
+                    {method === 'bank_transfer' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
+                            <div className="bg-white p-4 rounded-xl shadow-sm space-y-3">
+                                <div className="flex justify-between items-center border-b pb-2">
+                                    <span className="text-xs font-bold text-gray-400">BANK</span>
+                                    <span className="font-bold text-teal-600">HBL Bank</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b pb-2">
+                                    <span className="text-xs font-bold text-gray-400">TITLE</span>
+                                    <span className="font-bold">Mubeen Ahmad</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-gray-400">IBAN / ACC#</span>
+                                    <span className="font-black text-teal-600 tracking-wider">PK12 HBL 0000 1234 5678 90</span>
+                                </div>
+                            </div>
+                            <ol className="space-y-2 text-sm text-teal-700">
+                                <li>1. Transfer <strong>Rs. 1,000</strong> via Banking App or ATM</li>
+                                <li>2. Download/Screenshot the successful transaction screen</li>
+                                <li>3. Enter your Reference/Transaction ID below</li>
+                                <li>4. Upload the proof of payment</li>
+                            </ol>
+                        </div>
+                    )}
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method</label>
+                        <div className="grid grid-cols-3 gap-4">
+                            {(['jazzcash', 'easypaisa', 'bank_transfer'] as PaymentMethod[]).map((m) => (
+                                <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => setMethod(m)}
+                                    className={`p-4 border-2 rounded-lg transition ${method === m ? 'border-teal-500 bg-teal-50' : 'border-gray-200'
+                                        }`}
+                                >
+                                    <div className="text-2xl mb-2">
+                                        {m === 'jazzcash' && '📱'}
+                                        {m === 'easypaisa' && '💳'}
+                                        {m === 'bank_transfer' && '🏦'}
+                                    </div>
+                                    <div className="text-xs font-medium capitalize">{m.replace('_', ' ')}</div>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Amount Selection */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-3">
-                                Payment Amount
-                            </label>
-                            <div className="grid grid-cols-2 gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setAmount(1000)}
-                                    className={`p-4 rounded-2xl border-2 transition-all ${amount === 1000
-                                        ? 'border-jobs-primary bg-jobs-primary/5 font-black'
-                                        : 'border-gray-100 hover:border-jobs-primary/30'
-                                        }`}
-                                >
-                                    <div className="text-2xl font-black text-jobs-primary">Rs. 1,000</div>
-                                    <div className="text-xs text-jobs-dark/60">Registration Fee</div>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setAmount(10000)}
-                                    className={`p-4 rounded-2xl border-2 transition-all ${amount === 10000
-                                        ? 'border-jobs-accent bg-jobs-accent/5 font-black'
-                                        : 'border-gray-100 hover:border-jobs-accent/30'
-                                        }`}
-                                >
-                                    <div className="text-2xl font-black text-jobs-accent">Rs. 10,000</div>
-                                    <div className="text-xs text-jobs-dark/60">Premium (1 Month)</div>
-                                </button>
-                            </div>
-                        </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Transaction ID
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={transactionId}
+                            onChange={(e) => setTransactionId(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                            placeholder="TXN12345678"
+                        />
+                    </div>
 
-                        {/* Screenshot Upload */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-3">
-                                Upload Payment Screenshot
-                            </label>
-
-                            {!previewUrl ? (
-                                <label className="block cursor-pointer">
-                                    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center hover:border-jobs-primary hover:bg-jobs-primary/5 transition-all">
-                                        <ImageIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                                        <p className="text-sm font-bold text-jobs-dark mb-1">
-                                            Click to upload or drag and drop
-                                        </p>
-                                        <p className="text-xs text-jobs-dark/50">
-                                            PNG, JPG or WebP (max. 5MB)
-                                        </p>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleFileChange}
-                                            className="hidden"
-                                        />
-                                    </div>
-                                </label>
-                            ) : (
-                                <div className="relative w-full h-96">
-                                    <Image
-                                        src={previewUrl}
-                                        alt="Payment screenshot"
-                                        fill
-                                        unoptimized
-                                        className="object-contain rounded-2xl border-2 border-gray-100"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setScreenshot(null);
-                                            setPreviewUrl(null);
-                                        }}
-                                        className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-10"
-                                    >
-                                        <XCircle className="h-5 w-5" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {error && (
-                            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100 flex items-center gap-3">
-                                <div className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></div>
-                                {error}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Payment Screenshot
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleScreenshotChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                        />
+                        {previewUrl && (
+                            <div className="mt-4">
+                                <img src={previewUrl} alt="Preview" className="w-full max-h-64 object-contain rounded-lg border" />
                             </div>
                         )}
-
-                        <button
-                            type="submit"
-                            disabled={!screenshot || submitting}
-                            className="w-full bg-jobs-accent text-white py-5 rounded-2xl font-black text-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-jobs-accent/25 flex items-center justify-center gap-2"
-                        >
-                            {submitting ? (
-                                <>
-                                    <Loader2 className="h-6 w-6 animate-spin" />
-                                    Submitting...
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle className="h-6 w-6" />
-                                    Submit for Approval
-                                </>
-                            )}
-                        </button>
-                    </form>
-
-                    <div className="mt-8 pt-6 border-t border-gray-100">
-                        <div className="flex items-center gap-2 text-sm text-jobs-dark/60">
-                            <Clock className="h-4 w-4" />
-                            <span>Approval usually takes 12-24 hours</span>
-                        </div>
                     </div>
-                </div>
+
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full bg-teal-600 text-white py-4 rounded-lg font-semibold hover:bg-teal-700 disabled:opacity-50"
+                    >
+                        {submitting ? 'Submitting...' : 'Submit for Verification'}
+                    </button>
+                </form>
             </div>
         </div>
     );

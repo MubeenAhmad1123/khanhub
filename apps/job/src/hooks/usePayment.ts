@@ -1,48 +1,70 @@
-'use client';
-
+// usePayment Hook - Payment Submission and Verification
 import { useState } from 'react';
-import { createPayment, updatePayment } from '@/lib/firebase/firestore';
-import { uploadPaymentScreenshot } from '@/lib/firebase/storage';
-import { PaymentType } from '@/types/payment';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db, storage } from '@/lib/firebase/config';
+import { PaymentType, PaymentMethod } from '@/types/payment';
+import { useAuth } from './useAuth';
 
-export function usePayment(userId: string | null) {
+export function usePayment() {
+    const { user } = useAuth();
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    /**
+     * Submit payment for verification
+     */
     const submitPayment = async (
-        type: PaymentType,
+        screenshot: File,
+        transactionId: string,
         amount: number,
-        screenshotFile: File
-    ): Promise<string> => {
-        if (!userId) {
-            throw new Error('User not authenticated');
-        }
-
-        setSubmitting(true);
-        setError(null);
+        type: PaymentType,
+        method: PaymentMethod,
+        userNotes?: string
+    ): Promise<void> => {
+        if (!user) throw new Error('Not authenticated');
 
         try {
-            // Upload screenshot
-            const screenshotUrl = await uploadPaymentScreenshot(userId, screenshotFile);
+            setSubmitting(true);
+            setError(null);
 
-            // Create payment record
-            const paymentId = await createPayment({
-                userId,
-                type,
+            // Validate screenshot
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            if (!validTypes.includes(screenshot.type)) {
+                throw new Error('Invalid file type. Please upload JPG, PNG, or WebP');
+            }
+
+            if (screenshot.size > 5 * 1024 * 1024) {
+                throw new Error('Image size must be less than 5MB');
+            }
+
+            // Upload screenshot to Firebase Storage
+            const fileName = `${user.uid}_${Date.now()}_${screenshot.name}`;
+            const storageRef = ref(storage, `payment_screenshots/${user.uid}/${fileName}`);
+            await uploadBytes(storageRef, screenshot);
+            const downloadURL = await getDownloadURL(storageRef);
+
+            // Create payment record in Firestore
+            await addDoc(collection(db, 'payments'), {
+                userId: user.uid,
+                userEmail: user.email,
+                userName: user.displayName,
+                userPhone: user.profile?.phone || '',
                 amount,
-                screenshotUrl,
+                type,
+                method,
+                transactionId,
+                screenshotUrl: downloadURL,
+                screenshotFileName: fileName,
                 status: 'pending',
-                reviewedBy: null,
-                reviewedAt: null,
-                rejectionReason: null,
-                createdAt: new Date(),
-                updatedAt: new Date(),
+                userNotes: userNotes || '',
+                submittedAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                isFlagged: false,
             });
 
-            return paymentId;
-        } catch (err) {
-            console.error('Error submitting payment:', err);
-            setError('Failed to submit payment');
+        } catch (err: any) {
+            setError(err.message || 'Failed to submit payment');
             throw err;
         } finally {
             setSubmitting(false);

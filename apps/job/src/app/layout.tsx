@@ -1,16 +1,14 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import JobNavbar from '@/components/layout/JobNavbar';
-import JobFooter from '@/components/layout/JobFooter';
-import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 import '@/styles/globals.css';
+import ImprovedNavbar from '@/components/layout/ImprovedNavbar';
+import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-    title: 'Khanhub Jobs - Find Your Dream Career in Pakistan',
-    description: 'Pakistan\'s leading job portal connecting talented professionals with top companies',
-    keywords: 'jobs pakistan, careers, employment, job search, hiring',
+    title: 'KhanHub - Pakistan\'s #1 Job Portal',
+    description: 'Find your dream job in Pakistan. AI-powered job matching, verified employers, and instant applications.',
 };
 
 export default function RootLayout({
@@ -20,11 +18,10 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={`${inter.className} min-h-screen flex flex-col`}>
+            <body className={inter.className}>
                 <AuthProviderWrapper>
-                    <JobNavbar />
-                    <main className="flex-grow flex flex-col">{children}</main>
-                    <JobFooter />
+                    <ImprovedNavbar />
+                    <main>{children}</main>
                 </AuthProviderWrapper>
             </body>
         </html>
