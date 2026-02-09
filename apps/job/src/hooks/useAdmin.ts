@@ -32,8 +32,15 @@ export function useAdmin() {
         adminNotes?: string
     ): Promise<void> => {
         try {
+<<<<<<< HEAD
             setLoading(true);
             setError(null);
+=======
+            const [payments, placementsData] = await Promise.all([
+                getPendingPayments() as Promise<Payment[]>,
+                getAllPlacements() as Promise<Placement[]>,
+            ]);
+>>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
 
             const paymentRef = doc(db, 'payments', paymentId);
             const paymentSnap = await getDoc(paymentRef);

@@ -7,6 +7,32 @@ import { JobStatistics } from './job';
 
 // ==================== ADMIN DASHBOARD ====================
 
+// Placement Type
+export interface Placement {
+    id: string;
+    jobId: string;
+    applicationId: string;
+    candidateId: string;
+    employerId: string;
+
+    // Details
+    jobTitle: string;
+    candidateName: string;
+    companyName: string;
+
+    // Financials
+    salary: number;
+    commissionAmount: number;
+    isCommissionPaid: boolean;
+
+    // Dates
+    hiredAt: any; // Date | Timestamp
+    createdAt: any; // Date | Timestamp
+    updatedAt: any; // Date | Timestamp
+
+    status: 'active' | 'completed' | 'disputed';
+}
+
 export interface AdminDashboardData {
     // Summary Statistics
     summary: {

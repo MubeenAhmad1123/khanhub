@@ -1,96 +1,205 @@
+// ==========================================
+// EMAIL SERVICE (Resend)
+// ==========================================
+// Send transactional emails using Resend API
+
 import { Resend } from 'resend';
 
-// Initialize Resend only if API key is provided
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'Khanhub Jobs <noreply@khanhub.com>';
-
-// Helper to check if email service is available
-const isEmailServiceAvailable = () => {
-    if (!resend) {
-        console.warn('⚠️ Email service not configured. Add RESEND_API_KEY to .env.local to enable emails.');
-        return false;
-    }
-    return true;
-};
+// Email configuration
+const FROM_EMAIL = 'noreply@khanhub.com'; // Replace with your verified domain
+const COMPANY_NAME = 'Khanhub Job Portal';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jobkhanhub.vercel.app';
 
 /**
- * Send welcome email to new user
+ * Send welcome email to new job seeker
+ * @param to - Recipient email
+ * @param name - User's name
  */
-export async function sendWelcomeEmail(
-    to: string,
-    name: string
-): Promise<void> {
-    if (!isEmailServiceAvailable()) return;
-
-    await resend!.emails.send({
-        from: FROM_EMAIL,
-        to,
-        subject: 'Welcome to Khanhub Jobs!',
-        html: `
-            <h2>Welcome to Khanhub Jobs, ${name}!</h2>
-            <p>Thank you for joining Pakistan's premier job placement platform.</p>
-            <p>Your next steps:</p>
-            <ol>
-                <li>Complete your payment verification (Rs. 1,000)</li>
-                <li>Upload your CV and record an intro video</li>
-                <li>Start browsing and applying to jobs</li>
+export async function sendWelcomeEmail(to: string, name: string): Promise<void> {
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `Welcome to ${COMPANY_NAME}! 🎉`,
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #16a34a; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">Welcome to ${COMPANY_NAME}!</h1>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Thank you for registering with ${COMPANY_NAME}! We're excited to help you find your dream job in Pakistan.
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              <strong>Next Steps:</strong>
+            </p>
+            
+            <ol style="font-size: 16px; line-height: 1.8;">
+              <li>Upload your payment screenshot (Rs. 1,000 registration fee)</li>
+              <li>Wait for admin approval (usually within 24 hours)</li>
+              <li>Complete your profile (CV, intro video, skills)</li>
+              <li>Start applying to jobs!</li>
             </ol>
-            <p>Best regards,<br>Khanhub Team</p>
-        `,
-    });
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/auth/verify-payment" style="background-color: #16a34a; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Upload Payment Screenshot
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+              Questions? Reply to this email or contact us at support@khanhub.com
+            </p>
+          </div>
+          
+          <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+            © 2024 ${COMPANY_NAME}. All rights reserved.
+          </div>
+        </body>
+        </html>
+      `,
+        });
+        console.log('✅ Welcome email sent to:', to);
+    } catch (error) {
+        console.error('❌ Error sending welcome email:', error);
+    }
 }
 
 /**
  * Send payment approval email
+ * @param to - Recipient email
+ * @param name - User's name
+ * @param type - Payment type (registration or premium)
  */
 export async function sendPaymentApprovalEmail(
     to: string,
     name: string,
-    amount: number
+    type: 'registration' | 'premium'
 ): Promise<void> {
-    await resend.emails.send({
-        from: FROM_EMAIL,
-        to,
-        subject: 'Payment Approved - Khanhub Jobs',
-        html: `
-            <h2>Payment Approved!</h2>
-            <p>Hi ${name},</p>
-            <p>Your payment of <strong>Rs. ${amount.toLocaleString()}</strong> has been approved.</p>
-            <p>You can now access all features of your account.</p>
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="background:#22c55e;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">Go to Dashboard</a></p>
-            <p>Best regards,<br>Khanhub Team</p>
-        `,
-    });
+    try {
+        const subject = type === 'registration'
+            ? '✅ Payment Approved - Welcome to Khanhub!'
+            : '✅ Premium Membership Activated!';
+
+        const message = type === 'registration'
+            ? 'Your registration payment has been approved! You can now access the job portal and apply to jobs.'
+            : 'Your premium membership is now active! Enjoy unlimited applications and full job details for 100 jobs.';
+
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject,
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #16a34a; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">🎉 Payment Approved!</h1>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">${message}</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/dashboard" style="background-color: #16a34a; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Go to Dashboard
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+              Happy job hunting! 🚀
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+        });
+        console.log('✅ Payment approval email sent to:', to);
+    } catch (error) {
+        console.error('❌ Error sending payment approval email:', error);
+    }
 }
 
 /**
  * Send payment rejection email
+ * @param to - Recipient email
+ * @param name - User's name
+ * @param reason - Rejection reason
  */
 export async function sendPaymentRejectionEmail(
     to: string,
     name: string,
     reason: string
 ): Promise<void> {
-    await resend.emails.send({
-        from: FROM_EMAIL,
-        to,
-        subject: 'Payment Verification Issue - Khanhub Jobs',
-        html: `
-            <h2>Payment Not Approved</h2>
-            <p>Hi ${name},</p>
-            <p>Unfortunately, we could not verify your payment for the following reason:</p>
-            <p><strong>${reason}</strong></p>
-            <p>Please upload a clear screenshot of your payment transaction and try again.</p>
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-payment" style="background:#3b82f6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">Upload Payment Proof</a></p>
-            <p>If you have questions, please contact our support team.</p>
-            <p>Best regards,<br>Khanhub Team</p>
-        `,
-    });
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: '❌ Payment Verification Issue',
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #dc2626; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">Payment Not Approved</h1>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Unfortunately, we couldn't verify your payment due to the following reason:
+            </p>
+            
+            <div style="background-color: #fee2e2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; color: #991b1b;"><strong>Reason:</strong> ${reason}</p>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Please upload a clear screenshot of your payment receipt and try again.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/auth/verify-payment" style="background-color: #16a34a; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Upload New Screenshot
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+              Need help? Contact us at support@khanhub.com
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+        });
+        console.log('✅ Payment rejection email sent to:', to);
+    } catch (error) {
+        console.error('❌ Error sending payment rejection email:', error);
+    }
 }
 
 /**
- * Send application confirmation email
+ * Send application confirmation email to job seeker
+ * @param to - Recipient email
+ * @param name - User's name
+ * @param jobTitle - Job title
+ * @param companyName - Company name
  */
 export async function sendApplicationConfirmationEmail(
     to: string,
@@ -98,24 +207,56 @@ export async function sendApplicationConfirmationEmail(
     jobTitle: string,
     companyName: string
 ): Promise<void> {
-    await resend.emails.send({
-        from: FROM_EMAIL,
-        to,
-        subject: `Application Submitted - ${jobTitle}`,
-        html: `
-            <h2>Application Submitted Successfully!</h2>
-            <p>Hi ${name},</p>
-            <p>Your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong> has been submitted.</p>
-            <p>The employer will review your application and contact you if you're shortlisted.</p>
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/applications" style="background:#22c55e;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">Track Application</a></p>
-            <p>Good luck!</p>
-            <p>Best regards,<br>Khanhub Team</p>
-        `,
-    });
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `Application Submitted: ${jobTitle}`,
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #2563eb; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">Application Submitted! ✅</h1>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong> has been successfully submitted.
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              The employer will review your application and contact you if you're a good fit.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/dashboard/applications" style="background-color: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Track Application
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+              Good luck! 🍀
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+        });
+        console.log('✅ Application confirmation email sent to:', to);
+    } catch (error) {
+        console.error('❌ Error sending application confirmation email:', error);
+    }
 }
 
 /**
  * Send application status update email
+ * @param to - Recipient email
+ * @param name - User's name
+ * @param jobTitle - Job title
+ * @param status - New application status
  */
 export async function sendApplicationStatusEmail(
     to: string,
@@ -123,110 +264,228 @@ export async function sendApplicationStatusEmail(
     jobTitle: string,
     status: string
 ): Promise<void> {
-    const statusMessages = {
-        viewed: 'The employer has viewed your application.',
-        shortlisted: 'Congratulations! You have been shortlisted for this position.',
-        interview: 'You have been scheduled for an interview!',
-        rejected: 'Unfortunately, your application was not selected this time.',
-        hired: 'Congratulations! You have been selected for this position!',
-    };
+    try {
+        const statusMessages: { [key: string]: { subject: string; message: string; color: string } } = {
+            shortlisted: {
+                subject: '🎉 You\'ve been shortlisted!',
+                message: 'Congratulations! Your application has been shortlisted. The employer may contact you soon.',
+                color: '#16a34a',
+            },
+            interview: {
+                subject: '📅 Interview Scheduled',
+                message: 'Great news! You\'ve been invited for an interview. Check your dashboard for details.',
+                color: '#2563eb',
+            },
+            rejected: {
+                subject: 'Application Update',
+                message: 'Thank you for your interest. Unfortunately, you were not selected for this position. Keep applying!',
+                color: '#6b7280',
+            },
+            hired: {
+                subject: '🎊 Congratulations! You\'re hired!',
+                message: 'Amazing news! You\'ve been hired for this position. The employer will contact you with next steps.',
+                color: '#16a34a',
+            },
+        };
 
-    await resend.emails.send({
-        from: FROM_EMAIL,
-        to,
-        subject: `Application Update - ${jobTitle}`,
-        html: `
-            <h2>Application Status Update</h2>
-            <p>Hi ${name},</p>
-            <p>Your application for <strong>${jobTitle}</strong> has been updated:</p>
-            <p><strong>${statusMessages[status as keyof typeof statusMessages] || status}</strong></p>
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/applications" style="background:#3b82f6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">View Details</a></p>
-            <p>Best regards,<br>Khanhub Team</p>
-        `,
-    });
+        const statusInfo = statusMessages[status] || {
+            subject: 'Application Status Update',
+            message: `Your application status has been updated to: ${status}`,
+            color: '#2563eb',
+        };
+
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: statusInfo.subject,
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: ${statusInfo.color}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">${statusInfo.subject}</h1>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              ${statusInfo.message}
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              <strong>Job:</strong> ${jobTitle}
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/dashboard/applications" style="background-color: ${statusInfo.color}; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                View Details
+              </a>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+        });
+        console.log('✅ Application status email sent to:', to);
+    } catch (error) {
+        console.error('❌ Error sending application status email:', error);
+    }
 }
 
 /**
- * Send premium expiry reminder
+ * Send job approval email to employer
+ * @param to - Recipient email
+ * @param companyName - Company name
+ * @param jobTitle - Job title
+ */
+export async function sendJobApprovalEmail(
+    to: string,
+    companyName: string,
+    jobTitle: string
+): Promise<void> {
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `✅ Job Approved: ${jobTitle}`,
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #16a34a; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">Job Posting Approved! 🎉</h1>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${companyName}</strong>,</p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Your job posting for <strong>${jobTitle}</strong> has been approved and is now live!
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Candidates can now view and apply to your job. You'll receive notifications when applications come in.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/employer/dashboard" style="background-color: #16a34a; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                View Dashboard
+              </a>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+        });
+        console.log('✅ Job approval email sent to:', to);
+    } catch (error) {
+        console.error('❌ Error sending job approval email:', error);
+    }
+}
+
+/**
+ * Send premium expiry reminder (7 days before)
+ * @param to - Recipient email
+ * @param name - User's name
+ * @param expiryDate - Expiry date string
  */
 export async function sendPremiumExpiryReminder(
     to: string,
     name: string,
-    expiryDate: Date
+    expiryDate: string
 ): Promise<void> {
-    const daysRemaining = Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-
-    await resend.emails.send({
-        from: FROM_EMAIL,
-        to,
-        subject: 'Premium Membership Expiring Soon - Khanhub Jobs',
-        html: `
-            <h2>Premium Membership Expiring</h2>
-            <p>Hi ${name},</p>
-            <p>Your premium membership will expire in <strong>${daysRemaining} days</strong> on ${expiryDate.toLocaleDateString()}.</p>
-            <p>Renew now to continue enjoying unlimited job applications and full contact details.</p>
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/premium" style="background:#f97316;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">Renew Premium</a></p>
-            <p>Best regards,<br>Khanhub Team</p>
-        `,
-    });
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: '⏰ Premium Membership Expiring Soon',
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #ea580c; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">Premium Expiring Soon ⏰</h1>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Your premium membership will expire on <strong>${expiryDate}</strong>.
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Renew now to continue enjoying unlimited applications and full job details!
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/dashboard/premium" style="background-color: #ea580c; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Renew Premium
+              </a>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+        });
+        console.log('✅ Premium expiry reminder sent to:', to);
+    } catch (error) {
+        console.error('❌ Error sending premium expiry reminder:', error);
+    }
 }
 
 /**
- * Send commission payment reminder to employer
+ * Send commission payment reminder to admin
+ * @param adminEmail - Admin email
+ * @param candidateName - Candidate name
+ * @param companyName - Company name
+ * @param commissionAmount - Commission amount
  */
 export async function sendCommissionReminderEmail(
-    to: string,
-    employerName: string,
+    adminEmail: string,
     candidateName: string,
-    jobTitle: string,
+    companyName: string,
     commissionAmount: number
 ): Promise<void> {
-    await resend.emails.send({
-        from: FROM_EMAIL,
-        to,
-        subject: 'Placement Commission Due - Khanhub Jobs',
-        html: `
-            <h2>Placement Commission Payment Due</h2>
-            <p>Hi ${employerName},</p>
-            <p>This is a reminder that the placement commission for <strong>${candidateName}</strong> (${jobTitle}) is now due.</p>
-            <p>Commission Amount: <strong>Rs. ${commissionAmount.toLocaleString()}</strong></p>
-            <p>Please process the payment at your earliest convenience.</p>
-            <p>If you have already paid, please disregard this message.</p>
-            <p>Best regards,<br>Khanhub Team</p>
-        `,
-    });
-}
-
-/**
- * Send job approval notification to employer
- */
-export async function sendJobApprovalEmail(
-    to: string,
-    employerName: string,
-    jobTitle: string,
-    approved: boolean,
-    reason?: string
-): Promise<void> {
-    await resend.emails.send({
-        from: FROM_EMAIL,
-        to,
-        subject: approved ? 'Job Posted Successfully' : 'Job Posting Needs Revision',
-        html: approved
-            ? `
-                <h2>Job Posting Approved!</h2>
-                <p>Hi ${employerName},</p>
-                <p>Your job posting for <strong>${jobTitle}</strong> has been approved and is now live.</p>
-                <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/employer/jobs" style="background:#22c55e;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">View Job Posting</a></p>
-                <p>Best regards,<br>Khanhub Team</p>
-            `
-            : `
-                <h2>Job Posting Needs Revision</h2>
-                <p>Hi ${employerName},</p>
-                <p>Your job posting for <strong>${jobTitle}</strong> requires some changes before it can be published.</p>
-                ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
-                <p>Please review and resubmit your job posting.</p>
-                <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/employer/jobs" style="background:#3b82f6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">Edit Job Posting</a></p>
-                <p>Best regards,<br>Khanhub Team</p>
-            `,
-    });
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: adminEmail,
+            subject: `💰 Commission Pending: Rs. ${commissionAmount.toLocaleString()}`,
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #16a34a; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0;">💰 Commission Collection Reminder</h1>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; line-height: 1.6;"><strong>Placement Details:</strong></p>
+            
+            <ul style="font-size: 16px; line-height: 1.8;">
+              <li><strong>Candidate:</strong> ${candidateName}</li>
+              <li><strong>Company:</strong> ${companyName}</li>
+              <li><strong>Commission Amount:</strong> Rs. ${commissionAmount.toLocaleString()}</li>
+            </ul>
+            
+            <p style="font-size: 16px; line-height: 1.6;">
+              Please follow up with the candidate to collect the commission payment.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/admin/placements" style="background-color: #16a34a; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                View Placements
+              </a>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+        });
+        console.log('✅ Commission reminder email sent to admin');
+    } catch (error) {
+        console.error('❌ Error sending commission reminder email:', error);
+    }
 }

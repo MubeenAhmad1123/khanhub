@@ -25,6 +25,7 @@ export function usePayment() {
         if (!user) throw new Error('Not authenticated');
 
         try {
+<<<<<<< HEAD
             setSubmitting(true);
             setError(null);
 
@@ -61,6 +62,33 @@ export function usePayment() {
                 submittedAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 isFlagged: false,
+=======
+            // 1. Create payment record with placeholder screenshot URL
+            const paymentId = await createPayment({
+                userId,
+                type,
+                amount,
+                screenshotUrl: '', // Will update after upload
+                screenshotFileName: screenshotFile.name,
+                status: 'pending',
+                method: 'bank_transfer', // Default or passed generic method
+                transactionId: 'PENDING', // Will update if needed or passed
+                reviewedBy: null,
+                reviewedAt: null,
+                rejectionReason: null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                isFlagged: false,
+            });
+
+            // 2. Upload screenshot
+            const uploadResult = await uploadPaymentScreenshot(screenshotFile, paymentId);
+
+            // 3. Update payment with actual URL
+            await updatePayment(paymentId, {
+                screenshotUrl: uploadResult.url,
+                transactionId: paymentId.substring(0, 8).toUpperCase(), // Generate temp ID or usage generic
+>>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
             });
 
         } catch (err: any) {

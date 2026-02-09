@@ -4,16 +4,71 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
+import { Job } from '@/types/job';
+import { getActiveJobs } from '@/lib/firebase/jobs';
+import {
+    MapPin,
+    Search,
+    ArrowRight,
+    Sparkles,
+    Briefcase,
+    Building2,
+    Users,
+    TrendingUp,
+    CheckCircle2
+} from 'lucide-react';
 
 export default function HomePage() {
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [showFeatures, setShowFeatures] = useState(false);
+    const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchLocation, setSearchLocation] = useState('');
 
-    // Authenticated users stay on the landing page but see a "Go to Dashboard" button
-    // No more automatic redirect from here
+    useEffect(() => {
+        loadJobs();
+    }, []);
 
-    if (loading) {
+    const loadJobs = async () => {
+        try {
+            setLoading(true);
+            const jobs = await getActiveJobs(20) as Job[];
+            const featured = jobs.filter((job) => job.isFeatured).slice(0, 6);
+            setFeaturedJobs(featured);
+        } catch (error) {
+            console.error('Error loading jobs:', error);
+            setFeaturedJobs([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = () => {
+        const params = new URLSearchParams();
+        if (searchQuery) params.set('q', searchQuery);
+        if (searchLocation) params.set('location', searchLocation);
+        router.push(`/search?${params.toString()}`);
+    };
+
+    const categories = [
+        { name: 'Healthcare', icon: '🏥', count: 150, href: '/search?category=Healthcare' },
+        { name: 'IT & Software', icon: '💻', count: 320, href: '/search?category=IT & Software' },
+        { name: 'Engineering', icon: '⚙️', count: 180, href: '/search?category=Engineering' },
+        { name: 'Sales', icon: '📈', count: 95, href: '/search?category=Marketing & Sales' },
+        { name: 'Marketing', icon: '📱', count: 75, href: '/search?category=Marketing & Sales' },
+        { name: 'Finance', icon: '💰', count: 120, href: '/search?category=Finance & Accounting' },
+    ];
+
+    const stats = [
+        { label: 'Active Jobs', value: '1,234', icon: Briefcase },
+        { label: 'Companies', value: '500+', icon: Building2 },
+        { label: 'Job Seekers', value: '10K+', icon: Users },
+        { label: 'Success Rate', value: '85%', icon: TrendingUp },
+    ];
+
+    if (authLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center">
                 <div className="text-center">
@@ -24,324 +79,208 @@ export default function HomePage() {
         );
     }
 
-    // Removed auto-redirect early return
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-50 via-blue-50 to-purple-50">
-            {/* Navigation Bar */}
-            <nav className="bg-white shadow-md sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center">
-                            <h1 className="text-2xl font-bold text-teal-600">KhanHub</h1>
-                            <span className="ml-2 text-sm text-gray-500">Pakistan's #1 Job Portal</span>
-                        </div>
-                        <div className="flex gap-4">
-                            {user ? (
-                                <Link
-                                    href={user.role === 'admin' ? '/admin' : user.role === 'employer' ? '/employer/dashboard' : '/dashboard'}
-                                    className="px-6 py-2 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors shadow-md"
-                                >
-                                    Go to Dashboard
-                                </Link>
-                            ) : (
-                                <>
-                                    <Link
-                                        href="/auth/login"
-                                        className="px-6 py-2 text-teal-600 font-medium hover:bg-teal-50 rounded-lg transition-colors"
-                                    >
-                                        Login
-                                    </Link>
-                                    <Link
-                                        href="/auth/register"
-                                        className="px-6 py-2 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors shadow-md"
-                                    >
-                                        Get Started
-                                    </Link>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
+        <div className="min-h-screen bg-white">
             {/* Hero Section */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-                <div className="text-center mb-16">
-                    <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-                        Find Your Dream Job
-                        <br />
-                        <span className="text-teal-600">In Pakistan</span>
-                    </h1>
-                    <div className="flex flex-col md:flex-row gap-4 justify-center">
-                        {user ? (
-                            <Link
-                                href={user.role === 'admin' ? '/admin' : user.role === 'employer' ? '/employer/dashboard' : '/dashboard'}
-                                className="px-8 py-4 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors shadow-lg text-lg"
-                            >
-                                🚀 Go to My Workspace
-                            </Link>
-                        ) : (
-                            <>
+            <section className="bg-gradient-to-br from-teal-600 via-teal-700 to-blue-800 relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)]"></div>
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 relative z-10">
+                    <div className="text-center max-w-4xl mx-auto">
+                        {user && (
+                            <div className="mb-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-white/90 text-sm font-medium border border-white/20">
+                                <Sparkles className="h-4 w-4" />
+                                Welcome back, {user.displayName || user.email}!
+                            </div>
+                        )}
+
+                        <h1 className="text-5xl md:text-7xl font-black mb-6 text-white tracking-tight leading-tight">
+                            Find Your Dream Career<br />in Pakistan 🇵🇰
+                        </h1>
+                        <p className="text-xl md:text-2xl mb-12 text-white/90 font-medium max-w-2xl mx-auto leading-relaxed">
+                            Connect with top companies and find verified jobs that match your skills perfectly.
+                        </p>
+
+                        {/* Persona-Selection Buttons for New Users */}
+                        {!user && (
+                            <div className="flex flex-col md:flex-row gap-4 justify-center mb-12">
                                 <Link
                                     href="/auth/register?role=job_seeker"
-                                    className="px-8 py-4 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors shadow-lg text-lg text-center"
+                                    className="px-10 py-5 bg-white text-teal-700 font-bold rounded-2xl hover:bg-gray-100 transition-all shadow-xl text-lg flex items-center justify-center gap-3 active:scale-95"
                                 >
                                     🎯 Join as Job Seeker
                                 </Link>
                                 <Link
                                     href="/auth/register?role=employer"
-                                    className="px-8 py-4 bg-jobs-dark text-white font-semibold rounded-lg hover:bg-black transition-colors shadow-lg text-lg text-center"
+                                    className="px-10 py-5 bg-teal-900/40 backdrop-blur-sm text-white border-2 border-white/30 font-bold rounded-2xl hover:bg-teal-900/60 transition-all shadow-xl text-lg flex items-center justify-center gap-3 active:scale-95"
                                 >
                                     🏢 Join as Hiring Person
                                 </Link>
-                            </>
+                            </div>
                         )}
-                        <button
-                            onClick={() => setShowFeatures(!showFeatures)}
-                            className="px-8 py-4 border-2 border-teal-600 text-teal-600 font-semibold rounded-lg hover:bg-teal-50 transition-colors text-lg"
-                        >
-                            Learn More
-                        </button>
-                    </div>
-                </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-20">
-                    <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-                        <div className="text-4xl font-bold text-teal-600 mb-2">10K+</div>
-                        <div className="text-gray-600">Active Jobs</div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-                        <div className="text-4xl font-bold text-teal-600 mb-2">50K+</div>
-                        <div className="text-gray-600">Job Seekers</div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-                        <div className="text-4xl font-bold text-teal-600 mb-2">5K+</div>
-                        <div className="text-gray-600">Companies</div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-                        <div className="text-4xl font-bold text-teal-600 mb-2">95%</div>
-                        <div className="text-gray-600">Success Rate</div>
-                    </div>
-                </div>
+                        {user && (
+                            <div className="flex justify-center mb-12">
+                                <Link
+                                    href={user.role === 'admin' ? '/admin' : user.role === 'employer' ? '/employer/dashboard' : '/dashboard'}
+                                    className="px-12 py-5 bg-white text-teal-700 font-bold rounded-2xl hover:bg-gray-100 transition-all shadow-2xl text-xl flex items-center justify-center gap-3 active:scale-95"
+                                >
+                                    🚀 Go to My Workspace
+                                </Link>
+                            </div>
+                        )}
 
-                {/* Features */}
-                {showFeatures && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-                        <div className="bg-white rounded-lg shadow-lg p-8">
-                            <div className="text-5xl mb-4">🎯</div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">AI-Powered Matching</h3>
-                            <p className="text-gray-600">
-                                Get matched with jobs based on your skills, experience, and location.
-                                Our algorithm finds your perfect fit with 95% accuracy.
-                            </p>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-lg p-8">
-                            <div className="text-5xl mb-4">⚡</div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">Instant Applications</h3>
-                            <p className="text-gray-600">
-                                Upload your CV once and apply to multiple jobs instantly.
-                                Track all your applications in one dashboard.
-                            </p>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-lg p-8">
-                            <div className="text-5xl mb-4">✅</div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">Verified Employers</h3>
-                            <p className="text-gray-600">
-                                All companies are verified by our team. Apply with confidence
-                                knowing you're dealing with legitimate employers.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {/* How It Works */}
-                <div className="bg-white rounded-2xl shadow-2xl p-12 mb-20">
-                    <h2 className="text-4xl font-bold text-center text-gray-900 mb-12">
-                        How It Works
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center text-2xl font-bold text-teal-600 mx-auto mb-4">
-                                1
+                        {/* Search Bar */}
+                        <div className="bg-white rounded-3xl shadow-2xl p-3 flex flex-col md:flex-row gap-2 border border-white/20 backdrop-blur-md max-w-4xl mx-auto">
+                            <div className="flex-1 flex items-center gap-3 px-6 py-4">
+                                <Search className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                                <input
+                                    type="text"
+                                    placeholder="Job title, keywords, or company..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                    className="flex-1 outline-none text-gray-800 text-lg font-medium placeholder:text-gray-400"
+                                />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Register</h3>
-                            <p className="text-gray-600 text-sm">
-                                Create your account and choose your role
-                            </p>
-                        </div>
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center text-2xl font-bold text-teal-600 mx-auto mb-4">
-                                2
+                            <div className="flex-1 flex items-center gap-3 px-6 py-4 border-t md:border-t-0 md:border-l border-gray-100">
+                                <MapPin className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                                <input
+                                    type="text"
+                                    placeholder="City or location..."
+                                    value={searchLocation}
+                                    onChange={(e) => setSearchLocation(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                    className="flex-1 outline-none text-gray-800 text-lg font-medium placeholder:text-gray-400"
+                                />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Upload CV</h3>
-                            <p className="text-gray-600 text-sm">
-                                Add your resume and complete your profile
-                            </p>
-                        </div>
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center text-2xl font-bold text-teal-600 mx-auto mb-4">
-                                3
-                            </div>
-                            <h3 className="text-lg font-semibold mb-2">Get Matched</h3>
-                            <p className="text-gray-600 text-sm">
-                                Our AI finds the best jobs for you
-                            </p>
-                        </div>
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center text-2xl font-bold text-teal-600 mx-auto mb-4">
-                                4
-                            </div>
-                            <h3 className="text-lg font-semibold mb-2">Get Hired</h3>
-                            <p className="text-gray-600 text-sm">
-                                Apply and land your dream job
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* CTA Section */}
-                <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-2xl shadow-2xl p-12 text-center text-white">
-                    <h2 className="text-4xl font-bold mb-4">Ready to Start?</h2>
-                    <p className="text-xl mb-8 opacity-90">
-                        Join Pakistan's fastest-growing job platform today
-                    </p>
-                    <div className="flex gap-4 justify-center">
-                        <Link
-                            href="/auth/register"
-                            className="px-8 py-4 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg text-lg"
-                        >
-                            Sign Up as Job Seeker
-                        </Link>
-                        <Link
-                            href="/auth/register"
-                            className="px-8 py-4 bg-teal-700 text-white font-semibold rounded-lg hover:bg-teal-800 transition-colors shadow-lg text-lg"
-                        >
-                            Post Jobs as Employer
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Pricing */}
-                <div className="mt-20">
-                    <h2 className="text-4xl font-bold text-center text-gray-900 mb-12">
-                        Simple Pricing
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                        {/* Free Plan */}
-                        <div className="bg-white rounded-lg shadow-lg p-8 border-2 border-gray-200">
-                            <h3 className="text-2xl font-bold text-gray-900 mb-2">Basic</h3>
-                            <div className="text-4xl font-bold text-teal-600 mb-4">
-                                Rs. 1,000
-                                <span className="text-lg text-gray-500 font-normal">/one-time</span>
-                            </div>
-                            <ul className="space-y-3 mb-8">
-                                <li className="flex items-center gap-2">
-                                    <span className="text-green-600">✓</span>
-                                    <span>10 Job Applications</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-green-600">✓</span>
-                                    <span>CV Upload & Parsing</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-green-600">✓</span>
-                                    <span>AI Job Matching</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-green-600">✓</span>
-                                    <span>Application Tracking</span>
-                                </li>
-                            </ul>
-                            <Link
-                                href="/auth/register"
-                                className="block w-full text-center px-6 py-3 border-2 border-teal-600 text-teal-600 font-semibold rounded-lg hover:bg-teal-50 transition-colors"
+                            <button
+                                onClick={handleSearch}
+                                className="bg-orange-500 text-white px-10 py-5 rounded-2xl font-black hover:bg-orange-600 transition-all text-center shadow-lg active:scale-95 flex items-center justify-center gap-2 text-lg"
                             >
-                                Get Started
-                            </Link>
-                        </div>
-
-                        {/* Premium Plan */}
-                        <div className="bg-gradient-to-br from-teal-600 to-blue-600 rounded-lg shadow-2xl p-8 text-white relative">
-                            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-sm font-bold">
-                                POPULAR
-                            </div>
-                            <h3 className="text-2xl font-bold mb-2">Premium</h3>
-                            <div className="text-4xl font-bold mb-4">
-                                Rs. 10,000
-                                <span className="text-lg opacity-90 font-normal">/month</span>
-                            </div>
-                            <ul className="space-y-3 mb-8">
-                                <li className="flex items-center gap-2">
-                                    <span className="text-yellow-300">✓</span>
-                                    <span>Unlimited Applications</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-yellow-300">✓</span>
-                                    <span>Priority Support</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-yellow-300">✓</span>
-                                    <span>Featured Profile</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-yellow-300">✓</span>
-                                    <span>Full Employer Contact Info</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-yellow-300">✓</span>
-                                    <span>Video Introduction</span>
-                                </li>
-                            </ul>
-                            <Link
-                                href="/auth/register"
-                                className="block w-full text-center px-6 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                                Upgrade Now
-                            </Link>
+                                Search Jobs
+                                <ArrowRight className="h-5 w-5" />
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            {/* Stats Bar */}
+            <section className="py-16 bg-gray-50 border-b border-gray-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                        {stats.map((stat) => (
+                            <div key={stat.label} className="text-center group">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-white rounded-xl shadow-sm mb-4 group-hover:scale-110 transition-transform">
+                                    <stat.icon className="h-6 w-6 text-teal-600" />
+                                </div>
+                                <p className="text-3xl font-black text-gray-900 mb-1">{stat.value}</p>
+                                <p className="text-gray-500 text-sm font-bold uppercase tracking-widest">{stat.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Categories */}
+            <section className="py-24 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
+                            Browse by Category
+                        </h2>
+                        <p className="text-gray-600 text-xl font-medium">Find your next opportunity in these hot fields</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                        {categories.map((cat) => (
+                            <Link
+                                key={cat.name}
+                                href={cat.href}
+                                className="group bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-teal-100 transition-all flex items-center justify-between"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <span className="text-4xl group-hover:scale-110 transition-transform">{cat.icon}</span>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 text-lg">{cat.name}</h3>
+                                        <p className="text-teal-600 text-sm font-semibold">{cat.count}+ positions</p>
+                                    </div>
+                                </div>
+                                <div className="p-2 bg-gray-50 rounded-full group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors">
+                                    <ArrowRight className="h-5 w-5" />
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Features/Value Proposition */}
+            <section className="py-24 bg-teal-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                        <div className="bg-white p-10 rounded-3xl shadow-sm border border-teal-100">
+                            <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center text-3xl mb-6">🎯</div>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-4">AI Matching</h3>
+                            <p className="text-gray-600 leading-relaxed font-medium">
+                                Our platform uses advanced AI to match your unique skill set with the most relevant job openings in Pakistan.
+                            </p>
+                        </div>
+                        <div className="bg-white p-10 rounded-3xl shadow-sm border border-teal-100">
+                            <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center text-3xl mb-6">⚡</div>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-4">Fast Apply</h3>
+                            <p className="text-gray-600 leading-relaxed font-medium">
+                                Upload your CV once and apply to multiple verified positions with a single click. No more filling redundant forms.
+                            </p>
+                        </div>
+                        <div className="bg-white p-10 rounded-3xl shadow-sm border border-teal-100">
+                            <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center text-3xl mb-6">🛡️</div>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-4">Verified Roles</h3>
+                            <p className="text-gray-600 leading-relaxed font-medium">
+                                Every job post is vetted for authenticity. Apply with complete peace of mind to trusted Pakistani employers.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             {/* Footer */}
-            <footer className="bg-gray-900 text-white py-12">
+            <footer className="bg-slate-900 text-white py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        <div>
-                            <h3 className="text-xl font-bold mb-4">KhanHub</h3>
-                            <p className="text-gray-400">
-                                Pakistan's most trusted job portal connecting talent with opportunity.
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                        <div className="md:col-span-1">
+                            <h2 className="text-3xl font-black mb-6 text-teal-400">KhanHub</h2>
+                            <p className="text-slate-400 leading-relaxed font-medium">
+                                Empowering Pakistan's workforce by connecting high-quality talent with verified opportunities.
                             </p>
                         </div>
                         <div>
-                            <h4 className="font-semibold mb-4">For Job Seekers</h4>
-                            <ul className="space-y-2 text-gray-400">
-                                <li><Link href="/search" className="hover:text-white">Browse Jobs</Link></li>
-                                <li><Link href="/auth/register" className="hover:text-white">Create Account</Link></li>
-                                <li><Link href="/dashboard/premium" className="hover:text-white">Upgrade Premium</Link></li>
+                            <h4 className="font-bold text-lg mb-6 uppercase tracking-widest text-slate-500">For Seekers</h4>
+                            <ul className="space-y-4 font-medium">
+                                <li><Link href="/search" className="text-slate-300 hover:text-teal-400 transition-colors">Find Jobs</Link></li>
+                                <li><Link href="/auth/register" className="text-slate-300 hover:text-teal-400 transition-colors">Create Profile</Link></li>
+                                <li><Link href="/dashboard/applications" className="text-slate-300 hover:text-teal-400 transition-colors">My Applications</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 className="font-semibold mb-4">For Employers</h4>
-                            <ul className="space-y-2 text-gray-400">
-                                <li><Link href="/employer/post-job" className="hover:text-white">Post a Job</Link></li>
-                                <li><Link href="/auth/register" className="hover:text-white">Employer Signup</Link></li>
-                                <li><Link href="/employer/dashboard" className="hover:text-white">Dashboard</Link></li>
+                            <h4 className="font-bold text-lg mb-6 uppercase tracking-widest text-slate-500">For Employers</h4>
+                            <ul className="space-y-4 font-medium">
+                                <li><Link href="/auth/register?role=employer" className="text-slate-300 hover:text-teal-400 transition-colors">Post a Job</Link></li>
+                                <li><Link href="/employer/dashboard" className="text-slate-300 hover:text-teal-400 transition-colors">Recruiter Dashboard</Link></li>
+                                <li><Link href="/search?q=talant" className="text-slate-300 hover:text-teal-400 transition-colors">Search Talent</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 className="font-semibold mb-4">Support</h4>
-                            <ul className="space-y-2 text-gray-400">
-                                <li><Link href="#" className="hover:text-white">Help Center</Link></li>
-                                <li><Link href="#" className="hover:text-white">Contact Us</Link></li>
-                                <li><Link href="#" className="hover:text-white">Privacy Policy</Link></li>
+                            <h4 className="font-bold text-lg mb-6 uppercase tracking-widest text-slate-500">Contact</h4>
+                            <ul className="space-y-4 font-medium text-slate-300">
+                                <li className="flex items-center gap-3">📧 support@khanhub.pk</li>
+                                <li className="flex items-center gap-3">📍 Islamabad, Pakistan</li>
                             </ul>
                         </div>
                     </div>
-                    <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                        <p>&copy; 2026 KhanHub. All rights reserved.</p>
+                    <div className="pt-8 border-t border-slate-800 text-center text-slate-500">
+                        <p className="font-bold">&copy; 2026 KhanHub. Pakistan's Dedicated Job Portal.</p>
                     </div>
                 </div>
             </footer>

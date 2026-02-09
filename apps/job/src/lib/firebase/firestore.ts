@@ -25,7 +25,7 @@ import {
     WriteBatch,
     writeBatch,
 } from 'firebase/firestore';
-import { db } from './config';
+import { db } from '@/lib/firebase/firebase-config';
 
 // ==================== GENERIC CRUD OPERATIONS ====================
 
@@ -482,6 +482,20 @@ export const getPendingJobs = async () => {
 };
 
 /**
+ * Create a new job
+ */
+export const createJob = async (jobData: any): Promise<string> => {
+    const jobRef = doc(collection(db, COLLECTIONS.JOBS));
+    await setDoc(jobRef, {
+        id: jobRef.id,
+        ...jobData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    });
+    return jobRef.id;
+};
+
+/**
  * Get applications for a job
  */
 export const getApplicationsByJob = async (jobId: string) => {
@@ -499,6 +513,20 @@ export const getApplicationsByCandidate = async (candidateId: string) => {
         where('candidateId', '==', candidateId),
         orderBy('appliedAt', 'desc'),
     ]);
+};
+
+/**
+ * Create a new application
+ */
+export const createApplication = async (applicationData: any): Promise<string> => {
+    const applicationRef = doc(collection(db, COLLECTIONS.APPLICATIONS));
+    await setDoc(applicationRef, {
+        id: applicationRef.id,
+        ...applicationData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    });
+    return applicationRef.id;
 };
 
 /**
@@ -533,6 +561,56 @@ export const isJobSaved = async (
         where('jobId', '==', jobId),
     ]);
     return savedJobs.length > 0;
+};
+
+// ==================== JOB HELPERS ====================
+
+/**
+ * Get jobs by category
+ */
+export const getJobsByCategory = async (category: string, limitCount: number = 20) => {
+    return queryDocuments(COLLECTIONS.JOBS, [
+        where('category', '==', category),
+        where('status', '==', 'active'),
+        orderBy('postedAt', 'desc'),
+        limit(limitCount),
+    ]);
+};
+
+// ==================== PAYMENT HELPERS ====================
+
+/**
+ * Create a new payment record
+ */
+export const createPayment = async (paymentData: any): Promise<string> => {
+    const paymentRef = doc(collection(db, COLLECTIONS.PAYMENTS));
+    await setDoc(paymentRef, {
+        id: paymentRef.id,
+        ...paymentData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    });
+    return paymentRef.id;
+};
+
+/**
+ * Update a payment record
+ */
+export const updatePayment = async (paymentId: string, data: any): Promise<void> => {
+    const paymentRef = doc(db, COLLECTIONS.PAYMENTS, paymentId);
+    await updateDoc(paymentRef, {
+        ...data,
+        updatedAt: serverTimestamp(),
+    });
+};
+
+/**
+ * Get all placements
+ */
+export const getAllPlacements = async () => {
+    return queryDocuments(COLLECTIONS.PLACEMENTS, [
+        orderBy('createdAt', 'desc'),
+    ]);
 };
 
 // ==================== EXPORT ALL ====================

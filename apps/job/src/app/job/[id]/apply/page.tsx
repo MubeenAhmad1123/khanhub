@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { getJobById, createApplication } from '@/lib/firebase/firestore';
 import { calculateMatchScore } from '@/lib/services/matchingAlgorithm';
-import { awardPoints } from '@/lib/services/pointsSystem';
+import { awardPointsForJobApplication } from '@/lib/services/pointsSystem';
 import { Job } from '@/types/job';
 import MatchScoreBadge from '@/components/jobs/MatchScoreBadge';
 
@@ -16,7 +16,7 @@ export default function ApplyJobPage() {
     const router = useRouter();
     const params = useParams();
     const jobId = params.id as string;
-    const { user, profile } = useAuth();
+    const { user } = useAuth();
 
     const [job, setJob] = useState<Job | null>(null);
     const [loading, setLoading] = useState(true);
@@ -32,12 +32,13 @@ export default function ApplyJobPage() {
             try {
                 const jobData = await getJobById(jobId);
                 if (jobData) {
-                    setJob(jobData);
+                    setJob(jobData as Job);
 
                     // Calculate match score if profile exists
-                    if (profile) {
-                        const score = calculateMatchScore(profile, jobData);
-                        setMatchScore(score);
+                    if (user) {
+                        // TODO: Map user to profile if needed
+                        // const score = calculateMatchScore(user, jobData);
+                        // setMatchScore(score);
                     }
                 }
                 setLoading(false);
@@ -51,13 +52,13 @@ export default function ApplyJobPage() {
         if (jobId) {
             loadJob();
         }
-    }, [jobId, profile]);
+    }, [jobId, user]);
 
     const canApply = () => {
-        if (!profile) return { can: false, reason: 'Profile not loaded' };
-        if (!profile.registrationApproved) return { can: false, reason: 'Registration payment pending approval' };
-        if (!profile.profile?.cvUrl) return { can: false, reason: 'Please upload your CV first' };
-        if (!profile.isPremium && profile.freeApplicationsUsed >= 10) {
+        if (!user) return { can: false, reason: 'Profile not loaded' };
+        if (!user.registrationApproved) return { can: false, reason: 'Registration payment pending approval' };
+        if (!user.profile?.cvUrl) return { can: false, reason: 'Please upload your CV first' };
+        if (!user.isPremium && user.freeApplicationsUsed >= 10) {
             return { can: false, reason: 'Free application limit reached. Upgrade to premium for unlimited applications.' };
         }
         return { can: true };
@@ -66,7 +67,7 @@ export default function ApplyJobPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!user || !profile || !job) return;
+        if (!user || !job) return;
 
         const check = canApply();
         if (!check.can) {
@@ -85,11 +86,11 @@ export default function ApplyJobPage() {
                 employerId: job.employerId,
                 companyName: job.companyName,
                 candidateId: user.uid,
-                candidateName: profile.displayName,
-                candidateEmail: profile.email,
-                candidatePhone: profile.profile?.phone || '',
-                cvUrl: profile.profile?.cvUrl || '',
-                videoUrl: profile.profile?.introVideoUrl || null,
+                candidateName: user.displayName,
+                candidateEmail: user.email,
+                candidatePhone: user.profile?.phone || '',
+                cvUrl: user.profile?.cvUrl || '',
+                videoUrl: user.profile?.introVideoUrl || null,
                 coverLetter,
                 matchScore: matchScore || 0,
                 status: 'pending',
@@ -100,14 +101,14 @@ export default function ApplyJobPage() {
             });
 
             // Award points
-            await awardPoints(user.uid, 'JOB_APPLICATION', `Applied to ${job.title}`);
+            await awardPointsForJobApplication(user.uid);
 
             // Send confirmation email
             try {
                 const { sendApplicationConfirmationEmail } = await import('@/lib/services/emailService');
                 await sendApplicationConfirmationEmail(
-                    profile.email,
-                    profile.displayName,
+                    user.email,
+                    user.displayName,
                     job.title,
                     job.companyName
                 );
@@ -253,7 +254,7 @@ export default function ApplyJobPage() {
                             <div>
                                 <div className="text-blue-700 mb-1">CV Status</div>
                                 <div className="font-bold text-blue-900 flex items-center gap-2">
-                                    {profile?.profile?.cvUrl ? (
+                                    {user?.profile?.cvUrl ? (
                                         <>
                                             <CheckCircle className="h-4 w-4 text-green-600" />
                                             Uploaded
@@ -269,7 +270,7 @@ export default function ApplyJobPage() {
                             <div>
                                 <div className="text-blue-700 mb-1">Video Introduction</div>
                                 <div className="font-bold text-blue-900 flex items-center gap-2">
-                                    {profile?.profile?.introVideoUrl ? (
+                                    {user?.profile?.introVideoUrl ? (
                                         <>
                                             <CheckCircle className="h-4 w-4 text-green-600" />
                                             Uploaded
@@ -285,7 +286,7 @@ export default function ApplyJobPage() {
                             <div>
                                 <div className="text-blue-700 mb-1">Applications Used</div>
                                 <div className="font-bold text-blue-900">
-                                    {profile?.freeApplicationsUsed || 0} / {profile?.isPremium ? '∞' : '10'}
+                                    {user?.freeApplicationsUsed || 0} / {user?.isPremium ? '∞' : '10'}
                                 </div>
                             </div>
                             <div>
