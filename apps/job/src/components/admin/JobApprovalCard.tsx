@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Job } from '@/types/job';
-import { formatSalary } from '@/lib/utils';
+import { formatSalary, formatSalaryRange } from '@/lib/utils';
 
 interface JobApprovalCardProps {
     job: Job;
@@ -68,9 +68,9 @@ export default function JobApprovalCard({ job, onApprove, onReject, onFeature }:
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                         <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
-                        <p className="text-gray-600 mt-1">{job.company}</p>
+                        <p className="text-gray-600 mt-1">{job.companyName}</p>
                         <p className="text-sm text-gray-500 mt-1">
-                            Posted: {job.createdAt ? new Date(job.createdAt.toDate()).toLocaleDateString() : 'N/A'}
+                            Posted: {job.postedAt ? new Date((job.postedAt as any).toDate ? (job.postedAt as any).toDate() : job.postedAt).toLocaleDateString() : 'N/A'}
                         </p>
                     </div>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
@@ -87,17 +87,17 @@ export default function JobApprovalCard({ job, onApprove, onReject, onFeature }:
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Type</p>
-                            <p className="text-gray-900 capitalize">{job.type}</p>
+                            <p className="text-gray-900 capitalize">{job.employmentType}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Salary</p>
                             <p className="text-gray-900">
-                                {formatSalary(job.salary.min, job.salary.max)}
+                                {formatSalaryRange(job.salaryMin, job.salaryMax)}
                             </p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Experience</p>
-                            <p className="text-gray-900">{job.experience} years</p>
+                            <p className="text-gray-900">{job.minExperience} years</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Category</p>
@@ -118,11 +118,11 @@ export default function JobApprovalCard({ job, onApprove, onReject, onFeature }:
                     </div>
 
                     {/* Skills */}
-                    {job.skills && job.skills.length > 0 && (
+                    {job.requiredSkills && job.requiredSkills.length > 0 && (
                         <div>
                             <p className="text-sm text-gray-500 mb-2">Required Skills</p>
                             <div className="flex flex-wrap gap-2">
-                                {job.skills.map((skill, index) => (
+                                {job.requiredSkills.map((skill, index) => (
                                     <span
                                         key={index}
                                         className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm"
@@ -134,19 +134,7 @@ export default function JobApprovalCard({ job, onApprove, onReject, onFeature }:
                         </div>
                     )}
 
-                    {/* Requirements */}
-                    {job.requirements && job.requirements.length > 0 && (
-                        <div>
-                            <p className="text-sm text-gray-500 mb-2">Requirements</p>
-                            <ul className="list-disc list-inside space-y-1">
-                                {job.requirements.map((req, index) => (
-                                    <li key={index} className="text-sm text-gray-700">
-                                        {req}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
+
                 </div>
 
                 {/* Action Buttons */}

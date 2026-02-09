@@ -5,11 +5,12 @@ import { Crown, Check, Zap, Star, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePayment } from '@/hooks/usePayment';
 import PremiumBadge from '@/components/premium/PremiumBadge';
+import { toDate } from '@/lib/firebase/firestore';
 
 export default function PremiumUpgradePage() {
     const router = useRouter();
     const { user, profile } = useAuth();
-    const { submitPayment, submitting, error } = usePayment(user?.uid || null);
+    const { submitPayment, submitting, error } = usePayment();
 
     if (profile?.isPremium) {
         return (
@@ -25,7 +26,7 @@ export default function PremiumUpgradePage() {
                         </p>
                         {profile.premiumExpiresAt && (
                             <p className="text-white/80">
-                                Your premium membership expires on {new Date(profile.premiumExpiresAt).toLocaleDateString()}
+                                Your premium membership expires on {toDate(profile.premiumExpiresAt).toLocaleDateString()}
                             </p>
                         )}
                         <button

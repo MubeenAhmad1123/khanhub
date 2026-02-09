@@ -8,7 +8,6 @@ import { useAuth } from './useAuth';
 import { parseResume } from '@/lib/services/cvParser';
 import { calculateProfileStrength } from '@/lib/services/pointsSystem';
 
-<<<<<<< HEAD
 export function useProfile() {
     const { user, refreshProfile } = useAuth();
     const [uploading, setUploading] = useState(false);
@@ -23,33 +22,6 @@ export function useProfile() {
         try {
             setUploading(true);
             setError(null);
-=======
-import { useState, useEffect, useCallback } from 'react';
-import { JobSeekerProfile } from '@/types/user';
-import { updateDocument, COLLECTIONS } from '@/lib/firebase/firestore';
-import { calculateProfileStrength, getProfileImprovementSteps } from '@/lib/services/pointsSystem';
-
-export function useProfile(userId: string | null, initialProfile: JobSeekerProfile | null) {
-    const [profile, setProfile] = useState<JobSeekerProfile | null>(initialProfile);
-    const [updating, setUpdating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const profileStrength = profile ? calculateProfileStrength(profile) : 0;
-    const improvementSteps = profile ? getProfileImprovementSteps(profile) : [];
-
-    const updateProfile = useCallback(async (updates: Partial<JobSeekerProfile>) => {
-        if (!userId) {
-            setError('User not authenticated');
-            return;
-        }
-
-        setUpdating(true);
-        setError(null);
-
-        try {
-            // Update Firestore directly for full profile updates
-            await updateDocument(COLLECTIONS.USERS, userId, updates);
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
 
             // Validate file
             const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -95,7 +67,9 @@ export function useProfile(userId: string | null, initialProfile: JobSeekerProfi
             // Add parsed data if available
             if (parsedData) {
                 if (parsedData.skills.length > 0) {
-                    updates.skills = [...new Set([...(user.profile?.skills || []), ...parsedData.skills])];
+                    const existingSkills = user.profile?.skills || [];
+                    const newSkills = parsedData.skills;
+                    updates.skills = Array.from(new Set([...existingSkills, ...newSkills]));
                 }
             }
 

@@ -1,23 +1,7 @@
 'use client';
 
+import { Job } from '@/types/job';
 import JobCard from './JobCard';
-
-interface Job {
-    id: string;
-    title: string;
-    companyName: string;
-    companyLogo?: string;
-    location: string;
-    employmentType: string;
-    salaryMin: number;
-    salaryMax: number;
-    category: string;
-    requiredSkills?: string[];
-    createdAt: any;
-    applicationsCount?: number;
-    featured?: boolean;
-    matchScore?: number;
-}
 
 interface JobGridProps {
     jobs: Job[];

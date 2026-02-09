@@ -121,12 +121,12 @@ export default function ImprovedNavbar() {
                                     className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                                 >
                                     <div className="w-9 h-9 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold">
-                                        {user.email?.[0].toUpperCase()}
+                                        {user.email ? user.email[0].toUpperCase() : '?'}
                                     </div>
                                     <div className="text-left">
-                                        <p className="text-sm font-medium text-gray-900">{user.email}</p>
+                                        <p className="text-sm font-medium text-gray-900">{user.email || 'No email'}</p>
                                         <p className="text-xs text-gray-500 capitalize">
-                                            {user.role?.replace('_', ' ')}
+                                            {user.role?.replace('_', ' ') || 'User'}
                                         </p>
                                     </div>
                                     <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

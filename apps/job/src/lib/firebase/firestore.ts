@@ -4,6 +4,7 @@
 import {
     collection,
     doc,
+    addDoc,
     getDoc,
     getDocs,
     setDoc,
@@ -26,6 +27,10 @@ import {
     writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
+import { Application } from '@/types/application';
+import { Job } from '@/types/job';
+import { Placement } from '@/types/admin';
+import { COLLECTIONS } from '@/types/DATABASE_SCHEMA';
 
 // ==================== GENERIC CRUD OPERATIONS ====================
 
@@ -371,14 +376,21 @@ export const removeFromArrayField = async <T>(
 // ==================== HELPER FUNCTIONS ====================
 
 /**
- * Convert Firestore Timestamp to Date
+ * Robustly convert Firestore Timestamp, JS Date, or plain object to Date
  */
-export const timestampToDate = (timestamp: Timestamp | Date): Date => {
-    if (timestamp instanceof Date) {
-        return timestamp;
-    }
-    return timestamp.toDate();
+export const toDate = (date: any): Date => {
+    if (!date) return new Date();
+    if (date instanceof Date) return date;
+    if (typeof date.toDate === 'function') return date.toDate();
+    if (date.seconds) return new Date(date.seconds * 1000);
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
 };
+
+/**
+ * @deprecated Use toDate instead
+ */
+export const timestampToDate = (timestamp: any): Date => toDate(timestamp);
 
 /**
  * Build query constraints from filters
@@ -404,20 +416,7 @@ export const buildOrderByConstraints = (
     );
 };
 
-// ==================== COLLECTION NAMES ====================
 
-export const COLLECTIONS = {
-    USERS: 'users',
-    JOBS: 'jobs',
-    APPLICATIONS: 'applications',
-    PAYMENTS: 'payments',
-    PLACEMENTS: 'placements',
-    SAVED_JOBS: 'saved_jobs',
-    ADMIN_ACTIONS: 'admin_actions',
-    NOTIFICATIONS: 'notifications',
-    REPORTS: 'reports',
-    SETTINGS: 'settings',
-} as const;
 
 // ==================== SPECIFIC COLLECTION HELPERS ====================
 
@@ -472,28 +471,35 @@ export const getActiveJobs = async (limitCount: number = 20) => {
 };
 
 /**
- * Get pending jobs (for admin)
+ * Alias for getActiveJobs to maintain compatibility
  */
-export const getPendingJobs = async () => {
-    return queryDocuments(COLLECTIONS.JOBS, [
-        where('status', '==', 'pending'),
+export const getApprovedJobs = async (limitCount: number = 20) => getActiveJobs(limitCount);
+
+/**
+ * Get jobs by status
+ */
+export const getJobsByStatus = async (status: string) => {
+    return queryDocuments<Job>(COLLECTIONS.JOBS, [
+        where('status', '==', status),
         orderBy('postedAt', 'desc'),
     ]);
 };
 
 /**
- * Create a new job
+ * Update a job
  */
-export const createJob = async (jobData: any): Promise<string> => {
-    const jobRef = doc(collection(db, COLLECTIONS.JOBS));
-    await setDoc(jobRef, {
-        id: jobRef.id,
-        ...jobData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-    });
-    return jobRef.id;
+export const updateJob = async (id: string, data: Partial<Job>) => {
+    return updateDocument(COLLECTIONS.JOBS, id, data);
 };
+
+/**
+ * Get pending jobs (for admin)
+ */
+export const getPendingJobs = async () => {
+    return getJobsByStatus('pending');
+};
+
+
 
 /**
  * Get applications for a job
@@ -501,6 +507,16 @@ export const createJob = async (jobData: any): Promise<string> => {
 export const getApplicationsByJob = async (jobId: string) => {
     return queryDocuments(COLLECTIONS.APPLICATIONS, [
         where('jobId', '==', jobId),
+        orderBy('appliedAt', 'desc'),
+    ]);
+};
+
+/**
+ * Get applications by employer
+ */
+export const getApplicationsByEmployer = async (employerId: string) => {
+    return queryDocuments(COLLECTIONS.APPLICATIONS, [
+        where('employerId', '==', employerId),
         orderBy('appliedAt', 'desc'),
     ]);
 };
@@ -527,6 +543,17 @@ export const createApplication = async (applicationData: any): Promise<string> =
         updatedAt: serverTimestamp(),
     });
     return applicationRef.id;
+};
+
+/**
+ * Update an application
+ */
+export const updateApplication = async (applicationId: string, data: any): Promise<void> => {
+    const applicationRef = doc(db, COLLECTIONS.APPLICATIONS, applicationId);
+    await updateDoc(applicationRef, {
+        ...data,
+        updatedAt: serverTimestamp(),
+    });
 };
 
 /**
@@ -613,11 +640,37 @@ export const getAllPlacements = async () => {
     ]);
 };
 
+/**
+ * Create a new placement
+ */
+export const createPlacement = async (placementData: any): Promise<string> => {
+    const placementRef = doc(collection(db, COLLECTIONS.PLACEMENTS));
+    await setDoc(placementRef, {
+        id: placementRef.id,
+        ...placementData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    });
+    return placementRef.id;
+};
+
+/**
+ * Update a placement record
+ */
+export const updatePlacement = async (
+    id: string,
+    data: Partial<Placement>
+): Promise<void> => {
+    return updateDocument(COLLECTIONS.PLACEMENTS, id, data as any);
+};
+
 // ==================== EXPORT ALL ====================
 
 export {
+    db,
     collection,
     doc,
+    addDoc,
     getDoc,
     getDocs,
     setDoc,
@@ -634,4 +687,10 @@ export {
     arrayRemove,
     writeBatch,
     Timestamp,
+};
+
+export type {
+    QueryDocumentSnapshot,
+    DocumentData,
+    QueryConstraint,
 };

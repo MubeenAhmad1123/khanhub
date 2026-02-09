@@ -1,30 +1,22 @@
 'use client';
 
-<<<<<<< HEAD
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, MapPin, Briefcase, DollarSign, X, SlidersHorizontal, Loader2, ArrowRight, Filter } from 'lucide-react';
+import { Search, MapPin, Briefcase, DollarSign, X, SlidersHorizontal, Loader2, Filter } from 'lucide-react';
 import JobGrid from '@/components/jobs/JobGrid';
 import { useAuth } from '@/hooks/useAuth';
-import { Job, JobFilters, PAKISTANI_CITIES, JOB_CATEGORIES, EMPLOYMENT_TYPES } from '@/types/job';
-import { queryDocuments, where, orderBy, limit, startAfter, QueryDocumentSnapshot } from '@/lib/firebase/firestore';
+import { Job, PAKISTANI_CITIES, JOB_CATEGORIES, EMPLOYMENT_TYPES } from '@/types/job';
+import { queryDocuments, queryDocumentsPaginated, where, orderBy, limit, startAfter, QueryDocumentSnapshot } from '@/lib/firebase/firestore';
+import type { QueryConstraint } from 'firebase/firestore';
 
 export default function SearchPage() {
     const searchParams = useSearchParams();
-    const { user, profile } = useAuth();
-=======
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, MapPin, Filter, SlidersHorizontal, ChevronDown, Bookmark, Building2, Clock, DollarSign, TrendingUp, Users, Loader2 } from 'lucide-react';
-import Image from 'next/image';
-import { Button } from '@khanhub/shared-ui';
-import { getActiveJobs } from '@/lib/firebase/firestore';
-import { Job } from '@/types/job';
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
+    const { profile } = useAuth();
 
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false); // Added loadingMore state
     const [showFilters, setShowFilters] = useState(false);
     const [totalResults, setTotalResults] = useState(0);
     const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
@@ -42,58 +34,32 @@ import { Job } from '@/types/job';
 
     const PAGE_SIZE = 20;
 
-    useEffect(() => {
-<<<<<<< HEAD
-        searchJobs(true);
-    }, [selectedCategory, selectedLocation, selectedEmploymentType, remoteOnly, sortBy]);
-
-    const searchJobs = async (reset = false) => {
+    const fetchJobs = useCallback(async (reset = false) => {
         try {
             setLoading(true);
+            if (!reset) setLoadingMore(true);
 
             // Build query constraints
-            const constraints = [
+            const constraints: QueryConstraint[] = [
                 where('status', '==', 'active')
             ];
 
             // Add filters
-            if (selectedCategory) {
+            if (selectedCategory && selectedCategory !== '') {
                 constraints.push(where('category', '==', selectedCategory));
-=======
-        const loadJobs = async () => {
-            try {
-                const approvedJobs = await getActiveJobs() as Job[];
-                setJobs(approvedJobs);
-                setLoading(false);
-            } catch (err) {
-                console.error('Error loading jobs:', err);
-                setLoading(false);
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
             }
 
-            if (selectedLocation && selectedLocation !== 'all') {
+            if (selectedLocation && selectedLocation !== 'all' && selectedLocation !== '') {
                 constraints.push(where('city', '==', selectedLocation));
             }
 
-<<<<<<< HEAD
-            if (selectedEmploymentType) {
+            if (selectedEmploymentType && selectedEmploymentType !== '') {
                 constraints.push(where('employmentType', '==', selectedEmploymentType));
             }
 
             if (remoteOnly) {
                 constraints.push(where('isRemote', '==', true));
             }
-=======
-    const filteredJobs = jobs.filter(job => {
-        const matchesSearch = searchTerm === '' ||
-            job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.companyName.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesLocation = locationTerm === '' ||
-            job.city.toLowerCase().includes(locationTerm.toLowerCase()) ||
-            job.location.toLowerCase().includes(locationTerm.toLowerCase());
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
 
             // Add sorting
             const sortField = sortBy === 'salary_high' ? 'salaryMax' :
@@ -102,21 +68,19 @@ import { Job } from '@/types/job';
             const sortDirection = sortBy === 'salary_low' ? 'asc' : 'desc';
 
             constraints.push(orderBy(sortField, sortDirection));
-            constraints.push(limit(PAGE_SIZE));
+            const { documents: results, lastDoc: newLastDoc } = await queryDocumentsPaginated<Job>(
+                'jobs',
+                constraints,
+                PAGE_SIZE,
+                reset ? undefined : (lastDoc || undefined)
+            );
 
-            // Add pagination
-            if (!reset && lastDoc) {
-                constraints.push(startAfter(lastDoc));
-            }
-
-            const results = await queryDocuments<Job>('jobs', constraints);
-
-            // Filter by search query and salary (client-side)
-            let filteredJobs = results;
+            // Filter by search query and salary (client-side post-processing)
+            let processedJobs = [...results];
 
             if (searchQuery) {
                 const query = searchQuery.toLowerCase();
-                filteredJobs = filteredJobs.filter(job =>
+                processedJobs = processedJobs.filter(job =>
                     job.title.toLowerCase().includes(query) ||
                     job.companyName.toLowerCase().includes(query) ||
                     job.description?.toLowerCase().includes(query) ||
@@ -125,36 +89,41 @@ import { Job } from '@/types/job';
             }
 
             if (minSalary) {
-                filteredJobs = filteredJobs.filter(job => job.salaryMax >= parseInt(minSalary));
+                processedJobs = processedJobs.filter(job => (job.salaryMax || 0) >= parseInt(minSalary));
             }
 
             if (maxSalary) {
-                filteredJobs = filteredJobs.filter(job => job.salaryMin <= parseInt(maxSalary));
+                processedJobs = processedJobs.filter(job => (job.salaryMin || 0) <= parseInt(maxSalary));
             }
 
             if (reset) {
-                setJobs(filteredJobs);
+                setJobs(processedJobs);
             } else {
-                setJobs(prev => [...prev, ...filteredJobs]);
+                setJobs(prev => [...prev, ...processedJobs]);
             }
 
-            setTotalResults(filteredJobs.length);
+            setTotalResults(processedJobs.length);
             setHasMore(results.length === PAGE_SIZE);
-            setLastDoc(results.length > 0 ? results[results.length - 1] as any : null);
+            setLastDoc(newLastDoc);
         } catch (error) {
             console.error('Error searching jobs:', error);
-            setJobs([]);
+            if (reset) setJobs([]);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
-    };
+    }, [searchQuery, selectedCategory, selectedLocation, selectedEmploymentType, remoteOnly, sortBy, lastDoc, minSalary, maxSalary]);
+
+    useEffect(() => {
+        fetchJobs(true);
+    }, [fetchJobs]);
 
     const handleSearch = () => {
-        searchJobs(true);
+        fetchJobs(true);
     };
 
     const handleLoadMore = () => {
-        searchJobs(false);
+        fetchJobs(false);
     };
 
     const clearFilters = () => {
@@ -165,7 +134,7 @@ import { Job } from '@/types/job';
         setMinSalary('');
         setMaxSalary('');
         setRemoteOnly(false);
-        searchJobs(true);
+        fetchJobs(true);
     };
 
     const activeFiltersCount = [
@@ -191,7 +160,7 @@ import { Job } from '@/types/job';
                                 placeholder="Job title, keywords, or company..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                                 className="flex-1 bg-transparent outline-none text-jobs-dark font-medium placeholder:text-gray-400"
                             />
                         </div>
@@ -273,7 +242,6 @@ import { Job } from '@/types/job';
                                 )}
                             </div>
 
-<<<<<<< HEAD
                             <div className="space-y-6">
                                 {/* Category Filter */}
                                 <div>
@@ -346,48 +314,6 @@ import { Job } from '@/types/job';
                                             onChange={(e) => setMaxSalary(e.target.value)}
                                             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-jobs-primary focus:border-transparent"
                                         />
-=======
-                                    <div className="flex gap-6">
-                                        <div className="w-16 h-16 bg-jobs-neutral rounded-2xl flex items-center justify-center text-3xl group-hover:bg-jobs-primary/10 transition-colors">
-                                            {job.companyLogo ? (
-                                                <Image
-                                                    src={job.companyLogo}
-                                                    alt={job.companyName}
-                                                    width={64}
-                                                    height={64}
-                                                    className="w-full h-full object-cover rounded-2xl"
-                                                />
-                                            ) : (
-                                                <Building2 className="h-8 w-8 text-gray-400" />
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="text-xl font-black text-jobs-dark group-hover:text-jobs-primary transition-colors tracking-tight">{job.title}</h3>
-                                            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500 font-medium">
-                                                <div className="flex items-center gap-1">
-                                                    <Building2 className="h-4 w-4" /> {job.companyName}
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <MapPin className="h-4 w-4" /> {job.location}
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <Clock className="h-4 w-4" /> {new Date(job.postedAt as any).toLocaleDateString()}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-3 mt-4">
-                                                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-bold uppercase tracking-wide capitalize">{job.employmentType.replace('-', ' ')}</span>
-                                                {job.salaryMin && (
-                                                    <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-                                                        <DollarSign className="h-3 w-3" /> Rs. {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
-                                                    </span>
-                                                )}
-                                                {job.isRemote && (
-                                                    <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wide">Remote</span>
-                                                )}
-                                            </div>
-                                        </div>
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
                                     </div>
                                 </div>
 

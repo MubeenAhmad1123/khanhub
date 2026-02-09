@@ -41,7 +41,7 @@ export default function JobDetailPage() {
             try {
                 const jobData = await getJobById(jobId);
                 if (jobData) {
-                    setJob(jobData);
+                    setJob(jobData as unknown as Job);
 
                     // Calculate match score if profile exists
                     if (user) {

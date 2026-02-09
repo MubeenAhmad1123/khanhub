@@ -5,7 +5,26 @@ import { PaymentStatistics, RevenueBreakdown, Commission } from './payment';
 import { ApplicationStatistics } from './application';
 import { JobStatistics } from './job';
 
+// ==================== ANALYTICS ====================
+export interface AnalyticsData {
+    totalRevenue: number;
+    revenueToday: number;
+    revenueThisWeek: number;
+    revenueThisMonth: number;
+    totalApplications: number;
+    applicationsToday: number;
+    applicationsThisWeek: number;
+    applicationsThisMonth: number;
+    totalJobSeekers: number;
+    totalEmployers: number;
+    totalActiveJobs: number;
+    totalPlacements: number;
+    pendingPayments: number;
+    pendingJobs: number;
+}
+
 // ==================== ADMIN DASHBOARD ====================
+export type CommissionStatus = 'pending' | 'collected' | 'failed';
 
 // Placement Type
 export interface Placement {
@@ -21,16 +40,17 @@ export interface Placement {
     companyName: string;
 
     // Financials
-    salary: number;
+    firstMonthSalary: number;
     commissionAmount: number;
-    isCommissionPaid: boolean;
+    commissionStatus: CommissionStatus;
+    commissionPaidAt?: any;
 
     // Dates
     hiredAt: any; // Date | Timestamp
     createdAt: any; // Date | Timestamp
     updatedAt: any; // Date | Timestamp
 
-    status: 'active' | 'completed' | 'disputed';
+    status?: 'active' | 'completed' | 'disputed';
 }
 
 export interface AdminDashboardData {

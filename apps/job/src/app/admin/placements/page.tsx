@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DollarSign, Clock, CheckCircle, XCircle, Search, Filter, Loader2, ArrowLeft, Users, Building2, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -14,10 +14,15 @@ export default function AdminPlacementsPage() {
     const [statusFilter, setStatusFilter] = useState<CommissionStatus | 'all'>('all');
     const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+    // Initial fetch
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
     const filteredPlacements = placements.filter(placement => {
         const matchesSearch =
-            placement.jobSeekerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            placement.employerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            placement.candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            placement.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             placement.jobTitle.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesStatus = statusFilter === 'all' || placement.commissionStatus === statusFilter;
@@ -32,7 +37,7 @@ export default function AdminPlacementsPage() {
                 commissionStatus: newStatus,
                 commissionPaidAt: newStatus === 'collected' ? new Date() : null,
                 updatedAt: new Date(),
-            });
+            } as any);
             await refresh();
         } catch (err) {
             console.error('Error updating placement status:', err);
@@ -111,16 +116,16 @@ export default function AdminPlacementsPage() {
                                     {filteredPlacements.map((placement) => (
                                         <tr key={placement.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-8 py-6">
-                                                <div className="font-black text-jobs-dark">{placement.jobSeekerName}</div>
+                                                <div className="font-black text-jobs-dark">{placement.candidateName}</div>
                                                 <div className="text-xs text-jobs-dark/60 flex items-center gap-1 mt-1">
                                                     <Briefcase className="h-3 w-3" /> {placement.jobTitle}
                                                 </div>
                                                 <div className="text-[10px] text-gray-400 mt-0.5">
-                                                    Hired: {new Date(placement.hiredAt).toLocaleDateString()}
+                                                    Hired: {placement.hiredAt ? (placement.hiredAt instanceof Date ? placement.hiredAt.toLocaleDateString() : (placement.hiredAt as any).toDate().toLocaleDateString()) : 'N/A'}
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
-                                                <div className="font-bold text-jobs-dark">{placement.employerName}</div>
+                                                <div className="font-bold text-jobs-dark">{placement.companyName}</div>
                                                 <div className="text-[10px] text-gray-400 mt-1">ID: {placement.employerId.slice(0, 8)}</div>
                                             </td>
                                             <td className="px-8 py-6">

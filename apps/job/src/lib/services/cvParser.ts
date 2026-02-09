@@ -136,7 +136,7 @@ function extractSkills(text: string): string[] {
  * @param file - File object (PDF or DOCX)
  * @returns Parsed CV data
  */
-export async function parseCV(file: File): Promise<ParsedCVData> {
+export async function parseResume(file: File): Promise<ParsedCVData> {
     try {
         // Convert File to Buffer (for server-side processing)
         const arrayBuffer = await file.arrayBuffer();

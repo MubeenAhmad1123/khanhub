@@ -1,4 +1,4 @@
-// useAdmin Hook - Admin Operations
+// useAdmin Hook - Admin Operations (FIXED VERSION)
 import { useState, useEffect } from 'react';
 import {
     collection,
@@ -17,14 +17,15 @@ import { Payment } from '@/types/payment';
 import { Job } from '@/types/job';
 import { User } from '@/types/user';
 import { AdminDashboardData } from '@/types/admin';
-import { sendPaymentApprovalEmail, sendPaymentRejectionEmail, sendJobApprovalEmail } from '@/lib/services/emailService';
+import { sendPaymentApprovalEmail, sendPaymentRejectionEmail, sendJobApprovalEmail, sendJobRejectionEmail } from '@/lib/services/emailService';
 
 export function useAdmin() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [placements, setPlacements] = useState<any[]>([]);
 
     /**
-     * Approve payment
+     * Approve payment - FIXED VERSION
      */
     const approvePayment = async (
         paymentId: string,
@@ -32,15 +33,10 @@ export function useAdmin() {
         adminNotes?: string
     ): Promise<void> => {
         try {
-<<<<<<< HEAD
             setLoading(true);
             setError(null);
-=======
-            const [payments, placementsData] = await Promise.all([
-                getPendingPayments() as Promise<Payment[]>,
-                getAllPlacements() as Promise<Placement[]>,
-            ]);
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
+
+            console.log('🔄 Approving payment:', paymentId);
 
             const paymentRef = doc(db, 'payments', paymentId);
             const paymentSnap = await getDoc(paymentRef);
@@ -50,6 +46,7 @@ export function useAdmin() {
             }
 
             const payment = paymentSnap.data() as Payment;
+            console.log('📄 Payment data:', payment);
 
             // Update payment status
             await updateDoc(paymentRef, {
@@ -58,6 +55,7 @@ export function useAdmin() {
                 reviewedAt: serverTimestamp(),
                 adminNotes: adminNotes || '',
             });
+            console.log('✅ Payment document updated');
 
             // Update user status
             const userRef = doc(db, 'users', payment.userId);
@@ -66,6 +64,7 @@ export function useAdmin() {
                 await updateDoc(userRef, {
                     paymentStatus: 'approved',
                 });
+                console.log('✅ User paymentStatus updated to approved');
             } else if (payment.type === 'premium') {
                 const premiumStart = new Date();
                 const premiumEnd = new Date();
@@ -82,16 +81,26 @@ export function useAdmin() {
                     premiumStartDate: premiumStart,
                     premiumEndDate: premiumEnd,
                 });
+                console.log('✅ Premium subscription activated');
             }
 
-            // Send approval email
-            await sendPaymentApprovalEmail(
-                payment.userEmail,
-                payment.userName,
-                payment.amount
-            );
+            // Send approval email (don't let email errors break the approval)
+            try {
+                await sendPaymentApprovalEmail(
+                    payment.userEmail,
+                    payment.userName,
+                    payment.type
+                );
+                console.log('✅ Approval email sent');
+            } catch (emailError) {
+                console.warn('⚠️ Email failed but payment was approved:', emailError);
+                // Don't throw - payment is already approved
+            }
+
+            console.log('✅ Payment approval completed successfully');
 
         } catch (err: any) {
+            console.error('❌ Error approving payment:', err);
             setError(err.message || 'Failed to approve payment');
             throw err;
         } finally {
@@ -100,7 +109,7 @@ export function useAdmin() {
     };
 
     /**
-     * Reject payment
+     * Reject payment - FIXED VERSION
      */
     const rejectPayment = async (
         paymentId: string,
@@ -111,6 +120,8 @@ export function useAdmin() {
         try {
             setLoading(true);
             setError(null);
+
+            console.log('🔄 Rejecting payment:', paymentId);
 
             const paymentRef = doc(db, 'payments', paymentId);
             const paymentSnap = await getDoc(paymentRef);
@@ -129,15 +140,25 @@ export function useAdmin() {
                 rejectionReason,
                 adminNotes: adminNotes || '',
             });
+            console.log('✅ Payment document updated to rejected');
 
-            // Send rejection email
-            await sendPaymentRejectionEmail(
-                payment.userEmail,
-                payment.userName,
-                rejectionReason
-            );
+            // Send rejection email (don't let email errors break the rejection)
+            try {
+                await sendPaymentRejectionEmail(
+                    payment.userEmail,
+                    payment.userName,
+                    rejectionReason
+                );
+                console.log('✅ Rejection email sent');
+            } catch (emailError) {
+                console.warn('⚠️ Email failed but payment was rejected:', emailError);
+                // Don't throw - payment is already rejected
+            }
+
+            console.log('✅ Payment rejection completed successfully');
 
         } catch (err: any) {
+            console.error('❌ Error rejecting payment:', err);
             setError(err.message || 'Failed to reject payment');
             throw err;
         } finally {
@@ -146,7 +167,7 @@ export function useAdmin() {
     };
 
     /**
-     * Approve job posting
+     * Approve job posting - FIXED VERSION
      */
     const approveJob = async (
         jobId: string,
@@ -156,6 +177,8 @@ export function useAdmin() {
         try {
             setLoading(true);
             setError(null);
+
+            console.log('🔄 Approving job:', jobId);
 
             const jobRef = doc(db, 'jobs', jobId);
             const jobSnap = await getDoc(jobRef);
@@ -171,22 +194,31 @@ export function useAdmin() {
                 approvedAt: serverTimestamp(),
                 isFeatured,
             });
+            console.log('✅ Job document updated to active');
 
-            // Get employer email
-            const employerRef = doc(db, 'users', job.employerId);
-            const employerSnap = await getDoc(employerRef);
+            // Get employer email (don't let email errors break the approval)
+            try {
+                const employerRef = doc(db, 'users', job.employerId);
+                const employerSnap = await getDoc(employerRef);
 
-            if (employerSnap.exists()) {
-                const employer = employerSnap.data() as User;
-                await sendJobApprovalEmail(
-                    employer.email,
-                    employer.displayName,
-                    job.title,
-                    true
-                );
+                if (employerSnap.exists()) {
+                    const employer = employerSnap.data() as User;
+                    await sendJobApprovalEmail(
+                        employer.email,
+                        employer.displayName,
+                        job.title
+                    );
+                    console.log('✅ Job approval email sent');
+                }
+            } catch (emailError) {
+                console.warn('⚠️ Email failed but job was approved:', emailError);
+                // Don't throw - job is already approved
             }
 
+            console.log('✅ Job approval completed successfully');
+
         } catch (err: any) {
+            console.error('❌ Error approving job:', err);
             setError(err.message || 'Failed to approve job');
             throw err;
         } finally {
@@ -195,7 +227,7 @@ export function useAdmin() {
     };
 
     /**
-     * Reject job posting
+     * Reject job posting - FIXED VERSION
      */
     const rejectJob = async (
         jobId: string,
@@ -205,6 +237,8 @@ export function useAdmin() {
         try {
             setLoading(true);
             setError(null);
+
+            console.log('🔄 Rejecting job:', jobId);
 
             const jobRef = doc(db, 'jobs', jobId);
             const jobSnap = await getDoc(jobRef);
@@ -219,23 +253,32 @@ export function useAdmin() {
                 status: 'rejected',
                 rejectionReason,
             });
+            console.log('✅ Job document updated to rejected');
 
-            // Get employer email
-            const employerRef = doc(db, 'users', job.employerId);
-            const employerSnap = await getDoc(employerRef);
+            // Get employer email (don't let email errors break the rejection)
+            try {
+                const employerRef = doc(db, 'users', job.employerId);
+                const employerSnap = await getDoc(employerRef);
 
-            if (employerSnap.exists()) {
-                const employer = employerSnap.data() as User;
-                await sendJobApprovalEmail(
-                    employer.email,
-                    employer.displayName,
-                    job.title,
-                    false,
-                    rejectionReason
-                );
+                if (employerSnap.exists()) {
+                    const employer = employerSnap.data() as User;
+                    await sendJobRejectionEmail(
+                        employer.email,
+                        employer.displayName,
+                        job.title,
+                        rejectionReason
+                    );
+                    console.log('✅ Job rejection email sent');
+                }
+            } catch (emailError) {
+                console.warn('⚠️ Email failed but job was rejected:', emailError);
+                // Don't throw - job is already rejected
             }
 
+            console.log('✅ Job rejection completed successfully');
+
         } catch (err: any) {
+            console.error('❌ Error rejecting job:', err);
             setError(err.message || 'Failed to reject job');
             throw err;
         } finally {
@@ -335,6 +378,26 @@ export function useAdmin() {
     };
 
     /**
+     * Get all placements
+     */
+    const getPlacements = async (): Promise<void> => {
+        try {
+            setLoading(true);
+            setError(null);
+            const snapshot = await getDocs(query(collection(db, 'placements'), orderBy('createdAt', 'desc')));
+            const placementsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setPlacements(placementsData);
+        } catch (err: any) {
+            setError(err.message || 'Failed to load placements');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
      * Get admin dashboard data
      */
     const getDashboardData = async (): Promise<AdminDashboardData> => {
@@ -414,6 +477,13 @@ export function useAdmin() {
                 },
             };
 
+            console.log('useAdmin [Debug]: Fetched raw counts', {
+                users: usersSnapshot.size,
+                jobs: jobsSnapshot.size,
+                applications: applicationsSnapshot.size,
+                placements: placementsSnapshot.size
+            });
+
             return dashboardData;
         } catch (err: any) {
             setError(err.message || 'Failed to load dashboard data');
@@ -426,6 +496,9 @@ export function useAdmin() {
     return {
         loading,
         error,
+        placements,
+        getPlacements,
+        refresh: getPlacements,
         approvePayment,
         rejectPayment,
         approveJob,

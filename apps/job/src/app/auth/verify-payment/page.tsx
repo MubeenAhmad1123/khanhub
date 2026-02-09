@@ -1,47 +1,71 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { usePayment } from '@/hooks/usePayment';
 import { PaymentMethod } from '@/types/payment';
+import { Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function VerifyPaymentPage() {
     const router = useRouter();
-    const { user, refreshProfile } = useAuth();
-    const { submitPayment, submitting } = usePayment();
+    const { user, loading, refreshProfile } = useAuth();
+    const { submitPayment, submitting, uploadProgress, error: paymentError } = usePayment();
 
     const [screenshot, setScreenshot] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [transactionId, setTransactionId] = useState('');
     const [method, setMethod] = useState<PaymentMethod>('jazzcash');
+    const [senderName, setSenderName] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
-        if (!user) {
+        if (!loading && !user) {
             router.push('/auth/login');
             return;
         }
-        if (user.paymentStatus === 'approved') {
+        if (!loading && user?.paymentStatus === 'approved') {
             router.push('/dashboard');
         }
-    }, [user, router]);
+        // Pre-fill sender name with user's display name
+        if (user?.displayName) {
+            setSenderName(user.displayName);
+        }
+    }, [user, loading, router]);
 
     const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setScreenshot(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setPreviewUrl(reader.result as string);
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            setError('Please upload a valid image (JPG, PNG, or WebP)');
+            return;
         }
+
+        // Validate file size (max 10MB - Cloudinary will handle it)
+        if (file.size > 10 * 1024 * 1024) {
+            setError('Image size must be less than 10MB');
+            return;
+        }
+
+        setError('');
+        setScreenshot(file);
+
+        // Create preview
+        const reader = new FileReader();
+        reader.onloadend = () => setPreviewUrl(reader.result as string);
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
+        // Validation
         if (!screenshot) {
             setError('Please upload payment screenshot');
             return;
@@ -52,175 +76,311 @@ export default function VerifyPaymentPage() {
             return;
         }
 
+        if (!senderName.trim()) {
+            setError('Please enter sender name');
+            return;
+        }
+
         try {
-            await submitPayment(screenshot, transactionId, 1000, 'registration', method);
+            // ✅ Use Cloudinary upload via usePayment hook
+            await submitPayment(
+                screenshot,
+                transactionId.trim(),
+                1000, // Amount
+                'registration', // Type
+                method,
+                '' // User notes (optional)
+            );
+
             setSuccess(true);
-            setTimeout(() => router.push('/dashboard'), 3000);
+
+            // Refresh user profile to get updated payment status
+            setTimeout(async () => {
+                await refreshProfile();
+                router.push('/dashboard');
+            }, 3000);
+
         } catch (err: any) {
-            setError(err.message || 'Failed to submit payment');
+            console.error('Payment submission error:', err);
+            setError(err.message || 'Failed to submit payment. Please try again.');
         }
     };
 
+    // Success state
     if (success) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
-                    <div className="text-6xl mb-4">✅</div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Payment Submitted!</h2>
+            <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-blue-50 flex items-center justify-center p-4">
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center animate-in fade-in zoom-in">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle className="h-10 w-10 text-green-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Submitted!</h2>
                     <p className="text-gray-600 mb-6">
-                        Your payment proof has been submitted. We'll review it within 30 minutes.
+                        Your payment is under review. We'll notify you within 24 hours via email.
                     </p>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                        <p className="text-sm text-yellow-800">You'll receive an email once approved.</p>
+                    <div className="space-y-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-4">
+                        <p>Transaction ID: <span className="font-mono text-gray-900">{transactionId}</span></p>
+                        <p>Amount: <span className="font-semibold text-teal-600">Rs. 1,000</span></p>
+                        <p>Method: <span className="capitalize">{method.replace('_', ' ')}</span></p>
+                    </div>
+                    <div className="mt-6">
+                        <div className="animate-pulse text-teal-600">Redirecting to dashboard...</div>
                     </div>
                 </div>
             </div>
         );
     }
 
+    // Loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-blue-50 flex items-center justify-center">
+                <Loader2 className="h-12 w-12 text-teal-600 animate-spin" />
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-teal-700 mb-2">Payment Verification</h1>
-                    <p className="text-gray-600">Rs. 1,000 Registration Fee | Approved within 30 minutes</p>
+        <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl mx-auto">
+                {/* Header */}
+                <div className="text-center mb-8 animate-in fade-in slide-in-from-top-4">
+                    <h1 className="text-4xl font-black text-gray-900 mb-2">Complete Registration</h1>
+                    <p className="text-gray-600">Submit payment proof to activate your account</p>
                 </div>
 
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-                        {error}
+                {/* Error Alert */}
+                {(error || paymentError) && (
+                    <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-start">
+                            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-red-800">{error || paymentError}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
 
-                <div className="bg-teal-50 border border-teal-200 rounded-lg p-6 mb-8">
-                    <h3 className="font-bold text-teal-800 mb-3">Payment Instructions:</h3>
-
-                    {method === 'jazzcash' && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
-                            <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
-                                <div className="text-3xl">📱</div>
-                                <div>
-                                    <p className="text-xs text-gray-500 uppercase font-black">JazzCash Number</p>
-                                    <p className="text-xl font-black text-teal-600">0322-4467554</p>
-                                    <p className="text-xs text-gray-400">Title: Mubeen Ahmad</p>
-                                </div>
-                            </div>
-                            <ol className="space-y-2 text-sm text-teal-700">
-                                <li>1. Open JazzCash App or dial *786#</li>
-                                <li>2. Send <strong>Rs. 1,000</strong> to the number above</li>
-                                <li>3. Take a screenshot of the digital receipt</li>
-                                <li>4. Enter your Transaction ID and upload screenshot below</li>
-                            </ol>
+                {/* Upload Progress */}
+                {submitting && uploadProgress > 0 && (
+                    <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-blue-800">
+                                {uploadProgress < 100 ? 'Uploading screenshot...' : 'Processing payment...'}
+                            </span>
+                            <span className="text-sm font-bold text-blue-900">{uploadProgress}%</span>
                         </div>
-                    )}
-
-                    {method === 'easypaisa' && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
-                            <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
-                                <div className="text-3xl">💳</div>
-                                <div>
-                                    <p className="text-xs text-gray-500 uppercase font-black">EasyPaisa Number</p>
-                                    <p className="text-xl font-black text-teal-600">0322-4467554</p>
-                                    <p className="text-xs text-gray-400">Title: Mubeen Ahmad</p>
-                                </div>
-                            </div>
-                            <ol className="space-y-2 text-sm text-teal-700">
-                                <li>1. Open EasyPaisa App or dial *786#</li>
-                                <li>2. Send <strong>Rs. 1,000</strong> to the number above</li>
-                                <li>3. Take a screenshot of the digital receipt</li>
-                                <li>4. Enter your Transaction ID and upload screenshot below</li>
-                            </ol>
+                        <div className="w-full bg-blue-200 rounded-full h-2">
+                            <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${uploadProgress}%` }}
+                            />
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {method === 'bank_transfer' && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
-                            <div className="bg-white p-4 rounded-xl shadow-sm space-y-3">
-                                <div className="flex justify-between items-center border-b pb-2">
-                                    <span className="text-xs font-bold text-gray-400">BANK</span>
-                                    <span className="font-bold text-teal-600">HBL Bank</span>
-                                </div>
-                                <div className="flex justify-between items-center border-b pb-2">
-                                    <span className="text-xs font-bold text-gray-400">TITLE</span>
-                                    <span className="font-bold">Mubeen Ahmad</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-gray-400">IBAN / ACC#</span>
-                                    <span className="font-black text-teal-600 tracking-wider">PK12 HBL 0000 1234 5678 90</span>
-                                </div>
-                            </div>
-                            <ol className="space-y-2 text-sm text-teal-700">
-                                <li>1. Transfer <strong>Rs. 1,000</strong> via Banking App or ATM</li>
-                                <li>2. Download/Screenshot the successful transaction screen</li>
-                                <li>3. Enter your Reference/Transaction ID below</li>
-                                <li>4. Upload the proof of payment</li>
-                            </ol>
+                {/* Main Card */}
+                <div className="bg-white rounded-2xl shadow-xl p-8 animate-in fade-in slide-in-from-bottom-4">
+                    {/* Payment Amount */}
+                    <div className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-xl p-6 mb-6">
+                        <div className="text-center">
+                            <p className="text-sm font-medium opacity-90 mb-1">Registration Fee</p>
+                            <p className="text-5xl font-black tracking-tight">Rs. 1,000</p>
+                            <p className="text-sm opacity-75 mt-2">One-time payment • Lifetime access</p>
                         </div>
-                    )}
-                </div>
+                    </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method</label>
-                        <div className="grid grid-cols-3 gap-4">
-                            {(['jazzcash', 'easypaisa', 'bank_transfer'] as PaymentMethod[]).map((m) => (
-                                <button
-                                    key={m}
-                                    type="button"
-                                    onClick={() => setMethod(m)}
-                                    className={`p-4 border-2 rounded-lg transition ${method === m ? 'border-teal-500 bg-teal-50' : 'border-gray-200'
-                                        }`}
-                                >
-                                    <div className="text-2xl mb-2">
-                                        {m === 'jazzcash' && '📱'}
-                                        {m === 'easypaisa' && '💳'}
-                                        {m === 'bank_transfer' && '🏦'}
+                    {/* Payment Instructions */}
+                    <div className="mb-6">
+                        <h3 className="font-bold text-lg text-gray-900 mb-4">📱 Payment Instructions</h3>
+
+                        {method === 'jazzcash' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
+                                <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-xl border-2 border-red-200">
+                                    <div className="text-center">
+                                        <p className="text-xs text-gray-500 uppercase font-black">JazzCash Number</p>
+                                        <p className="text-xl font-black text-red-600">0311-6000707</p>
+                                        <p className="text-xs text-gray-400">Title: Mubeen Ahmad</p>
                                     </div>
-                                    <div className="text-xs font-medium capitalize">{m.replace('_', ' ')}</div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                                </div>
+                                <ol className="space-y-2 text-sm text-red-700">
+                                    <li>1. Open JazzCash App or dial *786#</li>
+                                    <li>2. Send <strong>Rs. 1,000</strong> to the number above</li>
+                                    <li>3. Take a screenshot of the confirmation screen</li>
+                                    <li>4. Enter your Transaction ID and upload screenshot below</li>
+                                </ol>
+                            </div>
+                        )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Transaction ID
-                        </label>
-                        <input
-                            type="text"
-                            required
-                            value={transactionId}
-                            onChange={(e) => setTransactionId(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-                            placeholder="TXN12345678"
-                        />
-                    </div>
+                        {method === 'easypaisa' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
+                                <div className="bg-gradient-to-br from-green-50 to-teal-50 p-4 rounded-xl border-2 border-green-200">
+                                    <div className="text-center">
+                                        <p className="text-xs text-gray-500 uppercase font-black">EasyPaisa Number</p>
+                                        <p className="text-xl font-black text-teal-600">0322-4467554</p>
+                                        <p className="text-xs text-gray-400">Title: Mubeen Ahmad</p>
+                                    </div>
+                                </div>
+                                <ol className="space-y-2 text-sm text-teal-700">
+                                    <li>1. Open EasyPaisa App or dial *786#</li>
+                                    <li>2. Send <strong>Rs. 1,000</strong> to the number above</li>
+                                    <li>3. Take a screenshot of the confirmation screen</li>
+                                    <li>4. Enter your Transaction ID and upload screenshot below</li>
+                                </ol>
+                            </div>
+                        )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Payment Screenshot
-                        </label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleScreenshotChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                        />
-                        {previewUrl && (
-                            <div className="mt-4">
-                                <img src={previewUrl} alt="Preview" className="w-full max-h-64 object-contain rounded-lg border" />
+                        {method === 'bank_transfer' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
+                                <div className="bg-white p-4 rounded-xl shadow-sm space-y-3">
+                                    <div className="flex justify-between items-center border-b pb-2">
+                                        <span className="text-xs font-bold text-gray-400">BANK</span>
+                                        <span className="font-bold text-teal-600">HBL Bank</span>
+                                    </div>
+                                    <div className="flex justify-between items-center border-b pb-2">
+                                        <span className="text-xs font-bold text-gray-400">TITLE</span>
+                                        <span className="font-bold">Mubeen Ahmad</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-gray-400">IBAN</span>
+                                        <span className="font-black text-teal-600 tracking-wider text-sm">PK12 HBL 1234 5678 90</span>
+                                    </div>
+                                </div>
+                                <ol className="space-y-2 text-sm text-teal-700">
+                                    <li>1. Transfer <strong>Rs. 1,000</strong> via Banking App or ATM</li>
+                                    <li>2. Take screenshot of successful transaction</li>
+                                    <li>3. Enter your Reference/Transaction ID below</li>
+                                    <li>4. Upload the proof of payment</li>
+                                </ol>
                             </div>
                         )}
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={submitting}
-                        className="w-full bg-teal-600 text-white py-4 rounded-lg font-semibold hover:bg-teal-700 disabled:opacity-50"
-                    >
-                        {submitting ? 'Submitting...' : 'Submit for Verification'}
-                    </button>
-                </form>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Payment Method Selection */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method</label>
+                            <div className="grid grid-cols-3 gap-4">
+                                {(['jazzcash', 'easypaisa', 'bank_transfer'] as PaymentMethod[]).map((m) => (
+                                    <button
+                                        key={m}
+                                        type="button"
+                                        onClick={() => setMethod(m)}
+                                        className={`p-4 border-2 rounded-lg transition ${method === m ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        <div className="text-2xl mb-2">
+                                            {m === 'jazzcash' && '📱'}
+                                            {m === 'easypaisa' && '💳'}
+                                            {m === 'bank_transfer' && '🏦'}
+                                        </div>
+                                        <div className="text-xs font-medium capitalize">{m.replace('_', ' ')}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Sender Name */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Sender Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                value={senderName}
+                                onChange={(e) => setSenderName(e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                placeholder="Name on payment account"
+                            />
+                        </div>
+
+                        {/* Transaction ID */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Transaction ID <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                value={transactionId}
+                                onChange={(e) => setTransactionId(e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                placeholder="TXN12345678 or Reference Number"
+                            />
+                        </div>
+
+                        {/* Screenshot Upload */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Payment Screenshot <span className="text-red-500">*</span>
+                            </label>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-teal-500 transition">
+                                {!previewUrl ? (
+                                    <div>
+                                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                                        <label className="cursor-pointer">
+                                            <span className="text-teal-600 font-semibold hover:text-teal-700">
+                                                Click to upload
+                                            </span>
+                                            <span className="text-gray-500"> or drag and drop</span>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleScreenshotChange}
+                                                className="hidden"
+                                                required
+                                            />
+                                        </label>
+                                        <p className="text-xs text-gray-500 mt-2">JPG, PNG or WebP (max 10MB)</p>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <Image
+                                            src={previewUrl}
+                                            alt="Payment Screenshot"
+                                            width={500}
+                                            height={400}
+                                            className="max-h-64 mx-auto rounded-lg border object-contain"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setScreenshot(null);
+                                                setPreviewUrl(null);
+                                            }}
+                                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition"
+                                        >
+                                            ✕
+                                        </button>
+                                        <p className="text-sm text-gray-600 mt-2">Click ✕ to change image</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="w-full bg-teal-600 text-white py-4 rounded-lg font-semibold hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                        >
+                            {submitting ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    {uploadProgress < 100 ? `Uploading... ${uploadProgress}%` : 'Processing...'}
+                                </>
+                            ) : (
+                                'Submit for Verification'
+                            )}
+                        </button>
+                    </form>
+
+                    {/* Help Text */}
+                    <div className="mt-6 text-center text-sm text-gray-500">
+                        <p>Need help? Contact us at support@khanhub.pk</p>
+                    </div>
+                </div>
             </div>
         </div>
     );

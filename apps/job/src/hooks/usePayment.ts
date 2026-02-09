@@ -1,18 +1,21 @@
-// usePayment Hook - Payment Submission and Verification
+// usePayment Hook - Payment Submission with Cloudinary Upload
+'use client';
+
 import { useState } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/config';
 import { PaymentType, PaymentMethod } from '@/types/payment';
 import { useAuth } from './useAuth';
+import { uploadPaymentScreenshot, UploadProgress } from '@/lib/services/cloudinaryUpload';
 
 export function usePayment() {
     const { user } = useAuth();
     const [submitting, setSubmitting] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number>(0);
     const [error, setError] = useState<string | null>(null);
 
     /**
-     * Submit payment for verification
+     * Submit payment for verification with Cloudinary upload
      */
     const submitPayment = async (
         screenshot: File,
@@ -20,14 +23,15 @@ export function usePayment() {
         amount: number,
         type: PaymentType,
         method: PaymentMethod,
-        userNotes?: string
+        userNotes?: string,
+        senderName?: string // Added senderName parameter
     ): Promise<void> => {
         if (!user) throw new Error('Not authenticated');
 
         try {
-<<<<<<< HEAD
             setSubmitting(true);
             setError(null);
+            setUploadProgress(0);
 
             // Validate screenshot
             const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -35,63 +39,84 @@ export function usePayment() {
                 throw new Error('Invalid file type. Please upload JPG, PNG, or WebP');
             }
 
-            if (screenshot.size > 5 * 1024 * 1024) {
-                throw new Error('Image size must be less than 5MB');
+            if (screenshot.size > 10 * 1024 * 1024) {
+                throw new Error('Image size must be less than 10MB');
             }
 
-            // Upload screenshot to Firebase Storage
-            const fileName = `${user.uid}_${Date.now()}_${screenshot.name}`;
-            const storageRef = ref(storage, `payment_screenshots/${user.uid}/${fileName}`);
-            await uploadBytes(storageRef, screenshot);
-            const downloadURL = await getDownloadURL(storageRef);
+            console.log('📤 Uploading payment screenshot to Cloudinary...');
+
+            // Upload screenshot to Cloudinary with progress tracking
+            const uploadResult = await uploadPaymentScreenshot(
+                screenshot,
+                user.uid,
+                (progress: UploadProgress) => {
+                    setUploadProgress(progress.percentage);
+                    console.log(`Upload progress: ${progress.percentage}%`);
+                }
+            );
+
+            console.log('✅ Screenshot uploaded:', uploadResult.secureUrl);
 
             // Create payment record in Firestore
-            await addDoc(collection(db, 'payments'), {
+            const paymentData = {
+                // User information
                 userId: user.uid,
                 userEmail: user.email,
-                userName: user.displayName,
+                userName: user.displayName || senderName || 'Unknown',
                 userPhone: user.profile?.phone || '',
+
+                // Payment details
                 amount,
                 type,
                 method,
                 transactionId,
-                screenshotUrl: downloadURL,
-                screenshotFileName: fileName,
+                senderName: senderName || user.displayName || 'Unknown', // Include senderName
+
+                // Cloudinary screenshot data (NOT base64!)
+                screenshotUrl: uploadResult.secureUrl, // ✅ This is what admin looks for
+                screenshotPublicId: uploadResult.publicId, // Store for potential deletion
+                screenshotFileName: screenshot.name,
+                screenshotSize: screenshot.size,
+                screenshotFormat: uploadResult.format,
+
+                // Status tracking
                 status: 'pending',
+                isFlagged: false,
+                adminNotes: '',
                 userNotes: userNotes || '',
+
+                // Timestamps
                 submittedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
-                isFlagged: false,
-=======
-            // 1. Create payment record with placeholder screenshot URL
-            const paymentId = await createPayment({
-                userId,
-                type,
-                amount,
-                screenshotUrl: '', // Will update after upload
-                screenshotFileName: screenshotFile.name,
-                status: 'pending',
-                method: 'bank_transfer', // Default or passed generic method
-                transactionId: 'PENDING', // Will update if needed or passed
-                reviewedBy: null,
                 reviewedAt: null,
-                rejectionReason: null,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                isFlagged: false,
-            });
+                reviewedBy: null,
+            };
 
-            // 2. Upload screenshot
-            const uploadResult = await uploadPaymentScreenshot(screenshotFile, paymentId);
+            const docRef = await addDoc(collection(db, 'payments'), paymentData);
+            console.log('✅ Payment record created:', docRef.id);
+            console.log('✅ Screenshot URL saved:', uploadResult.secureUrl);
 
-            // 3. Update payment with actual URL
-            await updatePayment(paymentId, {
-                screenshotUrl: uploadResult.url,
-                transactionId: paymentId.substring(0, 8).toUpperCase(), // Generate temp ID or usage generic
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
-            });
+            setUploadProgress(100);
+
+            // Optional: Send confirmation email
+            try {
+                const { sendPaymentSubmittedEmail } = await import('@/lib/services/emailService');
+                await sendPaymentSubmittedEmail({
+                    to: user.email!,
+                    userName: user.displayName || 'User',
+                    amount,
+                    transactionId,
+                    paymentId: docRef.id,
+                });
+                console.log('✅ Confirmation email sent');
+            } catch (emailError) {
+                console.warn('⚠️ Email notification failed (non-critical):', emailError);
+                // Don't throw error - email is optional
+            }
 
         } catch (err: any) {
+            console.error('❌ Payment submission error:', err);
             setError(err.message || 'Failed to submit payment');
             throw err;
         } finally {
@@ -101,6 +126,7 @@ export function usePayment() {
 
     return {
         submitting,
+        uploadProgress,
         error,
         submitPayment,
     };

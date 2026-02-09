@@ -4,13 +4,14 @@
 // Handle job application submissions
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase/firebase-config'; // ✅ Fixed path
-import { collection, addDoc, doc, getDoc, updateDoc, increment, Timestamp, query, where, getDocs } from 'firebase/firestore';
-import { COLLECTIONS, ApplicationStatus } from '@/types/DATABASE_SCHEMA'; // ✅ Fixed path
-import { SubmitApplicationSchema } from '@/lib/validations'; // ✅ Updated path
-import { calculateMatchScore } from '@/lib/services/matchingAlgorithm'; // ✅ Fixed path
-import { awardPointsForJobApplication } from '@/lib/services/pointsSystem'; // ✅ Fixed path
-import { sendApplicationConfirmationEmail } from '@/lib/services/emailService'; // ✅ Fixed path
+import { db, collection, addDoc, doc, getDoc, updateDoc, increment, Timestamp, query, where, getDocs } from '@/lib/firebase/firestore';
+import { COLLECTIONS } from '@/types/DATABASE_SCHEMA';
+import { SubmitApplicationSchema } from '@/lib/validations';
+import { calculateMatchScore } from '@/lib/services/matchingAlgorithm';
+import { awardPointsForJobApplication } from '@/lib/services/pointsSystem';
+import { sendApplicationConfirmationEmail } from '@/lib/services/emailService';
+import { User, isJobSeeker } from '@/types/user';
+import { Job } from '@/types/job';
 
 /**
  * POST /api/applications
@@ -42,20 +43,48 @@ export async function POST(request: NextRequest) {
         if (!jobSeekerDoc.exists()) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
-        const jobSeeker = { id: jobSeekerDoc.id, ...jobSeekerDoc.data() };
+
+        // Use unknown as intermediate to satisfy strict TS
+        const data = jobSeekerDoc.data() || {};
+        const baseUser = {
+            uid: jobSeekerDoc.id,
+            email: data.email || '',
+            displayName: data.displayName || '',
+            role: data.role || 'job_seeker',
+            paymentStatus: data.paymentStatus || 'pending',
+            isPremium: data.isPremium || false,
+            applicationsUsed: data.applicationsUsed || 0,
+            premiumJobsViewed: data.premiumJobsViewed || 0,
+            points: data.points || 0,
+            pointsHistory: data.pointsHistory || [],
+            createdAt: data.createdAt || Timestamp.now(),
+            updatedAt: data.updatedAt || Timestamp.now(),
+            isActive: data.isActive !== undefined ? data.isActive : true,
+            isFeatured: data.isFeatured || false,
+            isBanned: data.isBanned || false,
+            onboardingCompleted: data.onboardingCompleted || false,
+            ...data
+        } as unknown as User;
+
+        if (!isJobSeeker(baseUser)) {
+            return NextResponse.json({ error: 'Only job seekers can apply' }, { status: 403 });
+        }
+
+        const jobSeeker = baseUser;
 
         // 2. Check if payment is approved
-        if (!jobSeeker.paymentApproved) {
+        if (jobSeeker.paymentStatus !== 'approved') {
             return NextResponse.json(
-                { error: 'Payment not approved. Please complete payment verification.' },
+                { error: 'Payment not approved' },
                 { status: 403 }
             );
         }
 
         // 3. Check application quota
-        if (!jobSeeker.isPremium && jobSeeker.applicationCount >= jobSeeker.applicationQuota) {
+        const applicationsUsed = (jobSeeker as any).applicationsUsed || 0;
+        if (!jobSeeker.isPremium && applicationsUsed >= 10) {
             return NextResponse.json(
-                { error: 'Application limit reached. Please upgrade to premium.' },
+                { error: 'Application limit reached' },
                 { status: 403 }
             );
         }
@@ -65,7 +94,9 @@ export async function POST(request: NextRequest) {
         if (!jobDoc.exists()) {
             return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
-        const job = { id: jobDoc.id, ...jobDoc.data() };
+
+        const rawJobData = { id: jobDoc.id, ...jobDoc.data() };
+        const job = rawJobData as unknown as Job;
 
         // 5. Check if already applied
         const existingApplicationQuery = query(
@@ -76,7 +107,7 @@ export async function POST(request: NextRequest) {
         const existingApplications = await getDocs(existingApplicationQuery);
         if (!existingApplications.empty) {
             return NextResponse.json(
-                { error: 'You have already applied to this job' },
+                { error: 'You have already applied' },
                 { status: 400 }
             );
         }
@@ -90,18 +121,20 @@ export async function POST(request: NextRequest) {
             jobTitle: job.title,
             jobSeekerId: userId,
             employerId: job.employerId,
+            companyName: job.companyName,
 
-            applicantName: jobSeeker.fullName,
+            applicantName: jobSeeker.displayName,
             applicantEmail: jobSeeker.email,
-            applicantPhone: jobSeeker.phoneNumber || '',
-            applicantCvUrl: jobSeeker.cvUrl || '',
-            applicantVideoUrl: jobSeeker.videoUrl || '',
+            applicantPhone: jobSeeker.profile.phone || '',
+            applicantCvUrl: jobSeeker.profile.cvUrl || '',
+            applicantVideoUrl: jobSeeker.profile.videoUrl || null,
 
             coverLetter: coverLetter || '',
             matchScore,
-            status: ApplicationStatus.SUBMITTED,
+            status: 'applied',
 
             appliedAt: Timestamp.now(),
+            createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
         };
 
@@ -109,12 +142,12 @@ export async function POST(request: NextRequest) {
 
         // 8. Update job application count
         await updateDoc(doc(db, COLLECTIONS.JOBS, jobId), {
-            applicationCount: increment(1),
+            applicantCount: increment(1),
         });
 
         // 9. Update user application count
         await updateDoc(doc(db, COLLECTIONS.USERS, userId), {
-            applicationCount: increment(1),
+            applicationsUsed: increment(1),
         });
 
         // 10. Award points
@@ -123,7 +156,7 @@ export async function POST(request: NextRequest) {
         // 11. Send confirmation email
         await sendApplicationConfirmationEmail(
             jobSeeker.email,
-            jobSeeker.fullName,
+            jobSeeker.displayName,
             job.title,
             job.companyName
         );
@@ -171,7 +204,7 @@ export async function GET(request: NextRequest) {
         const applicationsSnapshot = await getDocs(applicationsQuery);
         const applications = applicationsSnapshot.docs.map((doc) => ({
             id: doc.id,
-            ...doc.data(),
+            ...(doc.data() as any),
         }));
 
         return NextResponse.json({ applications });

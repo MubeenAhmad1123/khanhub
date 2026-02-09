@@ -84,24 +84,7 @@ export default function JobFilters({
             {/* Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {jobs.map((job) => (
-                    <JobCard
-                        key={job.id}
-                        job={{
-                            id: job.id,
-                            title: job.title,
-                            companyName: job.companyName, // Fixed
-                            companyLogo: job.companyLogo || undefined, // Fixed
-                            location: job.location,
-                            employmentType: job.employmentType, // Fixed
-                            salaryMin: job.salaryMin || 0, // Fixed
-                            salaryMax: job.salaryMax || 0, // Fixed
-                            category: job.category,
-                            requiredSkills: job.requiredSkills || [], // Fixed
-                            createdAt: job.createdAt,
-                            applicationsCount: job.applicantCount, // Fixed
-                            featured: job.isFeatured, // Fixed
-                        }}
-                    />
+                    <JobCard key={job.id} job={job} />
                 ))}
             </div>
         </div>

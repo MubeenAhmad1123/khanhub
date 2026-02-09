@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Payment } from '@/types/payment';
 import { formatDistanceToNow, addMinutes, differenceInSeconds } from 'date-fns';
+import { toDate } from '@/lib/firebase/firestore';
 
 interface PaymentCardProps {
     payment: Payment;
@@ -22,7 +24,7 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
         if (!payment.submittedAt) return;
 
         const timer = setInterval(() => {
-            const submittedAt = (payment.submittedAt as any).toDate ? (payment.submittedAt as any).toDate() : new Date(payment.submittedAt as any);
+            const submittedAt = toDate(payment.submittedAt);
             const expiryTime = addMinutes(submittedAt, 30);
             const now = new Date();
             const diff = differenceInSeconds(expiryTime, now);
@@ -44,7 +46,7 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
 
     // Calculate time since submission
     const timeAgo = payment.submittedAt
-        ? formatDistanceToNow((payment.submittedAt as any).toDate ? (payment.submittedAt as any).toDate() : new Date(payment.submittedAt as any), { addSuffix: true })
+        ? formatDistanceToNow(toDate(payment.submittedAt), { addSuffix: true })
         : 'Unknown time';
 
     const handleApprove = async () => {
@@ -146,9 +148,11 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
                             rel="noopener noreferrer"
                             className="block"
                         >
-                            <img
+                            <Image
                                 src={payment.screenshotUrl}
                                 alt="Payment screenshot"
+                                width={800}
+                                height={600}
                                 className="w-full max-h-64 object-contain border rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
                             />
                         </a>

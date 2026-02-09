@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Job } from '@/types/job';
-import { formatSalary } from '@/lib/utils';
+import { formatSalaryRange } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function EmployerJobsPage() {
@@ -51,7 +51,7 @@ export default function EmployerJobsPage() {
                 const snapshot = await getDocs(q);
                 const jobsData = snapshot.docs.map((doc) => ({
                     id: doc.id,
-                    ...doc.data(),
+                    ...(doc.data() as any),
                 })) as Job[];
 
                 setJobs(jobsData);
@@ -145,8 +145,8 @@ export default function EmployerJobsPage() {
                         <button
                             onClick={() => setFilter('all')}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'all'
-                                    ? 'bg-teal-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-teal-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             All ({jobs.length})
@@ -154,8 +154,8 @@ export default function EmployerJobsPage() {
                         <button
                             onClick={() => setFilter('active')}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'active'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Active ({activeCount})
@@ -163,8 +163,8 @@ export default function EmployerJobsPage() {
                         <button
                             onClick={() => setFilter('pending')}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'pending'
-                                    ? 'bg-yellow-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-yellow-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Pending ({pendingCount})
@@ -172,8 +172,8 @@ export default function EmployerJobsPage() {
                         <button
                             onClick={() => setFilter('closed')}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'closed'
-                                    ? 'bg-gray-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-gray-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Closed ({closedCount})
@@ -203,15 +203,15 @@ export default function EmployerJobsPage() {
                                         <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
                                         <p className="text-gray-600 mt-1">{job.location}</p>
                                         <p className="text-sm text-gray-500 mt-1">
-                                            Posted: {job.createdAt ? new Date(job.createdAt.toDate()).toLocaleDateString() : 'N/A'}
+                                            Posted: {job.postedAt ? new Date((job.postedAt as any).toDate ? (job.postedAt as any).toDate() : job.postedAt).toLocaleDateString() : 'N/A'}
                                         </p>
                                     </div>
                                     <span
                                         className={`px-3 py-1 rounded-full text-sm font-medium ${job.status === 'active'
-                                                ? 'bg-green-100 text-green-800'
-                                                : job.status === 'pending'
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : 'bg-gray-100 text-gray-800'
+                                            ? 'bg-green-100 text-green-800'
+                                            : job.status === 'pending'
+                                                ? 'bg-yellow-100 text-yellow-800'
+                                                : 'bg-gray-100 text-gray-800'
                                             }`}
                                     >
                                         {job.status === 'active' && '✓ Active'}
@@ -223,21 +223,21 @@ export default function EmployerJobsPage() {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                                     <div>
                                         <p className="text-sm text-gray-500">Type</p>
-                                        <p className="text-gray-900 capitalize">{job.type}</p>
+                                        <p className="text-gray-900 capitalize">{job.employmentType.replace('_', ' ')}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Salary</p>
-                                        <p className="text-gray-900">{formatSalary(job.salary.min, job.salary.max)}</p>
+                                        <p className="text-gray-900">{formatSalaryRange(job.salaryMin, job.salaryMax)}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Applications</p>
                                         <p className="text-gray-900 font-semibold">
-                                            {job.applicationsCount || 0}
+                                            {job.applicantCount || 0}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Views</p>
-                                        <p className="text-gray-900 font-semibold">{job.views || 0}</p>
+                                        <p className="text-gray-900 font-semibold">{job.viewCount || 0}</p>
                                     </div>
                                 </div>
 

@@ -1,5 +1,5 @@
 // useJobs Hook - Job Fetching and Management
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     collection,
     query,
@@ -13,9 +13,11 @@ import {
     increment,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { toDate } from '@/lib/firebase/firestore';
 import { Job, JobFilters, JobSortOption } from '@/types/job';
 import { useAuth } from './useAuth';
 import { calculateMatchScore } from '@/lib/services/matchingAlgorithm';
+import { isJobSeeker } from '@/types/user';
 
 export function useJobs(filters?: JobFilters, sortBy: JobSortOption = 'newest') {
     const [jobs, setJobs] = useState<Job[]>([]);
@@ -23,11 +25,7 @@ export function useJobs(filters?: JobFilters, sortBy: JobSortOption = 'newest') 
     const [error, setError] = useState<string | null>(null);
     const { user } = useAuth();
 
-    useEffect(() => {
-        fetchJobs();
-    }, [filters, sortBy]);
-
-    const fetchJobs = async () => {
+    const fetchJobs = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -72,17 +70,17 @@ export function useJobs(filters?: JobFilters, sortBy: JobSortOption = 'newest') 
 
             // Client-side search
             if (filters?.searchQuery) {
-                const query = filters.searchQuery.toLowerCase();
+                const queryStr = filters.searchQuery.toLowerCase();
                 jobsData = jobsData.filter(job =>
-                    job.title.toLowerCase().includes(query) ||
-                    job.companyName.toLowerCase().includes(query) ||
-                    job.description.toLowerCase().includes(query) ||
-                    job.requiredSkills.some(skill => skill.toLowerCase().includes(query))
+                    job.title.toLowerCase().includes(queryStr) ||
+                    job.companyName.toLowerCase().includes(queryStr) ||
+                    job.description.toLowerCase().includes(queryStr) ||
+                    job.requiredSkills.some(skill => skill.toLowerCase().includes(queryStr))
                 );
             }
 
             // Calculate match scores if user is job seeker
-            if (user?.role === 'job_seeker' && user.profile) {
+            if (user && isJobSeeker(user)) {
                 jobsData = jobsData.map(job => ({
                     ...job,
                     matchScore: calculateMatchScore(user, job),
@@ -94,12 +92,16 @@ export function useJobs(filters?: JobFilters, sortBy: JobSortOption = 'newest') 
 
             setJobs(jobsData);
         } catch (err: any) {
-            setError(err.message || 'Failed to fetch jobs');
             console.error('Error fetching jobs:', err);
+            setError(err.message || 'Failed to fetch jobs');
         } finally {
             setLoading(false);
         }
-    };
+    }, [filters, sortBy, user]);
+
+    useEffect(() => {
+        fetchJobs();
+    }, [fetchJobs]);
 
     return { jobs, loading, error, refetch: fetchJobs };
 }
@@ -225,27 +227,19 @@ export function useRecentJobs(limitCount: number = 12) {
 function sortJobs(jobs: Job[], sortBy: JobSortOption): Job[] {
     switch (sortBy) {
         case 'newest':
-            return jobs.sort((a, b) => {
-                const dateA = a.postedAt instanceof Date ? a.postedAt : a.postedAt.toDate();
-                const dateB = b.postedAt instanceof Date ? b.postedAt : b.postedAt.toDate();
-                return dateB.getTime() - dateA.getTime();
-            });
+            return [...jobs].sort((a, b) => toDate(b.postedAt).getTime() - toDate(a.postedAt).getTime());
         case 'oldest':
-            return jobs.sort((a, b) => {
-                const dateA = a.postedAt instanceof Date ? a.postedAt : a.postedAt.toDate();
-                const dateB = b.postedAt instanceof Date ? b.postedAt : b.postedAt.toDate();
-                return dateA.getTime() - dateB.getTime();
-            });
+            return [...jobs].sort((a, b) => toDate(a.postedAt).getTime() - toDate(b.postedAt).getTime());
         case 'salary_high':
-            return jobs.sort((a, b) => b.salaryMax - a.salaryMax);
+            return [...jobs].sort((a, b) => (b.salaryMax || 0) - (a.salaryMax || 0));
         case 'salary_low':
-            return jobs.sort((a, b) => a.salaryMin - b.salaryMin);
+            return [...jobs].sort((a, b) => (a.salaryMin || 0) - (b.salaryMin || 0));
         case 'match_score':
-            return jobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+            return [...jobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
         case 'most_viewed':
-            return jobs.sort((a, b) => b.viewCount - a.viewCount);
+            return [...jobs].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
         case 'most_applications':
-            return jobs.sort((a, b) => b.applicantCount - a.applicantCount);
+            return [...jobs].sort((a, b) => (b.applicantCount || 0) - (a.applicantCount || 0));
         default:
             return jobs;
     }

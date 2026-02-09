@@ -1,29 +1,79 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Briefcase, Users, Clock, TrendingUp, Plus, FileText, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { Job } from '@/types/job';
+import { getDocs, collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import JobCard from '@/components/jobs/JobCard';
 
 export default function EmployerDashboardPage() {
     const router = useRouter();
     const { user, loading, isEmployer } = useAuth();
 
-    useEffect(() => {
-        if (!loading) {
-            if (!user) {
-                router.push('/auth/login');
-            } else if (!isEmployer) {
-                router.push('/dashboard');
-            }
-        }
-    }, [loading, user, isEmployer, router]);
+    const [stats, setStats] = useState({
+        activeJobs: 0,
+        totalApplications: 0,
+        pendingReview: 0,
+        totalViews: 0
+    });
+    const [recentJobs, setRecentJobs] = useState<Job[]>([]);
+    const [fetchingData, setFetchingData] = useState(true);
 
-    if (loading || !user) {
+    const fetchDashboardData = useCallback(async () => {
+        if (!user) return;
+
+        try {
+            setFetchingData(true);
+
+            // Fetch Employer's Jobs
+            const jobsQuery = query(
+                collection(db, 'jobs'),
+                where('employerId', '==', user.uid),
+                orderBy('createdAt', 'desc')
+            );
+            const jobsSnapshot = await getDocs(jobsQuery);
+            const jobsData = jobsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Job));
+
+            // Set recent jobs (limit to 4 for dashboard)
+            setRecentJobs(jobsData.slice(0, 4));
+
+            // Fetch Employer's Applications
+            const appsQuery = query(
+                collection(db, 'applications'),
+                where('employerId', '==', user.uid)
+            );
+            const appsSnapshot = await getDocs(appsQuery);
+
+            // Calculate Stats
+            const activeJobsCount = jobsData.filter(j => j.status === 'active').length;
+            const pendingReviewCount = jobsData.filter(j => j.status === 'pending').length;
+            const totalViewsCount = jobsData.reduce((sum, j) => sum + (j.viewCount || 0), 0);
+
+            setStats({
+                activeJobs: activeJobsCount,
+                totalApplications: appsSnapshot.size,
+                pendingReview: pendingReviewCount,
+                totalViews: totalViewsCount
+            });
+
+        } catch (error) {
+            console.error('Error fetching employer dashboard data:', error);
+        } finally {
+            setFetchingData(false);
+        }
+    }, [user]);
+
+    if (loading || !user || (fetchingData && !recentJobs.length)) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-jobs-primary" />
+            <div className="min-h-screen flex items-center justify-center bg-jobs-neutral">
+                <div className="text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-jobs-primary mx-auto mb-4" />
+                    <p className="text-jobs-dark/60 font-medium">Loading your dashboard...</p>
+                </div>
             </div>
         );
     }
@@ -74,7 +124,7 @@ export default function EmployerDashboardPage() {
                                 <Briefcase className="h-6 w-6 text-blue-600" />
                             </div>
                         </div>
-                        <div className="text-3xl font-black text-jobs-dark">0</div>
+                        <div className="text-3xl font-black text-jobs-dark">{stats.activeJobs}</div>
                         <div className="text-sm text-jobs-dark/60">Active Jobs</div>
                     </div>
 
@@ -84,7 +134,7 @@ export default function EmployerDashboardPage() {
                                 <Users className="h-6 w-6 text-green-600" />
                             </div>
                         </div>
-                        <div className="text-3xl font-black text-jobs-dark">0</div>
+                        <div className="text-3xl font-black text-jobs-dark">{stats.totalApplications}</div>
                         <div className="text-sm text-jobs-dark/60">Total Applications</div>
                     </div>
 
@@ -94,7 +144,7 @@ export default function EmployerDashboardPage() {
                                 <Clock className="h-6 w-6 text-yellow-600" />
                             </div>
                         </div>
-                        <div className="text-3xl font-black text-jobs-dark">0</div>
+                        <div className="text-3xl font-black text-jobs-dark">{stats.pendingReview}</div>
                         <div className="text-sm text-jobs-dark/60">Pending Review</div>
                     </div>
 
@@ -104,7 +154,7 @@ export default function EmployerDashboardPage() {
                                 <TrendingUp className="h-6 w-6 text-purple-600" />
                             </div>
                         </div>
-                        <div className="text-3xl font-black text-jobs-dark">0</div>
+                        <div className="text-3xl font-black text-jobs-dark">{stats.totalViews}</div>
                         <div className="text-sm text-jobs-dark/60">Total Views</div>
                     </div>
                 </div>
@@ -115,7 +165,7 @@ export default function EmployerDashboardPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-black text-jobs-dark">Your Job Postings</h2>
+                                <h2 className="text-xl font-black text-jobs-dark">Recent Job Postings</h2>
                                 <Link
                                     href="/employer/jobs"
                                     className="text-sm font-bold text-jobs-primary hover:underline"
@@ -124,20 +174,28 @@ export default function EmployerDashboardPage() {
                                 </Link>
                             </div>
 
-                            <div className="text-center py-12">
-                                <Briefcase className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-500 mb-4">No job postings yet</p>
-                                <Link
-                                    href="/employer/post-job"
-                                    className="inline-flex items-center gap-2 bg-jobs-primary text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition"
-                                >
-                                    <Plus className="h-5 w-5" />
-                                    Post Your First Job
-                                </Link>
-                            </div>
+                            {recentJobs.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {recentJobs.map((job) => (
+                                        <JobCard key={job.id} job={job} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <Briefcase className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                                    <p className="text-gray-500 mb-4">No job postings yet</p>
+                                    <Link
+                                        href="/employer/post-job"
+                                        className="inline-flex items-center gap-2 bg-jobs-primary text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition"
+                                    >
+                                        <Plus className="h-5 w-5" />
+                                        Post Your First Job
+                                    </Link>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Recent Applications */}
+                        {/* Recent Applications (Can be implemented similarly) */}
                         <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-black text-jobs-dark">Recent Applications</h2>
@@ -151,7 +209,7 @@ export default function EmployerDashboardPage() {
 
                             <div className="text-center py-12">
                                 <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-500">No applications yet</p>
+                                <p className="text-gray-500">Applications will appear here</p>
                             </div>
                         </div>
                     </div>

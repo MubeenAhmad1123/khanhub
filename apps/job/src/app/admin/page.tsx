@@ -4,152 +4,154 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { useAdmin } from '@/hooks/useAdmin';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+
+interface DashboardStats {
+    totalPayments: number;
+    pendingPayments: number;
+    approvedPayments: number;
+    rejectedPayments: number;
+    totalJobs: number;
+    pendingJobs: number;
+    activeJobs: number;
+    rejectedJobs: number;
+    totalUsers: number;
+    totalApplications: number;
+}
 
 export default function AdminDashboard() {
     const router = useRouter();
-    const { user, loading, refreshProfile } = useAuth();
-    const { getDashboardData } = useAdmin();
-    const [dashboardData, setDashboardData] = useState<any>(null);
-    const [dataLoading, setDataLoading] = useState(true);
-    const [isVerifyingRole, setIsVerifyingRole] = useState(true);
-    const [verificationError, setVerificationError] = useState(false);
+    const { user, loading: authLoading } = useAuth();
+    const [stats, setStats] = useState<DashboardStats>({
+        totalPayments: 0,
+        pendingPayments: 0,
+        approvedPayments: 0,
+        rejectedPayments: 0,
+        totalJobs: 0,
+        pendingJobs: 0,
+        activeJobs: 0,
+        rejectedJobs: 0,
+        totalUsers: 0,
+        totalApplications: 0,
+    });
+    const [loading, setLoading] = useState(true);
 
+    // Auth check
     useEffect(() => {
-        const verifyRole = async () => {
-            if (loading) return;
+        if (authLoading) return;
 
-            console.log('Dashboard: Verifying role...', user?.role);
+        if (!user) {
+            router.push('/admin/login');
+            return;
+        }
 
-            if (user?.role === 'admin') {
-                setIsVerifyingRole(false);
-                setVerificationError(false);
-                return;
-            }
+        if (user.role !== 'admin') {
+            router.push('/');
+            return;
+        }
+    }, [user, authLoading, router]);
 
-            // Not admin yet. Try an active refresh.
-            if (user) {
-                console.log('Dashboard: Not admin yet. Attempting forced refresh...');
-                await refreshProfile();
-
-                // Show error if still not admin after refresh
-                setTimeout(() => {
-                    if (user?.role !== 'admin') {
-                        console.log('Dashboard: Still not admin after refresh.');
-                        setVerificationError(true);
-                        setIsVerifyingRole(false);
-                    } else {
-                        setIsVerifyingRole(false);
-                        setVerificationError(false);
-                    }
-                }, 2000);
-            } else {
-                console.log('Dashboard: No user found, redirecting to login.');
-                router.push('/admin/login');
-            }
-        };
-
-        verifyRole();
-    }, [user, loading, router]);
-
+    // Real-time stats listeners
     useEffect(() => {
-        if (user?.role === 'admin' && !isVerifyingRole) { // Only load data if user is admin and role is verified
-            loadDashboardData();
+        if (!user || user.role !== 'admin') return;
+
+        console.log('🔄 Setting up real-time dashboard stats...');
+
+        const unsubscribers: (() => void)[] = [];
+
+        try {
+            // Listen to ALL payments
+            const paymentsUnsubscribe = onSnapshot(
+                collection(db, 'payments'),
+                (snapshot) => {
+                    const payments = snapshot.docs.map(doc => doc.data());
+                    setStats(prev => ({
+                        ...prev,
+                        totalPayments: payments.length,
+                        pendingPayments: payments.filter(p => p.status === 'pending').length,
+                        approvedPayments: payments.filter(p => p.status === 'approved').length,
+                        rejectedPayments: payments.filter(p => p.status === 'rejected').length,
+                    }));
+                    console.log('✅ Payments stats updated:', payments.length, 'total');
+                },
+                (error) => {
+                    console.error('❌ Error loading payments:', error);
+                }
+            );
+            unsubscribers.push(paymentsUnsubscribe);
+
+            // Listen to ALL jobs
+            const jobsUnsubscribe = onSnapshot(
+                collection(db, 'jobs'),
+                (snapshot) => {
+                    const jobs = snapshot.docs.map(doc => doc.data());
+                    setStats(prev => ({
+                        ...prev,
+                        totalJobs: jobs.length,
+                        pendingJobs: jobs.filter(j => j.status === 'pending').length,
+                        activeJobs: jobs.filter(j => j.status === 'active').length,
+                        rejectedJobs: jobs.filter(j => j.status === 'rejected').length,
+                    }));
+                    console.log('✅ Jobs stats updated:', jobs.length, 'total');
+                },
+                (error) => {
+                    console.error('❌ Error loading jobs:', error);
+                }
+            );
+            unsubscribers.push(jobsUnsubscribe);
+
+            // Listen to ALL users
+            const usersUnsubscribe = onSnapshot(
+                collection(db, 'users'),
+                (snapshot) => {
+                    setStats(prev => ({
+                        ...prev,
+                        totalUsers: snapshot.size,
+                    }));
+                    console.log('✅ Users stats updated:', snapshot.size, 'total');
+                },
+                (error) => {
+                    console.error('❌ Error loading users:', error);
+                }
+            );
+            unsubscribers.push(usersUnsubscribe);
+
+            // Listen to ALL applications
+            const applicationsUnsubscribe = onSnapshot(
+                collection(db, 'applications'),
+                (snapshot) => {
+                    setStats(prev => ({
+                        ...prev,
+                        totalApplications: snapshot.size,
+                    }));
+                    console.log('✅ Applications stats updated:', snapshot.size, 'total');
+                },
+                (error) => {
+                    console.error('❌ Error loading applications:', error);
+                }
+            );
+            unsubscribers.push(applicationsUnsubscribe);
+
+            setLoading(false);
+
+            // Cleanup all listeners
+            return () => {
+                console.log('🔌 Disconnecting dashboard listeners...');
+                unsubscribers.forEach(unsub => unsub());
+            };
+        } catch (error) {
+            console.error('❌ Error setting up dashboard:', error);
+            setLoading(false);
         }
     }, [user]);
 
-    const loadDashboardData = async () => {
-        try {
-            const data = await getDashboardData();
-            setDashboardData(data);
-        } catch (error) {
-            console.error('Error loading dashboard:', error);
-        } finally {
-            setDataLoading(false);
-        }
-    };
-
-    if (loading || isVerifyingRole) {
+    if (authLoading || loading) {
         return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Verifying Administrative Access</h2>
-                    <p className="text-slate-400">Please wait while we secure your session...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (verificationError || !user || user.role !== 'admin') {
-        return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
-                    <div className="text-5xl mb-6">🛑</div>
-                    <h2 className="text-2xl font-bold text-slate-800 mb-4">Access Denied</h2>
-                    <p className="text-slate-600 mb-8">
-                        Your account ({user?.email}) does not have administrative privileges.
-                        If you just promoted this account, please wait a moment and try again.
-                    </p>
-                    <div className="space-y-4">
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition"
-                        >
-                            🔄 Retry Verification
-                        </button>
-                        <div className="border-t border-gray-100 my-4 pt-4">
-                            <p className="text-xs text-gray-400 mb-3 uppercase font-bold tracking-widest">Wrong Role? Switch Now:</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={async () => {
-                                        if (!user?.uid) return;
-                                        const { doc, updateDoc } = await import('firebase/firestore');
-                                        const { db } = await import('@/lib/firebase/config');
-                                        await updateDoc(doc(db, 'users', user.uid), { role: 'job_seeker' });
-                                        window.location.href = '/dashboard';
-                                    }}
-                                    className="bg-jobs-primary/10 text-jobs-primary py-2 rounded-lg font-bold text-xs hover:bg-jobs-primary/20 transition"
-                                >
-                                    🎯 I am a Seeker
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        if (!user?.uid) return;
-                                        const { doc, updateDoc } = await import('firebase/firestore');
-                                        const { db } = await import('@/lib/firebase/config');
-                                        await updateDoc(doc(db, 'users', user.uid), { role: 'employer' });
-                                        window.location.href = '/employer/dashboard';
-                                    }}
-                                    className="bg-blue-50 text-blue-600 py-2 rounded-lg font-bold text-xs hover:bg-blue-100 transition"
-                                >
-                                    🏢 I am a Hiring Person
-                                </button>
-                            </div>
-                        </div>
-                        <button
-                            onClick={async () => {
-                                const { signOut } = await import('firebase/auth');
-                                const { auth } = await import('@/lib/firebase/config');
-                                await signOut(auth);
-                                router.push('/auth/login');
-                            }}
-                            className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-bold hover:bg-red-100 transition"
-                        >
-                            🚪 Logout & Switch Account
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (dataLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading dashboard data...</p>
+                    <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading dashboard...</p>
                 </div>
             </div>
         );
@@ -157,151 +159,220 @@ export default function AdminDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            {/* Header */}
             <div className="bg-gradient-to-r from-teal-600 to-teal-700 text-white">
                 <div className="max-w-7xl mx-auto px-4 py-8">
-                    <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
-                    <p className="text-teal-100">Manage your job portal</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-4xl font-bold mb-2">🛡️ Admin Dashboard</h1>
+                            <p className="text-teal-100">Manage your job portal (Real-time)</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-sm text-teal-100">Logged in as</p>
+                            <p className="font-semibold">{user?.email}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto px-4 py-8">
-                {/* Pending Actions Alert */}
-                {dashboardData?.pendingActions && (
-                    (dashboardData.pendingActions.paymentsToReview > 0 ||
-                        dashboardData.pendingActions.jobsToReview > 0) && (
-                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 mb-8 rounded-lg">
-                            <div className="flex items-center gap-4">
-                                <div className="text-4xl">⚠️</div>
-                                <div>
-                                    <h3 className="font-bold text-yellow-800 mb-2">Pending Actions Required</h3>
-                                    <div className="flex gap-6 text-sm text-yellow-700">
-                                        {dashboardData.pendingActions.paymentsToReview > 0 && (
-                                            <span>{dashboardData.pendingActions.paymentsToReview} payments to review</span>
-                                        )}
-                                        {dashboardData.pendingActions.jobsToReview > 0 && (
-                                            <span>{dashboardData.pendingActions.jobsToReview} jobs to approve</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )
-                )}
-
-                {/* Stats Grid */}
-                <div className="grid md:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
-                        <div className="text-gray-600 text-sm mb-1">Total Users</div>
-                        <div className="text-3xl font-bold text-gray-800">
-                            {dashboardData?.summary?.totalUsers || 0}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2">
-                            {dashboardData?.summary?.totalJobSeekers || 0} job seekers, {dashboardData?.summary?.totalEmployers || 0} employers
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
-                        <div className="text-gray-600 text-sm mb-1">Active Jobs</div>
-                        <div className="text-3xl font-bold text-gray-800">
-                            {dashboardData?.summary?.activeJobs || 0}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2">
-                            {dashboardData?.summary?.pendingJobs || 0} pending approval
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
-                        <div className="text-gray-600 text-sm mb-1">Applications</div>
-                        <div className="text-3xl font-bold text-gray-800">
-                            {dashboardData?.summary?.totalApplications || 0}
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-amber-500">
-                        <div className="text-gray-600 text-sm mb-1">Total Revenue</div>
-                        <div className="text-3xl font-bold text-gray-800">
-                            Rs. {(dashboardData?.summary?.totalRevenue || 0).toLocaleString()}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2">
-                            {dashboardData?.summary?.totalPlacements || 0} placements
-                        </div>
-                    </div>
-                </div>
-
                 {/* Quick Actions */}
-                <div className="grid md:grid-cols-3 gap-6 mb-8">
+                <div className="grid md:grid-cols-4 gap-4 mb-8">
                     <Link
                         href="/admin/payments"
-                        className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+                        className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="text-5xl">💳</div>
-                            <div>
-                                <h3 className="font-bold text-gray-800 mb-1">Payments</h3>
-                                <p className="text-sm text-gray-600">
-                                    {dashboardData?.pendingActions?.paymentsToReview || 0} pending
-                                </p>
-                            </div>
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-4xl">💰</span>
+                            {stats.pendingPayments > 0 && (
+                                <span className="bg-white text-yellow-600 text-xs font-bold px-2 py-1 rounded-full">
+                                    {stats.pendingPayments} NEW
+                                </span>
+                            )}
                         </div>
+                        <h3 className="text-xl font-bold">Payments</h3>
+                        <p className="text-yellow-100 text-sm">Review submissions</p>
                     </Link>
 
                     <Link
                         href="/admin/jobs"
-                        className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+                        className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="text-5xl">📋</div>
-                            <div>
-                                <h3 className="font-bold text-gray-800 mb-1">Job Approvals</h3>
-                                <p className="text-sm text-gray-600">
-                                    {dashboardData?.pendingActions?.jobsToReview || 0} pending
-                                </p>
-                            </div>
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-4xl">📋</span>
+                            {stats.pendingJobs > 0 && (
+                                <span className="bg-white text-green-600 text-xs font-bold px-2 py-1 rounded-full">
+                                    {stats.pendingJobs} NEW
+                                </span>
+                            )}
                         </div>
+                        <h3 className="text-xl font-bold">Jobs</h3>
+                        <p className="text-green-100 text-sm">Approve postings</p>
                     </Link>
 
                     <Link
                         href="/admin/users"
-                        className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+                        className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="text-5xl">👥</div>
-                            <div>
-                                <h3 className="font-bold text-gray-800 mb-1">Users</h3>
-                                <p className="text-sm text-gray-600">Manage all users</p>
-                            </div>
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-4xl">👥</span>
                         </div>
-                    </Link>
-                </div>
-
-                {/* Additional Actions */}
-                <div className="grid md:grid-cols-3 gap-6">
-                    <Link
-                        href="/admin/placements"
-                        className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
-                    >
-                        <div className="text-4xl mb-4">🎯</div>
-                        <h3 className="font-bold text-gray-800 mb-2">Placements</h3>
-                        <p className="text-gray-600 text-sm">Track commissions</p>
+                        <h3 className="text-xl font-bold">Users</h3>
+                        <p className="text-purple-100 text-sm">Manage accounts</p>
                     </Link>
 
                     <Link
                         href="/admin/analytics"
-                        className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+                        className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105"
                     >
-                        <div className="text-4xl mb-4">📊</div>
-                        <h3 className="font-bold text-gray-800 mb-2">Analytics</h3>
-                        <p className="text-gray-600 text-sm">View insights</p>
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-4xl">📊</span>
+                        </div>
+                        <h3 className="text-xl font-bold">Analytics</h3>
+                        <p className="text-blue-100 text-sm">View insights</p>
                     </Link>
+                </div>
 
-                    <Link
-                        href="/employer/post-job"
-                        className="bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg shadow hover:shadow-lg transition p-6"
-                    >
-                        <div className="text-4xl mb-4">➕</div>
-                        <h3 className="font-bold mb-2">Post Job</h3>
-                        <p className="text-teal-100 text-sm">Admin can post directly</p>
-                    </Link>
+                {/* Stats Grid */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {/* Payment Stats */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-gray-700">Payment Stats</h3>
+                            <span className="text-2xl">💳</span>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">Total:</span>
+                                <span className="font-bold text-gray-900">{stats.totalPayments}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-yellow-600">Pending:</span>
+                                <span className="font-bold text-yellow-600">{stats.pendingPayments}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-green-600">Approved:</span>
+                                <span className="font-bold text-green-600">{stats.approvedPayments}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-red-600">Rejected:</span>
+                                <span className="font-bold text-red-600">{stats.rejectedPayments}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Job Stats */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-gray-700">Job Stats</h3>
+                            <span className="text-2xl">💼</span>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">Total:</span>
+                                <span className="font-bold text-gray-900">{stats.totalJobs}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-yellow-600">Pending:</span>
+                                <span className="font-bold text-yellow-600">{stats.pendingJobs}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-green-600">Active:</span>
+                                <span className="font-bold text-green-600">{stats.activeJobs}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-red-600">Rejected:</span>
+                                <span className="font-bold text-red-600">{stats.rejectedJobs}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* User Stats */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-gray-700">Users</h3>
+                            <span className="text-2xl">👤</span>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-4xl font-bold text-teal-600 mb-2">{stats.totalUsers}</div>
+                            <p className="text-sm text-gray-600">Total Registered</p>
+                        </div>
+                    </div>
+
+                    {/* Application Stats */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-gray-700">Applications</h3>
+                            <span className="text-2xl">📝</span>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-4xl font-bold text-purple-600 mb-2">{stats.totalApplications}</div>
+                            <p className="text-sm text-gray-600">Total Submitted</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Pending Actions Alert */}
+                {(stats.pendingPayments > 0 || stats.pendingJobs > 0) && (
+                    <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg shadow mb-8">
+                        <div className="flex items-start">
+                            <span className="text-3xl mr-4">⚠️</span>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-yellow-900 text-lg mb-2">Action Required</h3>
+                                <div className="space-y-1 text-yellow-800">
+                                    {stats.pendingPayments > 0 && (
+                                        <p>
+                                            • <strong>{stats.pendingPayments}</strong> payment{stats.pendingPayments > 1 ? 's' : ''} waiting for review
+                                        </p>
+                                    )}
+                                    {stats.pendingJobs > 0 && (
+                                        <p>
+                                            • <strong>{stats.pendingJobs}</strong> job{stats.pendingJobs > 1 ? 's' : ''} waiting for approval
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Quick Links */}
+                <div className="bg-white rounded-lg shadow p-6">
+                    <h3 className="font-semibold text-gray-800 mb-4">Quick Links</h3>
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <Link
+                            href="/employer/post-job"
+                            className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition"
+                        >
+                            <span className="text-2xl mr-3">➕</span>
+                            <div>
+                                <p className="font-semibold text-gray-800">Post New Job</p>
+                                <p className="text-xs text-gray-600">Create job posting</p>
+                            </div>
+                        </Link>
+
+                        <Link
+                            href="/admin/placements"
+                            className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition"
+                        >
+                            <span className="text-2xl mr-3">🎯</span>
+                            <div>
+                                <p className="font-semibold text-gray-800">Placements</p>
+                                <p className="text-xs text-gray-600">Track commissions</p>
+                            </div>
+                        </Link>
+
+                        <Link
+                            href="/admin/applications"
+                            className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition"
+                        >
+                            <span className="text-2xl mr-3">📋</span>
+                            <div>
+                                <p className="font-semibold text-gray-800">All Applications</p>
+                                <p className="text-xs text-gray-600">View submissions</p>
+                            </div>
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>

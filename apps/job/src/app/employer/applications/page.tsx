@@ -6,15 +6,15 @@ import Link from 'next/link';
 import { Users, Eye, Download, CheckCircle, XCircle, Clock, Star, Loader2, Mail, Phone, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getApplicationsByEmployer, updateApplication, createPlacement } from '@/lib/firebase/firestore';
-import { JobApplication } from '@/types/application';
+import { Application } from '@/types/application';
 import MatchScoreBadge from '@/components/jobs/MatchScoreBadge';
 
 export default function EmployerApplicationsPage() {
     const router = useRouter();
     const { user, profile, loading: authLoading, isEmployer } = useAuth();
-    const [applications, setApplications] = useState<JobApplication[]>([]);
+    const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'pending' | 'shortlisted' | 'rejected'>('all');
+    const [filter, setFilter] = useState<'all' | 'applied' | 'shortlisted' | 'rejected'>('all');
 
     useEffect(() => {
         if (!authLoading) {
@@ -31,7 +31,7 @@ export default function EmployerApplicationsPage() {
             if (!user) return;
 
             try {
-                const apps = await getApplicationsByEmployer(user.uid);
+                const apps = await getApplicationsByEmployer(user.uid) as Application[];
                 setApplications(apps);
                 setLoading(false);
             } catch (err) {
@@ -45,7 +45,7 @@ export default function EmployerApplicationsPage() {
         }
     }, [user]);
 
-    const handleStatusChange = async (applicationId: string, newStatus: JobApplication['status']) => {
+    const handleStatusChange = async (applicationId: string, newStatus: Application['status']) => {
         try {
             await updateApplication(applicationId, {
                 status: newStatus,
@@ -58,15 +58,16 @@ export default function EmployerApplicationsPage() {
                 if (app) {
                     // Extract salary - this is a simplified version
                     // In a real app, you'd have the actual agreed salary
+                    // @ts-ignore - salary might be in metadata or specific field
                     const salary = app.salary || 50000; // Fallback
 
                     await createPlacement({
                         jobId: app.jobId,
                         jobTitle: app.jobTitle,
                         employerId: app.employerId,
-                        employerName: profile?.companyName || 'Employer',
-                        jobSeekerId: app.candidateId,
-                        jobSeekerName: app.candidateName,
+                        employerName: (profile as any)?.companyName || (profile as any)?.name || 'Employer',
+                        jobSeekerId: app.jobSeekerId,
+                        jobSeekerName: app.applicantName,
                         firstMonthSalary: salary,
                         commissionAmount: salary * 0.5,
                         commissionStatus: 'pending',
@@ -105,7 +106,7 @@ export default function EmployerApplicationsPage() {
 
     const statusCounts = {
         all: applications.length,
-        pending: applications.filter(a => a.status === 'pending').length,
+        applied: applications.filter(a => a.status === 'applied').length,
         shortlisted: applications.filter(a => a.status === 'shortlisted').length,
         rejected: applications.filter(a => a.status === 'rejected').length,
     };
@@ -121,7 +122,7 @@ export default function EmployerApplicationsPage() {
 
                 {/* Filter Tabs */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2 mb-6 flex gap-2">
-                    {(['all', 'pending', 'shortlisted', 'rejected'] as const).map((status) => (
+                    {(['all', 'applied', 'shortlisted', 'rejected'] as const).map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
@@ -130,7 +131,7 @@ export default function EmployerApplicationsPage() {
                                 : 'text-jobs-dark/60 hover:bg-gray-50'
                                 }`}
                         >
-                            {status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})
+                            {status === 'applied' ? 'Pending Review' : status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})
                         </button>
                     ))}
                 </div>
@@ -165,7 +166,7 @@ export default function EmployerApplicationsPage() {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2">
                                             <h3 className="text-xl font-black text-jobs-dark">
-                                                {application.candidateName}
+                                                {application.applicantName}
                                             </h3>
                                             <MatchScoreBadge score={application.matchScore} />
                                         </div>
@@ -175,24 +176,24 @@ export default function EmployerApplicationsPage() {
                                         <div className="flex flex-wrap gap-4 text-sm text-jobs-dark/60">
                                             <div className="flex items-center gap-1">
                                                 <Mail className="h-4 w-4" />
-                                                <span>{application.candidateEmail}</span>
+                                                <span>{application.applicantEmail}</span>
                                             </div>
-                                            {application.candidatePhone && (
+                                            {application.applicantPhone && (
                                                 <div className="flex items-center gap-1">
                                                     <Phone className="h-4 w-4" />
-                                                    <span>{application.candidatePhone}</span>
+                                                    <span>{application.applicantPhone}</span>
                                                 </div>
                                             )}
                                             <div className="flex items-center gap-1">
                                                 <Clock className="h-4 w-4" />
-                                                <span>{application.appliedAt.toLocaleDateString()}</span>
+                                                <span>{application.appliedAt ? new Date((application.appliedAt as any).toDate ? (application.appliedAt as any).toDate() : application.appliedAt).toLocaleDateString() : 'N/A'}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Status Badge */}
                                     <div>
-                                        {application.status === 'pending' && (
+                                        {application.status === 'applied' && (
                                             <span className="px-4 py-2 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">
                                                 Pending Review
                                             </span>
@@ -229,7 +230,7 @@ export default function EmployerApplicationsPage() {
                                 {/* Action Buttons */}
                                 <div className="flex gap-3 mt-4">
                                     <a
-                                        href={application.cvUrl}
+                                        href={application.applicantCvUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-200 transition"
@@ -238,9 +239,9 @@ export default function EmployerApplicationsPage() {
                                         View CV
                                     </a>
 
-                                    {application.videoUrl && (
+                                    {application.applicantVideoUrl && (
                                         <a
-                                            href={application.videoUrl}
+                                            href={application.applicantVideoUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl font-bold text-sm hover:bg-purple-200 transition"
@@ -250,7 +251,7 @@ export default function EmployerApplicationsPage() {
                                         </a>
                                     )}
 
-                                    {application.status === 'pending' && (
+                                    {application.status === 'applied' && (
                                         <>
                                             <button
                                                 onClick={() => handleStatusChange(application.id!, 'shortlisted')}

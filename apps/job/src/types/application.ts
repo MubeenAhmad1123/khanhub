@@ -16,6 +16,7 @@ export interface Application {
 
     jobId: string;
     jobTitle: string;
+    companyName: string;
     jobSeekerId: string;
     employerId: string;
 
@@ -38,6 +39,8 @@ export interface Application {
     employerNotes?: string;
     interviewDate?: Date | Timestamp;
 }
+
+export type JobApplication = Application;
 
 export interface ApplicationStatistics {
     total: number;

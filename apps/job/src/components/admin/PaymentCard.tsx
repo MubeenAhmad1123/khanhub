@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
+
 import { Payment } from '@/types/payment';
 import { formatDistanceToNow } from 'date-fns';
+import { toDate } from '@/lib/firebase/firestore';
 
 interface PaymentCardProps {
     payment: Payment;
@@ -17,14 +20,14 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
     const [rejectReason, setRejectReason] = useState('');
 
     // Calculate time since submission
-    const timeAgo = payment.createdAt
-        ? formatDistanceToNow(payment.createdAt.toDate(), { addSuffix: true })
+    const timeAgo = payment.submittedAt
+        ? formatDistanceToNow(toDate(payment.submittedAt), { addSuffix: true })
         : 'Unknown time';
 
     // Calculate if within 30-min window
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    const isWithinWindow = payment.createdAt
-        ? payment.createdAt.toDate() > thirtyMinutesAgo
+    const isWithinWindow = payment.submittedAt
+        ? toDate(payment.submittedAt) > thirtyMinutesAgo
         : false;
 
     const handleApprove = async () => {
@@ -95,7 +98,7 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Payment Method</p>
-                            <p className="text-gray-900 capitalize">{payment.paymentMethod}</p>
+                            <p className="text-gray-900 capitalize">{payment.method}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Type</p>
@@ -126,9 +129,11 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
                             rel="noopener noreferrer"
                             className="block"
                         >
-                            <img
+                            <Image
                                 src={payment.screenshotUrl}
                                 alt="Payment screenshot"
+                                width={800}
+                                height={600}
                                 className="w-full max-h-64 object-contain border rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
                             />
                         </a>

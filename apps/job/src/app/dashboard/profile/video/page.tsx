@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Video, Camera, StopCircle, Play, RotateCcw, Upload, CheckCircle, Loader2, XCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { uploadIntroVideo } from '@/lib/firebase/storage';
+import { uploadVideo } from '@/lib/firebase/storage';
 import { updateUserProfile } from '@/lib/firebase/auth';
-import { awardPoints } from '@/lib/services/pointsSystem';
+import { awardPointsForVideo } from '@/lib/services/pointsSystem';
 import { Button } from '@/components/ui/button';
 
 export default function IntroVideoPage() {
@@ -27,15 +27,6 @@ export default function IntroVideoPage() {
     const streamRef = useRef<MediaStream | null>(null);
     const chunksRef = useRef<Blob[]>([]);
 
-    useEffect(() => {
-        if (isCounting && countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-            return () => clearTimeout(timer);
-        } else if (countdown === 0 && recording) {
-            stopRecording();
-        }
-    }, [isCounting, countdown, recording]);
-
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -53,12 +44,30 @@ export default function IntroVideoPage() {
         }
     };
 
-    const stopCamera = () => {
+    const stopCamera = useCallback(() => {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
-    };
+    }, []);
+
+    const stopRecording = useCallback(() => {
+        if (mediaRecorderRef.current && recording) {
+            mediaRecorderRef.current.stop();
+            setRecording(false);
+            setIsCounting(false);
+            stopCamera();
+        }
+    }, [recording, stopCamera]);
+
+    useEffect(() => {
+        if (isCounting && countdown > 0) {
+            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+            return () => clearTimeout(timer);
+        } else if (countdown === 0 && recording) {
+            stopRecording();
+        }
+    }, [isCounting, countdown, recording, stopRecording]);
 
     const startRecording = () => {
         if (!streamRef.current) return;
@@ -93,14 +102,6 @@ export default function IntroVideoPage() {
         }
     };
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && recording) {
-            mediaRecorderRef.current.stop();
-            setRecording(false);
-            setIsCounting(false);
-        }
-    };
-
     const resetRecording = () => {
         setVideoBlob(null);
         setPreviewUrl(null);
@@ -115,16 +116,17 @@ export default function IntroVideoPage() {
         setError('');
 
         try {
-            const videoUrl = await uploadIntroVideo(user.uid, videoBlob);
+            const videoFile = new File([videoBlob], 'intro-video.webm', { type: 'video/webm' });
+            const uploadResult = await uploadVideo(videoFile, user.uid);
 
             await updateUserProfile(user.uid, {
                 profile: {
                     ...profile?.profile,
-                    introVideoUrl: videoUrl,
+                    videoUrl: uploadResult.url,
                 },
             });
 
-            await awardPoints(user.uid, 'INTRO_VIDEO', 'Intro video uploaded successfully');
+            await awardPointsForVideo(user.uid);
 
             setUploading(false);
             router.push('/dashboard');

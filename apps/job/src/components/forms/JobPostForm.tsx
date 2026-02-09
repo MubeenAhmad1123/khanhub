@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -17,6 +18,7 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
         title: '',
         company: '',
         location: '',
+        locationType: 'on-site',
         type: 'full-time',
         category: '',
         experience: '',
@@ -26,7 +28,61 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
         requirements: '',
         skills: '',
     });
+    const [companyLogo, setCompanyLogo] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string>('');
     const [loading, setLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    // Handle logo file selection
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image size should be less than 5MB');
+                return;
+            }
+            setCompanyLogo(file);
+            // Create preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setLogoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Upload image to Cloudinary
+    const uploadToCloudinary = async (file: File): Promise<string> => {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'your_upload_preset');
+
+            const response = await fetch(
+                `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+                {
+                    method: 'POST',
+                    body: formData,
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to upload image');
+            }
+
+            const data = await response.json();
+            return data.secure_url;
+        } catch (error) {
+            console.error('Cloudinary upload error:', error);
+            throw new Error('Failed to upload company logo');
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,11 +94,29 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
 
         try {
             setLoading(true);
+            setUploadProgress(10);
+
+            let logoUrl = '';
+
+            // Upload logo if provided
+            if (companyLogo) {
+                setUploadProgress(30);
+                try {
+                    logoUrl = await uploadToCloudinary(companyLogo);
+                    setUploadProgress(60);
+                } catch (uploadError) {
+                    console.error('Logo upload failed:', uploadError);
+                    // Continue without logo instead of failing completely
+                    alert('Warning: Company logo upload failed. Posting job without logo.');
+                }
+            }
 
             const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
             const { db } = await import('@/lib/firebase/config');
 
-            // Convert requirements and skills to arrays
+            setUploadProgress(70);
+
+            // Transform fields to match Job interface
             const requirementsArray = formData.requirements
                 .split('\n')
                 .map((r) => r.trim())
@@ -53,30 +127,59 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
                 .map((s) => s.trim())
                 .filter((s) => s.length > 0);
 
-            // Admin posts bypass approval
-            const status = isAdmin ? 'active' : 'pending';
+            // Extract city from location (simple comma split)
+            const locationParts = formData.location.split(',');
+            const city = locationParts[0].trim();
+            const province = locationParts.length > 1 ? locationParts[1].trim() : '';
 
-            await addDoc(collection(db, 'jobs'), {
+            // Map experience string to ExperienceLevel
+            const mapExperienceToLevel = (exp: string): any => {
+                const years = parseInt(exp) || 0;
+                if (years === 0) return 'entry';
+                if (years <= 2) return 'mid';
+                if (years <= 5) return 'senior';
+                return 'executive';
+            };
+
+            const jobData = {
                 title: formData.title,
-                company: formData.company,
+                companyName: formData.company,
                 location: formData.location,
-                type: formData.type,
-                category: formData.category,
-                experience: parseInt(formData.experience) || 0,
-                salary: {
-                    min: parseInt(formData.salaryMin) || 0,
-                    max: parseInt(formData.salaryMax) || 0,
-                },
+                city: city,
+                isRemote: formData.locationType === 'remote',
+                employmentType: formData.type as any,
+                experienceLevel: mapExperienceToLevel(formData.experience),
+                minExperience: parseInt(formData.experience) || 0,
+                category: formData.category.toLowerCase(),
+                salaryMin: parseInt(formData.salaryMin) || 0,
+                salaryMax: parseInt(formData.salaryMax) || 0,
+                currency: 'PKR',
+                salaryCurrency: 'PKR',
+                salaryPeriod: 'monthly',
+                showSalary: true,
                 description: formData.description,
-                requirements: requirementsArray,
-                skills: skillsArray,
+                requiredQualifications: requirementsArray,
+                requiredSkills: skillsArray,
+                responsibilities: [], // Could be expanded if needed
                 employerId: user.uid,
                 status,
-                isFeatured: false,
-                views: 0,
-                applicationsCount: 0,
+                isFeatured: isAdmin,
+                isPremium: false,
+                acceptingApplications: true,
+                applicantCount: 0,
+                viewCount: 0,
+                postedAt: serverTimestamp(),
+                isActive: true,
                 createdAt: serverTimestamp(),
-            });
+                updatedAt: serverTimestamp(),
+                ...(logoUrl && { companyLogo: logoUrl }),
+            };
+
+            console.log('Attempting to save job:', jobData);
+
+            await addDoc(collection(db, 'jobs'), jobData);
+
+            setUploadProgress(100);
 
             alert(
                 isAdmin
@@ -89,11 +192,28 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
             } else {
                 router.push('/employer/jobs');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Post job error:', error);
-            alert('Failed to post job. Please try again.');
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
+
+            // Provide more specific error messages
+            let errorMessage = 'Failed to post job. ';
+
+            if (error.code === 'permission-denied') {
+                errorMessage += 'You do not have permission to post jobs. Please check your account status.';
+            } else if (error.code === 'unauthenticated') {
+                errorMessage += 'Please login again.';
+            } else if (error.message) {
+                errorMessage += error.message;
+            } else {
+                errorMessage += 'Please try again.';
+            }
+
+            alert(errorMessage);
         } finally {
             setLoading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -106,6 +226,37 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Company Logo Upload (Optional) */}
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Logo (Optional)
+                </label>
+                <div className="flex items-center gap-4">
+                    {logoPreview && (
+                        <div className="relative w-20 h-20 border-2 border-gray-300 rounded-lg overflow-hidden">
+                            <Image
+                                src={logoPreview}
+                                alt="Logo preview"
+                                width={80}
+                                height={80}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    )}
+                    <div className="flex-1">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoChange}
+                            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            PNG, JPG, or WEBP. Max size 5MB.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {/* Job Title */}
             <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
@@ -141,20 +292,39 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
             </div>
 
             {/* Location */}
-            <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                    Location *
-                </label>
-                <input
-                    type="text"
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="Karachi, Lahore, Islamabad, or Remote"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                        City/Location *
+                    </label>
+                    <input
+                        type="text"
+                        id="location"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleChange}
+                        required
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        placeholder="e.g., Karachi, Sindh"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="locationType" className="block text-sm font-medium text-gray-700 mb-2">
+                        Location Type *
+                    </label>
+                    <select
+                        id="locationType"
+                        name="locationType"
+                        value={formData.locationType}
+                        onChange={handleChange}
+                        required
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    >
+                        <option value="on-site">On-site</option>
+                        <option value="remote">Remote</option>
+                        <option value="hybrid">Hybrid</option>
+                    </select>
+                </div>
             </div>
 
             {/* Job Type & Category */}
@@ -316,6 +486,22 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
                 />
                 <p className="text-sm text-gray-500 mt-1">Separate skills with commas</p>
             </div>
+
+            {/* Progress Bar */}
+            {loading && uploadProgress > 0 && (
+                <div className="bg-gray-100 rounded-lg p-4">
+                    <div className="flex justify-between text-sm text-gray-600 mb-2">
+                        <span>Uploading...</span>
+                        <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                            className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Info Box */}
             {!isAdmin && (

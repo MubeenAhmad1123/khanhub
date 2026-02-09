@@ -7,13 +7,14 @@ import { FileText, Clock, CheckCircle, XCircle, Eye, Loader2, Star, Users } from
 import { useAuth } from '@/hooks/useAuth';
 import { getApplicationsByCandidate } from '@/lib/firebase/firestore';
 import { JobApplication } from '@/types/application';
+import { toDate } from '@/lib/firebase/firestore';
 
 export default function ApplicationsTrackerPage() {
     const router = useRouter();
     const { user, profile, loading: authLoading } = useAuth();
     const [applications, setApplications] = useState<JobApplication[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'pending' | 'shortlisted' | 'rejected' | 'hired'>('all');
+    const [filter, setFilter] = useState<'all' | 'applied' | 'shortlisted' | 'rejected' | 'hired'>('all');
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -26,9 +27,13 @@ export default function ApplicationsTrackerPage() {
             if (!user) return;
 
             try {
-                const apps = await getApplicationsByCandidate(user.uid);
+                const apps = await getApplicationsByCandidate(user.uid) as JobApplication[];
                 // Sort by most recent first
-                apps.sort((a, b) => b.appliedAt.getTime() - a.appliedAt.getTime());
+                apps.sort((a, b) => {
+                    const dateA = a.appliedAt instanceof Date ? a.appliedAt : (a.appliedAt as any).toDate();
+                    const dateB = b.appliedAt instanceof Date ? b.appliedAt : (b.appliedAt as any).toDate();
+                    return dateB.getTime() - dateA.getTime();
+                });
                 setApplications(apps);
                 setLoading(false);
             } catch (err) {
@@ -56,7 +61,7 @@ export default function ApplicationsTrackerPage() {
 
     const statusCounts = {
         all: applications.length,
-        pending: applications.filter(a => a.status === 'pending').length,
+        applied: applications.filter(a => a.status === 'applied').length,
         shortlisted: applications.filter(a => a.status === 'shortlisted').length,
         rejected: applications.filter(a => a.status === 'rejected').length,
         hired: applications.filter(a => a.status === 'hired').length,
@@ -78,8 +83,8 @@ export default function ApplicationsTrackerPage() {
                         <div className="text-xs text-jobs-dark/60">Total</div>
                     </div>
                     <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="text-2xl font-black text-yellow-600">{statusCounts.pending}</div>
-                        <div className="text-xs text-jobs-dark/60">Pending</div>
+                        <div className="text-2xl font-black text-yellow-600">{statusCounts.applied}</div>
+                        <div className="text-xs text-jobs-dark/60">Applied</div>
                     </div>
                     <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100">
                         <div className="text-2xl font-black text-green-600">{statusCounts.shortlisted}</div>
@@ -97,13 +102,13 @@ export default function ApplicationsTrackerPage() {
 
                 {/* Filter Tabs */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2 mb-6 flex gap-2 overflow-x-auto">
-                    {(['all', 'pending', 'shortlisted', 'rejected', 'hired'] as const).map((status) => (
+                    {(['all', 'applied', 'shortlisted', 'rejected', 'hired'] as const).map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
                             className={`flex-1 whitespace-nowrap py-3 px-4 rounded-xl font-bold text-sm transition ${filter === status
-                                    ? 'bg-jobs-primary text-white shadow-md'
-                                    : 'text-jobs-dark/60 hover:bg-gray-50'
+                                ? 'bg-jobs-primary text-white shadow-md'
+                                : 'text-jobs-dark/60 hover:bg-gray-50'
                                 }`}
                         >
                             {status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})
@@ -151,7 +156,7 @@ export default function ApplicationsTrackerPage() {
                                         <div className="flex items-center gap-4 text-sm text-jobs-dark/60 mb-3">
                                             <div className="flex items-center gap-1">
                                                 <Clock className="h-4 w-4" />
-                                                <span>Applied {application.appliedAt.toLocaleDateString()}</span>
+                                                <span>Applied {toDate(application.appliedAt).toLocaleDateString()}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Users className="h-4 w-4" />
@@ -161,22 +166,22 @@ export default function ApplicationsTrackerPage() {
 
                                         {/* Status Timeline */}
                                         <div className="flex items-center gap-2">
-                                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${application.status === 'pending'
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : application.status === 'shortlisted'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : application.status === 'rejected'
-                                                            ? 'bg-red-100 text-red-800'
-                                                            : 'bg-purple-100 text-purple-800'
+                                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${application.status === 'applied'
+                                                ? 'bg-yellow-100 text-yellow-800'
+                                                : application.status === 'shortlisted'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : application.status === 'rejected'
+                                                        ? 'bg-red-100 text-red-800'
+                                                        : 'bg-purple-100 text-purple-800'
                                                 }`}>
-                                                {application.status === 'pending' && <Clock className="h-3 w-3" />}
+                                                {application.status === 'applied' && <Clock className="h-3 w-3" />}
                                                 {application.status === 'shortlisted' && <CheckCircle className="h-3 w-3" />}
                                                 {application.status === 'rejected' && <XCircle className="h-3 w-3" />}
                                                 {application.status === 'hired' && <Star className="h-3 w-3" />}
                                                 {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
                                             </div>
 
-                                            {application.status === 'pending' && (
+                                            {application.status === 'applied' && (
                                                 <span className="text-xs text-jobs-dark/50">Under review by employer</span>
                                             )}
                                             {application.status === 'shortlisted' && (
@@ -233,7 +238,7 @@ export default function ApplicationsTrackerPage() {
                         <div className="flex items-center gap-4">
                             <div className="text-sm">
                                 <div className="font-bold">You've used</div>
-                                <div className="text-2xl font-black">{profile?.freeApplicationsUsed || 0}/10</div>
+                                <div className="text-2xl font-black">{profile?.applicationsUsed || 0}/10</div>
                                 <div className="text-xs opacity-75">free applications</div>
                             </div>
                             <Link

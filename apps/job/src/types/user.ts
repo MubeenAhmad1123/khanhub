@@ -149,6 +149,7 @@ export interface User {
     isPremium: boolean;
     premiumStartDate?: Date | Timestamp;
     premiumEndDate?: Date | Timestamp;
+    premiumExpiresAt?: Date | Timestamp;
 
     // Usage Limits
     applicationsUsed: number; // For free users (max 10)
@@ -174,6 +175,23 @@ export interface User {
     banReason?: string;
     onboardingCompleted: boolean;
 }
+
+// ==================== ROLE-SPECIFIC USER TYPES ====================
+
+export interface JobSeeker extends User {
+    role: 'job_seeker';
+    profile: JobSeekerProfile;
+}
+
+export interface Employer extends User {
+    role: 'employer';
+    company: CompanyProfile;
+}
+
+export interface AdminUser extends User {
+    role: 'admin';
+}
+
 
 // ==================== POINTS SYSTEM ====================
 
@@ -318,11 +336,11 @@ export type UpdateUserData = Partial<Omit<User, 'uid' | 'email' | 'createdAt'>>;
 
 // ==================== TYPE GUARDS ====================
 
-export const isJobSeeker = (user: User): user is User & { profile: JobSeekerProfile } => {
+export const isJobSeeker = (user: User): user is JobSeeker => {
     return user.role === 'job_seeker' && !!user.profile;
 };
 
-export const isEmployer = (user: User): user is User & { company: CompanyProfile } => {
+export const isEmployer = (user: User): user is Employer => {
     return user.role === 'employer' && !!user.company;
 };
 

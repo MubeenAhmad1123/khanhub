@@ -27,20 +27,6 @@ export type { Application, ApplicationStatus } from './application';
 // Aliases for backward compatibility or clarity
 export type BaseUser = User;
 
-export type JobSeeker = User & {
-    role: 'job_seeker';
-    profile: JobSeekerProfile;
-};
-
-export type Employer = User & {
-    role: 'employer';
-    company: CompanyProfile;
-};
-
-export type Admin = User & {
-    role: 'admin';
-};
-
 export type PointsHistory = PointsHistoryEntry;
 
 // Placement Type (Reconstructed as it was missing from file list)
@@ -57,16 +43,17 @@ export interface Placement {
     companyName: string;
 
     // Financials
-    salary: number;
+    firstMonthSalary: number;
     commissionAmount: number;
-    isCommissionPaid: boolean;
+    commissionStatus: 'pending' | 'collected' | 'failed';
+    commissionPaidAt?: any;
 
     // Dates
     hiredAt: any; // Date | Timestamp
     createdAt: any; // Date | Timestamp
     updatedAt: any; // Date | Timestamp
 
-    status: 'active' | 'completed' | 'disputed';
+    status?: 'active' | 'completed' | 'disputed';
 }
 
 // Database Collection Names

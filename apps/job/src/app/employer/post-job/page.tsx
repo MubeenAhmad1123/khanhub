@@ -1,611 +1,425 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Briefcase, MapPin, DollarSign, Calendar, FileText, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
-import { createJob } from '@/lib/firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase/config';
-import { PAKISTANI_CITIES, PAKISTANI_PROVINCES } from '@/types/job';
+import { uploadCompanyLogo } from '@/lib/services/cloudinaryUpload';
+import { Briefcase, MapPin, DollarSign, Phone, FileText, Upload, Loader2 } from 'lucide-react';
 
-export default function PostJobPage() {
+export default function SimpleJobPostPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const [submitting, setSubmitting] = useState(false);
-    const [uploadingImage, setUploadingImage] = useState(false);
-    const [error, setError] = useState('');
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [jobImageUrl, setJobImageUrl] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         title: '',
-        shortDescription: '',
-        description: '',
-        category: 'healthcare' as any,
-        type: 'full-time' as any,
-        locationType: 'on-site' as any,
-        experienceLevel: 'mid' as any,
+        company: '',
         city: '',
-        province: '',
-        salaryMin: '',
-        salaryMax: '',
-        requiredSkills: '',
-        requiredEducation: '',
-        requiredExperience: '0',
-        requirements: '',
-        responsibilities: '',
-        benefits: '',
-        vacancies: '1',
-        deadline: '',
-        companyEmail: user?.email || '',
-        companyPhone: '',
-        companyAddress: '',
+        salary: '',
+        phone: '',
+        description: '',
     });
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const [logo, setLogo] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    // Pakistan cities
+    const cities = [
+        'Karachi',
+        'Lahore',
+        'Islamabad',
+        'Rawalpindi',
+        'Faisalabad',
+        'Multan',
+        'Peshawar',
+        'Quetta',
+        'Sialkot',
+        'Gujranwala',
+        'Remote / Online',
+    ];
+
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Preview
-        const reader = new FileReader();
-        reader.onloadend = () => setImagePreview(reader.result as string);
-        reader.readAsDataURL(file);
-
-        // Upload
-        setUploadingImage(true);
-        try {
-            const storageRef = ref(storage, `job-images/${Date.now()}-${file.name}`);
-            const snapshot = await uploadBytes(storageRef, file);
-            const url = await getDownloadURL(snapshot.ref);
-            setJobImageUrl(url);
-        } catch (err) {
-            console.error('Image upload error:', err);
-            setError('Failed to upload image. Please try again.');
-        } finally {
-            setUploadingImage(false);
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image must be less than 5MB');
+                return;
+            }
+            setLogo(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setLogoPreview(reader.result as string);
+            reader.readAsDataURL(file);
         }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-<<<<<<< HEAD
         if (!user) {
-            setError('You must be logged in to post a job');
+            alert('براہ کرم لاگ ان کریں / Please login first');
+            router.push('/auth/login');
             return;
         }
-=======
-        const handleSubmit = async (e: React.FormEvent) => {
-            e.preventDefault();
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
 
-            if (!user) {
-                setError('You must be logged in to post a job');
-                return;
-            }
-
-<<<<<<< HEAD
-        const is_admin = user.role === 'admin';
+        // Simple validation
+        if (!formData.title.trim() || !formData.company.trim() || !formData.phone.trim()) {
+            alert('Please fill required fields: Job Title, Company, Phone');
+            return;
+        }
 
         try {
-            const deadlineDate = new Date(formData.deadline);
-            const expiresAt = new Date(deadlineDate);
-            expiresAt.setDate(expiresAt.getDate() + 7); // Expires 7 days after deadline
+            setLoading(true);
+            setUploadProgress(20);
 
-            await createJob({
-                title: formData.title,
-                company: {
-                    id: user.uid,
-                    name: user.company?.name || (is_admin ? 'Admin Posted' : 'Company'),
-                    logo: user.company?.logo || null,
-                    industry: user.company?.industry || null,
-                },
-                jobImage: jobImageUrl,
-                shortDescription: formData.shortDescription,
-                description: formData.description,
-                category: formData.category,
-                type: formData.type,
-                locationType: formData.locationType,
-                experienceLevel: formData.experienceLevel,
-                location: `${formData.city}, ${formData.province}`,
-                city: formData.city,
-                province: formData.province,
-                isRemote: formData.locationType === 'remote',
-                salary: formData.salaryMin && formData.salaryMax ? {
-                    min: parseInt(formData.salaryMin),
-                    max: parseInt(formData.salaryMax),
-                    currency: 'PKR',
-                    period: 'month',
-                } : undefined,
-                requirements: formData.requirements.split('\n').filter(r => r.trim()),
-                responsibilities: formData.responsibilities.split('\n').filter(r => r.trim()),
-                qualifications: [],
-                benefits: formData.benefits ? formData.benefits.split('\n').filter(b => b.trim()) : [],
-                skills: formData.requiredSkills.split(',').map(s => s.trim()).filter(s => s),
-                requiredSkills: formData.requiredSkills.split(',').map(s => s.trim()).filter(s => s),
-                requiredEducation: formData.requiredEducation,
-                requiredExperience: parseInt(formData.requiredExperience),
+            let logoUrl = '';
+
+            // Upload logo if provided
+            if (logo) {
+                setUploadProgress(40);
+                try {
+                    const result = await uploadCompanyLogo(logo, user.uid, (progress) => {
+                        setUploadProgress(40 + (progress.percentage * 0.3));
+                    });
+                    logoUrl = result.secureUrl;
+                } catch (error) {
+                    console.error('Logo upload failed:', error);
+                    // Continue without logo
+                }
+            }
+
+            setUploadProgress(70);
+
+            // Create job posting
+            const jobData = {
+                // Basic Info
+                title: formData.title.trim(),
+                company: formData.company.trim(),
+                location: formData.city || 'Not specified',
+
+                // Salary
+                salary: formData.salary.trim() || 'Negotiable',
+
+                // Contact
+                phone: formData.phone.trim(),
+
+                // Description
+                description: formData.description.trim() || 'No description provided',
+
+                // Logo
+                companyLogo: logoUrl,
+
+                // Auto-filled fields
                 employerId: user.uid,
-                companyEmail: formData.companyEmail,
-                companyPhone: formData.companyPhone,
-                companyAddress: formData.companyAddress,
-                status: is_admin ? 'approved' : 'pending',
-                featured: is_admin,
-                vacancies: parseInt(formData.vacancies),
-                deadline: deadlineDate,
-                expiresAt,
-                postedAt: new Date(),
-                isActive: true,
-                applicationCount: 0,
-                viewsCount: 0,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            });
+                employerEmail: user.email || '',
+                status: 'active', // Direct post, no approval needed for simple jobs
 
-            setSubmitting(false);
-            router.push(is_admin ? '/admin' : '/employer/dashboard');
-        } catch (err) {
-            console.error('Error posting job:', err);
-            setError('Failed to post job. Please try again.');
-            setSubmitting(false);
+                // Type defaults
+                type: 'full-time',
+                category: 'Other',
+
+                // Stats
+                views: 0,
+                applicationsCount: 0,
+
+                // Timestamps
+                createdAt: serverTimestamp(),
+                postedAt: new Date().toISOString(),
+            };
+
+            console.log('Posting job:', jobData);
+
+            await addDoc(collection(db, 'jobs'), jobData);
+
+            setUploadProgress(100);
+
+            alert('✅ Job posted successfully! / کامیابی سے جاب پوسٹ ہو گئی!');
+            router.push('/employer/jobs');
+
+        } catch (error: any) {
+            console.error('Error posting job:', error);
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
+
+            let errorMsg = 'Failed to post job. ';
+
+            if (error.code === 'permission-denied') {
+                errorMsg += 'Permission denied. Please contact support.';
+            } else if (error.code === 'unauthenticated') {
+                errorMsg += 'Please login again.';
+            } else if (error.message) {
+                errorMsg += error.message;
+            }
+
+            alert(errorMsg);
+        } finally {
+            setLoading(false);
+            setUploadProgress(0);
         }
     };
 
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        setFormData(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value
+        }));
+    };
 
     return (
-        <div className="min-h-screen bg-jobs-neutral py-8 px-4">
-            <div className="max-w-4xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-black text-jobs-dark mb-2">Post a New Job</h1>
-                    <p className="text-jobs-dark/60">Fill in the details to create a job posting</p>
-=======
-            setSubmitting(true);
-            setError('');
-
-            try {
-                const deadlineDate = new Date(formData.deadline);
-                const expiresAt = new Date(deadlineDate);
-                expiresAt.setDate(expiresAt.getDate() + 7); // Expires 7 days after deadline
-
-                await createJob({
-                    title: formData.title,
-                    company: {
-                        id: user.uid,
-                        name: profile.companyName || 'Company',
-                        logo: profile.companyLogo || null,
-                        industry: profile.industry || null,
-                    },
-                    shortDescription: formData.shortDescription,
-                    description: formData.description,
-                    category: formData.category,
-                    type: formData.type,
-                    locationType: formData.locationType,
-                    experienceLevel: formData.experienceLevel,
-                    location: `${formData.city}, ${formData.province}`,
-                    city: formData.city,
-                    province: formData.province,
-                    isRemote: formData.locationType === 'remote',
-                    salary: formData.salaryMin && formData.salaryMax ? {
-                        min: parseInt(formData.salaryMin),
-                        max: parseInt(formData.salaryMax),
-                        currency: 'PKR',
-                        period: 'month',
-                    } : undefined,
-                    requirements: formData.requirements.split('\n').filter(r => r.trim()),
-                    responsibilities: formData.responsibilities.split('\n').filter(r => r.trim()),
-                    qualifications: [],
-                    benefits: formData.benefits ? formData.benefits.split('\n').filter(b => b.trim()) : [],
-                    skills: formData.requiredSkills.split(',').map(s => s.trim()).filter(s => s),
-                    requiredSkills: formData.requiredSkills.split(',').map(s => s.trim()).filter(s => s),
-                    requiredEducation: formData.requiredEducation,
-                    requiredExperience: parseInt(formData.requiredExperience),
-                    employerId: user.uid,
-                    companyEmail: formData.companyEmail,
-                    companyPhone: formData.companyPhone,
-                    companyAddress: formData.companyAddress,
-                    status: 'pending',
-                    featured: false,
-                    vacancies: parseInt(formData.vacancies),
-                    deadline: deadlineDate,
-                    expiresAt,
-                    postedAt: new Date(),
-                    isActive: true,
-                    applicationCount: 0,
-                    viewsCount: 0,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                });
-
-                setSubmitting(false);
-                router.push('/employer/dashboard');
-            } catch (err) {
-                console.error('Error posting job:', err);
-                setError('Failed to post job. Please try again.');
-                setSubmitting(false);
-            }
-        };
-
-        return (
-            <div className="min-h-screen bg-jobs-neutral py-8 px-4">
-                <div className="max-w-4xl mx-auto">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-black text-jobs-dark mb-2">Post a New Job</h1>
-                        <p className="text-jobs-dark/60">Fill in the details to create a job posting</p>
+        <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-blue-50 py-8 px-4">
+            <div className="max-w-2xl mx-auto">
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-600 rounded-full mb-4">
+                        <Briefcase className="w-8 h-8 text-white" />
                     </div>
+                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2">
+                        Post a Job
+                    </h1>
+                    <p className="text-lg text-gray-600">
+                        جاب پوسٹ کریں - صرف 1 منٹ میں
+                    </p>
+                    <p className="text-sm text-teal-600 font-medium mt-2">
+                        ⚡ Super Fast & Easy - Only 6 Fields
+                    </p>
+                </div>
 
-                    <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 space-y-8">
-                        {/* Basic Information */}
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-jobs-dark flex items-center gap-2">
-                                <Briefcase className="h-6 w-6 text-jobs-primary" />
-                                Basic Information
-                            </h2>
+                {/* Form Card */}
+                <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+                    <form onSubmit={handleSubmit} className="space-y-6">
 
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Job Title *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    placeholder="e.g. Senior Staff Nurse"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Short Description *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.shortDescription}
-                                    onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    placeholder="Brief one-line description"
-                                    maxLength={150}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Full Description *</label>
-                                <textarea
-                                    required
-                                    rows={6}
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary resize-none"
-                                    placeholder="Detailed job description..."
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Category *</label>
-                                    <select
-                                        required
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    >
-                                        <option value="healthcare">Healthcare</option>
-                                        <option value="technology">Technology</option>
-                                        <option value="education">Education</option>
-                                        <option value="finance">Finance</option>
-                                        <option value="marketing">Marketing</option>
-                                        <option value="sales">Sales</option>
-                                        <option value="customer-service">Customer Service</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Job Type *</label>
-                                    <select
-                                        required
-                                        value={formData.type}
-                                        onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    >
-                                        <option value="full-time">Full-time</option>
-                                        <option value="part-time">Part-time</option>
-                                        <option value="contract">Contract</option>
-                                        <option value="internship">Internship</option>
-                                    </select>
-                                </div>
+                        {/* Company Logo (Optional) */}
+                        <div className="text-center pb-6 border-b border-gray-200">
+                            <label className="block text-sm font-bold text-gray-700 mb-3">
+                                کمپنی لوگو (اختیاری) / Company Logo (Optional)
+                            </label>
+                            <div className="flex flex-col items-center gap-4">
+                                {logoPreview ? (
+                                    <div className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-teal-500">
+                                        <Image
+                                            src={logoPreview}
+                                            alt="Logo"
+                                            width={96}
+                                            height={96}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setLogo(null);
+                                                setLogoPreview('');
+                                            }}
+                                            className="absolute top-0 right-0 bg-red-500 text-white p-1 text-xs"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-teal-500 hover:bg-teal-50 transition-all">
+                                        <Upload className="w-6 h-6 text-gray-400" />
+                                        <span className="text-xs text-gray-500 mt-1">Upload</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleLogoChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
                             </div>
                         </div>
 
-                        {/* Location */}
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-jobs-dark flex items-center gap-2">
-                                <MapPin className="h-6 w-6 text-jobs-primary" />
-                                Location
-                            </h2>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Location Type *</label>
-                                    <select
-                                        required
-                                        value={formData.locationType}
-                                        onChange={(e) => setFormData({ ...formData, locationType: e.target.value as any })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    >
-                                        <option value="on-site">On-site</option>
-                                        <option value="remote">Remote</option>
-                                        <option value="hybrid">Hybrid</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">City *</label>
-                                    <select
-                                        required
-                                        value={formData.city}
-                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    >
-                                        <option value="">Select City</option>
-                                        {PAKISTANI_CITIES.map(city => (
-                                            <option key={city} value={city}>{city}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Province *</label>
-                                    <select
-                                        required
-                                        value={formData.province}
-                                        onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    >
-                                        <option value="">Select Province</option>
-                                        {PAKISTANI_PROVINCES.map(province => (
-                                            <option key={province} value={province}>{province}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+                        {/* 1. Job Title */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                <Briefcase className="w-4 h-4 text-teal-600" />
+                                Job Title * / جاب کا نام
+                            </label>
+                            <input
+                                type="text"
+                                name="title"
+                                value={formData.title}
+                                onChange={handleChange}
+                                required
+                                placeholder="e.g., Waiter, Shop Helper, Driver, Cook"
+                                className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all"
+                            />
                         </div>
 
-                        {/* Salary & Requirements */}
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-jobs-dark flex items-center gap-2">
-                                <DollarSign className="h-6 w-6 text-jobs-primary" />
-                                Compensation & Requirements
-                            </h2>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Minimum Salary (PKR)</label>
-                                    <input
-                                        type="number"
-                                        value={formData.salaryMin}
-                                        onChange={(e) => setFormData({ ...formData, salaryMin: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                        placeholder="50000"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Maximum Salary (PKR)</label>
-                                    <input
-                                        type="number"
-                                        value={formData.salaryMax}
-                                        onChange={(e) => setFormData({ ...formData, salaryMax: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                        placeholder="80000"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Experience Level *</label>
-                                    <select
-                                        required
-                                        value={formData.experienceLevel}
-                                        onChange={(e) => setFormData({ ...formData, experienceLevel: e.target.value as any })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    >
-                                        <option value="entry">Entry Level</option>
-                                        <option value="mid">Mid Level</option>
-                                        <option value="senior">Senior Level</option>
-                                        <option value="executive">Executive</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Required Years of Experience *</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        value={formData.requiredExperience}
-                                        onChange={(e) => setFormData({ ...formData, requiredExperience: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                        placeholder="2"
-                                        min="0"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Required Skills (comma-separated) *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.requiredSkills}
-                                    onChange={(e) => setFormData({ ...formData, requiredSkills: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    placeholder="e.g. Patient Care, ICU Management, Medical Equipment"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Required Education *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.requiredEducation}
-                                    onChange={(e) => setFormData({ ...formData, requiredEducation: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    placeholder="e.g. Bachelor's in Nursing (BSN)"
-                                />
-                            </div>
+                        {/* 2. Company Name */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-2">
+                                Company / Shop Name * / کمپنی / دکان کا نام
+                            </label>
+                            <input
+                                type="text"
+                                name="company"
+                                value={formData.company}
+                                onChange={handleChange}
+                                required
+                                placeholder="e.g., ABC Restaurant, XYZ Shop"
+                                className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all"
+                            />
                         </div>
 
-                        {/* Additional Details */}
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-jobs-dark flex items-center gap-2">
-                                <FileText className="h-6 w-6 text-jobs-primary" />
-                                Additional Details
-                            </h2>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Requirements (one per line) *</label>
-                                <textarea
-                                    required
-                                    rows={4}
-                                    value={formData.requirements}
-                                    onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary resize-none"
-                                    placeholder="Valid nursing license&#10;2+ years ICU experience&#10;Strong communication skills"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Responsibilities (one per line) *</label>
-                                <textarea
-                                    required
-                                    rows={4}
-                                    value={formData.responsibilities}
-                                    onChange={(e) => setFormData({ ...formData, responsibilities: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary resize-none"
-                                    placeholder="Monitor patient vital signs&#10;Administer medications&#10;Maintain patient records"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Benefits (one per line)</label>
-                                <textarea
-                                    rows={3}
-                                    value={formData.benefits}
-                                    onChange={(e) => setFormData({ ...formData, benefits: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary resize-none"
-                                    placeholder="Health insurance&#10;Paid time off&#10;Professional development"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Number of Vacancies *</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        value={formData.vacancies}
-                                        onChange={(e) => setFormData({ ...formData, vacancies: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                        placeholder="1"
-                                        min="1"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Application Deadline *</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={formData.deadline}
-                                        onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                        min={new Date().toISOString().split('T')[0]}
-                                    />
-                                </div>
-                            </div>
+                        {/* 3. City */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-teal-600" />
+                                City / شہر
+                            </label>
+                            <select
+                                name="city"
+                                value={formData.city}
+                                onChange={handleChange}
+                                className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all"
+                            >
+                                <option value="">Select City / شہر منتخب کریں</option>
+                                {cities.map(city => (
+                                    <option key={city} value={city}>{city}</option>
+                                ))}
+                            </select>
                         </div>
 
-                        {/* Contact Information */}
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-jobs-dark">Contact Information</h2>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Company Email *</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={formData.companyEmail}
-                                        onChange={(e) => setFormData({ ...formData, companyEmail: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                        placeholder="hr@company.com"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Company Phone *</label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        value={formData.companyPhone}
-                                        onChange={(e) => setFormData({ ...formData, companyPhone: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                        placeholder="+92 300 1234567"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Company Address *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.companyAddress}
-                                    onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jobs-primary/10 focus:border-jobs-primary"
-                                    placeholder="123 Main Street, Karachi"
-                                />
-                            </div>
+                        {/* 4. Salary */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                <DollarSign className="w-4 h-4 text-teal-600" />
+                                Salary (PKR) / تنخواہ
+                            </label>
+                            <input
+                                type="text"
+                                name="salary"
+                                value={formData.salary}
+                                onChange={handleChange}
+                                placeholder="e.g., 30,000 or 25,000-35,000 or Negotiable"
+                                className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                اگر آپ کو معلوم نہیں تو "Negotiable" لکھیں
+                            </p>
                         </div>
 
-                        {error && (
-                            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100">
-                                {error}
+                        {/* 5. Phone / WhatsApp */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                <Phone className="w-4 h-4 text-teal-600" />
+                                Phone / WhatsApp * / فون نمبر
+                            </label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                required
+                                placeholder="03001234567"
+                                className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Job seekers will contact you on this number
+                            </p>
+                        </div>
+
+                        {/* 6. Description */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-teal-600" />
+                                Job Details (Optional) / تفصیلات
+                            </label>
+                            <textarea
+                                name="description"
+                                value={formData.description}
+                                onChange={handleChange}
+                                rows={4}
+                                placeholder="What will the person do? Any requirements? Working hours?"
+                                className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all resize-none"
+                            />
+                        </div>
+
+                        {/* Progress Bar */}
+                        {loading && uploadProgress > 0 && (
+                            <div className="bg-teal-50 rounded-xl p-4">
+                                <div className="flex justify-between text-sm text-teal-700 mb-2 font-medium">
+                                    <span>Uploading...</span>
+                                    <span>{uploadProgress}%</span>
+                                </div>
+                                <div className="w-full bg-teal-200 rounded-full h-2">
+                                    <div
+                                        className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                </div>
                             </div>
                         )}
 
-                        <div className="flex gap-4">
+                        {/* Info Banner */}
+                        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                            <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 text-blue-500">ℹ️</div>
+                                <div className="text-sm">
+                                    <p className="text-blue-900 font-medium">
+                                        Your job will be posted immediately!
+                                    </p>
+                                    <p className="text-blue-700 mt-1">
+                                        آپ کی جاب فوری طور پر پوسٹ ہو جائے گی
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Submit Buttons */}
+                        <div className="flex gap-4 pt-4">
                             <button
                                 type="button"
                                 onClick={() => router.back()}
-                                className="flex-1 bg-gray-200 text-jobs-dark py-4 rounded-xl font-bold hover:bg-gray-300 transition"
+                                disabled={loading}
+                                className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all"
                             >
-                                Cancel
+                                Cancel / منسوخ
                             </button>
                             <button
                                 type="submit"
-                                disabled={submitting}
-                                className="flex-1 bg-jobs-accent text-white py-4 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                                disabled={loading}
+                                className="flex-1 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-4 rounded-xl font-bold hover:from-teal-700 hover:to-teal-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                             >
-                                {submitting ? (
+                                {loading ? (
                                     <>
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Posting Job...
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Posting...
                                     </>
                                 ) : (
-                                    'Post Job'
+                                    <>
+                                        <Briefcase className="w-5 h-5" />
+                                        Post Job / پوسٹ کریں
+                                    </>
                                 )}
                             </button>
                         </div>
 
-                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                            <p className="text-sm text-blue-800">
-                                <strong>Note:</strong> Your job posting will be reviewed by our admin team before going live. You'll receive an email once it's approved.
-                            </p>
-                        </div>
+                        {/* Required Fields Note */}
+                        <p className="text-center text-xs text-gray-500">
+                            * = Required fields / ضروری خانے
+                        </p>
                     </form>
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
+                </div>
+
+                {/* Help Text */}
+                <div className="mt-6 text-center">
+                    <p className="text-sm text-gray-600">
+                        Need help? Contact: <span className="font-bold text-teal-600">support@khanhub.com</span>
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                        مدد چاہیے؟ رابطہ کریں
+                    </p>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
+}

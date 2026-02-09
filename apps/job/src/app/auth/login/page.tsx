@@ -14,31 +14,61 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    // Redirect user based on role once authenticated
+    // Redirect user based on role and payment status
     useEffect(() => {
-        if (user) {
-            console.log('--- REDIRECT CHECK (LOGIN) ---');
-            console.log('User Role:', user.role);
+        if (!loading && user) {
+            console.log('=== LOGIN REDIRECT CHECK ===');
+            console.log('User:', user.email);
+            console.log('Role:', user.role);
+            console.log('Onboarding:', user.onboardingCompleted);
+            console.log('Payment Status:', user.paymentStatus);
+            console.log('===========================');
 
+            // Admin gets immediate access
             if (user.role === 'admin') {
-                console.log('Redirecting to: /admin');
+                console.log('→ Redirecting ADMIN to /admin');
                 router.push('/admin');
-            } else if (user.role === 'employer') {
-                console.log('Redirecting to: /employer/dashboard');
-                router.push('/employer/dashboard');
-            } else {
-                // Default to job seeker flow
-                console.log('Redirecting to: job seeker flow');
-                if (!user.onboardingCompleted) {
-                    router.push('/auth/onboarding');
-                } else if (user.paymentStatus !== 'approved') {
-                    router.push('/auth/verify-payment');
-                } else {
-                    router.push('/dashboard');
-                }
+                return;
             }
+
+            // Employer gets immediate access
+            if (user.role === 'employer') {
+                console.log('→ Redirecting EMPLOYER to /employer/dashboard');
+                router.push('/employer/dashboard');
+                return;
+            }
+
+            // Job seeker flow - check onboarding first
+            if (!user.onboardingCompleted) {
+                console.log('→ Redirecting to ONBOARDING (not completed)');
+                router.push('/auth/onboarding');
+                return;
+            }
+
+            // Then check payment status
+            if (user.paymentStatus === 'pending') {
+                console.log('→ Redirecting to DASHBOARD (payment pending)');
+                router.push('/dashboard');
+                return;
+            }
+
+            if (user.paymentStatus === 'rejected') {
+                console.log('→ Redirecting to VERIFY PAYMENT (payment rejected)');
+                router.push('/auth/verify-payment');
+                return;
+            }
+
+            if (user.paymentStatus === 'approved') {
+                console.log('→ Redirecting to DASHBOARD (payment approved)');
+                router.push('/dashboard');
+                return;
+            }
+
+            // Default: if no payment status set, go to payment page
+            console.log('→ Redirecting to VERIFY PAYMENT (no payment status)');
+            router.push('/auth/verify-payment');
         }
-    }, [user, router]);
+    }, [user, loading, router]);
 
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,7 +76,9 @@ export default function LoginPage() {
 
         try {
             await login(email.trim(), password);
+            // Don't redirect here - useEffect will handle it
         } catch (err: any) {
+            console.error('Login error:', err);
             setError(err.message || 'Failed to login');
         }
     };
@@ -56,10 +88,24 @@ export default function LoginPage() {
 
         try {
             await loginWithGoogle(role);
+            // Don't redirect here - useEffect will handle it
         } catch (err: any) {
+            console.error('Google login error:', err);
             setError(err.message || 'Failed to login with Google');
         }
     };
+
+    // Show loading while checking auth
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center p-4">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-white text-lg font-semibold">Loading...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center p-4">

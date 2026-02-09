@@ -70,7 +70,7 @@ export default function ApplicationForm({ jobId, jobTitle, onSuccess }: Applicat
             // Update user's applications count
             const { updateDoc, increment } = await import('firebase/firestore');
             await updateDoc(doc(db, 'users', user.uid), {
-                'stats.applicationsCount': increment(1),
+                applicationsUsed: increment(1),
             });
 
             alert('Application submitted successfully!');

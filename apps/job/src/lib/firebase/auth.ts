@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-// Firebase Auth Helpers - User Profile Operations
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from './config';
-import { User } from '@/types/user';
-=======
 // Firebase Authentication Helpers
 // Authentication utility functions for user management
 
@@ -21,11 +15,9 @@ import {
     User as FirebaseUser,
     UserCredential,
 } from 'firebase/auth';
-import { auth } from './firebase-config';
+import { auth, db } from './firebase-config';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from './firebase-config';
 import { User, UserRole, CreateUserData } from '@/types/user';
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
 
 /**
  * Get user profile from Firestore

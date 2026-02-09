@@ -108,6 +108,10 @@ export interface Job {
     // Timestamps
     createdAt: Date | Timestamp;
     updatedAt: Date | Timestamp;
+
+    // Optional matching fields (attached client-side)
+    matchScore?: number;
+    matchBreakdown?: MatchScoreBreakdown;
 }
 
 // ==================== CUSTOM QUESTIONS ====================
@@ -420,15 +424,9 @@ export const PAKISTANI_PROVINCES = [
     'Sindh',
     'Khyber Pakhtunkhwa',
     'Balochistan',
-<<<<<<< HEAD
-    'Azad Kashmir',
-    'Gilgit-Baltistan',
-    'Islamabad Capital Territory',
-=======
     'Islamabad Capital Territory',
     'Gilgit-Baltistan',
     'Azad Jammu and Kashmir',
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
 ];
 
 // ==================== DEFAULT VALUES ====================

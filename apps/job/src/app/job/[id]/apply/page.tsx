@@ -30,9 +30,9 @@ export default function ApplyJobPage() {
     useEffect(() => {
         const loadJob = async () => {
             try {
-                const jobData = await getJobById(jobId);
+                const jobData = await getJobById(jobId) as Job | null;
                 if (jobData) {
-                    setJob(jobData as Job);
+                    setJob(jobData);
 
                     // Calculate match score if profile exists
                     if (user) {
@@ -56,9 +56,9 @@ export default function ApplyJobPage() {
 
     const canApply = () => {
         if (!user) return { can: false, reason: 'Profile not loaded' };
-        if (!user.registrationApproved) return { can: false, reason: 'Registration payment pending approval' };
+        if (!user.paymentStatus || user.paymentStatus !== 'approved') return { can: false, reason: 'Registration payment pending approval' };
         if (!user.profile?.cvUrl) return { can: false, reason: 'Please upload your CV first' };
-        if (!user.isPremium && user.freeApplicationsUsed >= 10) {
+        if (!user.isPremium && user.applicationsUsed >= 10) {
             return { can: false, reason: 'Free application limit reached. Upgrade to premium for unlimited applications.' };
         }
         return { can: true };
@@ -85,15 +85,15 @@ export default function ApplyJobPage() {
                 jobTitle: job.title,
                 employerId: job.employerId,
                 companyName: job.companyName,
-                candidateId: user.uid,
-                candidateName: user.displayName,
-                candidateEmail: user.email,
-                candidatePhone: user.profile?.phone || '',
-                cvUrl: user.profile?.cvUrl || '',
-                videoUrl: user.profile?.introVideoUrl || null,
+                jobSeekerId: user.uid,
+                applicantName: user.displayName,
+                applicantEmail: user.email,
+                applicantPhone: user.profile?.phone || '',
+                applicantCvUrl: user.profile?.cvUrl || '',
+                applicantVideoUrl: user.profile?.videoUrl || null,
                 coverLetter,
                 matchScore: matchScore || 0,
-                status: 'pending',
+                status: 'applied',
                 appliedAt: new Date(),
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -270,7 +270,7 @@ export default function ApplyJobPage() {
                             <div>
                                 <div className="text-blue-700 mb-1">Video Introduction</div>
                                 <div className="font-bold text-blue-900 flex items-center gap-2">
-                                    {user?.profile?.introVideoUrl ? (
+                                    {user?.profile?.videoUrl ? (
                                         <>
                                             <CheckCircle className="h-4 w-4 text-green-600" />
                                             Uploaded
@@ -286,7 +286,7 @@ export default function ApplyJobPage() {
                             <div>
                                 <div className="text-blue-700 mb-1">Applications Used</div>
                                 <div className="font-bold text-blue-900">
-                                    {user?.freeApplicationsUsed || 0} / {user?.isPremium ? '∞' : '10'}
+                                    {user?.applicationsUsed || 0} / {user?.isPremium ? '∞' : '10'}
                                 </div>
                             </div>
                             <div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import { Job } from '@/types/job';
-import { getActiveJobs } from '@/lib/firebase/jobs';
+import { getActiveJobs } from '@/lib/firebase/firestore';
 import {
     MapPin,
     Search,

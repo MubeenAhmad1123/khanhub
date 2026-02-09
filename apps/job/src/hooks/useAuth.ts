@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+'use client';
+
 // Enhanced useAuth Hook - Complete Authentication Management
 import { useState, useEffect } from 'react';
 import {
@@ -11,8 +12,10 @@ import {
     sendEmailVerification,
     updateProfile as firebaseUpdateProfile,
     GoogleAuthProvider,
+    onAuthStateChanged,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { auth, db } from '@/lib/firebase/firebase-config';
+import { doc, getDoc } from 'firebase/firestore';
 import { getUserProfile, createUserProfile, updateUserProfile } from '@/lib/firebase/auth';
 import { User, UserRole } from '@/types/user';
 
@@ -30,48 +33,29 @@ export function useAuth() {
         loading: true,
         error: null,
     });
-=======
-// ==========================================
-// CUSTOM HOOKS - AUTHENTICATION (FIXED)
-// ==========================================
-
-'use client';
-
-import { useState, useEffect } from 'react';
-import { auth, db } from '@/lib/firebase/firebase-config'; // ✅ Correct path
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { User, COLLECTIONS } from '@/types/DATABASE_SCHEMA'; // ✅ Updated path
-
-interface UseAuthReturn {
-    user: User | null;
-    loading: boolean;
-    error: string | null;
-}
-
-/**
- * Custom hook for authentication
- * Returns current user with role and profile data
- */
-export function useAuth(): UseAuthReturn {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
 
     // Listen to auth state changes
     useEffect(() => {
-<<<<<<< HEAD
-        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                // Fetch full user profile from Firestore
-                const userProfile = await getUserProfile(firebaseUser.uid);
-                setAuthState({
-                    user: userProfile,
-                    firebaseUser,
-                    loading: false,
-                    error: null,
-                });
+                try {
+                    // Fetch full user profile from Firestore
+                    const userProfile = await getUserProfile(firebaseUser.uid);
+                    setAuthState({
+                        user: userProfile,
+                        firebaseUser,
+                        loading: false,
+                        error: null,
+                    });
+                } catch (err) {
+                    console.error('Error fetching user data:', err);
+                    setAuthState({
+                        user: null,
+                        firebaseUser,
+                        loading: false,
+                        error: 'Failed to load user data',
+                    });
+                }
             } else {
                 setAuthState({
                     user: null,
@@ -80,35 +64,11 @@ export function useAuth(): UseAuthReturn {
                     error: null,
                 });
             }
-=======
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-            if (firebaseUser) {
-                try {
-                    // Fetch user document from Firestore
-                    const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, firebaseUser.uid));
-
-                    if (userDoc.exists()) {
-                        setUser({ id: userDoc.id, ...userDoc.data() } as unknown as User);
-                    } else {
-                        setError('User profile not found');
-                        setUser(null);
-                    }
-                } catch (err) {
-                    console.error('Error fetching user data:', err);
-                    setError('Failed to load user data');
-                    setUser(null);
-                }
-            } else {
-                setUser(null);
-            }
-            setLoading(false);
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
         });
 
         return () => unsubscribe();
     }, []);
 
-<<<<<<< HEAD
     /**
      * Register with email and password
      */
@@ -342,6 +302,7 @@ export function useAuth(): UseAuthReturn {
 
     return {
         user: authState.user,
+        profile: authState.user,
         firebaseUser: authState.firebaseUser,
         loading: authState.loading,
         error: authState.error,
@@ -361,8 +322,6 @@ export function useAuth(): UseAuthReturn {
         updateProfile,
         refreshProfile,
     };
-=======
-    return { user, loading, error };
 }
 
 /**
@@ -391,7 +350,7 @@ export function usePremiumStatus() {
     if (user && 'isPremium' in user) {
         // Check if premium is active and not expired
         const isPremium = user.isPremium && user.premiumEndDate && (
-            user.premiumEndDate instanceof Date ? user.premiumEndDate : user.premiumEndDate.toDate()
+            user.premiumEndDate instanceof Date ? user.premiumEndDate : (user.premiumEndDate as any).toDate()
         ) > new Date();
         return { isPremium, loading: false };
     }
@@ -408,5 +367,4 @@ export function useIsAdmin() {
     if (loading) return { isAdmin: false, loading: true };
 
     return { isAdmin: user?.role === 'admin', loading: false };
->>>>>>> 34630a2430bd3417b8b7bee106e50a1000ec026b
 }
