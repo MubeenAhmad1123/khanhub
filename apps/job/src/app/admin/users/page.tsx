@@ -261,6 +261,12 @@ export default function AdminUsersPage() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Joined
                                 </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Points
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Strength
+                                </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Actions
                                 </th>
@@ -306,6 +312,20 @@ export default function AdminUsersPage() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {u.createdAt ? new Date(u.createdAt.toDate()).toLocaleDateString() : 'N/A'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                                        {(u as any).points || (u as any).totalPoints || 0}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-16 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                                <div
+                                                    className="bg-teal-500 h-full rounded-full"
+                                                    style={{ width: `${u.profile?.profileStrength || 0}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-xs text-gray-600">{u.profile?.profileStrength || 0}%</span>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex gap-2 justify-end">

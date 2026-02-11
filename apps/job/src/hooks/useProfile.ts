@@ -6,7 +6,7 @@ import { db, storage } from '@/lib/firebase/firebase-config';
 import { User, JobSeekerProfile, CompanyProfile } from '@/types/user';
 import { useAuth } from './useAuth';
 import { parseResume } from '@/lib/services/cvParser';
-import { calculateProfileStrength } from '@/lib/services/pointsSystem';
+import { calculateProfileStrength, awardPoints } from '@/lib/services/pointsSystem';
 
 export function useProfile() {
     const { user, refreshProfile } = useAuth();
@@ -80,8 +80,15 @@ export function useProfile() {
                 },
             });
 
+            // Recalculate and update profile strength
+            const newProfile = { ...user.profile, ...updates };
+            const strength = calculateProfileStrength({ profile: newProfile });
+            await updateDoc(doc(db, 'users', user.uid), {
+                'profile.profileStrength': strength,
+            });
+
             // Award points for CV upload
-            await awardPoints(user.uid, 'CV_UPLOADED');
+            await awardPoints(user.uid, 15, 'CV uploaded');
 
             await refreshProfile();
         } catch (err: any) {
@@ -129,14 +136,30 @@ export function useProfile() {
             const downloadURL = await getDownloadURL(storageRef);
 
             // Update user profile
+            const updates = {
+                videoUrl: downloadURL,
+                videoFileName: fileName,
+                videoUploadedAt: new Date(),
+            };
+
             await updateDoc(doc(db, 'users', user.uid), {
                 'profile.videoUrl': downloadURL,
                 'profile.videoFileName': fileName,
                 'profile.videoUploadedAt': new Date(),
             });
 
+            // Recalculate and update profile strength
+            const updatedProfile = {
+                ...user.profile,
+                ...updates
+            };
+            const strength = calculateProfileStrength({ profile: updatedProfile });
+            await updateDoc(doc(db, 'users', user.uid), {
+                'profile.profileStrength': strength,
+            });
+
             // Award points for video upload
-            await awardPoints(user.uid, 'INTRO_VIDEO');
+            await awardPoints(user.uid, 20, 'Intro video uploaded');
 
             await refreshProfile();
         } catch (err: any) {
@@ -259,23 +282,4 @@ export function useProfile() {
         updateCompanyProfile,
         uploadCompanyLogo,
     };
-}
-
-// Helper function to award points
-async function awardPoints(userId: string, action: string): Promise<void> {
-    try {
-        const pointsRef = doc(db, 'users', userId);
-        const docSnap = await getDoc(pointsRef);
-
-        if (docSnap.exists()) {
-            const currentPoints = docSnap.data().points || 0;
-            const pointsToAdd = action === 'CV_UPLOADED' ? 15 : 20;
-
-            await updateDoc(pointsRef, {
-                points: currentPoints + pointsToAdd,
-            });
-        }
-    } catch (error) {
-        console.error('Error awarding points:', error);
-    }
 }

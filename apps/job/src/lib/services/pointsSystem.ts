@@ -86,26 +86,31 @@ export async function awardPointsForProfileView(userId: string): Promise<void> {
 export function calculateProfileStrength(jobSeeker: any): number {
     let strength = 0;
 
+    // Handle both direct profile object or User object with nested profile
+    const p = jobSeeker.profile || jobSeeker;
+
     // CV uploaded (20%)
-    if (jobSeeker.cvUrl) strength += 20;
+    if (p.cvUrl) strength += 20;
 
     // Video uploaded (20%)
-    if (jobSeeker.videoUrl) strength += 20;
+    if (p.videoUrl) strength += 20;
 
     // Skills (15%) - minimum 5 skills
-    if (jobSeeker.skills && jobSeeker.skills.length >= 5) strength += 15;
+    if (p.skills && p.skills.length >= 5) strength += 15;
+    else if (p.skills && p.skills.length > 0) strength += 10; // Partial points for fewer skills
 
     // Experience (15%) - at least 1 entry
-    if (jobSeeker.experience && jobSeeker.experience.length >= 1) strength += 15;
+    if (p.experience && p.experience.length >= 1) strength += 15;
 
     // Education (10%) - at least 1 entry
-    if (jobSeeker.education && jobSeeker.education.length >= 1) strength += 10;
+    if (p.education && p.education.length >= 1) strength += 10;
 
     // Bio/Summary (10%) - at least 50 characters
-    if (jobSeeker.bio && jobSeeker.bio.length >= 50) strength += 10;
+    if (p.bio && p.bio.length >= 50) strength += 10;
+    else if (p.bio && p.bio.length > 0) strength += 5; // Partial points
 
     // Certifications (10%) - at least 1 entry
-    if (jobSeeker.certifications && jobSeeker.certifications.length >= 1) strength += 10;
+    if (p.certifications && p.certifications.length >= 1) strength += 10;
 
     return Math.min(strength, 100);
 }

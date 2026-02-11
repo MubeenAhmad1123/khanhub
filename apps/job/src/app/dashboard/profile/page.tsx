@@ -10,6 +10,7 @@ export default function ProfilePage() {
     const { user, loading: authLoading } = useAuth();
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [animatedStrength, setAnimatedStrength] = useState(0);
 
     // Auth check
     useEffect(() => {
@@ -42,6 +43,21 @@ export default function ProfilePage() {
         fetchProfile();
     }, [user]);
 
+    const profileStrength = profile?.profile?.profileStrength || 0;
+    const hasCV = !!profile?.profile?.cvUrl;
+    const hasVideo = !!profile?.profile?.videoUrl;
+    const isProfileComplete = profile?.profile?.fullName && profile?.profile?.skills?.length > 0;
+
+    // Trigger animation when profileStrength loads
+    useEffect(() => {
+        if (profileStrength > 0) {
+            const timer = setTimeout(() => {
+                setAnimatedStrength(profileStrength);
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [profileStrength]);
+
     if (authLoading || loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -53,10 +69,6 @@ export default function ProfilePage() {
         );
     }
 
-    const profileStrength = profile?.stats?.profileStrength || 0;
-    const hasCV = !!profile?.profile?.cvUrl;
-    const hasVideo = !!profile?.profile?.videoUrl;
-    const isProfileComplete = profile?.profile?.fullName && profile?.profile?.skills?.length > 0;
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
@@ -82,11 +94,10 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+                    <div className="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
                         <div
-                            className="bg-teal-600 h-3 rounded-full transition-all duration-500"
-                            style={{ width: `${profileStrength}%` }}
+                            className="bg-gradient-to-r from-teal-500 to-teal-700 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(20,184,166,0.3)]"
+                            style={{ width: `${animatedStrength}%` }}
                         ></div>
                     </div>
 

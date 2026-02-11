@@ -196,6 +196,10 @@ export function useAuth() {
                 });
 
                 userProfile = await getUserProfile(userCredential.user.uid);
+            } else if (!userProfile.onboardingCompleted && userProfile.role !== role) {
+                // Allow changing role IF onboarding is not completed
+                await updateUserProfile(userCredential.user.uid, { role });
+                userProfile = await getUserProfile(userCredential.user.uid);
             }
 
             setAuthState({

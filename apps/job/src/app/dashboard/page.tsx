@@ -25,6 +25,7 @@ export default function DashboardPage() {
     const [paymentSubmittedAt, setPaymentSubmittedAt] = useState<Date | null>(null);
     const [showPaymentStatusChange, setShowPaymentStatusChange] = useState(false);
     const [paymentStatusMessage, setPaymentStatusMessage] = useState('');
+    const [animatedStrength, setAnimatedStrength] = useState(0);
 
     // Real-time payment status listener
     useEffect(() => {
@@ -161,6 +162,15 @@ export default function DashboardPage() {
     useEffect(() => {
         if (user) {
             loadJobs();
+
+            // Animation for profile strength
+            const strength = user.profile?.profileStrength || 0;
+            if (strength > 0) {
+                const timer = setTimeout(() => {
+                    setAnimatedStrength(strength);
+                }, 500);
+                return () => clearTimeout(timer);
+            }
         }
     }, [user, loadJobs]);
 
@@ -336,7 +346,17 @@ export default function DashboardPage() {
                         title="Profile Strength"
                         value={`${user.profile?.profileStrength || 0}%`}
                         color="teal"
-                        subtitle="Keep improving!"
+                        subtitle={
+                            <div className="mt-2">
+                                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                        className="bg-teal-500 h-full rounded-full transition-all duration-1000 ease-out"
+                                        style={{ width: `${animatedStrength}%` }}
+                                    ></div>
+                                </div>
+                                <p className="text-[10px] mt-1 text-gray-400">Target 100%</p>
+                            </div>
+                        }
                     />
                     <StatCard
                         icon={<Star className="h-6 w-6" />}

@@ -29,7 +29,13 @@ export default function HomePage() {
 
     useEffect(() => {
         loadJobs();
-    }, []);
+
+        // Auto-redirect admins to their dashboard if they land here
+        if (!authLoading && user?.role === 'admin') {
+            console.log('Home: Redirecting detected Admin to /admin');
+            router.push('/admin');
+        }
+    }, [user, authLoading, router]);
 
     const loadJobs = async () => {
         try {

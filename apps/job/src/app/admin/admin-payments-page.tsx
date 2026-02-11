@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Payment } from '@/types/payment';
 import {
-    collection, getDocs, doc, updateDoc, serverTimestamp, query, where, orderBy
+    collection, doc, updateDoc, serverTimestamp, query, orderBy, onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { Loader2, CheckCircle, XCircle, Clock, Eye, AlertCircle } from 'lucide-react';
@@ -28,40 +28,38 @@ export default function AdminPaymentsPage() {
         }
     }, [user, loading, router]);
 
-    const loadPayments = useCallback(async () => {
-        try {
-            setLoadingPayments(true);
+    useEffect(() => {
+        if (!user || user.role !== 'admin') return;
 
-            let q = query(collection(db, 'payments'), orderBy('submittedAt', 'desc'));
+        setLoadingPayments(true);
+        const q = query(collection(db, 'payments'), orderBy('submittedAt', 'desc'));
 
-            if (filter !== 'all') {
-                q = query(
-                    collection(db, 'payments'),
-                    where('status', '==', filter),
-                    orderBy('submittedAt', 'desc')
-                );
-            }
-
-            const snapshot = await getDocs(q);
+        const unsubscribe = onSnapshot(q, (snapshot) => {
             const paymentsList = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
             })) as Payment[];
 
             setPayments(paymentsList);
-        } catch (error) {
-            console.error('Error loading payments:', error);
-            alert('Failed to load payments');
-        } finally {
             setLoadingPayments(false);
-        }
-    }, [filter]);
+        }, (error) => {
+            console.error('Error loading payments:', error);
+            setLoadingPayments(false);
+        });
 
-    useEffect(() => {
-        if (user?.role === 'admin') {
-            loadPayments();
-        }
-    }, [user, loadPayments]);
+        return () => unsubscribe();
+    }, [user]);
+
+    const filteredPayments = filter === 'all'
+        ? payments
+        : payments.filter(p => p.status === filter);
+
+    const stats = {
+        total: payments.length,
+        pending: payments.filter(p => p.status === 'pending').length,
+        approved: payments.filter(p => p.status === 'approved').length,
+        rejected: payments.filter(p => p.status === 'rejected').length,
+    };
 
     const handleApprove = async (payment: Payment) => {
         if (!confirm(`Approve payment from ${payment.userEmail}?`)) return;
@@ -100,7 +98,6 @@ export default function AdminPaymentsPage() {
             }
 
             alert('Payment approved successfully! User will be notified in real-time.');
-            loadPayments();
         } catch (error) {
             console.error('Error approving payment:', error);
             alert('Failed to approve payment');
@@ -136,7 +133,6 @@ export default function AdminPaymentsPage() {
             setShowModal(false);
             setSelectedPayment(null);
             setRejectionReason('');
-            loadPayments();
         } catch (error) {
             console.error('Error rejecting payment:', error);
             alert('Failed to reject payment');
@@ -157,13 +153,6 @@ export default function AdminPaymentsPage() {
             </div>
         );
     }
-
-    const stats = {
-        total: payments.length,
-        pending: payments.filter(p => p.status === 'pending').length,
-        approved: payments.filter(p => p.status === 'approved').length,
-        rejected: payments.filter(p => p.status === 'rejected').length,
-    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -240,9 +229,9 @@ export default function AdminPaymentsPage() {
                     <div className="text-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-teal-600 mx-auto" />
                     </div>
-                ) : payments.length > 0 ? (
+                ) : filteredPayments.length > 0 ? (
                     <div className="space-y-4">
-                        {payments.map((payment) => (
+                        {filteredPayments.map((payment) => (
                             <PaymentCard
                                 key={payment.id}
                                 payment={payment}
