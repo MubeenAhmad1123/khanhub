@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,12 +31,12 @@ export default function RegisterPage() {
     };
 
     // Auto-select role if provided in query params
-    useState(() => {
+    useEffect(() => {
         if (queryRole === 'job_seeker' || queryRole === 'employer') {
             setRole(queryRole as any);
             setStep('details');
         }
-    });
+    }, [queryRole]);
 
     const handleGoogleSignup = async (selectedRole: 'job_seeker' | 'employer') => {
         setError('');

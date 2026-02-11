@@ -8,9 +8,20 @@ import { Loader2, CheckCircle, ArrowRight, Building2, MapPin, Users, Calendar } 
 export default function OnboardingPage() {
     const router = useRouter();
     const { user, updateProfile, loading } = useAuth();
+    const [error, setError] = useState('');
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (user) {
+            console.log('=== ONBOARDING DEBUG ===');
+            console.log('User UID:', user.uid);
+            console.log('User Role:', user.role);
+            console.log('User Email:', user.email);
+            console.log('Onboarding Completed:', user.onboardingCompleted);
+            console.log('=========================');
+        }
+    }, [user]);
 
     // Separate form data for job seekers and employers
     const [jobSeekerData, setJobSeekerData] = useState({
@@ -40,6 +51,18 @@ export default function OnboardingPage() {
 
     const isEmployer = user?.role === 'employer';
     const totalSteps = isEmployer ? 3 : 4;
+
+    // IMPORTANT: Wait for role to be available before deciding flow
+    if (!loading && user && !user.role) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-teal-600">
+                <div className="bg-white p-8 rounded-3xl shadow-xl text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-teal-600 mx-auto mb-4" />
+                    <p className="text-gray-600 font-bold">Setting up your experience...</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleJobSeekerSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

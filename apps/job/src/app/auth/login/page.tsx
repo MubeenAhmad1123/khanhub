@@ -31,8 +31,13 @@ export default function LoginPage() {
                 return;
             }
 
-            // Employer gets immediate access
+            // Employer flow
             if (user.role === 'employer') {
+                if (!user.onboardingCompleted) {
+                    console.log('→ Redirecting EMPLOYER to ONBOARDING');
+                    router.push('/auth/onboarding');
+                    return;
+                }
                 console.log('→ Redirecting EMPLOYER to /employer/dashboard');
                 router.push('/employer/dashboard');
                 return;
