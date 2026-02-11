@@ -34,44 +34,69 @@ export default function ApplicationForm({ jobId, jobTitle, onSuccess }: Applicat
         try {
             setIsSubmitting(true);
 
-            const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/config');
+            // Import necessary helpers
+            const { getJobById, createApplication, incrementField } = await import('@/lib/firebase/firestore');
+            const { serverTimestamp } = await import('firebase/firestore');
 
-            // Check user's profile for CV
-            const { doc, getDoc } = await import('firebase/firestore');
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            const userData = userDoc.data();
+            // Get job details to ensure we have employerId and check if it still exists
+            const jobData = await getJobById(jobId) as any;
+            if (!jobData) {
+                alert('Job not found. It may have been removed.');
+                return;
+            }
 
-            if (!userData?.profile?.cvUrl) {
+            // Check if user has a CV
+            if (!user.profile?.cvUrl) {
                 alert('Please upload your CV before applying');
                 router.push('/dashboard/profile/cv');
                 return;
             }
 
-            // Calculate match score (simplified version)
-            // In production, this would call the matching algorithm
+            // Simplified match score for this form
             const matchScore = Math.floor(Math.random() * 30) + 70; // 70-100%
 
-            // Create application
-            await addDoc(collection(db, 'applications'), {
+            // Robust validation of required fields
+            const applicationData = {
                 jobId,
+                jobTitle: jobTitle || jobData.title || 'Untitled Job',
+                employerId: jobData.employerId || '',
+                companyName: jobData.companyName || 'Unknown Company',
+                // Include both IDs for compatibility across different dashboards/queries
+                jobSeekerId: user.uid,
                 candidateId: user.uid,
-                candidateName: userData?.profile?.fullName || user.email,
-                candidateEmail: user.email,
+                applicantName: user.displayName || 'Applicant',
+                candidateName: user.displayName || 'Applicant',
+                applicantEmail: user.email,
+                applicantPhone: user.profile?.phone || '',
+                applicantCvUrl: user.profile?.cvUrl || '',
+                applicantVideoUrl: user.profile?.videoUrl || null,
                 coverLetter: coverLetter.trim(),
-                cvUrl: userData?.profile?.cvUrl,
-                videoUrl: userData?.profile?.videoUrl || null,
                 matchScore,
-                status: 'pending',
+                status: 'applied',
                 appliedAt: serverTimestamp(),
                 createdAt: serverTimestamp(),
-            });
+                updatedAt: serverTimestamp(),
+                // Salary fallback if missing
+                salary: jobData.salaryMax || jobData.salaryMin || 0,
+            };
 
-            // Update user's applications count
-            const { updateDoc, increment } = await import('firebase/firestore');
-            await updateDoc(doc(db, 'users', user.uid), {
-                applicationsUsed: increment(1),
-            });
+            // Double check for any undefined required fields that might crash Firestore
+            if (!applicationData.employerId) {
+                console.warn('Warning: Job has no employerId. Falling back to job creator ID if available.');
+                applicationData.employerId = jobData.creatorId || '';
+            }
+
+            // Create application record using the unified helper
+            await createApplication(applicationData);
+
+            // Increment user's applicationsUsed count
+            try {
+                await incrementField('users', user.uid, 'applicationsUsed', 1);
+            } catch (upErr) {
+                console.warn('Non-critical: Failed to increment application count:', upErr);
+            }
+
+            // Optional: Post-submission points/email could be added here similar to apply/page.tsx
 
             alert('Application submitted successfully!');
             setCoverLetter('');
@@ -81,9 +106,9 @@ export default function ApplicationForm({ jobId, jobTitle, onSuccess }: Applicat
             } else {
                 router.push('/dashboard/applications');
             }
-        } catch (error) {
-            console.error('Application error:', error);
-            alert('Failed to submit application. Please try again.');
+        } catch (error: any) {
+            console.error('CRITICAL: Application submission failure:', error);
+            alert(`Failed to submit application: ${error.message || 'Please try again.'}`);
         } finally {
             setIsSubmitting(false);
         }

@@ -12,7 +12,7 @@ import {
     updateDoc,
     increment,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import { toDate } from '@/lib/firebase/firestore';
 import { Job, JobFilters, JobSortOption } from '@/types/job';
 import { useAuth } from './useAuth';
@@ -111,11 +111,7 @@ export function useJob(jobId: string) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchJob();
-    }, [jobId]);
-
-    const fetchJob = async () => {
+    const fetchJob = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -139,7 +135,11 @@ export function useJob(jobId: string) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [jobId]);
+
+    useEffect(() => {
+        fetchJob();
+    }, [fetchJob]);
 
     return { job, loading, error, refetch: fetchJob };
 }
@@ -149,11 +149,7 @@ export function useFeaturedJobs(limitCount: number = 6) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchFeaturedJobs();
-    }, [limitCount]);
-
-    const fetchFeaturedJobs = async () => {
+    const fetchFeaturedJobs = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -179,7 +175,11 @@ export function useFeaturedJobs(limitCount: number = 6) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [limitCount]);
+
+    useEffect(() => {
+        fetchFeaturedJobs();
+    }, [fetchFeaturedJobs]);
 
     return { jobs, loading, error, refetch: fetchFeaturedJobs };
 }
@@ -189,11 +189,7 @@ export function useRecentJobs(limitCount: number = 12) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchRecentJobs();
-    }, [limitCount]);
-
-    const fetchRecentJobs = async () => {
+    const fetchRecentJobs = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -218,7 +214,11 @@ export function useRecentJobs(limitCount: number = 12) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [limitCount]);
+
+    useEffect(() => {
+        fetchRecentJobs();
+    }, [fetchRecentJobs]);
 
     return { jobs, loading, error, refetch: fetchRecentJobs };
 }

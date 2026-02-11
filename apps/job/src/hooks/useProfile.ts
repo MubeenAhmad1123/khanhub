@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase/config';
+import { db, storage } from '@/lib/firebase/firebase-config';
 import { User, JobSeekerProfile, CompanyProfile } from '@/types/user';
 import { useAuth } from './useAuth';
 import { parseResume } from '@/lib/services/cvParser';

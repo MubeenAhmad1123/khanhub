@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
     MapPin, Briefcase, Clock, DollarSign, Building2, Users, Calendar,
     Bookmark, BookmarkCheck, Share2, Flag, ArrowLeft, CheckCircle2,
@@ -15,6 +16,7 @@ import { formatSalary, formatPostedDate, formatDeadline, getJobTypeBadge, getCat
 import BlurredContent from '@/components/premium/BlurredContent';
 import PremiumBadge from '@/components/premium/PremiumBadge';
 import Image from 'next/image';
+import RegisteredBadge from '@/components/ui/RegisteredBadge';
 
 interface JobDetailProps {
     job: Job;
@@ -23,7 +25,8 @@ interface JobDetailProps {
 }
 
 export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false }: JobDetailProps) {
-    const { profile, firebaseUser: user, isPremium, hasPaymentApproved } = useAuth();
+    const router = useRouter();
+    const { profile, firebaseUser: user, isPremium, isEmployer, isJobSeeker, hasPaymentApproved } = useAuth();
     const [isSaved, setIsSaved] = useState(initialIsSaved);
     const [hasApplied, setHasApplied] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -64,7 +67,7 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
 
     const handleSaveJob = async () => {
         if (!user) {
-            window.location.href = `/auth/login?redirect=/job/${job.id}`;
+            router.push(`/auth/login?redirect=/job/${job.id}`);
             return;
         }
 
@@ -99,17 +102,17 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
 
     const handleApply = () => {
         if (!user) {
-            window.location.href = `/auth/login?redirect=/job/${job.id}`;
+            router.push(`/auth/login?redirect=/job/${job.id}`);
             return;
         }
 
         if (!hasPaymentApproved) {
             alert('Please complete payment verification before applying.');
-            window.location.href = '/auth/verify-payment';
+            router.push('/auth/verify-payment');
             return;
         }
 
-        window.location.href = `/job/${job.id}/apply`;
+        router.push(`/job/${job.id}/apply`);
     };
 
     const handleShare = async () => {
@@ -169,9 +172,14 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                         <div className="flex-1">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <h1 className="text-3xl font-black text-jobs-dark mb-2 tracking-tight">
-                                        {job.title}
-                                    </h1>
+                                    <div className="flex items-center gap-3">
+                                        <h1 className="text-3xl font-black text-jobs-dark mb-2 tracking-tight">
+                                            {job.title}
+                                        </h1>
+                                        {(job as any).isEmployerVerified && (
+                                            <RegisteredBadge size={28} showText />
+                                        )}
+                                    </div>
                                     <p className="text-xl text-gray-600 font-bold mb-4">
                                         {job.companyName}
                                     </p>
@@ -185,7 +193,7 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Briefcase className="h-4 w-4 text-jobs-primary" />
                                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${getJobTypeBadge(job.employmentType)}`}>
-                                                {job.employmentType.replace('-', ' ').toUpperCase()}
+                                                {(job.employmentType || (job as any).type || 'full-time').replace('-', ' ').toUpperCase()}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-600">
@@ -237,7 +245,7 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                                 <h2 className="text-2xl font-black text-jobs-dark tracking-tight">Qualifications & Requirements</h2>
                             </div>
                             <ul className="space-y-3">
-                                {job.requiredQualifications?.map((req, index) => (
+                                {(job.requiredQualifications || []).map((req, index) => (
                                     <li key={index} className="flex items-start gap-3">
                                         <CheckCircle className="h-5 w-5 text-jobs-accent flex-shrink-0 mt-0.5" />
                                         <span className="text-jobs-dark/70 font-medium">{req}</span>
@@ -251,7 +259,7 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                             <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
                                 <h2 className="text-2xl font-black text-jobs-dark mb-6 tracking-tight">Responsibilities</h2>
                                 <ul className="space-y-3">
-                                    {job.responsibilities.map((responsibility, index) => (
+                                    {(job.responsibilities || []).map((responsibility, index) => (
                                         <li key={index} className="flex items-start gap-3">
                                             <CheckCircle2 className="h-5 w-5 text-jobs-primary flex-shrink-0 mt-0.5" />
                                             <span className="text-gray-700 font-medium">{responsibility}</span>
@@ -265,7 +273,7 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                         <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
                             <h2 className="text-2xl font-black text-jobs-dark mb-6 tracking-tight">Required Skills</h2>
                             <div className="flex flex-wrap gap-3">
-                                {job.requiredSkills.map((skill, index) => (
+                                {(job.requiredSkills || []).map((skill, index) => (
                                     <span
                                         key={index}
                                         className="px-4 py-2 bg-jobs-primary/5 text-jobs-primary font-black rounded-xl text-sm border border-jobs-primary/10"
@@ -281,7 +289,7 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                             <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
                                 <h2 className="text-2xl font-black text-jobs-dark mb-6 tracking-tight">Benefits</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {job.benefits.map((benefit, index) => (
+                                    {(job.benefits || []).map((benefit, index) => (
                                         <div key={index} className="flex items-center gap-3 p-3 bg-green-50/50 rounded-xl border border-green-100">
                                             <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
                                             <span className="text-gray-700 font-semibold">{benefit}</span>
@@ -294,60 +302,62 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
 
                     {/* Sidebar */}
                     <div className="space-y-6">
-                        {/* Apply Card */}
-                        <div className="bg-white rounded-3xl p-8 border-2 border-jobs-primary sticky top-24 shadow-xl shadow-jobs-primary/5">
-                            {hasApplied ? (
-                                <div className="text-center py-4">
-                                    <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                                    <p className="text-lg font-black text-jobs-dark mb-2">Already Applied</p>
-                                    <p className="text-sm text-gray-600 mb-6">Check your dashboard for current application status</p>
-                                    <Link
-                                        href="/dashboard/applications"
-                                        className="block w-full py-4 bg-gray-100 text-jobs-dark text-center font-black rounded-2xl hover:bg-gray-200 transition-all active:scale-95"
-                                    >
-                                        View Application
-                                    </Link>
-                                </div>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={handleApply}
-                                        disabled={applying}
-                                        className="w-full bg-jobs-accent text-white py-5 rounded-2xl font-black text-xl hover:opacity-90 transition-all shadow-lg shadow-jobs-accent/30 active:scale-95 disabled:opacity-50 mb-4"
-                                    >
-                                        {applying ? 'Applying...' : 'Apply Now'}
-                                    </button>
-
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={handleSaveJob}
-                                            disabled={saving}
-                                            className="flex-1 flex items-center justify-center gap-2 py-4 bg-gray-100 text-jobs-dark font-black rounded-2xl hover:bg-gray-200 transition-all disabled:opacity-50 active:scale-95"
+                        {/* Apply Card - Only show for job seekers or unauthenticated users */}
+                        {!isEmployer && (
+                            <div className="bg-white rounded-3xl p-8 border-2 border-jobs-primary sticky top-24 shadow-xl shadow-jobs-primary/5">
+                                {hasApplied ? (
+                                    <div className="text-center py-4">
+                                        <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                                        <p className="text-lg font-black text-jobs-dark mb-2">Already Applied</p>
+                                        <p className="text-sm text-gray-600 mb-6">Check your dashboard for current application status</p>
+                                        <Link
+                                            href="/dashboard/applications"
+                                            className="block w-full py-4 bg-gray-100 text-jobs-dark text-center font-black rounded-2xl hover:bg-gray-200 transition-all active:scale-95"
                                         >
-                                            {isSaved ? (
-                                                <>
-                                                    <BookmarkCheck className="h-5 w-5 text-jobs-primary" />
-                                                    Saved
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Bookmark className="h-5 w-5" />
-                                                    Save
-                                                </>
-                                            )}
-                                        </button>
-
-                                        <button
-                                            onClick={handleShare}
-                                            className="flex-1 flex items-center justify-center gap-2 py-4 bg-gray-100 text-jobs-dark font-black rounded-2xl hover:bg-gray-200 transition-all active:scale-95"
-                                        >
-                                            <Share2 className="h-5 w-5" />
-                                            Share
-                                        </button>
+                                            View Application
+                                        </Link>
                                     </div>
-                                </>
-                            )}
-                        </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={handleApply}
+                                            disabled={applying}
+                                            className="w-full bg-jobs-accent text-white py-5 rounded-2xl font-black text-xl hover:opacity-90 transition-all shadow-lg shadow-jobs-accent/30 active:scale-95 disabled:opacity-50 mb-4"
+                                        >
+                                            {applying ? 'Applying...' : 'Apply Now'}
+                                        </button>
+
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={handleSaveJob}
+                                                disabled={saving}
+                                                className="flex-1 flex items-center justify-center gap-2 py-4 bg-gray-100 text-jobs-dark font-black rounded-2xl hover:bg-gray-200 transition-all disabled:opacity-50 active:scale-95"
+                                            >
+                                                {isSaved ? (
+                                                    <>
+                                                        <BookmarkCheck className="h-5 w-5 text-jobs-primary" />
+                                                        Saved
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Bookmark className="h-5 w-5" />
+                                                        Save
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            <button
+                                                onClick={handleShare}
+                                                className="flex-1 flex items-center justify-center gap-2 py-4 bg-gray-100 text-jobs-dark font-black rounded-2xl hover:bg-gray-200 transition-all active:scale-95"
+                                            >
+                                                <Share2 className="h-5 w-5" />
+                                                Share
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
 
                         {/* Job Details Card */}
                         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
@@ -379,7 +389,12 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                                 <h3 className="text-lg font-black text-jobs-dark mb-4">Company Details</h3>
                                 <div className="space-y-4">
-                                    <p className="text-jobs-dark font-bold">{job.companyName}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-jobs-dark font-bold">{job.companyName}</p>
+                                        {(job as any).isEmployerVerified && (
+                                            <RegisteredBadge size={16} />
+                                        )}
+                                    </div>
                                     <div className="space-y-3">
                                         {job.contactEmail && (
                                             <div className="flex items-center gap-3 text-sm font-medium text-gray-600">

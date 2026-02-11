@@ -118,7 +118,7 @@ export default function JobPostForm({ onSuccess, isAdmin = false }: JobPostFormP
             }
 
             const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/config');
+            const { db } = await import('@/lib/firebase/firebase-config');
 
             // Convert requirements and skills to arrays
             const requirementsArray = formData.requirements

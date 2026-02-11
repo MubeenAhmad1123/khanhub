@@ -37,20 +37,27 @@ export default function CVUploadPage() {
             // 1. Parse CV locally to extract skills/experience
             const parsedData = await parseCV(file);
 
-            // 2. Upload file to Storage (using existing profile update logic)
-            // For now, we'll simulate the upload and update profile with parsed data
-            // In a real implementation, we'd use storage.ts
-
-            // Simulate storage upload
-            const cvUrl = "https://example.com/cv.pdf"; // This would come from storage.ts
+            // 2. Upload file to Cloudinary
+            const { uploadCV } = await import('@/lib/services/cloudinaryUpload');
+            const cvUrl = await uploadCV(file, user.uid);
 
             await updateProfile({
                 profile: {
                     ...user.profile,
                     cvUrl,
+                    cvFileName: file.name,
+                    cvUploadedAt: new Date(),
                     skills: parsedData.extractedData.skills,
                 }
             } as any);
+
+            // 3. Award points for CV upload
+            try {
+                const { awardPointsForCV } = await import('@/lib/services/pointsSystem');
+                await awardPointsForCV(user.uid);
+            } catch (pErr) {
+                console.error('Failed to award points for CV:', pErr);
+            }
 
             setSuccess(true);
             setTimeout(() => {

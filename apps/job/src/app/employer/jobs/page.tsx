@@ -3,17 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Job } from '@/types/job';
+import { useEmployerJobs } from '@/hooks/useEmployerRealtime';
 import { formatSalaryRange } from '@/lib/utils';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase-config';
 import Link from 'next/link';
 
 export default function EmployerJobsPage() {
     const router = useRouter();
     const { user, loading: authLoading } = useAuth();
 
-    const [jobs, setJobs] = useState<Job[]>([]);
-    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'closed'>('all');
+
+    // ✨ REAL-TIME HOOK - Updates automatically when admin changes job status
+    const { jobs, loading, error, stats } = useEmployerJobs(user?.uid, filter);
 
     // Auth check
     useEffect(() => {
@@ -22,65 +25,17 @@ export default function EmployerJobsPage() {
         }
     }, [authLoading, user, router]);
 
-    // Fetch jobs
-    useEffect(() => {
-        if (!user) return;
-
-        const fetchJobs = async () => {
-            try {
-                setLoading(true);
-                const { getDocs, collection, query, where, orderBy } = await import('firebase/firestore');
-                const { db } = await import('@/lib/firebase/config');
-
-                let q;
-                if (filter === 'all') {
-                    q = query(
-                        collection(db, 'jobs'),
-                        where('employerId', '==', user.uid),
-                        orderBy('createdAt', 'desc')
-                    );
-                } else {
-                    q = query(
-                        collection(db, 'jobs'),
-                        where('employerId', '==', user.uid),
-                        where('status', '==', filter),
-                        orderBy('createdAt', 'desc')
-                    );
-                }
-
-                const snapshot = await getDocs(q);
-                const jobsData = snapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...(doc.data() as any),
-                })) as Job[];
-
-                setJobs(jobsData);
-            } catch (error) {
-                console.error('Fetch jobs error:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchJobs();
-    }, [user, filter]);
-
     const handleCloseJob = async (jobId: string) => {
         if (!confirm('Are you sure you want to close this job posting?')) return;
 
         try {
-            const { doc, updateDoc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/config');
-
             await updateDoc(doc(db, 'jobs', jobId), {
                 status: 'closed',
                 closedAt: new Date(),
             });
 
             alert('Job closed successfully');
-            setJobs((prev) =>
-                prev.map((j) => (j.id === jobId ? { ...j, status: 'closed' as const } : j))
-            );
+            // No need to manually update state - real-time listener handles it!
         } catch (error) {
             console.error('Close job error:', error);
             alert('Failed to close job');
@@ -98,9 +53,15 @@ export default function EmployerJobsPage() {
         );
     }
 
-    const activeCount = jobs.filter((j) => j.status === 'active').length;
-    const pendingCount = jobs.filter((j) => j.status === 'pending').length;
-    const closedCount = jobs.filter((j) => j.status === 'closed').length;
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-600">Error: {error}</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
@@ -109,7 +70,17 @@ export default function EmployerJobsPage() {
                 <div className="mb-8 flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">My Job Postings</h1>
-                        <p className="text-gray-600 mt-2">Manage your job postings and view applications</p>
+                        <p className="text-gray-600 mt-2">
+                            Manage your job postings and view applications
+                            {/* Real-time indicator */}
+                            <span className="ml-2 inline-flex items-center gap-1 text-xs text-green-600">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                                Live
+                            </span>
+                        </p>
                     </div>
                     <Link
                         href="/employer/post-job"
@@ -119,23 +90,23 @@ export default function EmployerJobsPage() {
                     </Link>
                 </div>
 
-                {/* Stats */}
+                {/* Stats - Updates in real-time */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <div className="bg-white rounded-lg shadow p-6">
                         <p className="text-sm text-gray-500">Total Jobs</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-2">{jobs.length}</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
                     </div>
                     <div className="bg-green-50 rounded-lg shadow p-6 border-l-4 border-green-500">
                         <p className="text-sm text-green-700">Active</p>
-                        <p className="text-3xl font-bold text-green-900 mt-2">{activeCount}</p>
+                        <p className="text-3xl font-bold text-green-900 mt-2">{stats.active}</p>
                     </div>
                     <div className="bg-yellow-50 rounded-lg shadow p-6 border-l-4 border-yellow-500">
                         <p className="text-sm text-yellow-700">Pending Approval</p>
-                        <p className="text-3xl font-bold text-yellow-900 mt-2">{pendingCount}</p>
+                        <p className="text-3xl font-bold text-yellow-900 mt-2">{stats.pending}</p>
                     </div>
                     <div className="bg-gray-50 rounded-lg shadow p-6 border-l-4 border-gray-500">
                         <p className="text-sm text-gray-700">Closed</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-2">{closedCount}</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">{stats.closed}</p>
                     </div>
                 </div>
 
@@ -149,7 +120,7 @@ export default function EmployerJobsPage() {
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
-                            All ({jobs.length})
+                            All ({stats.total})
                         </button>
                         <button
                             onClick={() => setFilter('active')}
@@ -158,7 +129,7 @@ export default function EmployerJobsPage() {
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
-                            Active ({activeCount})
+                            Active ({stats.active})
                         </button>
                         <button
                             onClick={() => setFilter('pending')}
@@ -167,7 +138,7 @@ export default function EmployerJobsPage() {
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
-                            Pending ({pendingCount})
+                            Pending ({stats.pending})
                         </button>
                         <button
                             onClick={() => setFilter('closed')}
@@ -176,7 +147,7 @@ export default function EmployerJobsPage() {
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
-                            Closed ({closedCount})
+                            Closed ({stats.closed})
                         </button>
                     </div>
                 </div>
@@ -203,7 +174,14 @@ export default function EmployerJobsPage() {
                                         <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
                                         <p className="text-gray-600 mt-1">{job.location}</p>
                                         <p className="text-sm text-gray-500 mt-1">
-                                            Posted: {job.postedAt ? new Date((job.postedAt as any).toDate ? (job.postedAt as any).toDate() : job.postedAt).toLocaleDateString() : 'N/A'}
+                                            Posted:{' '}
+                                            {job.postedAt
+                                                ? new Date(
+                                                    (job.postedAt as any).toDate
+                                                        ? (job.postedAt as any).toDate()
+                                                        : job.postedAt
+                                                ).toLocaleDateString()
+                                                : 'N/A'}
                                         </p>
                                     </div>
                                     <span
@@ -223,11 +201,15 @@ export default function EmployerJobsPage() {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                                     <div>
                                         <p className="text-sm text-gray-500">Type</p>
-                                        <p className="text-gray-900 capitalize">{job.employmentType.replace('_', ' ')}</p>
+                                        <p className="text-gray-900 capitalize">
+                                            {(job.employmentType || (job as any).type || 'full-time').replace('_', ' ')}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Salary</p>
-                                        <p className="text-gray-900">{formatSalaryRange(job.salaryMin, job.salaryMax)}</p>
+                                        <p className="text-gray-900">
+                                            {formatSalaryRange(job.salaryMin, job.salaryMax)}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Applications</p>

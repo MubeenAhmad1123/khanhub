@@ -22,7 +22,7 @@ export default function ResetPasswordPage() {
             setLoading(true);
 
             const { sendPasswordResetEmail } = await import('firebase/auth');
-            const { auth } = await import('@/lib/firebase/config');
+            const { auth } = await import('@/lib/firebase/firebase-config');
 
             await sendPasswordResetEmail(auth, email);
 

@@ -21,6 +21,9 @@ export default function AdminUsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'job_seeker' | 'employer' | 'admin'>('all');
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [updating, setUpdating] = useState(false);
 
     // Auth check
     useEffect(() => {
@@ -29,15 +32,17 @@ export default function AdminUsersPage() {
         }
     }, [authLoading, user, router]);
 
-    // Fetch users
+    // Fetch users in real-time
     useEffect(() => {
-        if (!user) return;
+        if (!user || user.role !== 'admin') return;
 
-        const fetchUsers = async () => {
+        let unsubscribe: () => void;
+
+        const setupListener = async () => {
             try {
                 setLoading(true);
-                const { getDocs, collection, query, where, orderBy } = await import('firebase/firestore');
-                const { db } = await import('@/lib/firebase/config');
+                const { collection, query, where, orderBy, onSnapshot } = await import('firebase/firestore');
+                const { db } = await import('@/lib/firebase/firebase-config');
 
                 let q;
                 if (filter === 'all') {
@@ -50,21 +55,29 @@ export default function AdminUsersPage() {
                     );
                 }
 
-                const snapshot = await getDocs(q);
-                const usersData = snapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...(doc.data() as any),
-                })) as User[];
+                unsubscribe = onSnapshot(q, (snapshot) => {
+                    const usersData = snapshot.docs.map((doc) => ({
+                        id: doc.id,
+                        ...(doc.data() as any),
+                    })) as User[];
+                    setUsers(usersData);
+                    setLoading(false);
+                }, (error) => {
+                    console.error('Users listener error:', error);
+                    setLoading(false);
+                });
 
-                setUsers(usersData);
             } catch (error) {
                 console.error('Fetch users error:', error);
-            } finally {
                 setLoading(false);
             }
         };
 
-        fetchUsers();
+        setupListener();
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, [user, filter]);
 
     const handleBanUser = async (userId: string) => {
@@ -72,7 +85,7 @@ export default function AdminUsersPage() {
 
         try {
             const { doc, updateDoc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/config');
+            const { db } = await import('@/lib/firebase/firebase-config');
 
             await updateDoc(doc(db, 'users', userId), {
                 isBanned: true,
@@ -92,7 +105,7 @@ export default function AdminUsersPage() {
 
         try {
             const { deleteDoc, doc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/config');
+            const { db } = await import('@/lib/firebase/firebase-config');
 
             await deleteDoc(doc(db, 'users', userId));
 
@@ -104,24 +117,44 @@ export default function AdminUsersPage() {
         }
     };
 
-    const handlePromoteToAdmin = async (userId: string) => {
-        if (!confirm('Are you sure you want to promote this user to admin?')) return;
+    const handleUpdateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedUser) return;
 
+        setUpdating(true);
         try {
             const { doc, updateDoc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/config');
+            const { db } = await import('@/lib/firebase/firebase-config');
 
-            await updateDoc(doc(db, 'users', userId), {
-                role: 'admin',
-            });
+            const updates: any = {
+                role: (e.target as any).role.value,
+                paymentStatus: (e.target as any).paymentStatus.value,
+            };
 
-            alert('User promoted to admin successfully');
-            setUsers((prev) =>
-                prev.map((u) => (u.id === userId ? { ...u, role: 'admin' as const } : u))
-            );
+            // If approving payment and it was previously pending/rejected
+            if (updates.paymentStatus === 'approved' && selectedUser.paymentStatus !== 'approved') {
+                // Also update the payment document if it exists
+                try {
+                    await updateDoc(doc(db, 'payments', selectedUser.id), {
+                        status: 'approved',
+                        reviewedAt: new Date(),
+                        reviewedBy: user?.uid
+                    });
+                } catch (pErr) {
+                    console.log('No specific payment doc found for ID:', selectedUser.id);
+                }
+            }
+
+            await updateDoc(doc(db, 'users', selectedUser.id), updates);
+
+            alert('User updated successfully');
+            setShowEditModal(false);
+            setSelectedUser(null);
         } catch (error) {
-            console.error('Promote user error:', error);
-            alert('Failed to promote user');
+            console.error('Update user error:', error);
+            alert('Failed to update user');
+        } finally {
+            setUpdating(false);
         }
     };
 
@@ -276,14 +309,15 @@ export default function AdminUsersPage() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex gap-2 justify-end">
-                                            {u.role !== 'admin' && (
-                                                <button
-                                                    onClick={() => handlePromoteToAdmin(u.id)}
-                                                    className="text-teal-600 hover:text-teal-900"
-                                                >
-                                                    Promote
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedUser(u);
+                                                    setShowEditModal(true);
+                                                }}
+                                                className="text-teal-600 hover:text-teal-900 font-medium"
+                                            >
+                                                Manage
+                                            </button>
                                             <button
                                                 onClick={() => handleBanUser(u.id)}
                                                 className="text-red-600 hover:text-red-900"
@@ -304,6 +338,63 @@ export default function AdminUsersPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Manage User Modal */}
+                {showEditModal && selectedUser && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+                            <h2 className="text-2xl font-bold mb-2">Manage User</h2>
+                            <p className="text-gray-600 mb-6">{selectedUser.email}</p>
+
+                            <form onSubmit={handleUpdateUser} className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                                    <select
+                                        name="role"
+                                        defaultValue={selectedUser.role}
+                                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 outline-none"
+                                    >
+                                        <option value="job_seeker">Job Seeker</option>
+                                        <option value="employer">Employer</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+                                    <select
+                                        name="paymentStatus"
+                                        defaultValue={selectedUser.paymentStatus || 'pending'}
+                                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 outline-none"
+                                    >
+                                        <option value="pending">Pending</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="rejected">Rejected</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEditModal(false)}
+                                        className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={updating}
+                                        className="flex-1 bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {updating ? (
+                                            <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        ) : 'Save Changes'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

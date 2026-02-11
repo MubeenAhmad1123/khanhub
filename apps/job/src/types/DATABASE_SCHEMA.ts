@@ -72,9 +72,10 @@ export const COLLECTIONS = {
 } as const;
 
 export const POINTS = {
-    PROFILE_COMPLETED: 10,
+    BASIC_INFO_COMPLETED: 25,
     CV_UPLOADED: 15,
     VIDEO_UPLOADED: 20,
+    PROFILE_COMPLETED: 10, // Bonus for 100%
     JOB_APPLIED: 5,
     PROFILE_VIEWED: 3,
 } as const;

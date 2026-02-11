@@ -25,12 +25,15 @@ import {
     arrayRemove,
     WriteBatch,
     writeBatch,
+    Unsubscribe,
+    onSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { Application } from '@/types/application';
 import { Job } from '@/types/job';
 import { Placement } from '@/types/admin';
 import { COLLECTIONS } from '@/types/DATABASE_SCHEMA';
+
 
 // ==================== GENERIC CRUD OPERATIONS ====================
 
@@ -465,7 +468,7 @@ export const getJobById = async (jobId: string) => {
 export const getActiveJobs = async (limitCount: number = 20) => {
     return queryDocuments(COLLECTIONS.JOBS, [
         where('status', '==', 'active'),
-        orderBy('postedAt', 'desc'),
+        orderBy('createdAt', 'desc'), // Changed from postedAt to createdAt for better compatibility
         limit(limitCount),
     ]);
 };
@@ -662,6 +665,136 @@ export const updatePlacement = async (
     data: Partial<Placement>
 ): Promise<void> => {
     return updateDocument(COLLECTIONS.PLACEMENTS, id, data as any);
+};
+// ==================== REAL-TIME LISTENER OPERATIONS ====================
+
+/**
+ * Subscribe to real-time updates for a collection with query constraints
+ * @param collectionName - Name of the collection
+ * @param constraints - Query constraints (where, orderBy, limit, etc.)
+ * @param onUpdate - Callback when data updates
+ * @param onError - Callback when error occurs
+ * @returns Unsubscribe function to stop listening
+ */
+export const subscribeToCollection = <T>(
+    collectionName: string,
+    constraints: QueryConstraint[],
+    onUpdate: (documents: T[]) => void,
+    onError?: (error: Error) => void
+): Unsubscribe => {
+    try {
+        const q = query(collection(db, collectionName), ...constraints);
+
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+                const documents = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                })) as T[];
+
+                onUpdate(documents);
+            },
+            (error) => {
+                console.error(`Real-time listener error for ${collectionName}:`, error);
+                if (onError) onError(error as Error);
+            }
+        );
+
+        return unsubscribe;
+    } catch (error) {
+        console.error(`Error setting up real-time listener for ${collectionName}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Subscribe to a single document's real-time updates
+ * @param collectionName - Name of the collection
+ * @param documentId - Document ID
+ * @param onUpdate - Callback when document updates
+ * @param onError - Callback when error occurs
+ * @returns Unsubscribe function to stop listening
+ */
+export const subscribeToDocument = <T>(
+    collectionName: string,
+    documentId: string,
+    onUpdate: (document: T | null) => void,
+    onError?: (error: Error) => void
+): Unsubscribe => {
+    try {
+        const docRef = doc(db, collectionName, documentId);
+
+        const unsubscribe = onSnapshot(
+            docRef,
+            (docSnap) => {
+                if (docSnap.exists()) {
+                    const document = {
+                        id: docSnap.id,
+                        ...docSnap.data(),
+                    } as T;
+                    onUpdate(document);
+                } else {
+                    onUpdate(null);
+                }
+            },
+            (error) => {
+                console.error(`Real-time listener error for document ${documentId}:`, error);
+                if (onError) onError(error as Error);
+            }
+        );
+
+        return unsubscribe;
+    } catch (error) {
+        console.error(`Error setting up real-time listener for document ${documentId}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Subscribe to employer's jobs with real-time updates
+ */
+export const subscribeToEmployerJobs = (
+    employerId: string,
+    onUpdate: (jobs: Job[]) => void,
+    onError?: (error: Error) => void,
+    statusFilter?: 'all' | 'active' | 'pending' | 'closed'
+): Unsubscribe => {
+    const constraints: QueryConstraint[] = [
+        where('employerId', '==', employerId),
+    ];
+
+    if (statusFilter && statusFilter !== 'all') {
+        constraints.push(where('status', '==', statusFilter));
+    }
+
+    constraints.push(orderBy('createdAt', 'desc'));
+
+    return subscribeToCollection(
+        COLLECTIONS.JOBS,
+        constraints,
+        onUpdate,
+        onError
+    );
+};
+
+/**
+ * Subscribe to employer's applications with real-time updates
+ */
+export const subscribeToEmployerApplications = (
+    employerId: string,
+    onUpdate: (applications: Application[]) => void,
+    onError?: (error: Error) => void
+): Unsubscribe => {
+    return subscribeToCollection(
+        COLLECTIONS.APPLICATIONS,
+        [
+            where('employerId', '==', employerId),
+            orderBy('appliedAt', 'desc'),
+        ],
+        onUpdate,
+        onError
+    );
 };
 
 // ==================== EXPORT ALL ====================

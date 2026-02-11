@@ -6,6 +6,7 @@ import { MapPin, Clock, DollarSign, Briefcase, Star } from 'lucide-react';
 import { cn, formatSalaryRange, formatPostedDate, getJobTypeBadge } from '@/lib/utils';
 import Image from 'next/image';
 import { toDate } from '@/lib/firebase/firestore';
+import RegisteredBadge from '@/components/ui/RegisteredBadge';
 
 interface JobCardProps {
     job: Job;
@@ -72,7 +73,12 @@ export default function JobCard({ job, showMatchScore = false }: JobCardProps) {
                     <h3 className="text-xl font-black text-slate-800 group-hover:text-teal-600 transition-colors line-clamp-1">
                         {job.title}
                     </h3>
-                    <p className="text-slate-500 text-sm font-medium">{job.companyName || (job as any).company}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-slate-500 text-sm font-medium">{job.companyName || (job as any).company}</p>
+                        {(job as any).isEmployerVerified && (
+                            <RegisteredBadge size={16} />
+                        )}
+                    </div>
                 </div>
 
                 <div className="space-y-3 mb-6 flex-1">

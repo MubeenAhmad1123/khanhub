@@ -64,7 +64,7 @@ export default function SearchPage() {
             // Add sorting
             const sortField = sortBy === 'salary_high' ? 'salaryMax' :
                 sortBy === 'salary_low' ? 'salaryMin' :
-                    'postedAt';
+                    'createdAt'; // Changed from postedAt to createdAt
             const sortDirection = sortBy === 'salary_low' ? 'asc' : 'desc';
 
             constraints.push(orderBy(sortField, sortDirection));
@@ -81,10 +81,10 @@ export default function SearchPage() {
             if (searchQuery) {
                 const query = searchQuery.toLowerCase();
                 processedJobs = processedJobs.filter(job =>
-                    job.title.toLowerCase().includes(query) ||
-                    job.companyName.toLowerCase().includes(query) ||
-                    job.description?.toLowerCase().includes(query) ||
-                    job.requiredSkills?.some(skill => skill.toLowerCase().includes(query))
+                    (job.title?.toLowerCase().includes(query) || '') ||
+                    (job.companyName?.toLowerCase().includes(query) || (job as any).company?.toLowerCase().includes(query) || '') ||
+                    (job.description?.toLowerCase().includes(query) || '') ||
+                    (job.requiredSkills?.some(skill => skill.toLowerCase().includes(query)) || false)
                 );
             }
 

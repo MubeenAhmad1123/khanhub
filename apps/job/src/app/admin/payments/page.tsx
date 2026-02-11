@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Payment } from '@/types/payment';
 import {
-    collection, getDocs, doc, updateDoc, serverTimestamp, query, where, orderBy
+    collection, doc, updateDoc, serverTimestamp, query, where, orderBy, onSnapshot
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import { Loader2, CheckCircle, XCircle, Clock, Eye, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 
@@ -22,35 +22,6 @@ export default function AdminPaymentsPage() {
     const [rejectionReason, setRejectionReason] = useState('');
     const [processing, setProcessing] = useState(false);
 
-    const loadPayments = useCallback(async () => {
-        try {
-            setLoadingPayments(true);
-
-            let q = query(collection(db, 'payments'), orderBy('submittedAt', 'desc'));
-
-            if (filter !== 'all') {
-                q = query(
-                    collection(db, 'payments'),
-                    where('status', '==', filter),
-                    orderBy('submittedAt', 'desc')
-                );
-            }
-
-            const snapshot = await getDocs(q);
-            const paymentsList = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            })) as Payment[];
-
-            setPayments(paymentsList);
-        } catch (error) {
-            console.error('Error loading payments:', error);
-            alert('Failed to load payments');
-        } finally {
-            setLoadingPayments(false);
-        }
-    }, [filter]);
-
     useEffect(() => {
         if (!loading && (!user || user.role !== 'admin')) {
             router.push('/admin/login');
@@ -58,10 +29,40 @@ export default function AdminPaymentsPage() {
     }, [user, loading, router]);
 
     useEffect(() => {
-        if (user?.role === 'admin') {
-            loadPayments();
+        if (!user || user.role !== 'admin') return;
+
+        setLoadingPayments(true);
+
+        let q = query(collection(db, 'payments'), orderBy('submittedAt', 'desc'));
+
+        if (filter !== 'all') {
+            q = query(
+                collection(db, 'payments'),
+                where('status', '==', filter),
+                orderBy('submittedAt', 'desc')
+            );
         }
-    }, [user, filter, loadPayments]);
+
+        // CRITICAL FIX: Real-time listener with onSnapshot
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+                const paymentsList = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                })) as Payment[];
+                setPayments(paymentsList);
+                setLoadingPayments(false);
+            },
+            (error) => {
+                console.error('Error loading payments:', error);
+                alert('Failed to load payments');
+                setLoadingPayments(false);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [user, filter]);
 
     const handleApprove = async (payment: Payment) => {
         if (!confirm(`Approve payment from ${payment.userEmail}?`)) return;
@@ -100,7 +101,6 @@ export default function AdminPaymentsPage() {
             }
 
             alert('Payment approved successfully! User will be notified in real-time.');
-            loadPayments();
         } catch (error) {
             console.error('Error approving payment:', error);
             alert('Failed to approve payment');
@@ -136,7 +136,6 @@ export default function AdminPaymentsPage() {
             setShowModal(false);
             setSelectedPayment(null);
             setRejectionReason('');
-            loadPayments();
         } catch (error) {
             console.error('Error rejecting payment:', error);
             alert('Failed to reject payment');

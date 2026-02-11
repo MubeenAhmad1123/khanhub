@@ -27,7 +27,7 @@ export default function IntroVideoPage() {
     const streamRef = useRef<MediaStream | null>(null);
     const chunksRef = useRef<Blob[]>([]);
 
-    const startCamera = async () => {
+    const startCamera = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: true,
@@ -42,7 +42,7 @@ export default function IntroVideoPage() {
             console.error('Error accessing camera:', err);
             setError('Could not access camera/microphone. Please check permissions.');
         }
-    };
+    }, []);
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -140,7 +140,7 @@ export default function IntroVideoPage() {
     useEffect(() => {
         startCamera();
         return () => stopCamera();
-    }, []);
+    }, [startCamera, stopCamera]);
 
     return (
         <div className="min-h-screen bg-jobs-neutral py-8 px-4">

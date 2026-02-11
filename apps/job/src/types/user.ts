@@ -50,6 +50,7 @@ export interface Certification {
 
 export interface JobSeekerProfile {
     // Basic Info
+    fullName?: string;
     phone: string;
     location: string;
     bio: string;

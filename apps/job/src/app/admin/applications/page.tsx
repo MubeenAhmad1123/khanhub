@@ -12,7 +12,7 @@ import {
     doc,
     updateDoc
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import { Loader2, Search, Filter, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -149,9 +149,9 @@ export default function AdminApplicationsPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${app.status === 'hired' ? 'bg-green-100 text-green-700' :
-                                                app.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                    app.status === 'shortlisted' ? 'bg-blue-100 text-blue-700' :
-                                                        'bg-yellow-100 text-yellow-700'
+                                            app.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                app.status === 'shortlisted' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-yellow-100 text-yellow-700'
                                             }`}>
                                             {app.status}
                                         </span>

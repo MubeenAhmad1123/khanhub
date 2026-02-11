@@ -7,16 +7,19 @@ import Link from 'next/link';
 import { Job } from '@/types/job';
 import { getActiveJobs } from '@/lib/firebase/firestore';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import {
     Clock, CheckCircle, AlertCircle, Briefcase, TrendingUp,
     FileText, Star, Loader2, RefreshCw, XCircle, Bell
 } from 'lucide-react';
+import RegisteredBadge from '@/components/ui/RegisteredBadge';
+import MatchedJobCard from '@/components/jobs/MatchedJobCard';
 
 export default function DashboardPage() {
     const router = useRouter();
     const { user, loading, refreshProfile } = useAuth();
     const [jobs, setJobs] = useState<Job[]>([]);
+    const [matchedJobs, setMatchedJobs] = useState<any[]>([]); // Jobs with match scores
     const [loadingJobs, setLoadingJobs] = useState(true);
     const [timeElapsed, setTimeElapsed] = useState<string>('');
     const [paymentSubmittedAt, setPaymentSubmittedAt] = useState<Date | null>(null);
@@ -77,7 +80,7 @@ export default function DashboardPage() {
 
         try {
             const { doc, getDoc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/config');
+            const { db } = await import('@/lib/firebase/firebase-config');
             const { toDate } = await import('@/lib/firebase/firestore');
 
             const paymentDoc = await getDoc(doc(db, 'payments', user.uid));
@@ -96,14 +99,44 @@ export default function DashboardPage() {
         try {
             setLoadingJobs(true);
             const { getApprovedJobs } = await import('@/lib/firebase/firestore');
-            const jobsList = await getApprovedJobs(8) as Job[];
-            setJobs(jobsList);
+            const { rankJobsByMatch, getCategoryIcon } = await import('@/lib/services/jobMatching');
+            const { doc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase/firebase-config');
+
+            // Get all approved jobs
+            const jobsList = await getApprovedJobs(20) as Job[];
+
+            // Get user profile for matching
+            const userDoc = await getDoc(doc(db, 'users', user!.uid));
+            const userProfile = userDoc.data()?.profile;
+
+            if (userProfile) {
+                // Calculate matches and rank jobs
+                const matches = rankJobsByMatch(jobsList, userProfile, 8);
+
+                // Attach match data to jobs
+                const jobsWithMatches = matches.map(match => {
+                    const job = jobsList.find(j => j.id === match.jobId);
+                    return {
+                        ...job,
+                        matchScore: match.matchScore,
+                        matchReasons: match.matchReasons,
+                        skillsMatched: match.skillsMatched,
+                        categoryIcon: getCategoryIcon(job!.category),
+                    };
+                });
+
+                setMatchedJobs(jobsWithMatches);
+            } else {
+                // No profile, show generic jobs
+                setJobs(jobsList.slice(0, 8));
+            }
         } catch (error) {
             console.error('Error loading jobs:', error);
         } finally {
             setLoadingJobs(false);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -274,13 +307,18 @@ export default function DashboardPage() {
 
                 {/* Welcome Section */}
                 <div className="mb-8">
-                    <h1 className="text-4xl font-black text-gray-900 mb-2">
-                        Welcome back, {user.displayName || user.email?.split('@')[0]}! 👋
-                    </h1>
+                    <div className="flex items-center gap-3 mb-2">
+                        <h1 className="text-4xl font-black text-gray-900">
+                            Welcome back, {user.displayName || user.email?.split('@')[0]}! 👋
+                        </h1>
+                        {user.paymentStatus === 'approved' && (
+                            <RegisteredBadge size={32} showText />
+                        )}
+                    </div>
                     <p className="text-gray-600">
                         {user.paymentStatus === 'approved'
-                            ? 'Browse jobs while we verify your payment'
-                            : 'Here\'s what\'s happening with your job search today'}
+                            ? 'You are a verified member! Browse and apply to jobs.'
+                            : 'Browse jobs while we verify your payment'}
                     </p>
                 </div>
 
@@ -367,7 +405,26 @@ export default function DashboardPage() {
                 {/* Recommended Jobs */}
                 <div>
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">Recommended Jobs</h2>
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                                {matchedJobs.length > 0 ? (
+                                    <>
+                                        <span>🎯</span>
+                                        <span>Jobs Perfect for You</span>
+                                        <span className="text-sm font-normal bg-teal-100 text-teal-700 px-3 py-1 rounded-full">
+                                            Personalized
+                                        </span>
+                                    </>
+                                ) : (
+                                    'Recommended Jobs'
+                                )}
+                            </h2>
+                            {matchedJobs.length > 0 && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                    Based on your skills, location, and experience
+                                </p>
+                            )}
+                        </div>
                         <Link href="/search" className="text-teal-600 hover:text-teal-700 font-medium">
                             View All →
                         </Link>
@@ -376,6 +433,12 @@ export default function DashboardPage() {
                     {loadingJobs ? (
                         <div className="text-center py-12">
                             <Loader2 className="h-8 w-8 animate-spin text-teal-600 mx-auto" />
+                        </div>
+                    ) : matchedJobs.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {matchedJobs.map((job) => (
+                                <MatchedJobCard key={job.id} job={job} />
+                            ))}
                         </div>
                     ) : jobs.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -434,7 +497,11 @@ function JobCard({ job }: { job: Job }) {
                 </div>
                 <div className="flex items-center gap-2">
                     <span>💰</span>
-                    <span>Rs. {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}</span>
+                    <span>
+                        {(job.salaryMin && job.salaryMax)
+                            ? `Rs. ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`
+                            : 'Salary not specified'}
+                    </span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span>⏰</span>

@@ -2,8 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { setDoc, addDoc, doc, collection, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase-config';
 import { PaymentType, PaymentMethod } from '@/types/payment';
 import { useAuth } from './useAuth';
 import { uploadPaymentScreenshot, UploadProgress } from '@/lib/services/cloudinaryUpload';
@@ -93,8 +93,20 @@ export function usePayment() {
                 reviewedBy: null,
             };
 
-            const docRef = await addDoc(collection(db, 'payments'), paymentData);
-            console.log('✅ Payment record created:', docRef.id);
+            let docRef;
+            if (type === 'registration') {
+                // For registration payments, use user.uid as the doc ID to enable real-time dashboard listeners
+                const paymentDocRef = doc(db, 'payments', user.uid);
+                await setDoc(paymentDocRef, paymentData);
+                docRef = { id: user.uid };
+                console.log('✅ Registration payment record created/updated with User ID:', user.uid);
+            } else {
+                // For other payments (like premium), we might want multiple records or a random ID
+                const newDocRef = await addDoc(collection(db, 'payments'), paymentData);
+                docRef = newDocRef;
+                console.log('✅ Payment record created with random ID:', docRef.id);
+            }
+
             console.log('✅ Screenshot URL saved:', uploadResult.secureUrl);
 
             setUploadProgress(100);

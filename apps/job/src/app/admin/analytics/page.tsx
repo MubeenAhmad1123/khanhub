@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Users, Briefcase, DollarSign, Calendar, ArrowLeft, Loader2, PieChart, BarChart3, Activity } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, getDocs, where, orderBy, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import { AnalyticsData } from '@/types/admin';
 
 export default function AdminAnalyticsPage() {

@@ -8,6 +8,20 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Ensure an object is a Date (handles Firebase Timestamps)
+ */
+export function ensureDate(date: any): Date {
+    if (!date) return new Date();
+    if (date instanceof Date) return date;
+    if (typeof date.toDate === 'function') return date.toDate();
+    if (typeof date === 'string' || typeof date === 'number') return new Date(date);
+    if (date?.seconds !== undefined && date?.nanoseconds !== undefined) {
+        return new Date(date.seconds * 1000);
+    }
+    return new Date();
+}
+
+/**
  * Format salary in Pakistani Rupees
  */
 export function formatSalary(amount: number, period: 'month' | 'year' = 'month'): string {
@@ -33,24 +47,26 @@ export function formatSalaryRange(min: number, max: number, period: 'month' | 'y
 /**
  * Get days remaining until deadline
  */
-export function getDaysRemaining(deadline: Date): number {
+export function getDaysRemaining(deadline: any): number {
+    const date = ensureDate(deadline);
     const now = new Date();
-    const diff = deadline.getTime() - now.getTime();
+    const diff = date.getTime() - now.getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 /**
  * Format deadline text
  */
-export function formatDeadline(deadline: Date): string {
+export function formatDeadline(deadline: any): string {
     const days = getDaysRemaining(deadline);
+    const date = ensureDate(deadline);
 
     if (days < 0) return 'Expired';
     if (days === 0) return 'Today';
     if (days === 1) return 'Tomorrow';
     if (days <= 7) return `${days} days left`;
     if (days <= 30) return `${Math.ceil(days / 7)} weeks left`;
-    return new Date(deadline).toLocaleDateString('en-PK', {
+    return date.toLocaleDateString('en-PK', {
         day: 'numeric',
         month: 'short',
         year: 'numeric'
@@ -60,7 +76,8 @@ export function formatDeadline(deadline: Date): string {
 /**
  * Format posted date
  */
-export function formatPostedDate(date: Date): string {
+export function formatPostedDate(postedAt: any): string {
+    const date = ensureDate(postedAt);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));

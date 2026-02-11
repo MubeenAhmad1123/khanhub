@@ -26,7 +26,7 @@ export default function ProfilePage() {
             try {
                 setLoading(true);
                 const { doc, getDoc } = await import('firebase/firestore');
-                const { db } = await import('@/lib/firebase/config');
+                const { db } = await import('@/lib/firebase/firebase-config');
 
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists()) {
@@ -77,7 +77,7 @@ export default function ProfilePage() {
                         <div className="text-right">
                             <p className="text-3xl font-bold text-teal-600">{profileStrength}%</p>
                             <p className="text-sm text-gray-500">
-                                {profile?.stats?.points || 0} points
+                                {profile?.totalPoints || 0} points
                             </p>
                         </div>
                     </div>
@@ -241,12 +241,12 @@ export default function ProfilePage() {
 
                     {/* Edit Button */}
                     <div className="mt-6">
-                        <button
-                            onClick={() => alert('Edit profile feature coming soon!')}
-                            className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+                        <Link
+                            href="/dashboard/profile/edit"
+                            className="inline-block bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 hover:scale-[1.02] active:scale-[0.98]"
                         >
                             Edit Profile
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>

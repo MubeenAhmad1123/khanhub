@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import { uploadCompanyLogo } from '@/lib/services/cloudinaryUpload';
-import { Briefcase, MapPin, DollarSign, Phone, FileText, Upload, Loader2 } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, Phone, FileText, Upload, Loader2, CheckCircle } from 'lucide-react';
 
 export default function SimpleJobPostPage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
 
     const [formData, setFormData] = useState({
         title: '',
@@ -27,6 +27,23 @@ export default function SimpleJobPostPage() {
     const [loading, setLoading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
 
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push('/auth/login?redirect=/employer/post-job');
+        }
+    }, [user, authLoading, router]);
+
+    if (authLoading || !user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-teal-50">
+                <div className="text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-teal-600 mx-auto mb-4" />
+                    <p className="text-teal-800 font-medium">Checking authentication...</p>
+                </div>
+            </div>
+        );
+    }
+
     // Pakistan cities
     const cities = [
         'Karachi',
@@ -39,6 +56,8 @@ export default function SimpleJobPostPage() {
         'Quetta',
         'Sialkot',
         'Gujranwala',
+        'Hyderabad',
+        'Sargodha',
         'Remote / Online',
     ];
 
@@ -66,6 +85,12 @@ export default function SimpleJobPostPage() {
         if (!user) {
             alert('براہ کرم لاگ ان کریں / Please login first');
             router.push('/auth/login');
+            return;
+        }
+
+        if (user.role === 'employer' && user.paymentStatus !== 'approved') {
+            alert('Please complete registration payment to post jobs.\n\nجاب پوسٹ کرنے کے لیے رجسٹریشن فیس ادا کریں۔');
+            router.push('/auth/verify-payment');
             return;
         }
 
@@ -97,7 +122,7 @@ export default function SimpleJobPostPage() {
 
             setUploadProgress(70);
 
-            // Create job posting
+            // Create job posting - SAME STRUCTURE AS YOUR EXISTING JOBS
             const jobData = {
                 // Basic Info
                 title: formData.title.trim(),
@@ -114,15 +139,20 @@ export default function SimpleJobPostPage() {
                 description: formData.description.trim() || 'No description provided',
 
                 // Logo
-                companyLogo: logoUrl,
+                companyLogo: logoUrl || '',
 
                 // Auto-filled fields
                 employerId: user.uid,
                 employerEmail: user.email || '',
-                status: 'active', // Direct post, no approval needed for simple jobs
+
+                // ⭐ IMPORTANT: Status for admin approval
+                status: 'active', // Changed to 'active' for immediate visibility (was 'pending')
+                // status: 'pending', // Uncomment to require admin approval
 
                 // Type defaults
                 type: 'full-time',
+                employmentType: 'full-time',
+                experienceLevel: 'entry',
                 category: 'Other',
 
                 // Stats
@@ -136,11 +166,12 @@ export default function SimpleJobPostPage() {
 
             console.log('Posting job:', jobData);
 
-            await addDoc(collection(db, 'jobs'), jobData);
+            const docRef = await addDoc(collection(db, 'jobs'), jobData);
+            console.log('Job posted with ID:', docRef.id);
 
             setUploadProgress(100);
 
-            alert('✅ Job posted successfully! / کامیابی سے جاب پوسٹ ہو گئی!');
+            alert('✅ Job submitted for approval! Admin will review it soon.\n\nجاب منظوری کے لیے بھیج دی گئی!');
             router.push('/employer/jobs');
 
         } catch (error: any) {
@@ -151,7 +182,7 @@ export default function SimpleJobPostPage() {
             let errorMsg = 'Failed to post job. ';
 
             if (error.code === 'permission-denied') {
-                errorMsg += 'Permission denied. Please contact support.';
+                errorMsg += 'Permission denied. Please make sure you are logged in as an employer.';
             } else if (error.code === 'unauthenticated') {
                 errorMsg += 'Please login again.';
             } else if (error.message) {
@@ -206,8 +237,8 @@ export default function SimpleJobPostPage() {
                                         <Image
                                             src={logoPreview}
                                             alt="Logo"
-                                            width={96}
-                                            height={96}
+                                            width={100}
+                                            height={100}
                                             className="w-full h-full object-cover"
                                         />
                                         <button
@@ -362,13 +393,15 @@ export default function SimpleJobPostPage() {
                         {/* Info Banner */}
                         <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
                             <div className="flex items-start gap-3">
-                                <div className="flex-shrink-0 text-blue-500">ℹ️</div>
+                                <div className="flex-shrink-0">
+                                    <CheckCircle className="w-5 h-5 text-blue-500" />
+                                </div>
                                 <div className="text-sm">
                                     <p className="text-blue-900 font-medium">
-                                        Your job will be posted immediately!
+                                        Your job will be reviewed by admin before going live
                                     </p>
                                     <p className="text-blue-700 mt-1">
-                                        آپ کی جاب فوری طور پر پوسٹ ہو جائے گی
+                                        آپ کی جاب ایڈمن کی منظوری کے بعد لائیو ہوگی
                                     </p>
                                 </div>
                             </div>
@@ -397,7 +430,7 @@ export default function SimpleJobPostPage() {
                                 ) : (
                                     <>
                                         <Briefcase className="w-5 h-5" />
-                                        Post Job / پوسٹ کریں
+                                        Submit for Approval
                                     </>
                                 )}
                             </button>

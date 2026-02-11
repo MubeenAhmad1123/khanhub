@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import { Briefcase, MapPin, Building2, FileText, Video, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { getJobById, createApplication } from '@/lib/firebase/firestore';
+import { serverTimestamp } from 'firebase/firestore';
 import { calculateMatchScore } from '@/lib/services/matchingAlgorithm';
 import { awardPointsForJobApplication } from '@/lib/services/pointsSystem';
 import { Job } from '@/types/job';
@@ -16,7 +18,7 @@ export default function ApplyJobPage() {
     const router = useRouter();
     const params = useParams();
     const jobId = params.id as string;
-    const { user } = useAuth();
+    const { user, refreshProfile } = useAuth();
 
     const [job, setJob] = useState<Job | null>(null);
     const [loading, setLoading] = useState(true);
@@ -28,31 +30,29 @@ export default function ApplyJobPage() {
     const [coverLetter, setCoverLetter] = useState('');
 
     useEffect(() => {
-        const loadJob = async () => {
+        const loadInitialData = async () => {
             try {
+                // First refresh profile to get latest CV data
+                if (refreshProfile) {
+                    await refreshProfile();
+                }
+
                 const jobData = await getJobById(jobId) as Job | null;
                 if (jobData) {
                     setJob(jobData);
-
-                    // Calculate match score if profile exists
-                    if (user) {
-                        // TODO: Map user to profile if needed
-                        // const score = calculateMatchScore(user, jobData);
-                        // setMatchScore(score);
-                    }
                 }
                 setLoading(false);
             } catch (err) {
-                console.error('Error loading job:', err);
+                console.error('Error loading page data:', err);
                 setError('Failed to load job details');
                 setLoading(false);
             }
         };
 
         if (jobId) {
-            loadJob();
+            loadInitialData();
         }
-    }, [jobId, user]);
+    }, [jobId, refreshProfile]);
 
     const canApply = () => {
         if (!user) return { can: false, reason: 'Profile not loaded' };
@@ -67,7 +67,10 @@ export default function ApplyJobPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!user || !job) return;
+        if (!user || !job) {
+            setError('Please wait for the page to finish loading.');
+            return;
+        }
 
         const check = canApply();
         if (!check.can) {
@@ -79,50 +82,81 @@ export default function ApplyJobPage() {
         setError('');
 
         try {
-            // Create application
-            await createApplication({
+            // Robust validation of required fields
+            const applicationData = {
                 jobId: job.id,
-                jobTitle: job.title,
-                employerId: job.employerId,
-                companyName: job.companyName,
+                jobTitle: job.title || 'Untitled Job',
+                employerId: job.employerId || '',
+                companyName: job.companyName || 'Unknown Company',
+                // Include both IDs for compatibility across different dashboards/queries
                 jobSeekerId: user.uid,
-                applicantName: user.displayName,
+                candidateId: user.uid,
+                applicantName: user.displayName || 'Applicant',
+                candidateName: user.displayName || 'Applicant',
                 applicantEmail: user.email,
                 applicantPhone: user.profile?.phone || '',
                 applicantCvUrl: user.profile?.cvUrl || '',
                 applicantVideoUrl: user.profile?.videoUrl || null,
-                coverLetter,
+                coverLetter: coverLetter.trim(),
                 matchScore: matchScore || 0,
                 status: 'applied',
-                appliedAt: new Date(),
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                salary: job.salaryMax, // Initial salary value
-            });
+                appliedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                salary: job.salaryMax || 0,
+            };
 
-            // Award points
-            await awardPointsForJobApplication(user.uid);
+            // Double check for any undefined required fields that might crash Firestore
+            if (!applicationData.employerId) {
+                console.warn('Warning: Job has no employerId. Falling back to job creator ID if available.');
+                // @ts-ignore - job might have creatorId in some old records
+                applicationData.employerId = (job as any).creatorId || '';
+            }
 
-            // Send confirmation email
+            // Create application record
+            await createApplication(applicationData);
+
+            // Increment applicationsUsed count
             try {
+                const { updateDocument, incrementField } = await import('@/lib/firebase/firestore');
+                const COLLECTIONS = { USERS: 'users' }; // Inline if needed or import
+                await incrementField('users', user.uid, 'applicationsUsed', 1);
+            } catch (upErr) {
+                console.warn('Non-critical: Failed to increment application count:', upErr);
+            }
+
+            // Post-submission actions (non-critical, wrapped in try-catch to avoid blocking success)
+            try {
+                // Award points
+                await awardPointsForJobApplication(user.uid);
+            } catch (pErr) {
+                console.warn('Non-critical: Failed to award points:', pErr);
+            }
+
+            try {
+                // Send confirmation email
                 const { sendApplicationConfirmationEmail } = await import('@/lib/services/emailService');
                 await sendApplicationConfirmationEmail(
                     user.email,
-                    user.displayName,
+                    user.displayName || 'Applicant',
                     job.title,
                     job.companyName
                 );
             } catch (err) {
-                console.warn('Failed to send application confirmation email:', err);
+                console.warn('Non-critical: Failed to send application confirmation email:', err);
             }
 
             setSuccess(true);
             setTimeout(() => {
                 router.push('/dashboard/applications');
             }, 2000);
-        } catch (err) {
-            console.error('Error submitting application:', err);
-            setError('Failed to submit application. Please try again.');
+        } catch (err: any) {
+            console.error('CRITICAL: Error submitting application:', err);
+            // Log full error details to help debugging
+            if (err.code) console.error('Firebase Error Code:', err.code);
+            if (err.message) console.error('Firebase Error Message:', err.message);
+
+            setError(`Failed to submit application: ${err.message || 'Please try again.'}`);
             setSubmitting(false);
         }
     };
@@ -203,7 +237,7 @@ export default function ApplyJobPage() {
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <Briefcase className="h-4 w-4" />
-                                    <span>{job.employmentType.replace('-', ' ').toUpperCase()}</span>
+                                    <span>{(job.employmentType || (job as any).type || 'full-time').replace('-', ' ').toUpperCase()}</span>
                                 </div>
                             </div>
                         </div>
@@ -227,20 +261,20 @@ export default function ApplyJobPage() {
                                     <div className="font-bold text-red-900 mb-1">Can't Apply</div>
                                     <div className="text-sm text-red-700">{applicationCheck.reason}</div>
                                     {applicationCheck.reason?.includes('premium') && (
-                                        <button
-                                            onClick={() => router.push('/dashboard/premium')}
-                                            className="mt-3 bg-jobs-accent text-white px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90"
+                                        <Link
+                                            href="/dashboard/premium"
+                                            className="inline-block mt-3 bg-jobs-accent text-white px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90"
                                         >
                                             Upgrade to Premium
-                                        </button>
+                                        </Link>
                                     )}
                                     {applicationCheck.reason?.includes('CV') && (
-                                        <button
-                                            onClick={() => router.push('/dashboard/profile/cv')}
-                                            className="mt-3 bg-jobs-primary text-white px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90"
+                                        <Link
+                                            href="/dashboard/profile/cv"
+                                            className="inline-block mt-3 bg-jobs-primary text-white px-6 py-2 rounded-xl font-bold text-sm hover:opacity-90"
                                         >
                                             Upload CV
-                                        </button>
+                                        </Link>
                                     )}
                                 </div>
                             </div>

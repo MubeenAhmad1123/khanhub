@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 
 export default function AdminLoginPage() {
     const router = useRouter();
@@ -118,7 +118,7 @@ export default function AdminLoginPage() {
                         <button
                             onClick={async () => {
                                 const { signOut } = await import('firebase/auth');
-                                const { auth } = await import('@/lib/firebase/config');
+                                const { auth } = await import('@/lib/firebase/firebase-config');
                                 await signOut(auth);
                                 window.location.reload();
                             }}

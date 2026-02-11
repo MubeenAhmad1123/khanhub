@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Job } from '@/types/job';
 import { collection, getDocs, query, orderBy, updateDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import { Loader2, CheckCircle, XCircle, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
 
 export default function AdminJobsPage() {
@@ -23,13 +23,7 @@ export default function AdminJobsPage() {
         }
     }, [user, loading, router]);
 
-    useEffect(() => {
-        if (user?.role === 'admin') {
-            loadJobs();
-        }
-    }, [user, filter]);
-
-    const loadJobs = async () => {
+    const loadJobs = useCallback(async () => {
         try {
             setLoadingJobs(true);
             const q = query(collection(db, 'jobs'), orderBy('createdAt', 'desc'));
@@ -52,7 +46,13 @@ export default function AdminJobsPage() {
         } finally {
             setLoadingJobs(false);
         }
-    };
+    }, [filter]);
+
+    useEffect(() => {
+        if (user?.role === 'admin') {
+            loadJobs();
+        }
+    }, [user, loadJobs]);
 
     const handleApprove = async (jobId: string) => {
         if (!confirm('Approve this job posting?')) return;
@@ -173,8 +173,8 @@ export default function AdminJobsPage() {
                                 key={f}
                                 onClick={() => setFilter(f)}
                                 className={`px-6 py-3 rounded-lg font-medium transition-all ${filter === f
-                                        ? 'bg-teal-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-teal-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 {f.charAt(0).toUpperCase() + f.slice(1)}

@@ -12,7 +12,7 @@ import {
     addDoc,
     serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import { Payment } from '@/types/payment';
 import { Job } from '@/types/job';
 import { User } from '@/types/user';

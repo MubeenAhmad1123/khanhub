@@ -15,7 +15,7 @@ export default function ImprovedNavbar() {
     const handleLogout = async () => {
         try {
             const { signOut } = await import('firebase/auth');
-            const { auth } = await import('@/lib/firebase/config');
+            const { auth } = await import('@/lib/firebase/firebase-config');
 
             await signOut(auth);
             router.push('/');

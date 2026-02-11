@@ -27,7 +27,11 @@ export default function VerifyPaymentPage() {
             return;
         }
         if (!loading && user?.paymentStatus === 'approved') {
-            router.push('/dashboard');
+            if (user.role === 'employer') {
+                router.push('/employer/dashboard');
+            } else {
+                router.push('/dashboard');
+            }
         }
         // Pre-fill sender name with user's display name
         if (user?.displayName) {
@@ -97,7 +101,11 @@ export default function VerifyPaymentPage() {
             // Refresh user profile to get updated payment status
             setTimeout(async () => {
                 await refreshProfile();
-                router.push('/dashboard');
+                if (user?.role === 'employer') {
+                    router.push('/employer/dashboard');
+                } else {
+                    router.push('/dashboard');
+                }
             }, 3000);
 
         } catch (err: any) {
@@ -199,8 +207,8 @@ export default function VerifyPaymentPage() {
                                 <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-xl border-2 border-red-200">
                                     <div className="text-center">
                                         <p className="text-xs text-gray-500 uppercase font-black">JazzCash Number</p>
-                                        <p className="text-xl font-black text-red-600">0311-6000707</p>
-                                        <p className="text-xs text-gray-400">Title: Mubeen Ahmad</p>
+                                        <p className="text-xl font-black text-red-600">0310-6395220</p>
+                                        <p className="text-xs text-gray-400">Title: Muhammad Khan</p>
                                     </div>
                                 </div>
                                 <ol className="space-y-2 text-sm text-red-700">
@@ -217,8 +225,8 @@ export default function VerifyPaymentPage() {
                                 <div className="bg-gradient-to-br from-green-50 to-teal-50 p-4 rounded-xl border-2 border-green-200">
                                     <div className="text-center">
                                         <p className="text-xs text-gray-500 uppercase font-black">EasyPaisa Number</p>
-                                        <p className="text-xl font-black text-teal-600">0322-4467554</p>
-                                        <p className="text-xs text-gray-400">Title: Mubeen Ahmad</p>
+                                        <p className="text-xl font-black text-teal-600">03106395220</p>
+                                        <p className="text-xs text-gray-400">Title: Muhammad Khan</p>
                                     </div>
                                 </div>
                                 <ol className="space-y-2 text-sm text-teal-700">
@@ -239,7 +247,7 @@ export default function VerifyPaymentPage() {
                                     </div>
                                     <div className="flex justify-between items-center border-b pb-2">
                                         <span className="text-xs font-bold text-gray-400">TITLE</span>
-                                        <span className="font-bold">Mubeen Ahmad</span>
+                                        <span className="font-bold">Muhammad Khan</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs font-bold text-gray-400">IBAN</span>

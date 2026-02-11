@@ -105,7 +105,7 @@ export default function SavedJobsPage() {
                                     <div className="flex items-center justify-between mt-6">
                                         <div className="flex items-center gap-2">
                                             <span className="px-3 py-1 bg-jobs-primary/5 text-jobs-primary rounded-full text-[10px] font-black uppercase tracking-wider">
-                                                {job.employmentType.replace('-', ' ')}
+                                                {(job.employmentType || (job as any).type || 'full-time').replace('-', ' ')}
                                             </span>
                                             {job.salaryMin > 0 && (
                                                 <span className="text-sm font-black text-green-600">

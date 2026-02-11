@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Payment } from '@/types/payment';
 import {
     collection, getDocs, doc, updateDoc, serverTimestamp, query, where, orderBy
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firebase-config';
 import { Loader2, CheckCircle, XCircle, Clock, Eye, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 
@@ -28,13 +28,7 @@ export default function AdminPaymentsPage() {
         }
     }, [user, loading, router]);
 
-    useEffect(() => {
-        if (user?.role === 'admin') {
-            loadPayments();
-        }
-    }, [user, filter]);
-
-    const loadPayments = async () => {
+    const loadPayments = useCallback(async () => {
         try {
             setLoadingPayments(true);
 
@@ -61,7 +55,13 @@ export default function AdminPaymentsPage() {
         } finally {
             setLoadingPayments(false);
         }
-    };
+    }, [filter]);
+
+    useEffect(() => {
+        if (user?.role === 'admin') {
+            loadPayments();
+        }
+    }, [user, loadPayments]);
 
     const handleApprove = async (payment: Payment) => {
         if (!confirm(`Approve payment from ${payment.userEmail}?`)) return;
@@ -342,8 +342,8 @@ function FilterButton({ label, count, active, onClick, color = 'teal' }: any) {
         <button
             onClick={onClick}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${active
-                    ? activeColors[color]
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? activeColors[color]
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
         >
             {label} ({count})

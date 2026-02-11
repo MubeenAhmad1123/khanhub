@@ -15,10 +15,12 @@ import { POINTS, COLLECTIONS } from '@/types/DATABASE_SCHEMA'; // ✅ Fixed path
  */
 export async function awardPoints(userId: string, points: number, reason: string): Promise<void> {
     try {
-        // Update user's total points
+        // Update user's total points (handling both field aliases for compatibility)
         const userRef = doc(db, COLLECTIONS.USERS, userId);
         await updateDoc(userRef, {
+            points: increment(points),
             totalPoints: increment(points),
+            updatedAt: Timestamp.now(),
         });
 
         // Log in points history

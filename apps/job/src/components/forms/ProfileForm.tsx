@@ -29,7 +29,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
         const loadProfile = async () => {
             try {
                 const { doc, getDoc } = await import('firebase/firestore');
-                const { db } = await import('@/lib/firebase/config');
+                const { db } = await import('@/lib/firebase/firebase-config');
 
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists()) {
@@ -65,7 +65,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
             setLoading(true);
 
             const { doc, updateDoc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/config');
+            const { db } = await import('@/lib/firebase/firebase-config');
 
             // Convert skills string to array
             const skillsArray = formData.skills

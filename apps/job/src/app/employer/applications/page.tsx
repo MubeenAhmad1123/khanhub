@@ -3,18 +3,36 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Eye, Download, CheckCircle, XCircle, Clock, Star, Loader2, Mail, Phone, MapPin } from 'lucide-react';
+import {
+    Users,
+    Eye,
+    Download,
+    CheckCircle,
+    XCircle,
+    Clock,
+    Star,
+    Loader2,
+    Mail,
+    Phone,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getApplicationsByEmployer, updateApplication, createPlacement } from '@/lib/firebase/firestore';
+import { useEmployerApplications } from '@/hooks/useEmployerRealtime';
+import { updateApplication, createPlacement } from '@/lib/firebase/firestore';
 import { Application } from '@/types/application';
 import MatchScoreBadge from '@/components/jobs/MatchScoreBadge';
 
 export default function EmployerApplicationsPage() {
     const router = useRouter();
     const { user, profile, loading: authLoading, isEmployer } = useAuth();
-    const [applications, setApplications] = useState<Application[]>([]);
-    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'applied' | 'shortlisted' | 'rejected'>('all');
+
+    // ✨ REAL-TIME HOOK - Updates automatically when applications change
+    const {
+        applications: allApplications,
+        loading,
+        error,
+        stats,
+    } = useEmployerApplications(user?.uid);
 
     useEffect(() => {
         if (!authLoading) {
@@ -26,25 +44,6 @@ export default function EmployerApplicationsPage() {
         }
     }, [authLoading, user, isEmployer, router]);
 
-    useEffect(() => {
-        const loadApplications = async () => {
-            if (!user) return;
-
-            try {
-                const apps = await getApplicationsByEmployer(user.uid) as Application[];
-                setApplications(apps);
-                setLoading(false);
-            } catch (err) {
-                console.error('Error loading applications:', err);
-                setLoading(false);
-            }
-        };
-
-        if (user) {
-            loadApplications();
-        }
-    }, [user]);
-
     const handleStatusChange = async (applicationId: string, newStatus: Application['status']) => {
         try {
             await updateApplication(applicationId, {
@@ -54,7 +53,7 @@ export default function EmployerApplicationsPage() {
 
             // If hired, create a placement record
             if (newStatus === 'hired') {
-                const app = applications.find(a => a.id === applicationId);
+                const app = allApplications.find((a) => a.id === applicationId);
                 if (app) {
                     // Extract salary - this is a simplified version
                     // In a real app, you'd have the actual agreed salary
@@ -65,7 +64,8 @@ export default function EmployerApplicationsPage() {
                         jobId: app.jobId,
                         jobTitle: app.jobTitle,
                         employerId: app.employerId,
-                        employerName: (profile as any)?.companyName || (profile as any)?.name || 'Employer',
+                        employerName:
+                            (profile as any)?.companyName || (profile as any)?.name || 'Employer',
                         jobSeekerId: app.jobSeekerId,
                         jobSeekerName: app.applicantName,
                         firstMonthSalary: salary,
@@ -80,12 +80,7 @@ export default function EmployerApplicationsPage() {
                 }
             }
 
-            // Update local state
-            setApplications(apps =>
-                apps.map(app =>
-                    app.id === applicationId ? { ...app, status: newStatus } : app
-                )
-            );
+            // No need to manually update state - real-time listener handles it!
         } catch (err) {
             console.error('Error updating application:', err);
             alert('Failed to update application status');
@@ -100,16 +95,21 @@ export default function EmployerApplicationsPage() {
         );
     }
 
-    const filteredApplications = filter === 'all'
-        ? applications
-        : applications.filter(app => app.status === filter);
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-600">Error: {error}</p>
+                </div>
+            </div>
+        );
+    }
 
-    const statusCounts = {
-        all: applications.length,
-        applied: applications.filter(a => a.status === 'applied').length,
-        shortlisted: applications.filter(a => a.status === 'shortlisted').length,
-        rejected: applications.filter(a => a.status === 'rejected').length,
-    };
+    // Client-side filtering
+    const filteredApplications =
+        filter === 'all'
+            ? allApplications
+            : allApplications.filter((app) => app.status === filter);
 
     return (
         <div className="min-h-screen bg-jobs-neutral py-8 px-4">
@@ -117,21 +117,34 @@ export default function EmployerApplicationsPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-black text-jobs-dark mb-2">Applications</h1>
-                    <p className="text-jobs-dark/60">Review and manage candidate applications</p>
+                    <p className="text-jobs-dark/60">
+                        Review and manage candidate applications
+                        {/* Real-time indicator */}
+                        <span className="ml-2 inline-flex items-center gap-1 text-xs text-green-600">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            Live
+                        </span>
+                    </p>
                 </div>
 
-                {/* Filter Tabs */}
+                {/* Filter Tabs - Stats update in real-time */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2 mb-6 flex gap-2">
                     {(['all', 'applied', 'shortlisted', 'rejected'] as const).map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
                             className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition ${filter === status
-                                ? 'bg-jobs-primary text-white shadow-md'
-                                : 'text-jobs-dark/60 hover:bg-gray-50'
+                                    ? 'bg-jobs-primary text-white shadow-md'
+                                    : 'text-jobs-dark/60 hover:bg-gray-50'
                                 }`}
                         >
-                            {status === 'applied' ? 'Pending Review' : status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})
+                            {status === 'applied'
+                                ? 'Pending Review'
+                                : status.charAt(0).toUpperCase() + status.slice(1)}{' '}
+                            ({stats[status]})
                         </button>
                     ))}
                 </div>
@@ -140,7 +153,9 @@ export default function EmployerApplicationsPage() {
                 {filteredApplications.length === 0 ? (
                     <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-16 text-center">
                         <Users className="h-20 w-20 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-jobs-dark mb-2">No Applications Yet</h3>
+                        <h3 className="text-xl font-bold text-jobs-dark mb-2">
+                            No Applications Yet
+                        </h3>
                         <p className="text-jobs-dark/60 mb-6">
                             {filter === 'all'
                                 ? "You haven't received any applications yet"
@@ -186,7 +201,15 @@ export default function EmployerApplicationsPage() {
                                             )}
                                             <div className="flex items-center gap-1">
                                                 <Clock className="h-4 w-4" />
-                                                <span>{application.appliedAt ? new Date((application.appliedAt as any).toDate ? (application.appliedAt as any).toDate() : application.appliedAt).toLocaleDateString() : 'N/A'}</span>
+                                                <span>
+                                                    {application.appliedAt
+                                                        ? new Date(
+                                                            (application.appliedAt as any).toDate
+                                                                ? (application.appliedAt as any).toDate()
+                                                                : application.appliedAt
+                                                        ).toLocaleDateString()
+                                                        : 'N/A'}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -220,7 +243,9 @@ export default function EmployerApplicationsPage() {
                                 {/* Cover Letter */}
                                 {application.coverLetter && (
                                     <div className="bg-gray-50 p-4 rounded-xl mb-4">
-                                        <div className="text-xs font-bold text-gray-500 mb-2">Cover Letter</div>
+                                        <div className="text-xs font-bold text-gray-500 mb-2">
+                                            Cover Letter
+                                        </div>
                                         <p className="text-sm text-jobs-dark/80 leading-relaxed line-clamp-3">
                                             {application.coverLetter}
                                         </p>
@@ -254,14 +279,18 @@ export default function EmployerApplicationsPage() {
                                     {application.status === 'applied' && (
                                         <>
                                             <button
-                                                onClick={() => handleStatusChange(application.id!, 'shortlisted')}
+                                                onClick={() =>
+                                                    handleStatusChange(application.id!, 'shortlisted')
+                                                }
                                                 className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-xl font-bold text-sm hover:bg-green-200 transition"
                                             >
                                                 <CheckCircle className="h-4 w-4" />
                                                 Shortlist
                                             </button>
                                             <button
-                                                onClick={() => handleStatusChange(application.id!, 'rejected')}
+                                                onClick={() =>
+                                                    handleStatusChange(application.id!, 'rejected')
+                                                }
                                                 className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl font-bold text-sm hover:bg-red-200 transition"
                                             >
                                                 <XCircle className="h-4 w-4" />
@@ -272,7 +301,9 @@ export default function EmployerApplicationsPage() {
 
                                     {application.status === 'shortlisted' && (
                                         <button
-                                            onClick={() => handleStatusChange(application.id!, 'hired')}
+                                            onClick={() =>
+                                                handleStatusChange(application.id!, 'hired')
+                                            }
                                             className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl font-bold text-sm hover:bg-purple-200 transition"
                                         >
                                             <Star className="h-4 w-4" />
