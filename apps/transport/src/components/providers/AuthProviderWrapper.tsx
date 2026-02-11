@@ -1,13 +1,15 @@
+// File: apps/transport/src/components/providers/AuthProviderWrapper.tsx
+
 'use client';
 
-import { AuthProvider, initializeFirebase } from '@khanhub/auth';
-import { firebaseConfig } from '@/lib/firebase/config';
-
-// Initialize Firebase once on the client side
-if (typeof window !== 'undefined') {
-    initializeFirebase(firebaseConfig);
-}
+import { useEffect } from 'react';
+import { AuthProvider } from '@/hooks/useAuthUser';
+import { initializeFirebase } from '@/lib/firebase/config';
 
 export default function AuthProviderWrapper({ children }: { children: React.ReactNode }) {
-    return <AuthProvider>{children}</AuthProvider>;
+  useEffect(() => {
+    initializeFirebase();
+  }, []);
+
+  return <AuthProvider>{children}</AuthProvider>;
 }

@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import TransportNavbar from '@/components/layout/TransportNavbar';
-import TransportFooter from '@/components/layout/TransportFooter';
-import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 import '../styles/globals.css';
+import ClientShell from '@/components/layout/ClientShell';
+import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,11 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} min-h-screen flex flex-col`}>
-        <AuthProviderWrapper>
-          <TransportNavbar />
-          <main className="flex-grow flex flex-col">{children}</main>
-          <TransportFooter />
-        </AuthProviderWrapper>
+        <ClientShell>{children}</ClientShell>
       </body>
     </html>
   );
