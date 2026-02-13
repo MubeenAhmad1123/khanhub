@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { parseCV } from '@/lib/cvParser';
 
 export default function CVUploadPage() {
     const router = useRouter();
@@ -34,15 +33,17 @@ export default function CVUploadPage() {
         setError(null);
 
         try {
-            // 3. Update profile with video URL (preserve existing data)
-            // Note: We are NOT updating skills/experience since auto-parsing is disabled
+            // 1. Upload file to Cloudinary
+            const { uploadCV } = await import('@/lib/services/cloudinaryUpload');
+            const cvUrl = await uploadCV(file, user.uid);
+
+            // 2. Update profile with CV URL (preserve existing data)
             await updateProfile({
                 profile: {
                     ...(user.profile || {}), // Safely spread existing profile
                     cvUrl,
                     cvFileName: file.name,
                     cvUploadedAt: new Date(),
-                    // skills: parsedData.extractedData.skills, // DISABLED to prevent overwriting with empty array
                 }
             } as any);
 
