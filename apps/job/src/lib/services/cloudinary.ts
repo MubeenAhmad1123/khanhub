@@ -60,11 +60,11 @@ export async function uploadVideoToCloudinary(
     // Create FormData
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', 'job_portal_videos');
-    formData.append('folder', 'job-portal/intro-videos');
+    formData.append('upload_preset', 'auto-filled'); // Must be an Unsigned preset
+    // formData.append('folder', 'job-portal/intro-videos'); // Optional
 
     console.log('[Cloudinary Debug] Uploading to:', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
-    console.log('[Cloudinary Debug] Upload preset: job_portal_videos');
+    console.log('[Cloudinary Debug] Upload preset: auto-filled');
 
     // Upload with progress tracking
     return new Promise((resolve, reject) => {

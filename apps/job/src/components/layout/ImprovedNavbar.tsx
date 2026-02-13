@@ -52,7 +52,7 @@ export default function ImprovedNavbar() {
         }
         setShowProfileMenu(false);
         setShowMobileMenu(false);
-    }, [pathname]);
+    }, [pathname, showProfileMenu, showMobileMenu]);
 
     const isActive = (path: string) => pathname === path;
 
