@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
-import { MapPin, Search, ArrowRight, Sparkles } from 'lucide-react';
+import { MapPin, Search, ArrowRight, Sparkles, Briefcase, TrendingUp } from 'lucide-react';
 
 export default function HeroSection() {
     const router = useRouter();
@@ -21,98 +21,91 @@ export default function HeroSection() {
 
     if (authLoading) {
         return (
-            <section className="bg-gradient-to-br from-teal-600 via-teal-700 to-blue-800 py-20 md:py-32">
-                <div className="max-w-7xl mx-auto px-4 text-center">
-                    <div className="animate-pulse flex flex-col items-center">
-                        <div className="h-12 w-3/4 bg-white/20 rounded-lg mb-6"></div>
-                        <div className="h-6 w-1/2 bg-white/10 rounded-lg mb-12"></div>
-                        <div className="h-20 w-full max-w-4xl bg-white/5 rounded-3xl"></div>
-                    </div>
+            <section className="relative min-h-[600px] flex items-center justify-center bg-gray-900 overflow-hidden">
+                <div className="animate-pulse flex flex-col items-center w-full max-w-4xl px-4">
+                    <div className="h-16 w-3/4 bg-white/10 rounded-2xl mb-8"></div>
+                    <div className="h-6 w-1/2 bg-white/5 rounded-lg mb-12"></div>
+                    <div className="h-24 w-full bg-white/5 rounded-3xl"></div>
                 </div>
             </section>
         );
     }
 
     return (
-        <section className="bg-gradient-to-br from-teal-600 via-teal-700 to-blue-800 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)]"></div>
+        <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-[#0f172a]">
+            {/* Background Effects */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-teal-500/20 rounded-[100%] blur-[100px] opacity-50 animate-pulse"></div>
+                <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-blue-600/10 rounded-[100%] blur-[80px]"></div>
+                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.03]"></div>
+            </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 relative z-10">
-                <div className="text-center max-w-4xl mx-auto">
-                    {user && (
-                        <div className="mb-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-white/90 text-sm font-medium border border-white/20">
-                            <Sparkles className="h-4 w-4" />
-                            Welcome back, {user.displayName || user.email}!
-                        </div>
-                    )}
+            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                {/* Welcome Badge */}
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-teal-400 text-sm font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <Sparkles className="w-4 h-4" />
+                    <span>#1 Job Platform in Pakistan</span>
+                </div>
 
-                    <h1 className="text-5xl md:text-7xl font-black mb-6 text-white tracking-tight leading-tight">
-                        Find Your Dream Career<br />in Pakistan 🇵🇰
-                    </h1>
-                    <p className="text-xl md:text-2xl mb-12 text-white/90 font-medium max-w-2xl mx-auto leading-relaxed">
-                        Connect with top companies and find verified jobs that match your skills perfectly.
-                    </p>
+                {/* Main Heading */}
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight mb-8 leading-[1.1] animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
+                    Find your <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">dream job</span>
+                    <br />without the hassle.
+                </h1>
 
-                    {/* Persona-Selection Buttons for New Users */}
-                    {!user && (
-                        <div className="flex flex-col md:flex-row gap-4 justify-center mb-12">
-                            <Link
-                                href="/auth/register?role=job_seeker"
-                                className="px-10 py-5 bg-white text-teal-700 font-bold rounded-2xl hover:bg-gray-100 transition-all shadow-xl text-lg flex items-center justify-center gap-3 active:scale-95"
-                            >
-                                🎯 Join as Job Seeker
-                            </Link>
-                            <Link
-                                href="/auth/register?role=employer"
-                                className="px-10 py-5 bg-teal-900/40 backdrop-blur-sm text-white border-2 border-white/30 font-bold rounded-2xl hover:bg-teal-900/60 transition-all shadow-xl text-lg flex items-center justify-center gap-3 active:scale-95"
-                            >
-                                🏢 Join as Hiring Person
-                            </Link>
-                        </div>
-                    )}
+                <p className="text-xl md:text-2xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+                    Join thousands of professionals finding opportunities at top companies. verified jobs only.
+                </p>
 
-                    {user && (
-                        <div className="flex justify-center mb-12">
-                            <Link
-                                href={user.role === 'admin' ? '/admin' : user.role === 'employer' ? '/employer/dashboard' : '/dashboard'}
-                                className="px-12 py-5 bg-white text-teal-700 font-bold rounded-2xl hover:bg-gray-100 transition-all shadow-2xl text-xl flex items-center justify-center gap-3 active:scale-95"
-                            >
-                                🚀 Go to My Workspace
-                            </Link>
-                        </div>
-                    )}
-
-                    {/* Search Bar */}
-                    <div className="bg-white rounded-3xl shadow-2xl p-3 flex flex-col md:flex-row gap-2 border border-white/20 backdrop-blur-md max-w-4xl mx-auto">
-                        <div className="flex-1 flex items-center gap-3 px-6 py-4">
-                            <Search className="h-6 w-6 text-gray-400 flex-shrink-0" />
+                {/* Search Box */}
+                <div className="max-w-4xl mx-auto mb-16 animate-in fade-in scale-95 duration-700 delay-300">
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-2 rounded-3xl shadow-2xl shadow-teal-900/20 flex flex-col md:flex-row gap-2">
+                        <div className="flex-1 flex items-center px-6 h-16 bg-white/5 rounded-2xl border border-white/5 focus-within:bg-white/10 focus-within:border-teal-500/50 transition-all group">
+                            <Search className="w-6 h-6 text-gray-400 group-focus-within:text-teal-400 transition-colors" />
                             <input
                                 type="text"
-                                placeholder="Job title, keywords, or company..."
+                                placeholder="Job title, keywords..."
+                                className="w-full bg-transparent border-none outline-none text-white placeholder:text-gray-500 ml-4 font-medium text-lg"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                                className="flex-1 outline-none text-gray-800 text-lg font-medium placeholder:text-gray-400"
                             />
                         </div>
-                        <div className="flex-1 flex items-center gap-3 px-6 py-4 border-t md:border-t-0 md:border-l border-gray-100">
-                            <MapPin className="h-6 w-6 text-gray-400 flex-shrink-0" />
+
+                        <div className="flex-1 flex items-center px-6 h-16 bg-white/5 rounded-2xl border border-white/5 focus-within:bg-white/10 focus-within:border-teal-500/50 transition-all group">
+                            <MapPin className="w-6 h-6 text-gray-400 group-focus-within:text-teal-400 transition-colors" />
                             <input
                                 type="text"
                                 placeholder="City or location..."
+                                className="w-full bg-transparent border-none outline-none text-white placeholder:text-gray-500 ml-4 font-medium text-lg"
                                 value={searchLocation}
                                 onChange={(e) => setSearchLocation(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                                className="flex-1 outline-none text-gray-800 text-lg font-medium placeholder:text-gray-400"
                             />
                         </div>
+
                         <button
                             onClick={handleSearch}
-                            className="bg-orange-500 text-white px-10 py-5 rounded-2xl font-black hover:bg-orange-600 transition-all text-center shadow-lg active:scale-95 flex items-center justify-center gap-2 text-lg"
+                            className="h-16 px-10 bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-400 hover:to-blue-500 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-teal-500/25 transition-all flex items-center justify-center gap-2 active:scale-95"
                         >
-                            Search Jobs
-                            <ArrowRight className="h-5 w-5" />
+                            Search
                         </button>
+                    </div>
+                </div>
+
+                {/* Quick Stats / Tags */}
+                <div className="flex flex-wrap justify-center gap-4 md:gap-8 text-sm font-medium text-gray-400 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span>1,200+ New Jobs Today</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <span>500+ Top Companies</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                        <span>10k+ Daily Users</span>
                     </div>
                 </div>
             </div>
