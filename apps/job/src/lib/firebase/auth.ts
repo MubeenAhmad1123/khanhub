@@ -65,9 +65,48 @@ export async function createUserProfile(userData: Partial<User>): Promise<void> 
  */
 export async function updateUserProfile(uid: string, updates: Partial<User>): Promise<void> {
     try {
-        const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-        await setDoc(doc(db, 'users', uid), {
-            ...updates,
+        const { doc, setDoc, serverTimestamp, getDoc } = await import('firebase/firestore');
+        // Dynamic import to avoid circular dependency if any, though pointSystem doesn't import auth.ts usually
+        const { calculateProfileStrength } = await import('@/lib/services/pointsSystem');
+
+        const userRef = doc(db, 'users', uid);
+
+        // 1. Get current data to ensure complete profile for calculation
+        const currentDoc = await getDoc(userRef);
+        const currentData = currentDoc.data() as User | undefined;
+
+        // 2. Prepare updates with recalculated strength if applicable
+        let finalUpdates = { ...updates };
+
+        // Only recalculate if we have profile data to work with or are updating profile
+        if (currentData?.role === 'job_seeker' || updates.role === 'job_seeker' || updates.profile) {
+            const currentProfile = currentData?.profile || {};
+            const updatesProfile = updates.profile || {};
+
+            // Merge existing profile with updates to get complete state
+            const mergedProfile = {
+                ...currentProfile,
+                ...updatesProfile
+            };
+
+            // Calculate new strength
+            const newStrength = calculateProfileStrength(mergedProfile);
+
+            // Apply new strength to updates
+            finalUpdates = {
+                ...finalUpdates,
+                profile: {
+                    ...updatesProfile,
+                    profileStrength: newStrength
+                } as any
+            };
+
+            // Also update the top-level profileStrength if it exists on User type (it doesn't seems so based on types, 
+            // but let's stick to profile.profileStrength as defined in User type)
+        }
+
+        await setDoc(userRef, {
+            ...finalUpdates,
             updatedAt: serverTimestamp(),
         }, { merge: true });
     } catch (error) {
