@@ -34,20 +34,15 @@ export default function CVUploadPage() {
         setError(null);
 
         try {
-            // 1. Parse CV locally to extract skills/experience
-            const parsedData = await parseCV(file);
-
-            // 2. Upload file to Cloudinary
-            const { uploadCV } = await import('@/lib/services/cloudinaryUpload');
-            const cvUrl = await uploadCV(file, user.uid);
-
+            // 3. Update profile with video URL (preserve existing data)
+            // Note: We are NOT updating skills/experience since auto-parsing is disabled
             await updateProfile({
                 profile: {
-                    ...user.profile,
+                    ...(user.profile || {}), // Safely spread existing profile
                     cvUrl,
                     cvFileName: file.name,
                     cvUploadedAt: new Date(),
-                    skills: parsedData.extractedData.skills,
+                    // skills: parsedData.extractedData.skills, // DISABLED to prevent overwriting with empty array
                 }
             } as any);
 

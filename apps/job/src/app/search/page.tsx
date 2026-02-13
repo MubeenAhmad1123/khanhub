@@ -352,6 +352,34 @@ export default function SearchPage() {
 
                     {/* Results */}
                     <div className="flex-1">
+                        {/* Auth CTA for non-logged-in users */}
+                        {!profile && (
+                            <div className="bg-gradient-to-r from-teal-600 to-blue-600 text-white p-6 rounded-2xl mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                                <div>
+                                    <h3 className="font-black text-xl mb-1 flex items-center gap-2">
+                                        🚀 Boost Your Career
+                                    </h3>
+                                    <p className="text-white/90 font-medium">
+                                        Create a profile to save jobs, track applications, and get headhunted.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3 whitespace-nowrap">
+                                    <Link
+                                        href="/auth/login"
+                                        className="bg-white/20 hover:bg-white/30 text-white border border-white/40 px-6 py-2 rounded-xl font-bold transition-all backdrop-blur-sm"
+                                    >
+                                        Log In
+                                    </Link>
+                                    <Link
+                                        href="/auth/register"
+                                        className="bg-white text-teal-700 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-lg"
+                                    >
+                                        Sign Up
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Results Header */}
                         <div className="flex items-center justify-between mb-6">
                             <div>

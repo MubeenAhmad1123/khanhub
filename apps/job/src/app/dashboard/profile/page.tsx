@@ -187,7 +187,7 @@ export default function ProfilePage() {
                             <div>
                                 <label className="text-sm text-gray-500">Full Name</label>
                                 <p className="text-gray-900 font-medium">
-                                    {profile?.profile?.fullName || 'Not provided'}
+                                    {profile?.profile?.fullName || profile?.displayName || 'Not provided'}
                                 </p>
                             </div>
                             <div>

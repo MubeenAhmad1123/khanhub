@@ -76,6 +76,7 @@ export default function ImprovedNavbar() {
             return [
                 { name: 'Home', path: '/', icon: '🏠' },
                 { name: 'Browse Jobs', path: '/search', icon: '🔍' },
+                { name: 'For Employers', path: '/auth/register', icon: '🏢' },
             ];
         }
 
