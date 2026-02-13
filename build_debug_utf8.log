@@ -1,0 +1,51 @@
+﻿
+> khanhub-monorepo@1.0.0 build:jobs
+> npm --prefix apps/job run build
+
+
+> @khanhub/job@1.0.0 build
+> next build
+
+  Γû▓ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" 
+"C:\Users\Mirza Computers\AppDat ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed 
+    to compile.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/app/admin/admin-payments-page.tsx:57:11
+Type error: Cannot redeclare block-scoped variable 
+'stats'.
+
+[0m [90m 55 |[39m         [33m:[39m 
+payments[33m.[39mfilter(p [33m=>[39m 
+p[33m.[39mstatus [33m===[39m 
+filter)[33m;[39m[0m
+[0m [90m 56 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 57 |[39m     
+[36mconst[39m stats [33m=[39m {[0m
+[0m [90m    |[39m           
+[31m[1m^[22m[39m[0m
+[0m [90m 58 |[39m         total[33m:[39m 
+payments[33m.[39mlength[33m,[39m[0m
+[0m [90m 59 |[39m         pending[33m:[39m 
+payments[33m.[39mfilter(p [33m=>[39m 
+p[33m.[39mstatus [33m===[39m 
+[32m'pending'[39m)[33m.[39mlength[33m,[39m[0m
+[0m [90m 60 |[39m         approved[33m:[39m 
+payments[33m.[39mfilter(p [33m=>[39m 
+p[33m.[39mstatus [33m===[39m [32m'approved'[39
+m)[33m.[39mlength[33m,[39m[0m
+Next.js build worker exited with code: 1 and 
+signal: null
+

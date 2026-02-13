@@ -89,8 +89,14 @@ export default function CVUploadPage() {
                         </div>
                         <h1 className="text-2xl font-bold text-gray-900">Upload Your CV</h1>
                         <p className="text-gray-600 mt-2">
-                            We'll automatically extract your skills and experience to boost your profile
+                            Upload your CV to showcase your qualifications to employers
                         </p>
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800">
+                                💡 <strong>Note:</strong> Automatic skill extraction is currently being enhanced.
+                                Your CV will be uploaded successfully for employers to view.
+                            </p>
+                        </div>
                     </div>
 
                     {success ? (

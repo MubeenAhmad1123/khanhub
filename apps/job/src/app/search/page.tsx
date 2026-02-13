@@ -36,8 +36,17 @@ export default function SearchPage() {
 
     const fetchJobs = useCallback(async (reset = false) => {
         try {
-            setLoading(true);
-            if (!reset) setLoadingMore(true);
+            // Reset states when starting new search
+            if (reset) {
+                console.log('[Search Debug] Starting new search - resetting states');
+                setLoading(true);
+                setJobs([]);
+                setTotalResults(0);
+                setLastDoc(null);
+            } else {
+                console.log('[Search Debug] Loading more results');
+                setLoadingMore(true);
+            }
 
             // Build query constraints
             const constraints: QueryConstraint[] = [
@@ -98,16 +107,22 @@ export default function SearchPage() {
 
             if (reset) {
                 setJobs(processedJobs);
+                setTotalResults(processedJobs.length);
+                console.log(`[Search Debug] Search completed: ${processedJobs.length} jobs found`);
             } else {
                 setJobs(prev => [...prev, ...processedJobs]);
+                setTotalResults(prev => prev + processedJobs.length);
+                console.log(`[Search Debug] Loaded ${processedJobs.length} more jobs`);
             }
 
-            setTotalResults(processedJobs.length);
             setHasMore(results.length === PAGE_SIZE);
             setLastDoc(newLastDoc);
         } catch (error) {
-            console.error('Error searching jobs:', error);
-            if (reset) setJobs([]);
+            console.error('[Search Error] Failed to fetch jobs:', error);
+            if (reset) {
+                setJobs([]);
+                setTotalResults(0);
+            }
         } finally {
             setLoading(false);
             setLoadingMore(false);

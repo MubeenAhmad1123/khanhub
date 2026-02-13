@@ -209,8 +209,8 @@ export default function ProfilePage() {
                             <div>
                                 <label className="text-sm text-gray-500">Experience</label>
                                 <p className="text-gray-900 font-medium">
-                                    {profile?.profile?.experience
-                                        ? `${profile.profile.experience} years`
+                                    {profile?.profile?.yearsOfExperience || profile?.profile?.experience
+                                        ? `${profile.profile.yearsOfExperience || profile.profile.experience} years`
                                         : 'Not provided'}
                                 </p>
                             </div>

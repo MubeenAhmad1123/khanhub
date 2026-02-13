@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Video, Camera, StopCircle, Play, RotateCcw, Upload, CheckCircle, Loader2, XCircle, AlertCircle } from 'lucide-react';
+import { Video, Camera, StopCircle, Play, RotateCcw, Upload, CheckCircle, Loader2, XCircle, AlertCircle, FileVideo } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadVideo } from '@/lib/firebase/storage';
 import { updateUserProfile } from '@/lib/firebase/auth';
 import { awardPointsForVideo } from '@/lib/services/pointsSystem';
+import { uploadVideoToCloudinary, type UploadProgress } from '@/lib/services/cloudinary';
 import { Button } from '@/components/ui/button';
 
 export default function IntroVideoPage() {
@@ -21,6 +22,9 @@ export default function IntroVideoPage() {
     const [error, setError] = useState('');
     const [countdown, setCountdown] = useState(60);
     const [isCounting, setIsCounting] = useState(false);
+    const [uploadMode, setUploadMode] = useState<'record' | 'upload'>('record');
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -116,31 +120,69 @@ export default function IntroVideoPage() {
         setError('');
 
         try {
-            const videoFile = new File([videoBlob], 'intro-video.webm', { type: 'video/webm' });
-            const uploadResult = await uploadVideo(videoFile, user.uid);
+            let videoUrl: string;
+
+            if (uploadMode === 'upload') {
+                // Upload to Cloudinary
+                const videoFile = new File([videoBlob], `intro-video-${user.uid}.mp4`, { type: videoBlob.type });
+                const result = await uploadVideoToCloudinary(videoFile, (progress: UploadProgress) => {
+                    setUploadProgress(progress.percentage);
+                });
+                videoUrl = result.secure_url;
+            } else {
+                // Upload to Firebase Storage (for recorded videos)
+                const videoFile = new File([videoBlob], 'intro-video.webm', { type: 'video/webm' });
+                const uploadResult = await uploadVideo(videoFile, user.uid);
+                videoUrl = uploadResult.url;
+            }
 
             await updateUserProfile(user.uid, {
                 profile: {
                     ...profile?.profile,
-                    videoUrl: uploadResult.url,
+                    videoUrl,
                 },
             });
 
             await awardPointsForVideo(user.uid);
 
             setUploading(false);
-            router.push('/dashboard');
+            router.push('/dashboard/profile');
         } catch (err) {
             console.error('Upload error:', err);
-            setError('Failed to upload video. Please try again.');
+            setError(err instanceof Error ? err.message : 'Failed to upload video. Please try again.');
             setUploading(false);
         }
+    };
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file
+        const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+        const ALLOWED_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
+
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            setError('Invalid file type. Please upload MP4, WebM, MOV, or AVI files.');
+            return;
+        }
+
+        if (file.size > MAX_SIZE) {
+            setError('File too large. Maximum size is 50MB.');
+            return;
+        }
+
+        // Create preview
+        setVideoBlob(file);
+        setPreviewUrl(URL.createObjectURL(file));
+        setUploadMode('upload');
+        setError('');
     };
 
     useEffect(() => {
         startCamera();
         return () => stopCamera();
-    }, [startCamera, stopCamera]);
+    }, [uploadMode, startCamera, stopCamera]);
 
     return (
         <div className="min-h-screen bg-jobs-neutral py-8 px-4">
@@ -148,9 +190,37 @@ export default function IntroVideoPage() {
                 <div className="mb-8">
                     <h1 className="text-3xl font-black text-jobs-dark mb-2">Intro Video</h1>
                     <p className="text-jobs-dark/60">
-                        Record a short intro (max 60s) to stand out to employers!
+                        Record or upload a short intro to stand out to employers!
                     </p>
                 </div>
+
+                {/* Mode Selection */}
+                {!previewUrl && !recording && (
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <button
+                            onClick={() => { setUploadMode('record'); startCamera(); }}
+                            className={`p-6 rounded-2xl border-2 transition-all ${uploadMode === 'record'
+                                ? 'border-teal-600 bg-teal-50'
+                                : 'border-gray-200 bg-white hover:border-teal-300'
+                                }`}
+                        >
+                            <Camera className="h-8 w-8 mx-auto mb-2 text-teal-600" />
+                            <h3 className="font-bold text-gray-900">Record Video</h3>
+                            <p className="text-sm text-gray-600 mt-1">Use your camera</p>
+                        </button>
+                        <button
+                            onClick={() => { setUploadMode('upload'); stopCamera(); }}
+                            className={`p-6 rounded-2xl border-2 transition-all ${uploadMode === 'upload'
+                                ? 'border-teal-600 bg-teal-50'
+                                : 'border-gray-200 bg-white hover:border-teal-300'
+                                }`}
+                        >
+                            <FileVideo className="h-8 w-8 mx-auto mb-2 text-teal-600" />
+                            <h3 className="font-bold text-gray-900">Upload Video</h3>
+                            <p className="text-sm text-gray-600 mt-1">Choose from files</p>
+                        </button>
+                    </div>
+                )}
 
                 <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
                     <div className="relative aspect-video bg-black flex items-center justify-center">
@@ -185,7 +255,7 @@ export default function IntroVideoPage() {
                             </div>
                         )}
 
-                        {!previewUrl ? (
+                        {uploadMode === 'record' && !previewUrl ? (
                             <div className="flex flex-col items-center">
                                 {!recording ? (
                                     <Button
@@ -212,7 +282,31 @@ export default function IntroVideoPage() {
                                     Recording will automatically stop after 60 seconds
                                 </p>
                             </div>
-                        ) : (
+                        ) : uploadMode === 'upload' && !previewUrl ? (
+                            <div className="flex flex-col items-center">
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
+                                    onChange={handleFileSelect}
+                                    className="hidden"
+                                />
+                                <Button
+                                    variant="primary"
+                                    size="lg"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-full max-w-sm"
+                                    leftIcon={<FileVideo className="h-5 w-5" />}
+                                >
+                                    Choose Video File
+                                </Button>
+                                <p className="mt-4 text-sm text-jobs-dark/50">
+                                    Max file size: 50MB • Formats: MP4, WebM, MOV, AVI
+                                </p>
+                            </div>
+                        ) : null}
+
+                        {previewUrl && (
                             <div className="flex flex-col items-center">
                                 <div className="flex gap-4 w-full max-w-lg mb-6">
                                     <Button
@@ -234,6 +328,19 @@ export default function IntroVideoPage() {
                                         Save & Upload
                                     </Button>
                                 </div>
+                                {uploading && uploadProgress > 0 && (
+                                    <div className="w-full max-w-lg mb-4">
+                                        <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                                            <div
+                                                className="bg-teal-600 h-full transition-all duration-300"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-center text-gray-600 mt-1">
+                                            Uploading: {uploadProgress}%
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 w-full text-center">
                                     <p className="text-sm text-yellow-800">
                                         You'll earn <strong>20 points</strong> for uploading your intro video!

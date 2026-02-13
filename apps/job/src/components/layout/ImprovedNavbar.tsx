@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 export default function ImprovedNavbar() {
     const pathname = usePathname();
@@ -11,6 +12,7 @@ export default function ImprovedNavbar() {
     const { user, loading } = useAuth();
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const profileMenuRef = useRef<HTMLDivElement>(null);
 
     const handleLogout = async () => {
         try {
@@ -23,6 +25,34 @@ export default function ImprovedNavbar() {
             console.error('Logout error:', error);
         }
     };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+                console.log('[Navbar Debug] Closing dropdown - clicked outside');
+                setShowProfileMenu(false);
+            }
+        };
+
+        if (showProfileMenu) {
+            console.log('[Navbar Debug] Dropdown opened - adding click listener');
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showProfileMenu]);
+
+    // Close dropdown on navigation
+    useEffect(() => {
+        if (showProfileMenu || showMobileMenu) {
+            console.log('[Navbar Debug] Navigation detected - closing menus');
+        }
+        setShowProfileMenu(false);
+        setShowMobileMenu(false);
+    }, [pathname]);
 
     const isActive = (path: string) => pathname === path;
 
@@ -115,14 +145,28 @@ export default function ImprovedNavbar() {
                         {loading ? (
                             <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
                         ) : user ? (
-                            <div className="relative">
+                            <div className="relative" ref={profileMenuRef}>
                                 <button
                                     onClick={() => setShowProfileMenu(!showProfileMenu)}
                                     className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                                 >
-                                    <div className="w-9 h-9 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold">
-                                        {user.email ? user.email[0].toUpperCase() : '?'}
-                                    </div>
+                                    {user.photoURL ? (
+                                        <>
+                                            {console.log('[Navbar Debug] Rendering Google profile image:', user.photoURL)}
+                                            <Image
+                                                src={user.photoURL}
+                                                alt={user.displayName || user.email || 'Profile'}
+                                                width={36}
+                                                height={36}
+                                                className="w-9 h-9 rounded-full object-cover"
+                                                onError={() => console.error('[Navbar Error] Failed to load profile image:', user.photoURL)}
+                                            />
+                                        </>
+                                    ) : (
+                                        <div className="w-9 h-9 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold">
+                                            {user.email ? user.email[0].toUpperCase() : '?'}
+                                        </div>
+                                    )}
                                     <div className="text-left">
                                         <p className="text-sm font-medium text-gray-900">{user.email || 'No email'}</p>
                                         <p className="text-xs text-gray-500 capitalize">

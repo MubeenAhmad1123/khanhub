@@ -33,17 +33,9 @@ export default function AdminPaymentsPage() {
 
         setLoadingPayments(true);
 
-        let q = query(collection(db, 'payments'), orderBy('submittedAt', 'desc'));
+        const q = query(collection(db, 'payments'), orderBy('submittedAt', 'desc'));
 
-        if (filter !== 'all') {
-            q = query(
-                collection(db, 'payments'),
-                where('status', '==', filter),
-                orderBy('submittedAt', 'desc')
-            );
-        }
-
-        // CRITICAL FIX: Real-time listener with onSnapshot
+        // Fetch ALL payments so stats are always accurate regardless of filter
         const unsubscribe = onSnapshot(
             q,
             (snapshot) => {
@@ -62,16 +54,17 @@ export default function AdminPaymentsPage() {
         );
 
         return () => unsubscribe();
-    }, [user, filter]);
+    }, [user]);
 
     const handleApprove = async (payment: Payment) => {
         if (!confirm(`Approve payment from ${payment.userEmail}?`)) return;
 
         setProcessing(true);
         try {
-            // Update payment status
+            // Update payment status and clear rejection reason if it was previously rejected
             await updateDoc(doc(db, 'payments', payment.id), {
                 status: 'approved',
+                rejectionReason: null,
                 reviewedBy: user?.uid,
                 reviewedAt: serverTimestamp(),
             });
@@ -241,15 +234,17 @@ export default function AdminPaymentsPage() {
                     </div>
                 ) : payments.length > 0 ? (
                     <div className="space-y-4">
-                        {payments.map((payment) => (
-                            <PaymentCard
-                                key={payment.id}
-                                payment={payment}
-                                onApprove={handleApprove}
-                                onReject={openRejectModal}
-                                processing={processing}
-                            />
-                        ))}
+                        {payments
+                            .filter(p => filter === 'all' || p.status === filter)
+                            .map((payment) => (
+                                <PaymentCard
+                                    key={payment.id}
+                                    payment={payment}
+                                    onApprove={handleApprove}
+                                    onReject={openRejectModal}
+                                    processing={processing}
+                                />
+                            ))}
                     </div>
                 ) : (
                     <div className="bg-white rounded-xl shadow-md p-12 text-center">
@@ -436,8 +431,8 @@ function PaymentCard({ payment, onApprove, onReject, processing }: any) {
             </div>
 
             {/* Actions */}
-            {payment.status === 'pending' && (
-                <div className="flex gap-4 mt-6 pt-6 border-t border-gray-200">
+            <div className="flex gap-4 mt-6 pt-6 border-t border-gray-200">
+                {payment.status !== 'rejected' && (
                     <button
                         onClick={() => onReject(payment)}
                         disabled={processing}
@@ -446,6 +441,8 @@ function PaymentCard({ payment, onApprove, onReject, processing }: any) {
                         <XCircle className="h-5 w-5" />
                         Reject
                     </button>
+                )}
+                {payment.status !== 'approved' && (
                     <button
                         onClick={() => onApprove(payment)}
                         disabled={processing}
@@ -463,8 +460,8 @@ function PaymentCard({ payment, onApprove, onReject, processing }: any) {
                             </>
                         )}
                     </button>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* Screenshot Modal */}
             {showScreenshot && (
