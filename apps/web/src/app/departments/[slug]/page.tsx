@@ -195,9 +195,10 @@ export default async function DepartmentPage({ params }: { params: Params }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-3 gap-8 lg:gap-12">
             {/* Main Content - 2 columns */}
-            <div className="lg:col-span-2 space-y-8 sm:space-y-12">
+            <div className="lg:col-span-2 space-y-12">
+
               {/* About Section */}
-              <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-sm">
                 <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-4 font-display flex items-center gap-3">
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-md"
@@ -210,48 +211,120 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                 <p className="text-neutral-700 leading-relaxed text-base sm:text-lg">
                   {department.description}
                 </p>
-              </div>
-
-              {/* Programs Section */}
-              {department.programs && department.programs.length > 0 && (
-                <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-6 font-display flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
-                      style={{ backgroundColor: theme.light }}
-                    >
-                      <Calendar className="w-6 h-6" style={{ color: theme.primary }} />
-                    </div>
-                    Programs &amp; Services
-                  </h2>
-                  <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                    {department.programs.map((program, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-100 hover:border-[var(--hover-border)] hover:bg-[var(--hover-bg)] hover:shadow-md transition-all group cursor-pointer"
-                        style={{
-                          ['--hover-border' as string]: theme.accent,
-                          ['--hover-bg' as string]: theme.light
-                        }}
-                      >
-                        <div
-                          className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                          style={{ backgroundColor: theme.light }}
-                        >
-                          <Check className="w-4 h-4" style={{ color: theme.primary }} />
-                        </div>
-                        <span className="text-neutral-800 font-medium text-sm sm:text-base leading-snug">
-                          {program}
-                        </span>
+                {/* Why Choose Us Features */}
+                {department.features && (
+                  <div className="mt-8 grid sm:grid-cols-2 gap-4">
+                    {department.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primary }} />
+                        <span className="font-medium text-neutral-800">{feature}</span>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Sub-Departments & Courses */}
+              {department.subDepartments ? (
+                <div className="space-y-8">
+                  <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
+                    Our Departments & Courses
+                  </h2>
+
+                  {department.subDepartments.map((subDept, idx) => (
+                    <div key={idx} className="bg-white rounded-2xl border-2 border-neutral-100 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                      <div
+                        className="p-4 sm:p-6 text-white"
+                        style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})` }}
+                      >
+                        <h3 className="text-xl sm:text-2xl font-bold font-display">{subDept.title}</h3>
+                        {subDept.description && <p className="text-white/80 mt-1">{subDept.description}</p>}
+                      </div>
+
+                      <div className="p-4 sm:p-6 grid gap-4">
+                        {subDept.courses.map((course, cIdx) => (
+                          <div key={cIdx} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-neutral-50 rounded-xl border border-neutral-200 hover:border-neutral-300 transition-colors">
+                            <div>
+                              <h4 className="font-bold text-lg text-neutral-900">{course.name}</h4>
+                              <div className="flex items-center gap-4 mt-2 text-sm text-neutral-600">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" /> {course.duration}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="mt-3 sm:mt-0 sm:text-right">
+                              <div className="text-xs font-bold uppercase text-neutral-500 mb-1">Eligibility</div>
+                              <div className="inline-flex px-3 py-1 rounded-full text-sm font-semibold bg-white border border-neutral-200 text-neutral-800">
+                                {course.eligibility}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Fallback for other departments without structured sub-departments */
+                department.programs && department.programs.length > 0 && (
+                  <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-sm">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-6 font-display flex items-center gap-3">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
+                        style={{ backgroundColor: theme.light }}
+                      >
+                        <Calendar className="w-6 h-6" style={{ color: theme.primary }} />
+                      </div>
+                      Programs & Services
+                    </h2>
+                    <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                      {department.programs.map((program, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-100 transition-all hover:bg-neutral-50"
+                        >
+                          <Check className="w-5 h-5 mt-0.5" style={{ color: theme.primary }} />
+                          <span className="text-neutral-800 font-medium">{program}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              )}
+
+              {/* Gallery Section */}
+              {department.gallery && department.gallery.length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
+                    Campus Gallery
+                  </h2>
+                  {department.gallery.map((section, idx) => (
+                    <div key={idx} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {section.images.map((img, iIdx) => (
+                        <div key={iIdx} className="relative aspect-square rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group">
+                          <Image
+                            src={img.url}
+                            alt={img.alt}
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-500"
+                            sizes="(max-width: 640px) 50vw, 25vw"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-white text-xs text-center truncate">{img.alt}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  <div className="p-4 bg-sky-50 rounded-xl border border-sky-100 text-sky-800 text-sm text-center">
+                    🖼️ <strong>Note related to images:</strong> These are placeholders. Please add actual images to `public/images/ihs/` or update paths in data.
                   </div>
                 </div>
               )}
 
               {/* Facilities Section */}
               {department.facilities && department.facilities.length > 0 && (
-                <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-sm">
                   <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-6 font-display flex items-center gap-3">
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
@@ -265,21 +338,10 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                     {department.facilities.map((facility, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-100 hover:border-[var(--hover-border)] hover:bg-[var(--hover-bg)] hover:shadow-md transition-all cursor-pointer"
-                        style={{
-                          ['--hover-border' as string]: theme.accent,
-                          ['--hover-bg' as string]: theme.light
-                        }}
+                        className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-100 hover:shadow-md transition-all"
                       >
-                        <div
-                          className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                          style={{ backgroundColor: theme.light }}
-                        >
-                          <Award className="w-4 h-4" style={{ color: theme.primary }} />
-                        </div>
-                        <span className="text-neutral-800 font-medium text-sm sm:text-base leading-snug">
-                          {facility}
-                        </span>
+                        <Award className="w-5 h-5 mt-0.5" style={{ color: theme.primary }} />
+                        <span className="text-neutral-800 font-medium">{facility}</span>
                       </div>
                     ))}
                   </div>
@@ -302,7 +364,7 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                   </h3>
                   <div className="space-y-4">
                     <a
-                      href="tel:+923006395220"
+                      href={`tel:${department.contactPhone}`}
                       className="flex items-start gap-3 p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-all group min-h-[56px] focus:outline-none focus:ring-2 focus:ring-white/50"
                     >
                       <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -311,7 +373,7 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                       <div className="flex-1 min-w-0">
                         <div className="text-xs text-white/80 mb-0.5">Phone</div>
                         <div className="font-semibold text-sm sm:text-base break-all">
-                          +92-300-6395220
+                          {department.contactPhone}
                         </div>
                       </div>
                     </a>
@@ -339,7 +401,7 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                         <div className="text-xs text-white/80 mb-0.5">Status</div>
                         <div className="font-semibold flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                          Active
+                          Admissions Open
                         </div>
                       </div>
                     </div>
@@ -362,14 +424,8 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                         ['--hover-bg' as string]: theme.light
                       }}
                     >
-                      Send Inquiry
+                      Apply Now
                     </a>
-                    <Link
-                      href="/emergency"
-                      className="block w-full px-4 py-3 bg-red-50 border-2 border-red-200 rounded-xl text-center font-semibold text-red-600 hover:bg-red-100 hover:border-red-300 transition-all min-h-[48px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                    >
-                      🚨 Emergency Help
-                    </Link>
                   </div>
                 </div>
               </div>
@@ -379,7 +435,7 @@ export default async function DepartmentPage({ params }: { params: Params }) {
       </section>
 
       {/* ── INQUIRY FORM SECTION ── */}
-      <section id="inquiry-form" className="py-12 sm:py-16 bg-white">
+      <section id="inquiry-form" className="py-12 sm:py-16 bg-neutral-50 border-t border-neutral-200">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-2xl border-2 border-neutral-200 p-6 sm:p-8 shadow-lg">
             <div className="text-center mb-8">
@@ -390,10 +446,10 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                 <Mail className="w-8 h-8" style={{ color: theme.primary }} />
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-3 font-display">
-                Have a Question?
+                Online Admission Inquiry
               </h2>
               <p className="text-neutral-600 text-base sm:text-lg">
-                Send us an inquiry and our {department.shortName} team will get back to you within 24 hours.
+                Submit your details below for admission information in {department.name}.
               </p>
             </div>
             <InquiryForm department={department.slug} />
@@ -402,7 +458,7 @@ export default async function DepartmentPage({ params }: { params: Params }) {
       </section>
 
       {/* ── BACK TO DEPARTMENTS LINK ── */}
-      <section className="py-8 sm:py-12 bg-white">
+      <section className="py-8 sm:py-12 bg-white border-t border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Link
             href="/departments"
@@ -423,31 +479,22 @@ export default async function DepartmentPage({ params }: { params: Params }) {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
-            '@type': 'GovernmentService',
+            '@type': 'CollegeOrUniversity',
             name: department.name,
             description: department.description,
             url: `https://khanhub.com.pk/departments/${department.slug}`,
             image: department.image,
-            provider: {
-              '@type': 'GovernmentOrganization',
-              name: 'Khan Hub',
-              url: 'https://khanhub.com.pk',
-              telephone: department.contactPhone,
-              email: department.contactEmail
+            telephone: department.contactPhone,
+            email: department.contactEmail,
+            address: {
+              '@type': 'PostalAddress',
+              addressCountry: 'Pakistan'
             },
-            areaServed: {
-              '@type': 'Country',
-              name: 'Pakistan'
-            },
-            availableChannel: {
-              '@type': 'ServiceChannel',
-              servicePhone: {
-                '@type': 'ContactPoint',
-                telephone: department.contactPhone,
-                contactType: 'customer service'
-              },
-              serviceUrl: `https://khanhub.com.pk/departments/${department.slug}`
-            }
+            department: department.subDepartments?.map(sub => ({
+              '@type': 'EducationalOrganization',
+              name: sub.title,
+              description: sub.description
+            }))
           })
         }}
       />

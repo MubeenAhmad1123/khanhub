@@ -13,6 +13,10 @@ export const metadata: Metadata = {
     title: 'Khanhub Enterprise - Office & Business Solutions',
     description: 'Quality office equipment, furniture, and business supplies. New, imported, local, and budget products for businesses across Pakistan.',
     keywords: 'office equipment, furniture, business supplies, enterprise solutions, Pakistan',
+    icons: {
+        icon: '/logo.webp',
+        apple: '/logo.webp',
+    },
 };
 
 export default function RootLayout({

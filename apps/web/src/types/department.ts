@@ -36,4 +36,25 @@ export interface Department {
     facilities: string[];
     contactPhone: string;
     contactEmail: string;
+
+    // Enhanced structure for Institute of Health Sciences
+    subDepartments?: SubDepartment[];
+    features?: string[];
+    gallery?: {
+        title: string;
+        images: { url: string; alt: string; }[];
+    }[];
+}
+
+export interface SubDepartment {
+    title: string;
+    description?: string;
+    courses: Course[];
+}
+
+export interface Course {
+    name: string;
+    duration: string;
+    eligibility: string;
+    description?: string;
 }

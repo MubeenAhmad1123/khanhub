@@ -1,10 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '@/styles/globals.css';
-import ImprovedNavbar from '@/components/layout/ImprovedNavbar';
-import Footer from '@/components/layout/Footer';
-import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 import StructuredData from '@/components/seo/StructuredData';
+import ClientLayout from '@/components/layout/ClientLayout';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -59,11 +57,7 @@ export default function RootLayout({
         <html lang="en">
             <body className={inter.className}>
                 <StructuredData />
-                <AuthProviderWrapper>
-                    <ImprovedNavbar />
-                    <main>{children}</main>
-                    <Footer />
-                </AuthProviderWrapper>
+                <ClientLayout>{children}</ClientLayout>
             </body>
         </html>
     );

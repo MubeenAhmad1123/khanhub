@@ -158,19 +158,101 @@ export const DEPARTMENTS: Department[] = [
     icon: '🏥',
     image: '/images/institute-health-sciences.webp',
     category: 'social',
-    tagline: 'Advanced healthcare education and research',
-    description: 'Leading medical institution providing comprehensive healthcare education, research, and training programs.',
-    services: ['Medical Education', 'Research Programs', 'Clinical Training', 'Health Sciences'],
+    tagline: 'Excellence in Medical Education & Healthcare Training',
+    description: 'A premier institution dedicated to producing skilled healthcare professionals through state-of-the-art education and practical training.',
+    services: ['Medical Education', 'Paramedical Training', 'Nursing Programs', 'Pharmacy Technician'],
     stats: [
-      { value: '5,000+', label: 'Students' },
-      { value: '24/7', label: 'Facilities' }
+      { value: '3+', label: 'Departments' },
+      { value: '10+', label: 'Specialized Courses' },
+      { value: '100%', label: 'Practical Training' }
     ],
     isActive: true,
     colorHex: '#2563EB',
-    programs: ['MBBS', 'BDS', 'Nursing', 'Allied Health Sciences', 'Postgraduate Programs'],
-    facilities: ['Modern Lecture Halls', 'Research Labs', 'Medical Library', 'Simulation Center', 'Student Hostels'],
-    contactPhone: '+92-300-1234567',
-    contactEmail: 'info@ihs.khanhub.pk'
+    programs: ['Pharmacy Technician', 'LHV', 'CNA', 'OTT', 'MLT'],
+    facilities: ['Modern Labs', 'Hostel Facility', 'Digital Library', 'Clinical Training'],
+    contactPhone: '+92-300-6395220',
+    contactEmail: 'info@ihs.khanhub.pk',
+    features: [
+      'Less Fee Structure',
+      'Better Educational Standards',
+      'Experienced Teachers & Faculty',
+      'Best Equipped Laboratories',
+      'Hostel Facility Available',
+      'Scholarship Opportunities'
+    ],
+    subDepartments: [
+      {
+        title: 'Department of Pharmacy',
+        courses: [
+          {
+            name: 'Pharmacy Technician (Category-B)',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) - No minimum division required'
+          }
+        ]
+      },
+      {
+        title: 'FSc Paramedical Courses',
+        courses: [
+          {
+            name: 'Operation Theater Technology (OTT)',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks'
+          },
+          {
+            name: 'Medical Lab Technology (MLT)',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks'
+          },
+          {
+            name: 'Radiography & Imaging Technology (RIT)',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks'
+          },
+          {
+            name: 'Dispenser',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks'
+          },
+          {
+            name: 'Dialysis Technician',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks'
+          }
+        ]
+      },
+      {
+        title: 'Department of Nursing',
+        courses: [
+          {
+            name: 'Lady Health Visitor (LHV)',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks'
+          },
+          {
+            name: 'Community Midwife (CMW)',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks'
+          },
+          {
+            name: 'Certified Nursing Assistant (CNA)',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks'
+          }
+        ]
+      }
+    ],
+    gallery: [
+      {
+        title: 'Campus Life',
+        images: [
+          { url: '/images/ihs/lab-1.webp', alt: 'Advanced Computer Lab' },
+          { url: '/images/ihs/lab-2.webp', alt: 'Medical Laboratory' },
+          { url: '/images/ihs/classroom.webp', alt: 'Modern Classroom' },
+          { url: '/images/ihs/building.webp', alt: 'IHS Campus Building' }
+        ]
+      }
+    ]
   },
   {
     slug: 'education',
