@@ -12,6 +12,14 @@ export interface DepartmentStat {
     label: string;
 }
 
+export interface DepartmentService {
+    title: string;
+    description?: string;
+    icon?: string;
+    image?: string;
+    slug?: string;
+}
+
 export interface Program {
     slug: string;
     name: string;
