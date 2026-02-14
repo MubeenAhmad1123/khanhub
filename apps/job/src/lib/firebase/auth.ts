@@ -79,30 +79,27 @@ export async function updateUserProfile(uid: string, updates: Partial<User>): Pr
         let finalUpdates = { ...updates };
 
         // Only recalculate if we have profile data to work with or are updating profile
-        if (currentData?.role === 'job_seeker' || updates.role === 'job_seeker' || updates.profile) {
-            const currentProfile = currentData?.profile || {};
-            const updatesProfile = updates.profile || {};
-
-            // Merge existing profile with updates to get complete state
-            const mergedProfile = {
-                ...currentProfile,
-                ...updatesProfile
+        if (currentData?.role === 'job_seeker' || updates.role === 'job_seeker') {
+            const mergedUser = {
+                ...currentData,
+                ...updates,
+                profile: {
+                    ...(currentData?.profile || {}),
+                    ...(updates.profile || {})
+                }
             };
 
-            // Calculate new strength
-            const newStrength = calculateProfileStrength(mergedProfile);
+            // Calculate new strength using full user object
+            const newStrength = calculateProfileStrength(mergedUser);
 
-            // Apply new strength to updates
+            // Apply new strength to updates (ensuring we preserve other profile fields)
             finalUpdates = {
                 ...finalUpdates,
                 profile: {
-                    ...updatesProfile,
+                    ...(updates.profile || {}),
                     profileStrength: newStrength
-                } as any
-            };
-
-            // Also update the top-level profileStrength if it exists on User type (it doesn't seems so based on types, 
-            // but let's stick to profile.profileStrength as defined in User type)
+                }
+            } as any;
         }
 
         await setDoc(userRef, {

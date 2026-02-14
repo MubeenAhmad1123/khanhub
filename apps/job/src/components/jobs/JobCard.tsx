@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Job } from '@/types/job';
-import { MapPin, Clock, DollarSign, Briefcase, Star } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Briefcase, Star, Shield } from 'lucide-react';
 import { cn, formatSalaryRange, formatPostedDate, getJobTypeBadge } from '@/lib/utils';
 import Image from 'next/image';
 import { toDate } from '@/lib/firebase/firestore';
@@ -54,6 +54,12 @@ export default function JobCard({ job, showMatchScore = false }: JobCardProps) {
                     {job.isPremium && (
                         <span className="bg-amber-400 text-amber-900 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
                             Premium
+                        </span>
+                    )}
+                    {(job as any).postedByRole === 'admin' && (
+                        <span className="bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1">
+                            <Shield className="w-3 h-3 fill-white/20" />
+                            Official
                         </span>
                     )}
                 </div>

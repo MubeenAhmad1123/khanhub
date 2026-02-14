@@ -341,7 +341,7 @@ export default function AdminDashboard() {
                     <h3 className="font-semibold text-gray-800 mb-4">Quick Links</h3>
                     <div className="grid md:grid-cols-3 gap-4">
                         <Link
-                            href="/employer/post-job"
+                            href="/admin/post-job"
                             className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition"
                         >
                             <span className="text-2xl mr-3">➕</span>

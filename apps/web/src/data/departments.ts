@@ -270,7 +270,63 @@ export const DEPARTMENTS: Department[] = [
     ],
     isActive: true,
     colorHex: '#059669',
-    programs: ['Primary Education', 'Secondary Education', 'Higher Secondary', 'Special Education', 'Adult Literacy'],
+    programs: [
+      {
+        slug: 'primary-education',
+        name: 'Primary Education',
+        description: 'Foundational learning for children aged 5-11, focusing on core literacy, numeracy, and social skills.',
+        image: '/images/education/primary.webp',
+        features: ['Focused Curriculum', 'Holistic Development', 'Expert Educators'],
+        details: [
+          { label: 'Ages', value: '5 - 11 Years' },
+          { label: 'Focus', value: 'Foundational Literacy' }
+        ]
+      },
+      {
+        slug: 'secondary-education',
+        name: 'Secondary Education',
+        description: 'Comprehensive education for adolescents, preparing them for higher studies or vocational paths.',
+        image: '/images/education/secondary.webp',
+        features: ['Subject Specialization', 'Career Guidance', 'Modern Labs'],
+        details: [
+          { label: 'Ages', value: '11 - 16 Years' },
+          { label: 'Level', value: 'Middle & High School' }
+        ]
+      },
+      {
+        slug: 'higher-secondary',
+        name: 'Higher Secondary',
+        description: 'Advanced schooling focused on specialized streams like Pre-Medical, Pre-Engineering, and ICS.',
+        image: '/images/education/higher-secondary.webp',
+        features: ['Stream Selection', 'Board Exam Prep', 'Practical Training'],
+        details: [
+          { label: 'Duration', value: '2 Years' },
+          { label: 'Streams', value: 'Medical, Engineering, IT' }
+        ]
+      },
+      {
+        slug: 'special-education',
+        name: 'Special Education',
+        description: 'Tailored educational programs for children with diverse learning needs and abilities.',
+        image: '/images/education/special.webp',
+        features: ['Individualized Plans', 'Therapeutic Support', 'Inclusive Environment'],
+        details: [
+          { label: 'Focus', value: 'Inclusivity' },
+          { label: 'Support', value: 'Specialized Staff' }
+        ]
+      },
+      {
+        slug: 'adult-literacy',
+        name: 'Adult Literacy',
+        description: 'Empowering adults with essential reading, writing, and life skills for better opportunities.',
+        image: '/images/education/adult.webp',
+        features: ['Flexible Timing', 'Functional Skills', 'Community Based'],
+        details: [
+          { label: 'Focus', value: 'Lifelong Learning' },
+          { label: 'Eligibility', value: 'Ages 18+' }
+        ]
+      }
+    ],
     facilities: ['District Offices', 'Training Centers', 'Assessment Centers', 'Resource Libraries'],
     contactPhone: '+92-300-2345678',
     contactEmail: 'info@education.khanhub.pk'
@@ -292,16 +348,50 @@ export const DEPARTMENTS: Department[] = [
     isActive: true,
     colorHex: '#DC2626',
     programs: [
-      'Emergency Services',
-      'General Medicine',
-      'Surgery Department',
-      'Pediatrics',
-      'Gynecology & Obstetrics',
-      'Cardiology',
-      'Neurology',
-      'Oncology',
-      'Radiology',
-      'Laboratory Services'
+      {
+        slug: 'emergency-services',
+        name: 'Emergency Services',
+        description: '24/7 emergency care with state-of-the-art trauma facilities and expert medical staff.',
+        image: '/images/medical/emergency.webp',
+        features: ['24/7 Availability', 'Trauma Care', 'Rapid Response'],
+        details: [
+          { label: 'Service', value: 'Emergency' },
+          { label: 'Response', value: 'Immediate' }
+        ]
+      },
+      {
+        slug: 'general-medicine',
+        name: 'General Medicine',
+        description: 'Comprehensive evaluation and treatment of common illnesses and chronic conditions.',
+        image: '/images/medical/medicine.webp',
+        features: ['Full Checkup', 'Chronic Care', 'Consultations'],
+        details: [
+          { label: 'Type', value: 'Outpatient' },
+          { label: 'Care', value: 'Primary' }
+        ]
+      },
+      {
+        slug: 'cardiology',
+        name: 'Cardiology',
+        description: 'Specialized heart care including diagnostics, treatment, and preventive cardiology.',
+        image: '/images/medical/cardiology.webp',
+        features: ['ECG/Echo', 'TMT Tests', 'Heart Care'],
+        details: [
+          { label: 'Specialty', value: 'Heart' },
+          { label: 'Tech', value: 'Digital Diagnostics' }
+        ]
+      },
+      {
+        slug: 'pediatrics',
+        name: 'Pediatrics',
+        description: 'Dedicated healthcare for infants, children, and adolescents with a child-friendly environment.',
+        image: '/images/medical/pediatrics.webp',
+        features: ['Child Wellness', 'Vaccinations', 'Specialized Care'],
+        details: [
+          { label: 'Focus', value: 'Child Health' },
+          { label: 'Ages', value: '0 - 18' }
+        ]
+      }
     ],
     facilities: [
       '24/7 Emergency Department',
@@ -334,7 +424,41 @@ export const DEPARTMENTS: Department[] = [
     ],
     isActive: true,
     colorHex: '#F59E0B',
-    programs: ['License Issuance', 'Vehicle Registration', 'Route Permits', 'Traffic Safety'],
+    programs: [
+      {
+        slug: 'driving-license',
+        name: 'Driving License',
+        description: 'Simplified process for issuing and renewing driving licenses for all vehicle categories.',
+        image: '/images/transport/license.webp',
+        features: ['Quick Processing', 'Digital Tracking', 'Renewals'],
+        details: [
+          { label: 'Level', value: 'All Categories' },
+          { label: 'Process', value: 'Digital/Manual' }
+        ]
+      },
+      {
+        slug: 'vehicle-registration',
+        name: 'Vehicle Registration',
+        description: 'New vehicle registration and ownership transfer services with transparent procedures.',
+        image: '/images/transport/registration.webp',
+        features: ['New Reg', 'Transfer', 'Number Plates'],
+        details: [
+          { label: 'Efficiency', value: 'Same Day' },
+          { label: 'Security', value: 'Verified' }
+        ]
+      },
+      {
+        slug: 'route-permits',
+        name: 'Route Permits',
+        description: 'Issuance and management of route permits for commercial and public transport vehicles.',
+        image: '/images/transport/permits.webp',
+        features: ['Route Allotment', 'Permit Renewal', 'Safety Check'],
+        details: [
+          { label: 'Sector', value: 'Commercial' },
+          { label: 'Validity', value: 'Annual' }
+        ]
+      }
+    ],
     facilities: ['License Centers', 'Registration Offices', 'Testing Tracks', 'Customer Service Centers'],
     contactPhone: '+92-300-3456789',
     contactEmail: 'info@transport.khanhub.pk'

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
     MapPin, Briefcase, Clock, DollarSign, Building2, Users, Calendar,
     Bookmark, BookmarkCheck, Share2, Flag, ArrowLeft, CheckCircle2,
-    XCircle, Loader2, Mail, Phone, Globe, Linkedin, Facebook, Twitter, Award, AlertCircle, CheckCircle
+    XCircle, Loader2, Mail, Phone, Globe, Linkedin, Facebook, Twitter, Award, AlertCircle, CheckCircle, Shield, TrendingUp
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Job, SavedJob } from '@/types/job';
@@ -49,7 +49,7 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
         if (!user) return;
         try {
             const applications = await queryDocuments<Application>('applications', [
-                where('candidateId', '==', user.uid),
+                where('jobSeekerId', '==', user.uid),
                 where('jobId', '==', job.id)
             ]);
             setHasApplied(applications.length > 0);
@@ -179,6 +179,12 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                                         {(job as any).isEmployerVerified && (
                                             <RegisteredBadge size={28} showText />
                                         )}
+                                        {(job as any).postedByRole === 'admin' && (
+                                            <div className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-xl shadow-lg border-2 border-indigo-400">
+                                                <Shield className="w-5 h-5 fill-white/20" />
+                                                <span className="text-sm font-black uppercase tracking-tight">Official Post</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <p className="text-xl text-gray-600 font-bold mb-4">
                                         {job.companyName}
@@ -198,7 +204,16 @@ export default function JobDetail({ job, onSave, isSaved: initialIsSaved = false
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Clock className="h-4 w-4 text-jobs-primary" />
-                                            <span className="font-semibold">{formatPostedDate(job.postedAt as any)}</span>
+                                            <span className="font-semibold">
+                                                {(job as any).experience || 'Fresh / No Experience'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-gray-600">
+                                            <TrendingUp className="h-4 w-4 text-jobs-primary" />
+                                            <span className="font-semibold capitalize">{(job as any).experienceLevel || 'Entry Level'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-gray-600 text-xs">
+                                            <span>📅 {formatPostedDate(job.postedAt as any)}</span>
                                         </div>
                                     </div>
                                 </div>

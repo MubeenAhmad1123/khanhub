@@ -24,7 +24,7 @@ export default function Footer() {
                         <ul className="space-y-4 font-medium">
                             <li><Link href="/auth/register?role=employer" className="text-slate-300 hover:text-teal-400 transition-colors">Post a Job</Link></li>
                             <li><Link href="/employer/dashboard" className="text-slate-300 hover:text-teal-400 transition-colors">Recruiter Dashboard</Link></li>
-                            <li><Link href="/search?q=talant" className="text-slate-300 hover:text-teal-400 transition-colors">Search Talent</Link></li>
+                            <li><Link href="/search" className="text-slate-300 hover:text-teal-400 transition-colors">Search Talent</Link></li>
                         </ul>
                     </div>
                     <div>

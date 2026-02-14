@@ -277,16 +277,70 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                       </div>
                       Programs & Services
                     </h2>
-                    <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                      {department.programs.map((program, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-100 transition-all hover:bg-neutral-50"
-                        >
-                          <Check className="w-5 h-5 mt-0.5" style={{ color: theme.primary }} />
-                          <span className="text-neutral-800 font-medium">{program}</span>
-                        </div>
-                      ))}
+                    <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
+                      {department.programs.map((program, idx) => {
+                        const isObject = typeof program !== 'string';
+                        const programName = isObject ? program.name : program;
+                        const programDesc = isObject ? program.description : null;
+                        const programImg = isObject ? program.image : null;
+                        const programSlug = isObject ? program.slug : null;
+
+                        const content = (
+                          <div
+                            className={`flex flex-col h-full bg-white rounded-2xl border-2 border-neutral-100 overflow-hidden transition-all ${isObject ? 'hover:border-neutral-300 hover:shadow-xl' : ''}`}
+                          >
+                            {programImg && (
+                              <div className="relative h-40 w-full">
+                                <Image
+                                  src={programImg}
+                                  alt={programName}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="p-5 flex-1 flex flex-col">
+                              <div className="flex items-start gap-3 mb-3">
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                                  style={{ backgroundColor: theme.light }}
+                                >
+                                  <Check className="w-4 h-4" style={{ color: theme.primary }} />
+                                </div>
+                                <h3 className="font-bold text-neutral-900 leading-tight">
+                                  {programName}
+                                </h3>
+                              </div>
+                              {programDesc && (
+                                <p className="text-sm text-neutral-600 line-clamp-2 mb-4">
+                                  {programDesc}
+                                </p>
+                              )}
+                              {isObject && (
+                                <div className="mt-auto flex items-center gap-2 text-sm font-bold" style={{ color: theme.primary }}>
+                                  Learn More
+                                  <span className="transition-transform group-hover:translate-x-1">→</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+
+                        return isObject ? (
+                          <Link
+                            key={idx}
+                            href={`/departments/${department.slug}/${programSlug}`}
+                            className="group block"
+                          >
+                            {content}
+                          </Link>
+                        ) : (
+                          <div key={idx} className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-100 transition-all hover:bg-neutral-50">
+                            <Check className="w-5 h-5 mt-0.5" style={{ color: theme.primary }} />
+                            <span className="text-neutral-800 font-medium">{program}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )

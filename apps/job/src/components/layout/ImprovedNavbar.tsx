@@ -5,12 +5,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { LogOut, User, Settings, LayoutDashboard, Search, Briefcase, PlusCircle, BookmarkCheck, Shield, Menu, X, ChevronDown, Sparkles } from 'lucide-react';
+import { LogOut, User, Users, Settings, LayoutDashboard, Search, Briefcase, PlusCircle, BookmarkCheck, Shield, Menu, X, ChevronDown, Sparkles } from 'lucide-react';
+import RegisteredBadge from '@/components/ui/RegisteredBadge';
 
 export default function ImprovedNavbar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading, hasPaymentApproved } = useAuth();
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -66,11 +67,13 @@ export default function ImprovedNavbar() {
             ];
         }
 
-        if (pathname?.startsWith('/admin') && user.role === 'admin') {
+        if (user.role === 'admin') {
             return [
                 { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard className="w-4 h-4" /> },
                 { name: 'Payments', path: '/admin/payments', icon: <Sparkles className="w-4 h-4" /> },
                 { name: 'Jobs', path: '/admin/jobs', icon: <BookmarkCheck className="w-4 h-4" /> },
+                { name: 'Users', path: '/admin/users', icon: <Users className="w-4 h-4" /> },
+                { name: 'Browse Jobs', path: '/search', icon: <Search className="w-4 h-4" /> },
             ];
         }
 
@@ -99,7 +102,7 @@ export default function ImprovedNavbar() {
                 <div className="flex justify-between items-center h-16 sm:h-20">
                     {/* Logo - Always goes to Home */}
                     <div className="flex items-center gap-8">
-                        <Link href="/" className="group flex items-center gap-2">
+                        <Link href={user?.role === 'admin' ? '/admin' : '/'} className="group flex items-center gap-2">
                             <h1 className="text-2xl font-black text-teal-600 tracking-tight">
                                 KhanHub
                             </h1>
@@ -151,23 +154,33 @@ export default function ImprovedNavbar() {
                                                 alt="Profile"
                                                 width={36}
                                                 height={36}
-                                                className="w-9 h-9 rounded-full object-cover border border-gray-100 shadow-sm"
+                                                className={`w-9 h-9 rounded-full object-cover border shadow-sm ${user.role === 'admin' ? 'border-indigo-200' : 'border-gray-100'}`}
                                             />
                                         ) : (
-                                            <div className="w-9 h-9 rounded-full bg-teal-600 flex items-center justify-center text-white font-black text-sm border border-gray-100 shadow-sm">
-                                                {user.email ? user.email[0].toUpperCase() : '?'}
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-black text-sm border shadow-sm ${user.role === 'admin' ? 'bg-indigo-900 border-indigo-700' : 'bg-teal-600 border-gray-100'
+                                                }`}>
+                                                {user.role === 'admin' ? <Shield className="w-4 h-4" /> : (user.email ? user.email[0].toUpperCase() : '?')}
                                             </div>
                                         )}
-                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                                        <div className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white rounded-full ${user.role === 'admin' ? 'bg-indigo-500' : 'bg-green-500'}`}></div>
                                     </div>
 
                                     <div className="hidden md:flex flex-col items-start leading-tight">
                                         <span className="text-sm font-bold text-gray-900 truncate max-w-[150px]">
                                             {user.email}
                                         </span>
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            {user.role?.replace('_', ' ') || 'User'}
-                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            {hasPaymentApproved && user.role === 'job_seeker' && (
+                                                <RegisteredBadge size={12} />
+                                            )}
+                                            {user.role === 'admin' && (
+                                                <Shield className="w-2.5 h-2.5 text-indigo-600 fill-indigo-600" />
+                                            )}
+                                            <span className={`text-[10px] font-bold uppercase tracking-widest ${user.role === 'admin' ? 'text-indigo-600' : 'text-gray-500'
+                                                }`}>
+                                                {user.role?.replace('_', ' ') || 'User'}
+                                            </span>
+                                        </div>
                                     </div>
                                     <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
                                 </button>
@@ -282,6 +295,38 @@ export default function ImprovedNavbar() {
 
                         {user && (
                             <div className="pt-4 border-t border-gray-100">
+                                <div className="flex items-center gap-4 px-4 py-4 mb-2 bg-gray-50 rounded-2xl">
+                                    <div className="relative">
+                                        {user.photoURL ? (
+                                            <Image
+                                                src={user.photoURL}
+                                                alt="Profile"
+                                                width={48}
+                                                height={48}
+                                                className={`w-12 h-12 rounded-full object-cover border-2 shadow-sm ${user.role === 'admin' ? 'border-indigo-100' : 'border-white'}`}
+                                            />
+                                        ) : (
+                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg shadow-sm ${user.role === 'admin' ? 'bg-indigo-900' : 'bg-teal-600'}`}>
+                                                {user.role === 'admin' ? <Shield className="w-6 h-6" /> : (user.email ? user.email[0].toUpperCase() : '?')}
+                                            </div>
+                                        )}
+                                        <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white rounded-full ${user.role === 'admin' ? 'bg-indigo-500' : 'bg-green-500'}`}></div>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-black text-gray-900 truncate max-w-[200px]">{user.displayName || user.email}</span>
+                                        <div className="flex items-center gap-1.5">
+                                            {hasPaymentApproved && user.role === 'job_seeker' && (
+                                                <RegisteredBadge size={14} />
+                                            )}
+                                            {user.role === 'admin' && (
+                                                <Shield className="w-3 h-3 text-indigo-600 fill-indigo-600" />
+                                            )}
+                                            <span className={`text-[11px] font-bold uppercase tracking-widest ${user.role === 'admin' ? 'text-indigo-600' : 'text-gray-500'}`}>
+                                                {user.role?.replace('_', ' ') || 'User'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <button
                                     onClick={handleLogout}
                                     className="flex items-center gap-3 w-full px-4 py-4 rounded-xl text-base font-bold text-red-600 bg-red-50"

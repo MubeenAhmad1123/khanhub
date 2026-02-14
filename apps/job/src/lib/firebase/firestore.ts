@@ -529,8 +529,7 @@ export const getApplicationsByEmployer = async (employerId: string) => {
  */
 export const getApplicationsByCandidate = async (candidateId: string) => {
     return queryDocuments(COLLECTIONS.APPLICATIONS, [
-        where('candidateId', '==', candidateId),
-        orderBy('appliedAt', 'desc'),
+        where('jobSeekerId', '==', candidateId),
     ]);
 };
 

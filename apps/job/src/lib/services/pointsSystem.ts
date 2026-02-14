@@ -89,15 +89,18 @@ export function calculateProfileStrength(jobSeeker: any): number {
     // Handle both direct profile object or User object with nested profile
     const p = jobSeeker.profile || jobSeeker;
 
-    // CV uploaded (20%)
-    if (p.cvUrl) strength += 20;
+    // Onboarding/Basic Info (20%)
+    if (jobSeeker.onboardingCompleted) strength += 20;
 
-    // Video uploaded (20%)
-    if (p.videoUrl) strength += 20;
+    // CV uploaded (15%)
+    if (p.cvUrl) strength += 15;
+
+    // Video uploaded (15%)
+    if (p.videoUrl) strength += 15;
 
     // Skills (15%) - minimum 5 skills
     if (p.skills && p.skills.length >= 5) strength += 15;
-    else if (p.skills && p.skills.length > 0) strength += 10; // Partial points for fewer skills
+    else if (p.skills && p.skills.length > 0) strength += 10;
 
     // Experience (15%) - at least 1 entry
     if (p.experience && p.experience.length >= 1) strength += 15;
@@ -107,10 +110,7 @@ export function calculateProfileStrength(jobSeeker: any): number {
 
     // Bio/Summary (10%) - at least 50 characters
     if (p.bio && p.bio.length >= 50) strength += 10;
-    else if (p.bio && p.bio.length > 0) strength += 5; // Partial points
-
-    // Certifications (10%) - at least 1 entry
-    if (p.certifications && p.certifications.length >= 1) strength += 10;
+    else if (p.bio && p.bio.length > 0) strength += 5;
 
     return Math.min(strength, 100);
 }
@@ -154,13 +154,15 @@ export function getProfileStrengthLabel(strength: number): string {
  * @returns Suggestion string
  */
 export function getProfileCompletionSuggestion(jobSeeker: any): string {
-    if (!jobSeeker.cvUrl) return 'Upload your CV to increase profile strength';
-    if (!jobSeeker.videoUrl) return 'Add an intro video to stand out';
-    if (!jobSeeker.skills || jobSeeker.skills.length < 5) return 'Add at least 5 skills';
-    if (!jobSeeker.experience || jobSeeker.experience.length === 0) return 'Add your work experience';
-    if (!jobSeeker.education || jobSeeker.education.length === 0) return 'Add your education';
-    if (!jobSeeker.bio || jobSeeker.bio.length < 50) return 'Write a professional summary (50+ characters)';
-    if (!jobSeeker.certifications || jobSeeker.certifications.length === 0) return 'Add certifications to reach 100%';
+    const s = jobSeeker.profile || jobSeeker;
+    if (!jobSeeker.onboardingCompleted) return 'Complete your basic information';
+    if (!s.cvUrl) return 'Upload your CV to increase profile strength';
+    if (!s.videoUrl) return 'Add an intro video to stand out';
+    if (!s.skills || s.skills.length < 5) return 'Add at least 5 skills';
+    if (!s.experience || s.experience.length === 0) return 'Add your work experience';
+    if (!s.education || s.education.length === 0) return 'Add your education';
+    if (!s.bio || s.bio.length < 50) return 'Write a professional summary (50+ characters)';
+    if (!s.certifications || s.certifications.length === 0) return 'Add certifications to reach 100%';
     return 'Your profile is complete!';
 }
 

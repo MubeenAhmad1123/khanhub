@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Search, MapPin, Briefcase, DollarSign, X, SlidersHorizontal, Loader2, Filter } from 'lucide-react';
@@ -12,14 +12,14 @@ import type { QueryConstraint } from 'firebase/firestore';
 
 export default function SearchPage() {
     const searchParams = useSearchParams();
-    const { profile } = useAuth();
+    const { profile, loading: authLoading } = useAuth();
 
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false); // Added loadingMore state
     const [showFilters, setShowFilters] = useState(false);
     const [totalResults, setTotalResults] = useState(0);
-    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+    const lastDocRef = useRef<QueryDocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
 
     // Filter states
@@ -42,7 +42,7 @@ export default function SearchPage() {
                 setLoading(true);
                 setJobs([]);
                 setTotalResults(0);
-                setLastDoc(null);
+                lastDocRef.current = null;
             } else {
                 console.log('[Search Debug] Loading more results');
                 setLoadingMore(true);
@@ -81,7 +81,7 @@ export default function SearchPage() {
                 'jobs',
                 constraints,
                 PAGE_SIZE,
-                reset ? undefined : (lastDoc || undefined)
+                reset ? undefined : (lastDocRef.current || undefined)
             );
 
             // Filter by search query and salary (client-side post-processing)
@@ -116,7 +116,7 @@ export default function SearchPage() {
             }
 
             setHasMore(results.length === PAGE_SIZE);
-            setLastDoc(newLastDoc);
+            lastDocRef.current = newLastDoc;
         } catch (error) {
             console.error('[Search Error] Failed to fetch jobs:', error);
             if (reset) {
@@ -127,7 +127,7 @@ export default function SearchPage() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [searchQuery, selectedCategory, selectedLocation, selectedEmploymentType, remoteOnly, sortBy, lastDoc, minSalary, maxSalary]);
+    }, [searchQuery, selectedCategory, selectedLocation, selectedEmploymentType, remoteOnly, sortBy, minSalary, maxSalary]);
 
     useEffect(() => {
         fetchJobs(true);
@@ -353,7 +353,7 @@ export default function SearchPage() {
                     {/* Results */}
                     <div className="flex-1">
                         {/* Auth CTA for non-logged-in users */}
-                        {!profile && (
+                        {!authLoading && !profile && (
                             <div className="bg-gradient-to-r from-teal-600 to-blue-600 text-white p-6 rounded-2xl mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
                                 <div>
                                     <h3 className="font-black text-xl mb-1 flex items-center gap-2">

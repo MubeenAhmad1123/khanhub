@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
+import { calculateProfileStrength, getProfileImprovementSteps } from '@/lib/services/pointsSystem';
+import { updateUserProfile } from '@/lib/firebase/auth';
+import { Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -11,6 +14,7 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [animatedStrength, setAnimatedStrength] = useState(0);
+    const { refreshProfile } = useAuth();
 
     // Auth check
     useEffect(() => {
@@ -19,11 +23,11 @@ export default function ProfilePage() {
         }
     }, [authLoading, user, router]);
 
-    // Fetch profile
+    // Fetch profile and sync strength
     useEffect(() => {
         if (!user) return;
 
-        const fetchProfile = async () => {
+        const fetchAndSyncProfile = async () => {
             try {
                 setLoading(true);
                 const { doc, getDoc } = await import('firebase/firestore');
@@ -31,7 +35,29 @@ export default function ProfilePage() {
 
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists()) {
-                    setProfile(userDoc.data());
+                    const userData = userDoc.data();
+                    setProfile(userData);
+
+                    // Sync strength if mismatch
+                    const currentStrength = userData.profile?.profileStrength || 0;
+                    const calculatedStrength = calculateProfileStrength(userData);
+
+                    if (currentStrength !== calculatedStrength) {
+                        console.log(`♻️ Syncing profile strength on profile page: ${currentStrength}% -> ${calculatedStrength}%`);
+                        await updateUserProfile(user.uid, {
+                            profile: {
+                                profileStrength: calculatedStrength
+                            }
+                        } as any);
+                        // Update local state to reflect change immediately
+                        setProfile((prev: any) => ({
+                            ...prev,
+                            profile: {
+                                ...(prev?.profile || {}),
+                                profileStrength: calculatedStrength
+                            }
+                        }));
+                    }
                 }
             } catch (error) {
                 console.error('Fetch profile error:', error);
@@ -40,13 +66,13 @@ export default function ProfilePage() {
             }
         };
 
-        fetchProfile();
+        fetchAndSyncProfile();
     }, [user]);
 
     const profileStrength = profile?.profile?.profileStrength || 0;
     const hasCV = !!profile?.profile?.cvUrl;
     const hasVideo = !!profile?.profile?.videoUrl;
-    const isProfileComplete = profile?.profile?.fullName && profile?.profile?.skills?.length > 0;
+    const improvementSteps = profile ? getProfileImprovementSteps(profile.profile || profile) : [];
 
     // Trigger animation when profileStrength loads
     useEffect(() => {
@@ -102,23 +128,18 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Completion Tips */}
-                    <div className="space-y-2">
-                        {!isProfileComplete && (
-                            <div className="flex items-center gap-2 text-sm">
-                                <span className="text-yellow-500">⚠️</span>
-                                <span className="text-gray-700">Complete your basic information (+25 points)</span>
-                            </div>
-                        )}
-                        {!hasCV && (
-                            <div className="flex items-center gap-2 text-sm">
-                                <span className="text-yellow-500">⚠️</span>
-                                <span className="text-gray-700">Upload your CV (+15 points)</span>
-                            </div>
-                        )}
-                        {!hasVideo && (
-                            <div className="flex items-center gap-2 text-sm">
-                                <span className="text-yellow-500">⚠️</span>
-                                <span className="text-gray-700">Add an introduction video (+20 points)</span>
+                    <div className="space-y-3">
+                        {improvementSteps.length > 0 ? (
+                            improvementSteps.map((step, index) => (
+                                <div key={index} className="flex items-center gap-3 text-sm bg-yellow-50 text-yellow-800 px-4 py-2 rounded-lg border border-yellow-100">
+                                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                                    <span>{step}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex items-center gap-3 text-sm bg-green-50 text-green-800 px-4 py-2 rounded-lg border border-green-100">
+                                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                                <span>Your profile is 100% complete! Great job.</span>
                             </div>
                         )}
                     </div>

@@ -12,9 +12,13 @@ export interface DepartmentStat {
     label: string;
 }
 
-export interface DepartmentService {
-    title: string;
+export interface Program {
+    slug: string;
+    name: string;
     description: string;
+    image?: string;
+    features?: string[];
+    details?: { label: string; value: string }[];
 }
 
 export interface Department {
@@ -32,7 +36,7 @@ export interface Department {
 
     // Additional fields for individual department pages
     colorHex?: string;
-    programs: string[];
+    programs: string[] | Program[];
     facilities: string[];
     contactPhone: string;
     contactEmail: string;
