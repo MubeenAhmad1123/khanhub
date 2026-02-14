@@ -521,7 +521,52 @@ export const DEPARTMENTS: Department[] = [
     ],
     isActive: true,
     colorHex: '#0D9488',
-    programs: ['Old Age Pension', 'Disability Allowance', 'Widow Support', 'Orphan Care', 'Emergency Relief'],
+    programs: [
+      {
+        slug: 'pension-programs',
+        name: 'Pension Programs',
+        description: 'Streamlined financial support systems for senior citizens and retired workers to ensure dignity in old age.',
+        image: '/images/welfare/pension.webp',
+        features: ['Digital Payments', 'Senior Support', 'Easy Enrollment'],
+        details: [
+          { label: 'Category', value: 'Social Support' },
+          { label: 'Frequency', value: 'Monthly' }
+        ]
+      },
+      {
+        slug: 'disability-support',
+        name: 'Disability Support',
+        description: 'Comprehensive aid including financial assistance, assistive devices, and vocational training for people with disabilities.',
+        image: '/images/welfare/disability.webp',
+        features: ['Assistive Devices', 'Job Coaching', 'Grants'],
+        details: [
+          { label: 'Service', value: 'Rehabilitation' },
+          { label: 'Support', value: 'End-to-End' }
+        ]
+      },
+      {
+        slug: 'women-empowerment',
+        name: 'Women Empowerment',
+        description: 'Skill-building workshops, micro-finance opportunities, and legal support to help women achieve financial independence.',
+        image: '/images/welfare/empowerment.webp',
+        features: ['Skill Training', 'Micro-Loans', 'Legal Aid'],
+        details: [
+          { label: 'Focus', value: 'Financial Independence' },
+          { label: 'Network', value: 'Female Experts' }
+        ]
+      },
+      {
+        slug: 'child-protection',
+        name: 'Child Protection',
+        description: 'Safe havens and education initiatives for vulnerable children, ensuring their safety and future growth.',
+        image: '/images/welfare/child.webp',
+        features: ['Safe Shelters', 'Education', 'Health Care'],
+        details: [
+          { label: 'Ages', value: '0 - 18 Years' },
+          { label: 'Support', value: '24/7 Protection' }
+        ]
+      }
+    ],
     facilities: ['Welfare Centers', 'Community Halls', 'Support Offices', 'Distribution Points'],
     contactPhone: '+92-300-6789012',
     contactEmail: 'info@welfare.khanhub.pk'
@@ -542,7 +587,52 @@ export const DEPARTMENTS: Department[] = [
     ],
     isActive: true,
     colorHex: '#0EA5E9',
-    programs: ['Job Portal', 'Career Counseling', 'Resume Building', 'Interview Prep', 'Job Fairs'],
+    programs: [
+      {
+        slug: 'job-portal',
+        name: 'Job Portal',
+        description: 'A modern platform connecting job seekers with top employers across Pakistan with real-time tracking.',
+        image: '/images/jobs/portal.webp',
+        features: ['Real-time Tracking', 'Mobile Friendly', 'Verified Jobs'],
+        details: [
+          { label: 'Service', value: 'Online Portal' },
+          { label: 'Coverage', value: 'National' }
+        ]
+      },
+      {
+        slug: 'career-counseling',
+        name: 'Career Counseling',
+        description: 'Personalized sessions with industry experts to help you identify your strengths and map your career path.',
+        image: '/images/jobs/counseling.webp',
+        features: ['Expert Guidance', 'Skill Assessment', 'Roadmaps'],
+        details: [
+          { label: 'Type', value: 'One-on-One' },
+          { label: 'Format', value: 'Online/In-person' }
+        ]
+      },
+      {
+        slug: 'resume-building',
+        name: 'Resume Building',
+        description: 'Professional ATS-friendly resume and cover letter writing services to make you stand out.',
+        image: '/images/jobs/resume.webp',
+        features: ['ATS Optimization', 'Visual Design', 'Cover Letters'],
+        details: [
+          { label: 'Goal', value: 'Increase Interviews' },
+          { label: 'Style', value: 'Modern & Pro' }
+        ]
+      },
+      {
+        slug: 'interview-prep',
+        name: 'Interview Prep',
+        description: 'Mock interviews and feedback sessions to help you ace your next big opportunity with confidence.',
+        image: '/images/jobs/interview.webp',
+        features: ['Mock Interviews', 'Expert Feedback', 'Body Language'],
+        details: [
+          { label: 'Support', value: 'High Success' },
+          { label: 'Benefit', value: 'Boost Confidence' }
+        ]
+      }
+    ],
     facilities: ['Career Centers', 'Computer Labs', 'Interview Rooms', 'Resource Libraries'],
     contactPhone: '+92-300-7890123',
     contactEmail: 'jobs@khanhub.pk'
@@ -605,7 +695,52 @@ export const DEPARTMENTS: Department[] = [
     ],
     isActive: true,
     colorHex: '#0891B2',
-    programs: ['Physical Rehabilitation', 'Drug Rehabilitation', 'Alcohol Treatment', 'Psychological Counseling'],
+    programs: [
+      {
+        slug: 'physical-rehabilitation',
+        name: 'Physical Therapy',
+        description: 'Advanced physiotherapy and exercise programs to help patients recover mobility after injury or surgery.',
+        image: '/images/rehab/physical.webp',
+        features: ['Mobility Recovery', 'Pain Management', 'Expert Therapists'],
+        details: [
+          { label: 'Type', value: 'Physical' },
+          { label: 'Care', value: 'Individualized' }
+        ]
+      },
+      {
+        slug: 'drug-rehab',
+        name: 'Drug Rehabilitation',
+        description: 'Holistic recovery programs combining medical detox with psychological counseling and community support.',
+        image: '/images/rehab/drug.webp',
+        features: ['Medical Detox', 'Counseling', 'Aftercare'],
+        details: [
+          { label: 'Program', value: 'Inpatient' },
+          { label: 'Support', value: '24/7' }
+        ]
+      },
+      {
+        slug: 'psychological-counseling',
+        name: 'Psychological Counseling',
+        description: 'Expert-led sessions focusing on trauma recovery, depression, and mental resilience.',
+        image: '/images/rehab/counseling.webp',
+        features: ['Trauma Recovery', 'Mental Resilience', 'Safe Space'],
+        details: [
+          { label: 'Focus', value: 'Mental Health' },
+          { label: 'Format', value: 'One-on-One' }
+        ]
+      },
+      {
+        slug: 'vocational-rehab',
+        name: 'Vocational Rehab',
+        description: 'Helping recovering patients learn new skills and find meaningful employment during their recovery journey.',
+        image: '/images/rehab/vocational.webp',
+        features: ['Skill Building', 'Job Placement', 'Workshops'],
+        details: [
+          { label: 'Goal', value: 'Independence' },
+          { label: 'Benefit', value: 'Career Skills' }
+        ]
+      }
+    ],
     facilities: ['Therapy Rooms', 'Counseling Centers', 'Residential Units', 'Exercise Areas', 'Group Therapy Halls'],
     contactPhone: '+92-300-0123456',
     contactEmail: 'rehab@khanhub.pk'
@@ -689,7 +824,52 @@ export const DEPARTMENTS: Department[] = [
     ],
     isActive: true,
     colorHex: '#7C3AED',
-    programs: ['Startup Incubation', 'Business Loans', 'Mentorship Programs', 'Networking Events', 'Business Training'],
+    programs: [
+      {
+        slug: 'startup-incubation',
+        name: 'Startup Incubation',
+        description: 'Nurturing early-stage startups with office space, mentorship, and access to a massive network of investors.',
+        image: '/images/enterprises/incubation.webp',
+        features: ['Office Space', 'Mentorship', 'Investor Network'],
+        details: [
+          { label: 'Service', value: 'Incubation' },
+          { label: 'Access', value: 'Full Network' }
+        ]
+      },
+      {
+        slug: 'business-loans',
+        name: 'Business Loans',
+        description: 'Easy access to low-interest capital for small and medium enterprises to scale their operations.',
+        image: '/images/enterprises/loans.webp',
+        features: ['Low Interest', 'Quick Approval', 'Scalable Capital'],
+        details: [
+          { label: 'Type', value: 'Financial Aid' },
+          { label: 'Limit', value: 'Based on Need' }
+        ]
+      },
+      {
+        slug: 'mentorship',
+        name: 'Mentorship Programs',
+        description: 'Connecting aspiring entrepreneurs with seasoned business leaders for strategic guidance and growth.',
+        image: '/images/enterprises/mentorship.webp',
+        features: ['Strategic Guidance', 'Business Strategy', 'Networking'],
+        details: [
+          { label: 'Format', value: 'Mentorship' },
+          { label: 'Experts', value: 'Industry Leaders' }
+        ]
+      },
+      {
+        slug: 'digital-transformation',
+        name: 'Digital Transformation',
+        description: 'Helping traditional businesses adopt modern technologies and reach global markets through e-commerce.',
+        image: '/images/enterprises/digital.webp',
+        features: ['E-commerce', 'Tech Adoption', 'Global Reach'],
+        details: [
+          { label: 'Goal', value: 'Modernization' },
+          { label: 'Approach', value: 'Tech-First' }
+        ]
+      }
+    ],
     facilities: ['Incubation Centers', 'Co-working Spaces', 'Meeting Rooms', 'Resource Centers'],
     contactPhone: '+92-300-4560123',
     contactEmail: 'enterprise@khanhub.pk'
@@ -710,7 +890,52 @@ export const DEPARTMENTS: Department[] = [
     ],
     isActive: true,
     colorHex: '#14B8A6',
-    programs: ['Individual Therapy', 'Group Therapy', 'Family Counseling', 'Crisis Intervention', 'Psychiatric Treatment'],
+    programs: [
+      {
+        slug: 'individual-therapy',
+        name: 'Individual Therapy',
+        description: 'Private and confidential one-on-one sessions with licensed therapists to address personal mental health challenges.',
+        image: '/images/sukoon/individual.webp',
+        features: ['Confidential', 'Expert Therapists', 'Personalized'],
+        details: [
+          { label: 'Format', value: 'One-on-One' },
+          { label: 'Privacy', value: '100%' }
+        ]
+      },
+      {
+        slug: 'group-therapy',
+        name: 'Group Support',
+        description: 'Safe community spaces where individuals can share experiences and grow together under professional guidance.',
+        image: '/images/sukoon/group.webp',
+        features: ['Community Space', 'Shared Growth', 'Safe Environment'],
+        details: [
+          { label: 'Type', value: 'Group Session' },
+          { label: 'Support', value: 'Peer-to-Peer' }
+        ]
+      },
+      {
+        slug: 'family-counseling',
+        name: 'Family Counseling',
+        description: "Helping families navigate conflicts, improve communication, and support each other's mental well-being.",
+        image: '/images/sukoon/family.webp',
+        features: ['Conflict Resolution', 'Better Communication', 'Supportive'],
+        details: [
+          { label: 'Focus', value: 'Family Wellness' },
+          { label: 'Outcome', value: 'Better Relatioships' }
+        ]
+      },
+      {
+        slug: 'crisis-helpline',
+        name: 'Crisis Helpline',
+        description: '24/7 immediate support for individuals experiencing mental health emergencies or emotional distress.',
+        image: '/images/sukoon/helpline.webp',
+        features: ['24/7 Support', 'Immediate Crisis Aid', 'Compassionate'],
+        details: [
+          { label: 'Service', value: 'Helpline' },
+          { label: 'Availability', value: 'Always Open' }
+        ]
+      }
+    ],
     facilities: ['Counseling Rooms', 'Group Therapy Halls', 'Crisis Center', '24/7 Helpline', 'Psychiatric Ward'],
     contactPhone: '+92-300-SUKOON-1',
     contactEmail: 'help@sukoon.khanhub.pk'

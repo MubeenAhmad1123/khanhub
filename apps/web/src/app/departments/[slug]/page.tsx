@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       department.name,
       department.shortName,
       department.category,
-      ...department.services.map(s => typeof s === 'string' ? s : s.title),
+      ...(department.programs?.map(p => typeof p === 'string' ? p : p.name) || []),
       'Pakistan',
       'Khan Hub',
       'Government Services'
@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     openGraph: {
       title: department.name,
       description: department.tagline,
-      images: department.image ? [{ url: department.image, width: 1200, height: 630 }] : [],
+      images: department.image ? [{ url: department.image, width: 1200, height: 630, alt: department.name }] : [],
       type: 'website',
       siteName: 'Khan Hub'
     },
@@ -174,13 +174,13 @@ export default async function DepartmentPage({ params }: { params: Params }) {
 
             {/* Right: Image */}
             {department.image && (
-              <div className="relative h-64 sm:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-2xl">
+              <div className="relative h-64 sm:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-2xl shimmer">
                 <Image
                   src={department.image}
                   alt={department.name}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  sizes="(max-width: 1024px) 100vw, 800px"
                   priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
@@ -290,12 +290,13 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                             className={`flex flex-col h-full bg-white rounded-2xl border-2 border-neutral-100 overflow-hidden transition-all ${isObject ? 'hover:border-neutral-300 hover:shadow-xl' : ''}`}
                           >
                             {programImg && (
-                              <div className="relative h-40 w-full">
+                              <div className="relative h-40 w-full shimmer">
                                 <Image
                                   src={programImg}
                                   alt={programName}
                                   fill
                                   className="object-cover"
+                                  sizes="(max-width: 640px) 100vw, 400px"
                                 />
                               </div>
                             )}
@@ -355,13 +356,13 @@ export default async function DepartmentPage({ params }: { params: Params }) {
                   {department.gallery.map((section, idx) => (
                     <div key={idx} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       {section.images.map((img, iIdx) => (
-                        <div key={iIdx} className="relative aspect-square rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group">
+                        <div key={iIdx} className="relative aspect-square rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group shimmer">
                           <Image
                             src={img.url}
                             alt={img.alt}
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-500"
-                            sizes="(max-width: 640px) 50vw, 25vw"
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
                           />
                           <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <p className="text-white text-xs text-center truncate">{img.alt}</p>
@@ -533,22 +534,33 @@ export default async function DepartmentPage({ params }: { params: Params }) {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
-            '@type': 'CollegeOrUniversity',
+            '@type': 'GovernmentOrganization',
             name: department.name,
+            alternateName: department.shortName,
             description: department.description,
             url: `https://khanhub.com.pk/departments/${department.slug}`,
+            logo: 'https://khanhub.com.pk/logo.webp',
             image: department.image,
             telephone: department.contactPhone,
             email: department.contactEmail,
             address: {
               '@type': 'PostalAddress',
-              addressCountry: 'Pakistan'
+              addressCountry: 'Pakistan',
+              addressRegion: 'Punjab'
             },
-            department: department.subDepartments?.map(sub => ({
-              '@type': 'EducationalOrganization',
-              name: sub.title,
-              description: sub.description
-            }))
+            hasOfferCatalog: {
+              '@type': 'OfferCatalog',
+              name: 'Government Services & Welfare Programs',
+              itemListElement: department.programs?.map((prog, pIdx) => ({
+                '@type': 'ListItem',
+                position: pIdx + 1,
+                item: {
+                  '@type': 'Service',
+                  name: typeof prog === 'string' ? prog : prog.name,
+                  description: typeof prog === 'string' ? '' : prog.description
+                }
+              }))
+            }
           })
         }}
       />
