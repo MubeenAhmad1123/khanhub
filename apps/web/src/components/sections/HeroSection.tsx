@@ -289,10 +289,10 @@ export default function HeroSection() {
           {/* Right Content - Animated Logo Carousel */}
           <motion.div
             ref={logoRef}
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 1, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-            className="relative flex items-center justify-center order-first lg:order-last"
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="relative flex items-center justify-center order-last z-10"
           >
             {/* Floating Logo Container */}
             <motion.div
@@ -337,7 +337,7 @@ export default function HeroSection() {
                 className="relative z-10"
               >
                 {/* Logo Backdrop */}
-                <div className="absolute inset-0 -m-6 sm:-m-8 bg-white/50 backdrop-blur-sm rounded-full" />
+                <div className="absolute inset-0 -m-6 sm:-m-12 bg-white/40 backdrop-blur-[2px] rounded-full border border-white/20 shadow-xl" />
 
                 {/* Image Carousel */}
                 <ImageCarousel />

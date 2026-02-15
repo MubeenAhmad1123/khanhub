@@ -19,6 +19,7 @@
     "build:transport": "npm --prefix apps/transport run build"
   },
   "dependencies": {
-    "lottie-web": "^5.13.0"
+    "lottie-web": "^5.13.0",
+    "react-icons": "^5.5.0"
   }
 }

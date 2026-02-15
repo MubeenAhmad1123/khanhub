@@ -21,7 +21,7 @@ const SocialMediaSidebar: React.FC = () => {
     },
     {
       name: 'tiktok',
-      url: 'https://www.tiktok.com/@dr_muhammad.khan',
+      url: 'https://www.tiktok.com/@khanhub.com.pk',
       icon: <SiTiktok />,
       bgColor: '#000000',
       label: 'click here to visit'

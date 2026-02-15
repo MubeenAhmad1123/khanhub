@@ -14,13 +14,15 @@ export const SITE = {
   emergency: '03006395220',
   whatsapp: '03006395220',
   email: 'info@khanhub.com.pk',
-  address: 'Khan Hub Campus, Lahore, Punjab, Pakistan',
+  address: 'KHAN HUB (PVT.) LTD. Multan road Pir Murad, Vehari',
+  googleMaps: 'https://maps.app.goo.gl/WMHn4MpwPqEDmVkHA',
   founded: 2015,
   social: {
     facebook: 'https://facebook.com/khanhub.com.pk/',
     instagram: 'https://instagram.com/khanhub.com.pk/',
     youtube: 'https://youtube.com/channel/UC43UJw8xOdkp9y_iJIznINg',
-    tiktok: 'https://www.tiktok.com/@dr_muhammad.khan',
+    tiktok: 'https://www.tiktok.com/@khanhub.com.pk',
+    linkedin: '', // Icon added below, link left empty as requested
   },
   stats: [
     { label: 'Lives Impacted', value: '50,000+', icon: '❤️' },

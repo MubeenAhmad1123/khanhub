@@ -17,7 +17,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
 import { cn } from '@/lib/utils';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown, Facebook, Instagram, Youtube, Linkedin } from 'lucide-react';
+import { SiTiktok } from 'react-icons/si';
 import { SITE } from '@/data/site';
 
 // Navigation links - memoized constant
@@ -304,7 +305,32 @@ export default function Navbar() {
               <UserMenu />
             </div>
 
-            {/* Mobile Hamburger - FIXED VISIBILITY */}
+            {/* Mobile Social Icons Row */}
+            <div className="md:hidden flex items-center gap-2 flex-1 justify-end mr-1">
+              {Object.entries(SITE.social).map(([platform, url]) => {
+                if (!url && platform !== 'linkedin') return null;
+                const Icon = platform === 'facebook' ? Facebook :
+                  platform === 'instagram' ? Instagram :
+                    platform === 'youtube' ? Youtube :
+                      platform === 'tiktok' ? SiTiktok :
+                        platform === 'linkedin' ? Linkedin : null;
+                if (!Icon) return null;
+                return (
+                  <a
+                    key={platform}
+                    href={url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors"
+                    aria-label={platform}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </a>
+                );
+              })}
+            </div>
+
+            {/* Mobile Hamburger Button */}
             <button
               onClick={toggleMobileMenu}
               className="md:hidden flex items-center justify-center p-2.5 rounded-lg group relative z-[60] hover:bg-primary-50/50 transition-all duration-300 touch-manipulation min-w-[44px] min-h-[44px]"
@@ -448,6 +474,7 @@ export default function Navbar() {
               >
                 <span aria-hidden="true">💝</span> Donate Now
               </Link>
+
               <div className="flex justify-center pt-2">
                 <UserMenu />
               </div>

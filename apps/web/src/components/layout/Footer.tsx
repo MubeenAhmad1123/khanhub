@@ -13,7 +13,20 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Phone, Mail, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter, Heart } from 'lucide-react';
+import {
+  Facebook,
+  Instagram,
+  Youtube,
+  Linkedin,
+  Mail,
+  Phone,
+  MapPin,
+  ArrowRight,
+  Heart,
+  MessageCircle,
+  ExternalLink
+} from 'lucide-react';
+import { SiTiktok } from 'react-icons/si';
 import { SITE, FOOTER_LINKS } from '@/data/site';
 import { DEPARTMENTS } from '@/data/departments';
 
@@ -38,10 +51,24 @@ export default function Footer() {
     },
     {
       platform: 'youtube',
-      url: 'https://www.youtube.com/channel/UC43UJw8xOdkp9y_iJIznINg',
+      url: SITE.social.youtube,
       icon: Youtube,
       label: 'YouTube',
       hoverClass: 'hover:bg-red-50 hover:border-red-400 hover:text-red-600'
+    },
+    {
+      platform: 'tiktok',
+      url: SITE.social.tiktok,
+      icon: SiTiktok,
+      label: 'TikTok',
+      hoverClass: 'hover:bg-neutral-100 hover:border-neutral-400 hover:text-black'
+    },
+    {
+      platform: 'linkedin',
+      url: SITE.social.linkedin,
+      icon: Linkedin,
+      label: 'LinkedIn',
+      hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700'
     }
   ];
 

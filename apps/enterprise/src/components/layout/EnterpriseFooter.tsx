@@ -98,9 +98,9 @@ export default function EnterpriseFooter() {
                         <ul className="space-y-3">
                             <li className="flex items-start gap-2">
                                 <MapPin className="h-5 w-5 text-primary-400 flex-shrink-0 mt-1" />
-                                <span className="text-gray-400">
-                                    Khanhub Plaza, Main Road<br />
-                                    Bahawalpur, Punjab, Pakistan
+                                <span className="text-gray-400 text-sm">
+                                    KHAN HUB (PVT.) LTD.<br />
+                                    Multan raod Pir Murad, Vehari
                                 </span>
                             </li>
                             <li className="flex items-center gap-2">

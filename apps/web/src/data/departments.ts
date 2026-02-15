@@ -153,7 +153,7 @@ export const DEPARTMENT_THEMES = {
 export const DEPARTMENTS: Department[] = [
   {
     slug: 'institute-health-sciences',
-    name: 'Institute of Health & Sciences',
+    name: 'Khan Hub Institute of Health & Sciences',
     shortName: 'IHS',
     icon: '🏥',
     image: '/images/institute-health-sciences.webp',
@@ -256,7 +256,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'education',
-    name: 'Education Department',
+    name: 'Khan Hub Education Department',
     shortName: 'Education',
     icon: '📚',
     image: '/images/education.webp',
@@ -333,7 +333,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'medical-center',
-    name: 'Medical Center',
+    name: 'Khan Hub Medical Center',
     shortName: 'Medical Center',
     icon: '🏥',
     image: '/images/medical-center.webp',
@@ -410,7 +410,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'transport',
-    name: 'Transport Department',
+    name: 'Khan Hub Transport Department',
     shortName: 'Transport',
     icon: '🚗',
     image: '/images/transport.webp',
@@ -465,7 +465,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'surgical-services',
-    name: 'Surgical Services',
+    name: 'Khan Hub Surgical Services',
     shortName: 'Surgical Services',
     icon: '⚕️',
     image: '/images/surgical-services.webp',
@@ -486,7 +486,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'surgical-repair',
-    name: 'Surgical Repair Center',
+    name: 'Khan Hub Surgical Repair Center',
     shortName: 'Surgical Repair',
     icon: '🔧',
     image: '/images/surgical-repair.webp',
@@ -507,7 +507,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'social-welfare',
-    name: 'Social Welfare',
+    name: 'Khan Hub Social Welfare',
     shortName: 'Social Welfare',
     icon: '🤝',
     image: '/images/welfare-organization.webp',
@@ -573,7 +573,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'job-placement',
-    name: 'Job Placement Services',
+    name: 'Khan Hub Job Placement Services',
     shortName: 'Job Placement',
     icon: '💼',
     image: '/images/job.webp',
@@ -639,7 +639,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'skill-development',
-    name: 'Skill Development',
+    name: 'Khan Hub Skill Development',
     shortName: 'Skill Development',
     icon: '🎓',
     image: '/images/skill.webp',
@@ -660,7 +660,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'residential-services',
-    name: 'Residential Services',
+    name: 'Khan Hub Residential Services',
     shortName: 'Residential',
     icon: '🏘️',
     image: '/images/residential.webp',
@@ -681,7 +681,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'rehabilitation',
-    name: 'Rehabilitation Center',
+    name: 'Khan Hub Rehabilitation Center',
     shortName: 'Rehabilitation',
     icon: '♿',
     image: '/images/rehab.webp',
@@ -747,7 +747,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'tourism',
-    name: 'Travel & Tourism',
+    name: 'Khan Hub Travel & Tourism',
     shortName: 'Tourism',
     icon: '🏔️',
     image: '/images/travel-and-tour.webp',
@@ -768,7 +768,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'marketing',
-    name: 'Marketing & Promotion',
+    name: 'Khan Hub Marketing & Promotion',
     shortName: 'Marketing',
     icon: '📢',
     image: '/images/marketing.webp',
@@ -789,7 +789,7 @@ export const DEPARTMENTS: Department[] = [
   },
   {
     slug: 'prosthetic-services',
-    name: 'Prosthetic Services',
+    name: 'Khan Hub Prosthetic Services',
     shortName: 'Prosthetics',
     icon: '🦾',
     image: '/images/prosthetic.webp',
