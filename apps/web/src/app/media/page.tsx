@@ -6,9 +6,11 @@
 
 'use client';
 
-import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect, memo } from 'react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { PageHero } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -88,8 +90,8 @@ const VIDEOS: readonly Video[] = [
     title: 'Welfare — Ration Distribution Drive',
     category: 'welfare',
     department: 'Welfare Organization',
-    youtubeId: 'placeholder',
-    duration: '2:55',
+    youtubeId: '6NLggVF0y5g',
+    duration: '0:41',
     highlight: 'Monthly ration packages for families affected by inflation.',
   },
   {
@@ -120,14 +122,14 @@ const VIDEOS: readonly Video[] = [
     highlight: 'Building awareness so more people can access help on time.',
   },
   {
-  id: 10,
-  title: 'Rehabilitation — Recovery Journey',
-  category: 'healthcare',
-  department: 'Rehabilitation',
-  youtubeId: 'placeholder',
-  duration: '3:55',
-  highlight: "A patient's story from injury to recovery with rehab support.",
-},
+    id: 10,
+    title: 'Rehabilitation — Recovery Journey',
+    category: 'healthcare',
+    department: 'Rehabilitation',
+    youtubeId: 'placeholder',
+    duration: '3:55',
+    highlight: "A patient's story from injury to recovery with rehab support.",
+  },
 
   {
     id: 11,
@@ -140,11 +142,11 @@ const VIDEOS: readonly Video[] = [
   },
   {
     id: 12,
-    title: 'Travel & Tours — Healing Trip Documentary',
+    title: 'Travel & Tours — Foreign Job Opportunities',
     category: 'services',
     department: 'Travel & Tours',
-    youtubeId: 'placeholder',
-    duration: '5:00',
+    youtubeId: '4hO88pju3CM',
+    duration: '1:17',
     highlight: 'A healing trip for patients and families needing a mental break.',
   },
 ] as const;
@@ -204,6 +206,329 @@ const getCategoryDescription = (category: VideoCategory): string => {
   return descriptions[category];
 };
 
+const cardClass =
+  'relative overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-sm hover:shadow-xl hover:shadow-primary-500/10 hover:border-primary-300 transition-all duration-500 hover:-translate-y-1.5 group';
+const cardOverlayClass =
+  'pointer-events-none absolute inset-0 bg-gradient-to-br from-primary-50/10 via-white/50 to-success-50/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500';
+
+// ============================================================================
+// SUB-COMPONENTS - Memoized for performance
+// ============================================================================
+
+const VideoCard = memo(({ video, index, onClick }: { video: Video, index: number, onClick: (id: number) => void }) => {
+  const thumbnailUrl = video.youtubeId === 'placeholder'
+    ? null
+    : `https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`;
+
+  return (
+    <article
+      className="animate-fade-up"
+      style={{ animationDelay: `${index * 50}ms` }}
+      itemScope
+      itemType="https://schema.org/VideoObject"
+    >
+      <button
+        onClick={() => onClick(video.id)}
+        className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-2xl"
+        aria-label={`Play video: ${video.title}`}
+      >
+        <div className={cardClass}>
+          <div className={cardOverlayClass} />
+          <div className="relative p-3 sm:p-4 pb-4 sm:pb-5">
+            {/* Video Thumbnail */}
+            <div className="relative aspect-video rounded-lg overflow-hidden mb-3 flex items-center justify-center bg-neutral-900 group">
+              {thumbnailUrl ? (
+                <>
+                  <img
+                    src={thumbnailUrl}
+                    alt={video.title}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-300" />
+                </>
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-primary-800 via-primary-900 to-neutral-900 opacity-60" />
+              )}
+
+              <div className="relative z-10 flex items-center justify-center">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/20 border border-white/30 flex items-center justify-center group-hover:bg-primary-500/40 group-hover:scale-110 transition-all duration-300 backdrop-blur-sm shadow-xl">
+                  <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/60 text-[10px] text-white font-medium backdrop-blur-sm z-10">
+                ⏱ {video.duration}
+              </div>
+            </div>
+
+            <span className="text-[10px] sm:text-xs font-bold text-success-600 uppercase tracking-widest">
+              {video.department}
+            </span>
+            <h4 className="font-display font-bold text-sm sm:text-base mt-1 text-neutral-900 group-hover:text-primary-600 transition-colors line-clamp-2">
+              {video.title}
+            </h4>
+            <p className="text-[11px] sm:text-xs text-neutral-600 mt-2 line-clamp-2 leading-relaxed">
+              {video.highlight}
+            </p>
+          </div>
+        </div>
+      </button>
+    </article>
+  );
+});
+VideoCard.displayName = 'VideoCard';
+
+const PhotoCard = memo(({ photo, index, onClick }: { photo: Photo, index: number, onClick: (id: number) => void }) => (
+  <article
+    className="animate-fade-up"
+    style={{ animationDelay: `${index * 50}ms` }}
+    itemScope
+    itemType="https://schema.org/Photograph"
+  >
+    <button
+      onClick={() => onClick(photo.id)}
+      className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-2xl"
+      aria-label={`View photo: ${photo.title}`}
+    >
+      <div className={cardClass}>
+        <div className={cardOverlayClass} />
+        <div className="relative p-3 sm:p-4 pb-4 sm:pb-5">
+          <div className="relative aspect-square sm:aspect-video rounded-lg overflow-hidden mb-3 flex items-center justify-center bg-neutral-100 group-hover:scale-[1.02] transition-transform duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-50" />
+            <div className="relative z-10 flex items-center justify-center text-3xl sm:text-4xl filter grayscale group-hover:grayscale-0 transition-all duration-500" aria-hidden="true">
+              🏥
+            </div>
+          </div>
+
+          <span className="text-[10px] sm:text-xs font-bold text-primary-600 uppercase tracking-widest">
+            {photo.category}
+          </span>
+          <h4 className="font-display font-bold text-sm sm:text-base mt-1 text-neutral-900 group-hover:text-primary-600 transition-colors line-clamp-2">
+            {photo.title}
+          </h4>
+          <p className="text-[11px] sm:text-xs text-neutral-600 mt-2 line-clamp-2 leading-relaxed">
+            {photo.caption}
+          </p>
+        </div>
+      </div>
+    </button>
+  </article>
+));
+PhotoCard.displayName = 'PhotoCard';
+
+const VideoModal = memo(({
+  video,
+  onClose,
+  onNext,
+  onPrev,
+  onFullscreen,
+  containerRef
+}: {
+  video: Video,
+  onClose: () => void,
+  onNext: () => void,
+  onPrev: () => void,
+  onFullscreen: () => void,
+  containerRef: React.RefObject<HTMLDivElement>
+}) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4"
+    onClick={onClose}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="video-modal-title"
+  >
+    <div
+      className="relative w-full max-w-5xl rounded-3xl bg-white shadow-2xl animate-fade-up overflow-hidden max-h-[95vh] flex flex-col"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="h-1.5 w-full bg-gradient-to-r from-primary-500 via-primary-600 to-success-500" aria-hidden="true" />
+
+      <div className="p-5 sm:p-8 lg:p-10 overflow-y-auto">
+        <div className="flex justify-between items-start gap-4 mb-6 sm:mb-8">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-success-50 text-success-700 border border-success-100 uppercase tracking-widest">
+                {video.department}
+              </span>
+              <span className="px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-primary-50 text-primary-700 border border-primary-100 uppercase tracking-widest">
+                {video.category}
+              </span>
+            </div>
+            <h3 id="video-modal-title" className="font-display font-bold text-neutral-900 text-lg sm:text-2xl md:text-3xl leading-tight">
+              {video.title}
+            </h3>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 transition-all hover:scale-110 active:scale-95"
+            aria-label="Close modal"
+          >
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1.8fr,1.2fr] gap-6 lg:gap-10 items-start">
+          <div className="space-y-4">
+            <div className="relative aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl group/modal" ref={containerRef}>
+              {video.youtubeId !== 'placeholder' ? (
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${video.youtubeId}?autoplay=1&rel=0`}
+                  title={video.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary-900 via-neutral-950 to-success-900 opacity-80" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <button className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-white hover:bg-primary-500/40 hover:scale-110 transition-all duration-300 backdrop-blur-md shadow-2xl ring-4 ring-white/10">
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 ml-1.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover/modal:opacity-100 transition-all border border-white/10 z-20">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover/modal:opacity-100 transition-all border border-white/10 z-20">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {["High Definition", "Sign Language (Planned)", "English Subtitles"].map(tag => (
+                <span key={tag} className="px-3 py-1.5 rounded-lg bg-neutral-100 text-neutral-600 text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-neutral-200">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-6 sm:space-y-8">
+            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-neutral-50 to-neutral-100/50 border border-neutral-200/60 shadow-inner">
+              <h4 className="font-display font-bold text-neutral-900 text-sm sm:text-base mb-3 sm:mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+                Featured Highlight
+              </h4>
+              <p className="text-neutral-700 text-sm sm:text-base leading-relaxed italic">
+                "{video.highlight}"
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
+              <div className="space-y-1">
+                <span className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">📍 Location</span>
+                <p className="font-bold text-neutral-900">Khan Hub {video.department}</p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">⏱ Duration</span>
+                <p className="font-bold text-neutral-900">{video.duration} Minutes</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button onClick={onFullscreen} className="btn-primary w-full justify-center">⛶ Fullscreen</button>
+              <button className="btn-secondary w-full justify-center bg-white border-2 border-primary-500 text-primary-600 hover:bg-primary-50 font-bold">🔗 Share Story</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+));
+VideoModal.displayName = 'VideoModal';
+
+const PhotoModal = memo(({
+  photo,
+  onClose,
+  onNext,
+  onPrev,
+  onFullscreen,
+  containerRef
+}: {
+  photo: Photo,
+  onClose: () => void,
+  onNext: () => void,
+  onPrev: () => void,
+  onFullscreen: () => void,
+  containerRef: React.RefObject<HTMLDivElement>
+}) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4"
+    onClick={onClose}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="photo-modal-title"
+  >
+    <div
+      className="relative w-full max-w-4xl rounded-3xl bg-white shadow-2xl animate-fade-up overflow-hidden max-h-[95vh] flex flex-col"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="h-1.5 w-full bg-gradient-to-r from-success-500 via-success-600 to-primary-500" aria-hidden="true" />
+
+      <div className="p-5 sm:p-8 lg:p-10 overflow-y-auto">
+        <div className="flex justify-between items-start gap-4 mb-6 sm:mb-8">
+          <div className="flex-1 min-w-0">
+            <span className="px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-primary-50 text-primary-700 border border-primary-100 uppercase tracking-widest">
+              {photo.category}
+            </span>
+            <h3 id="photo-modal-title" className="font-display font-bold text-neutral-900 text-lg sm:text-2xl md:text-3xl mt-2 leading-tight">
+              {photo.title}
+            </h3>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 transition-all hover:scale-110 active:scale-95"
+            aria-label="Close modal"
+          >
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1.8fr,1.2fr] gap-6 lg:gap-10 items-start">
+          <div className="space-y-4">
+            <div className="relative aspect-square sm:aspect-video rounded-2xl overflow-hidden bg-neutral-100 shadow-2xl group/modal" ref={containerRef}>
+              <div className="absolute inset-0 bg-neutral-200 flex items-center justify-center text-5xl sm:text-7xl">🏥</div>
+              <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/40 hover:bg-white/80 text-neutral-900 flex items-center justify-center backdrop-blur-md opacity-0 group-hover/modal:opacity-100 transition-all border border-black/5">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/40 hover:bg-white/80 text-neutral-900 flex items-center justify-center backdrop-blur-md opacity-0 group-hover/modal:opacity-100 transition-all border border-black/5">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-6 sm:space-y-8">
+            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-neutral-50 to-neutral-100/50 border border-neutral-200/60 shadow-inner">
+              <h4 className="font-display font-bold text-neutral-900 text-sm sm:text-base mb-3 sm:mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
+                Context
+              </h4>
+              <p className="text-neutral-700 text-sm sm:text-base leading-relaxed">
+                {photo.caption}
+              </p>
+            </div>
+
+            <button onClick={onFullscreen} className="btn-primary w-full justify-center">⛶ View Full Image</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+));
+PhotoModal.displayName = 'PhotoModal';
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -215,7 +540,7 @@ export default function MediaPage() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [selectedPhotoId, setSelectedPhotoId] = useState<number | null>(null);
-  
+
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
   const photoContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -227,8 +552,8 @@ export default function MediaPage() {
       activeCategory === 'All'
         ? VIDEOS
         : VIDEOS.filter(
-            (v) => v.category.toLowerCase() === activeCategory.toLowerCase()
-          ),
+          (v) => v.category.toLowerCase() === activeCategory.toLowerCase()
+        ),
     [activeCategory]
   );
 
@@ -313,9 +638,9 @@ export default function MediaPage() {
     const el = videoContainerRef.current;
     if (!el) return;
     if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     } else {
-      el.requestFullscreen().catch(() => {});
+      el.requestFullscreen().catch(() => { });
     }
   }, []);
 
@@ -323,9 +648,9 @@ export default function MediaPage() {
     const el = photoContainerRef.current;
     if (!el) return;
     if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     } else {
-      el.requestFullscreen().catch(() => {});
+      el.requestFullscreen().catch(() => { });
     }
   }, []);
 
@@ -366,13 +691,23 @@ export default function MediaPage() {
   return (
     <>
       {/* Semantic HTML: article element for main content */}
-      <article itemScope itemType="https://schema.org/MediaGallery">
-        {/* Hero Section */}
+      <article itemScope itemType="https://schema.org/MediaGallery" className="overflow-x-hidden">
+        {/* Hero Section - Cinematic Background version */}
         <PageHero
+          backgroundImage="/images/media-hero.webp"
           badge="Media Gallery"
           title="Our Stories in Action"
           subtitle="Watch real stories from our clinics, institutes, and welfare centers — told through the people we serve."
-        />
+          cta={
+            <Link href="#media-heading" className="btn-success">
+              📽️ Browse Gallery
+            </Link>
+          }
+        >
+          <Link href="/donate" className="btn-secondary bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20">
+            💝 Support Our Work
+          </Link>
+        </PageHero>
 
         {/* Main Media Section */}
         <section className="section bg-gradient-light" aria-labelledby="media-heading">
@@ -386,7 +721,7 @@ export default function MediaPage() {
 
               {/* Tab Navigation - Mobile Optimized */}
               <nav aria-label="Media gallery tabs" className="mb-8 sm:mb-10">
-                <div className="flex justify-center gap-2 sm:gap-3">
+                <div className="flex justify-center gap-2 sm:gap-4 overflow-x-auto pb-2 sm:pb-0 px-4 sm:px-0 scrollbar-hide">
                   {(['videos', 'photos', 'events'] as const).map((tab) => {
                     const labels = {
                       videos: { emoji: '🎬', text: 'Videos' },
@@ -395,21 +730,21 @@ export default function MediaPage() {
                     };
                     const label = labels[tab];
                     const isActive = activeTab === tab;
-                    
+
                     return (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-wider px-4 sm:px-5 py-2 sm:py-2.5 transition-all border min-h-[44px] ${
+                        className={cn(
+                          "inline-flex items-center justify-center gap-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider px-5 sm:px-8 py-2.5 sm:py-3.5 transition-all duration-300 border-2 whitespace-nowrap",
                           isActive
-                            ? 'bg-gradient-brand text-white border-primary-600 shadow-primary-md'
-                            : 'bg-white text-neutral-700 border-neutral-200 hover:border-primary-300 hover:text-primary-600'
-                        }`}
+                            ? "bg-neutral-900 border-neutral-900 text-white shadow-xl shadow-neutral-900/10 scale-105"
+                            : "bg-white border-neutral-100 text-neutral-600 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50/30"
+                        )}
                         aria-pressed={isActive}
-                        aria-label={`View ${label.text}`}
                       >
                         <span aria-hidden="true">{label.emoji}</span>
-                        <span className="hidden sm:inline">{label.text}</span>
+                        <span>{label.text}</span>
                       </button>
                     );
                   })}
@@ -420,23 +755,23 @@ export default function MediaPage() {
               {activeTab === 'videos' && (
                 <div>
                   <h3 className="sr-only">Video Gallery</h3>
-                  
+
                   {/* Category Filter - Mobile Optimized */}
-                  <nav aria-label="Video categories filter" className="mb-6 sm:mb-8">
-                    <div className="flex flex-wrap justify-center gap-2">
+                  <nav aria-label="Video categories filter" className="mb-8 sm:mb-10">
+                    <div className="flex flex-wrap justify-center gap-2 px-2">
                       {CATEGORIES.map((cat) => {
                         const isActive = activeCategory === cat;
                         return (
                           <button
                             key={cat}
                             onClick={() => setActiveCategory(cat)}
-                            className={`inline-flex items-center justify-center rounded-full text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 transition-all border min-h-[36px] sm:min-h-[40px] ${
+                            className={cn(
+                              "inline-flex items-center justify-center rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-widest px-3 sm:px-5 py-2 transition-all duration-300 border-2",
                               isActive
-                                ? 'bg-primary-500 text-white border-primary-500 shadow-primary-sm'
-                                : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
-                            }`}
+                                ? "bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/20"
+                                : "bg-white border-neutral-100 text-neutral-500 hover:border-primary-200 hover:text-primary-600"
+                            )}
                             aria-pressed={isActive}
-                            aria-label={`Filter by ${cat}`}
                           >
                             {cat}
                           </button>
@@ -445,63 +780,14 @@ export default function MediaPage() {
                     </div>
                   </nav>
 
-                  {/* Video Grid - Responsive */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 sm:gap-8">
                     {filteredVideos.map((video, index) => (
-                      <article
+                      <VideoCard
                         key={video.id}
-                        className="animate-fade-up"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                        itemScope
-                        itemType="https://schema.org/VideoObject"
-                      >
-                        <button
-                          onClick={() => openVideo(video.id)}
-                          className="w-full text-left group"
-                          aria-label={`Play video: ${video.title}`}
-                        >
-                          <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300">
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-success-50 opacity-90" />
-                            <div className="relative p-3 sm:p-4 pb-4 sm:pb-5">
-                              {/* Video Thumbnail */}
-                              <div className="relative aspect-video rounded-lg overflow-hidden mb-3 flex items-center justify-center">
-                                <div className="absolute inset-0 bg-gradient-to-br from-primary-800 via-primary-900 to-neutral-900" />
-                                <div className="relative z-10 flex items-center justify-center">
-                                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 border border-primary-300 flex items-center justify-center group-hover:bg-primary-500/30 transition-all">
-                                    <svg
-                                      className="w-6 h-6 sm:w-7 sm:h-7 text-primary-50 ml-0.5"
-                                      fill="currentColor"
-                                      viewBox="0 0 24 24"
-                                      aria-hidden="true"
-                                    >
-                                      <path d="M8 5v14l11-7z" />
-                                    </svg>
-                                  </div>
-                                </div>
-                                {/* Duration Badge */}
-                                <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/60 text-[10px] sm:text-xs text-white font-medium">
-                                  ⏱ {video.duration}
-                                </div>
-                              </div>
-
-                              {/* Video Info */}
-                              <span className="text-[11px] sm:text-xs font-semibold text-success-700 uppercase tracking-wide">
-                                {video.department}
-                              </span>
-                              <h4 className="font-display font-semibold text-sm sm:text-base mt-1 text-neutral-900 group-hover:text-primary-600 transition-colors line-clamp-2" itemProp="name">
-                                {video.title}
-                              </h4>
-                              <p className="text-[11px] sm:text-xs text-neutral-700 mt-1.5 sm:mt-2 line-clamp-2" itemProp="description">
-                                {video.highlight}
-                              </p>
-                              
-                              {/* Hidden metadata for SEO */}
-                              <meta itemProp="duration" content={`PT${video.duration.replace(':', 'M')}S`} />
-                              <meta itemProp="thumbnailUrl" content={`https://khanhub.com.pk/thumbnails/${video.youtubeId}.jpg`} />
-                            </div>
-                          </div>
-                        </button>
-                      </article>
+                        video={video}
+                        index={index}
+                        onClick={openVideo}
+                      />
                     ))}
                   </div>
 
@@ -535,45 +821,14 @@ export default function MediaPage() {
                   </div>
 
                   {/* Photo Grid - Responsive */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 sm:gap-8">
                     {PHOTOS.map((photo, index) => (
-                      <article
+                      <PhotoCard
                         key={photo.id}
-                        className="animate-fade-up"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                        itemScope
-                        itemType="https://schema.org/Photograph"
-                      >
-                        <button
-                          onClick={() => openPhoto(photo.id)}
-                          className="w-full text-left group"
-                          aria-label={`View photo: ${photo.title}`}
-                        >
-                          <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300">
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-success-50 opacity-90" />
-                            <div className="relative p-3 sm:p-4 pb-4 sm:pb-5">
-                              {/* Photo Placeholder */}
-                              <div className="relative aspect-video rounded-lg overflow-hidden mb-3 flex items-center justify-center">
-                                <div className="absolute inset-0 bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-50" />
-                                <div className="relative z-10 flex items-center justify-center text-3xl sm:text-4xl" aria-hidden="true">
-                                  🏥
-                                </div>
-                              </div>
-                              
-                              {/* Photo Info */}
-                              <span className="text-[11px] sm:text-xs font-semibold text-primary-700 uppercase tracking-wide">
-                                {photo.category}
-                              </span>
-                              <h4 className="font-display font-semibold text-sm sm:text-base mt-1 text-neutral-900 group-hover:text-primary-600 transition-colors line-clamp-2" itemProp="name">
-                                {photo.title}
-                              </h4>
-                              <p className="text-[11px] sm:text-xs text-neutral-700 mt-1.5 sm:mt-2 line-clamp-2" itemProp="caption">
-                                {photo.caption}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      </article>
+                        photo={photo}
+                        index={index}
+                        onClick={openPhoto}
+                      />
                     ))}
                   </div>
                 </div>
@@ -612,271 +867,27 @@ export default function MediaPage() {
         />
       </article>
 
-      {/* ============================================================================ */}
-      {/* VIDEO MODAL - Mobile Optimized */}
-      {/* ============================================================================ */}
+      {/* Modals */}
       {selectedVideo && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={closeVideoModal}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="video-modal-title"
-        >
-          <div 
-            className="relative w-full max-w-5xl rounded-2xl bg-white shadow-2xl animate-fade-up overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header Accent */}
-            <div className="h-1 w-full bg-gradient-to-r from-primary-500 to-success-500" aria-hidden="true" />
-
-            <div className="p-4 sm:p-6 lg:p-8 max-h-[90vh] overflow-y-auto">
-              {/* Header - Mobile Responsive */}
-              <div className="flex justify-between items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-success-50 text-success-700 border border-success-100">
-                      {selectedVideo.department}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-100">
-                      {selectedVideo.category.toUpperCase()}
-                    </span>
-                  </div>
-                  <h3 id="video-modal-title" className="font-display font-semibold text-neutral-900 text-base sm:text-lg md:text-xl leading-tight">
-                    {selectedVideo.title}
-                  </h3>
-                  <p className="text-[11px] sm:text-xs text-neutral-600 mt-1.5 sm:mt-2">
-                    ⏱ {selectedVideo.duration} · Khan Hub Media
-                  </p>
-                </div>
-
-                <button
-                  onClick={closeVideoModal}
-                  className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 text-base sm:text-lg font-bold transition-colors"
-                  aria-label="Close video modal"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Content Grid - Responsive Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] gap-4 sm:gap-6 items-start">
-                {/* Video Player Area */}
-                <div className="relative">
-                  <div
-                    ref={videoContainerRef}
-                    className="relative aspect-video rounded-xl overflow-hidden border-2 border-neutral-200 bg-black"
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-900 via-neutral-900 to-success-900">
-                      <button 
-                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 border-2 border-primary-300 flex items-center justify-center text-primary-50 hover:bg-primary-500/30 transition-all"
-                        aria-label="Play video"
-                      >
-                        <svg
-                          className="w-7 h-7 sm:w-9 sm:h-9 ml-1"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Navigation Buttons */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); goPrevVideo(); }}
-                      className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 hover:bg-black/80 border border-white/40 text-white text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-1 transition-all"
-                      aria-label="Previous video"
-                    >
-                      ◀
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); goNextVideo(); }}
-                      className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 hover:bg-black/80 border border-white/40 text-white text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-1 transition-all"
-                      aria-label="Next video"
-                    >
-                      ▶
-                    </button>
-                  </div>
-
-                  {/* Video Tags - Mobile Responsive */}
-                  <div className="mt-3 sm:mt-4 flex flex-wrap gap-2 text-[10px] sm:text-[11px]">
-                    <span className="px-2 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-100">
-                      🎥 Patient & program stories
-                    </span>
-                    <span className="px-2 py-1 rounded-full bg-success-50 text-success-700 border border-success-100">
-                      ✅ Real impact visuals
-                    </span>
-                    <span className="px-2 py-1 rounded-full bg-neutral-50 text-neutral-700 border border-neutral-200">
-                      🔊 Voice-over & subtitles (planned)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Video Details Sidebar */}
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 sm:p-5 space-y-3 sm:space-y-4">
-                  <div>
-                    <h4 className="font-display font-semibold text-neutral-900 text-sm sm:text-base mb-2">
-                      Why this story matters
-                    </h4>
-                    <p className="text-neutral-800 text-xs sm:text-sm leading-relaxed">
-                      {selectedVideo.highlight}
-                    </p>
-                  </div>
-
-                  <div className="border-t border-neutral-200 my-3 sm:my-4" />
-
-                  <div className="space-y-2 text-xs sm:text-sm text-neutral-700">
-                    <p>
-                      <span className="font-semibold">📍 Location:</span> Khan Hub{' '}
-                      {selectedVideo.department}
-                    </p>
-                    <p>
-                      <span className="font-semibold">🕒 Recorded during:</span> Program activity
-                      (camp, session, or event)
-                    </p>
-                    <p>
-                      <span className="font-semibold">🔁 Program type:</span>{' '}
-                      {getCategoryDescription(selectedVideo.category)}
-                    </p>
-                  </div>
-
-                  <div className="border-t border-neutral-200 my-3 sm:my-4" />
-
-                  {/* Action Buttons - Mobile Responsive */}
-                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-                    <button
-                      onClick={handleVideoFullscreen}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm font-semibold px-4 sm:px-5 py-2.5 sm:py-3 shadow-primary-sm transition-all min-h-[44px]"
-                    >
-                      ⛶ Fullscreen
-                    </button>
-                    <button className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white border-2 border-primary-500 text-primary-600 hover:bg-primary-50 text-xs sm:text-sm font-semibold px-4 sm:px-5 py-2.5 sm:py-3 transition-all min-h-[44px]">
-                      🔗 View on YouTube
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <VideoModal
+          video={selectedVideo}
+          onClose={closeVideoModal}
+          onNext={goNextVideo}
+          onPrev={goPrevVideo}
+          onFullscreen={handleVideoFullscreen}
+          containerRef={videoContainerRef}
+        />
       )}
 
-      {/* ============================================================================ */}
-      {/* PHOTO MODAL - Mobile Optimized */}
-      {/* ============================================================================ */}
       {selectedPhoto && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={closePhotoModal}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="photo-modal-title"
-        >
-          <div 
-            className="relative w-full max-w-4xl rounded-2xl bg-white shadow-2xl animate-fade-up overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header Accent */}
-            <div className="h-1 w-full bg-gradient-to-r from-primary-500 to-success-500" aria-hidden="true" />
-            
-            <div className="p-4 sm:p-6 lg:p-8 max-h-[90vh] overflow-y-auto">
-              {/* Header */}
-              <div className="flex justify-between items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
-                <div className="flex-1 min-w-0">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-100">
-                    {selectedPhoto.category}
-                  </span>
-                  <h3 id="photo-modal-title" className="font-display font-semibold text-neutral-900 text-base sm:text-lg md:text-xl mt-2">
-                    {selectedPhoto.title}
-                  </h3>
-                </div>
-                <button
-                  onClick={closePhotoModal}
-                  className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 text-base sm:text-lg font-bold transition-colors"
-                  aria-label="Close photo modal"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Content Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] gap-4 sm:gap-6 items-start">
-                {/* Photo Area */}
-                <div className="relative">
-                  <div
-                    ref={photoContainerRef}
-                    className="relative aspect-video rounded-xl overflow-hidden border-2 border-neutral-200 bg-black"
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-200 via-neutral-100 to-neutral-50">
-                      <div className="text-4xl sm:text-5xl md:text-6xl" aria-hidden="true">🏥</div>
-                    </div>
-
-                    {/* Navigation Buttons */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); goPrevPhoto(); }}
-                      className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 hover:bg-black/80 border border-white/40 text-white text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-1 transition-all"
-                      aria-label="Previous photo"
-                    >
-                      ◀
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); goNextPhoto(); }}
-                      className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 hover:bg-black/80 border border-white/40 text-white text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-1 transition-all"
-                      aria-label="Next photo"
-                    >
-                      ▶
-                    </button>
-                  </div>
-
-                  {/* Photo Tags */}
-                  <div className="mt-3 sm:mt-4 flex flex-wrap gap-2 text-[10px] sm:text-[11px]">
-                    <span className="px-2 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-100">
-                      🏥 Hospital & centers
-                    </span>
-                    <span className="px-2 py-1 rounded-full bg-success-50 text-success-700 border border-success-100">
-                      🤝 Community programs
-                    </span>
-                  </div>
-                </div>
-
-                {/* Photo Details */}
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 sm:p-5 space-y-3 sm:space-y-4">
-                  <div>
-                    <h4 className="font-display font-semibold text-neutral-900 text-sm sm:text-base mb-2">
-                      About this moment
-                    </h4>
-                    <p className="text-neutral-800 text-xs sm:text-sm leading-relaxed">
-                      {selectedPhoto.caption}
-                    </p>
-                  </div>
-
-                  <div className="border-t border-neutral-200 my-3 sm:my-4" />
-
-                  <div className="space-y-2 text-xs sm:text-sm text-neutral-700">
-                    <p>
-                      <span className="font-semibold">📍 Captured at:</span> Khan Hub{' '}
-                      {selectedPhoto.category} program
-                    </p>
-                    <p>
-                      <span className="font-semibold">🎞 Type:</span> On-ground activity & patient
-                      support
-                    </p>
-                  </div>
-
-                  <div className="border-t border-neutral-200 my-3 sm:my-4" />
-
-                  <button
-                    onClick={handlePhotoFullscreen}
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm font-semibold px-4 sm:px-5 py-2.5 sm:py-3 shadow-primary-sm transition-all min-h-[44px]"
-                  >
-                    ⛶ View full image
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PhotoModal
+          photo={selectedPhoto}
+          onClose={closePhotoModal}
+          onNext={goNextPhoto}
+          onPrev={goPrevPhoto}
+          onFullscreen={handlePhotoFullscreen}
+          containerRef={photoContainerRef}
+        />
       )}
     </>
   );

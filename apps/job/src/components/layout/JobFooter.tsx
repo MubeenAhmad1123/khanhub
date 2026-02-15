@@ -37,6 +37,7 @@ export default function JobFooter() {
                         <h4 className="text-white font-semibold mb-4">Support</h4>
                         <ul className="space-y-2 text-sm">
                             <li><a href="mailto:support@khanhub.com" className="hover:text-teal-400">Contact Us</a></li>
+                            <li><a href="tel:03006395220" className="hover:text-teal-400">03006395220</a></li>
                             <li><Link href="/terms" className="hover:text-teal-400">Terms</Link></li>
                             <li><Link href="/privacy" className="hover:text-teal-400">Privacy</Link></li>
                         </ul>

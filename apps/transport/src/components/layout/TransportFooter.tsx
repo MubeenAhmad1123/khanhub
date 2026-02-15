@@ -38,9 +38,9 @@ export default function TransportFooter() {
                     <div className="footer-section">
                         <h4>Contact</h4>
                         <ul className="footer-links">
-                            <li><Link href="tel:+92">24/7: +92-XXX-XXXXXXX</Link></li>
+                            <li><Link href="tel:03006395220">24/7: 03006395220</Link></li>
                             <li><Link href="mailto:transport@khanhub.com.pk">transport@khanhub.com.pk</Link></li>
-                            <li><Link href="https://wa.me/92">WhatsApp Support</Link></li>
+                            <li><Link href="https://wa.me/923006395220">WhatsApp Support</Link></li>
                             <li>Multan Road, Vehari, Pakistan</li>
                         </ul>
                     </div>
