@@ -7,7 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { uploadCompanyLogo } from '@/lib/services/cloudinaryUpload';
-import { Briefcase, MapPin, DollarSign, Phone, FileText, Upload, Loader2, CheckCircle } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, Phone, FileText, Upload, Loader2, CheckCircle, Clock } from 'lucide-react';
+import CitySearch from '@/components/forms/CitySearch';
 
 export default function SimpleJobPostPage() {
     const router = useRouter();
@@ -20,6 +21,7 @@ export default function SimpleJobPostPage() {
         salary: '',
         phone: '',
         description: '',
+        experience: 'Fresh',
     });
 
     const [logo, setLogo] = useState<File | null>(null);
@@ -44,22 +46,6 @@ export default function SimpleJobPostPage() {
         );
     }
 
-    // Pakistan cities
-    const cities = [
-        'Karachi',
-        'Lahore',
-        'Islamabad',
-        'Rawalpindi',
-        'Faisalabad',
-        'Multan',
-        'Peshawar',
-        'Quetta',
-        'Sialkot',
-        'Gujranwala',
-        'Hyderabad',
-        'Sargodha',
-        'Remote / Online',
-    ];
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -152,7 +138,8 @@ export default function SimpleJobPostPage() {
                 // Type defaults
                 type: 'full-time',
                 employmentType: 'full-time',
-                experienceLevel: 'entry',
+                experienceLevel: formData.experience.toLowerCase().includes('fresh') ? 'entry' : 'mid',
+                experience: formData.experience,
                 category: 'Other',
 
                 // Stats
@@ -306,17 +293,11 @@ export default function SimpleJobPostPage() {
                                 <MapPin className="w-4 h-4 text-teal-600" />
                                 City / شہر
                             </label>
-                            <select
-                                name="city"
+                            <CitySearch
                                 value={formData.city}
-                                onChange={handleChange}
-                                className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all"
-                            >
-                                <option value="">Select City / شہر منتخب کریں</option>
-                                {cities.map(city => (
-                                    <option key={city} value={city}>{city}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData(prev => ({ ...prev, city: val }))}
+                                placeholder="Search or add city (e.g. Vehari) / شہر"
+                            />
                         </div>
 
                         {/* 4. Salary */}
@@ -339,23 +320,36 @@ export default function SimpleJobPostPage() {
                         </div>
 
                         {/* 5. Phone / WhatsApp */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-                                <Phone className="w-4 h-4 text-teal-600" />
-                                Phone / WhatsApp * / فون نمبر
-                            </label>
-                            <input
-                                type="tel"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
-                                required
-                                placeholder="03001234567"
-                                className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                Job seekers will contact you on this number
-                            </p>
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-teal-600" />
+                                    Experience / تجربہ
+                                </label>
+                                <select name="experience" value={formData.experience} onChange={handleChange} className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all">
+                                    <option value="Fresh">Fresh / No Experience</option>
+                                    <option value="Less than 1 Year">Less than 1 Year</option>
+                                    <option value="1-2 Years">1-2 Years</option>
+                                    <option value="2-3 Years">2-3 Years</option>
+                                    <option value="3-5 Years">3-5 Years</option>
+                                    <option value="5+ Years">5+ Years</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                    <Phone className="w-4 h-4 text-teal-600" />
+                                    Phone / WhatsApp * / فون نمبر
+                                </label>
+                                <input
+                                    type="tel"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="03001234567"
+                                    className="w-full text-lg px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all"
+                                />
+                            </div>
                         </div>
 
                         {/* 6. Description */}

@@ -1,0 +1,46 @@
+﻿
+> khanhub-monorepo@1.0.0 build:jobs
+> npm --prefix apps/job run build
+
+
+> @khanhub/job@1.0.0 build
+> next build
+
+  Γû▓ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" 
+"C:\Users\Mirza Computers\AppDat ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed 
+to co    mpile.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/app/auth/onboarding/page.tsx:409:29
+Type error: Cannot find name 'setLocalRole'.
+
+[0m [90m 407 |[39m                     
+onClick[33m=[39m{() [33m=>[39m {[0m
+[0m [90m 408 |[39m                         
+[36mif[39m (confirm([32m"Are you sure you want 
+to change your account type to Employer?"[39m)) 
+{[0m
+[0m[31m[1m>[22m[39m[90m 409 |[39m            
+                 
+setLocalRole([32m'employer'[39m)[33m;[39m[0m
+[0m [90m     |[39m                             
+[31m[1m^[22m[39m[0m
+[0m [90m 410 |[39m                             
+setStep([35m1[39m)[33m;[39m[0m
+[0m [90m 411 |[39m                         }[0m
+[0m [90m 412 |[39m                     }}[0m
+Next.js build worker exited with code: 1 and 
+signal: null
+

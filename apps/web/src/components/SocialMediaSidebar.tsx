@@ -13,13 +13,6 @@ const SocialMediaSidebar: React.FC = () => {
       label: 'click here to visit'
     },
     {
-      name: 'twitter',
-      url: '#',
-      icon: <FaTwitterSquare />,
-      bgColor: '#00aced',
-      label: 'click here to visit'
-    },
-    {
       name: 'instagram',
       url: 'https://www.instagram.com/khanhub.com.pk/',
       icon: <FaInstagram />,
@@ -31,13 +24,6 @@ const SocialMediaSidebar: React.FC = () => {
       url: 'https://www.tiktok.com/@dr_muhammad.khan',
       icon: <SiTiktok />,
       bgColor: '#000000',
-      label: 'click here to visit'
-    },
-    {
-      name: 'linkedin',
-      url: '',
-      icon: <FaLinkedin />,
-      bgColor: '#0077B5',
       label: 'click here to visit'
     },
     {
@@ -116,20 +102,12 @@ const SocialMediaSidebar: React.FC = () => {
           background: #3b5998;
         }
 
-        .twitter {
-          background: #00aced;
-        }
-
         .instagram {
           background: #e4405f;
         }
 
         .tiktok {
           background: #000000;
-        }
-
-        .linkedin {
-          background: #0077b5;
         }
 
         .youtube {

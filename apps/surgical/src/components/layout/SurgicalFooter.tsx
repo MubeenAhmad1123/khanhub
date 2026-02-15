@@ -86,7 +86,7 @@ export default function SurgicalFooter() {
                             </li>
                             <li className="flex items-center">
                                 <Phone className="h-5 w-5 mr-2 flex-shrink-0" />
-                                <a href="tel:067-3364220" className="hover:text-white">067-3364220</a>
+                                <a href="tel:03006395220" className="hover:text-white">03006395220</a>
                             </li>
                             <li className="flex items-center">
                                 <Mail className="h-5 w-5 mr-2 flex-shrink-0" />

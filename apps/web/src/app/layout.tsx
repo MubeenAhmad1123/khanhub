@@ -66,6 +66,10 @@ export const metadata: Metadata = {
       }
     ],
   },
+  icons: {
+    icon: '/logo.webp',
+    apple: '/logo.webp',
+  },
 
   twitter: {
     card: 'summary_large_image',

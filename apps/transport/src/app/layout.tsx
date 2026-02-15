@@ -8,6 +8,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Khanhub Transport - Reliable Rides in Pakistan',
   description: 'Fast, safe and comfortable rides at your fingertips with Khanhub Transport.',
+  icons: {
+    icon: '/logo.webp',
+    apple: '/logo.webp',
+  },
 };
 
 export default function RootLayout({

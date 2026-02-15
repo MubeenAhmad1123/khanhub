@@ -184,9 +184,11 @@ export async function uploadCV(
     formData.append('file', file);
     formData.append('upload_preset', uploadPreset);
     formData.append('folder', `khanhub/cvs/${userId}`);
-    formData.append('resource_type', 'raw'); // For non-image files
+    formData.append('resource_type', 'auto'); // Let Cloudinary decide (image for PDF, raw for DOCX)
 
-    const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`;
+    // Using 'auto' allows PDFs to be treated as images (better for viewing)
+    // while DOCX files remain as raw assets.
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
 
     const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -194,7 +196,9 @@ export async function uploadCV(
     });
 
     if (!response.ok) {
-        throw new Error('Failed to upload CV');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Cloudinary CV Upload Error:', errorData);
+        throw new Error(errorData?.error?.message || 'Failed to upload CV');
     }
 
     const result = await response.json();

@@ -66,6 +66,19 @@ try {
     db = getFirestore(app);
     storage = getStorage(app);
 
+    // Configure auth persistence to LOCAL (survives browser restarts)
+    // This ensures users stay logged in until they explicitly log out
+    if (typeof window !== 'undefined') {
+        // Dynamic import to avoid SSR issues
+        import('firebase/auth').then(({ setPersistence, browserLocalPersistence }) => {
+            setPersistence(auth, browserLocalPersistence).then(() => {
+                console.log('✅ Firebase Auth persistence set to LOCAL');
+            }).catch((error: any) => {
+                console.error('❌ Error setting auth persistence:', error);
+            });
+        });
+    }
+
     // Verify db is properly initialized
     if (!db) {
         throw new Error('Firestore database is undefined after initialization');

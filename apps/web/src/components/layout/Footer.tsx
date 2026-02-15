@@ -42,20 +42,6 @@ export default function Footer() {
       icon: Youtube,
       label: 'YouTube',
       hoverClass: 'hover:bg-red-50 hover:border-red-400 hover:text-red-600'
-    },
-    {
-      platform: 'linkedin',
-      url: SITE.social.linkedin,
-      icon: Linkedin,
-      label: 'LinkedIn',
-      hoverClass: 'hover:bg-blue-50 hover:border-blue-500 hover:text-blue-700'
-    },
-    {
-      platform: 'twitter',
-      url: SITE.social.twitter,
-      icon: Twitter,
-      label: 'Twitter',
-      hoverClass: 'hover:bg-neutral-100 hover:border-neutral-500 hover:text-neutral-900'
     }
   ];
 

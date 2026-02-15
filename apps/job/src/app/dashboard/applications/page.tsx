@@ -36,6 +36,21 @@ export default function ApplicationsTrackerPage() {
                 });
                 setApplications(apps);
                 setLoading(false);
+
+                // Self-healing: Check if application count matches user profile
+                // We only update if the count in profile is LOWER than actual applications (to assume they used more)
+                // OR if it's different and we trust the applications collection as source of truth.
+                const currentCount = user.applicationsUsed || 0;
+                const actualCount = apps.length;
+
+                if (currentCount !== actualCount) {
+                    console.log(`Syncing application count: Profile=${currentCount}, Actual=${actualCount}`);
+                    const { updateUserProfile } = await import('@/lib/firebase/auth');
+                    await updateUserProfile(user.uid, {
+                        applicationsUsed: actualCount
+                    });
+                    // This will also trigger the profile strength recalculation due to our previous fix in auth.ts
+                }
             } catch (err) {
                 console.error('Error loading applications:', err);
                 setLoading(false);

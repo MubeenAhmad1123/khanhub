@@ -61,17 +61,23 @@ const DepartmentCard = memo(function DepartmentCard({
                     />
 
                     {/* Image Header with Optimized Loading */}
-                    <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-50">
+                    <div className={`relative h-48 sm:h-52 w-full overflow-hidden ${department.image ? 'shimmer' : 'bg-neutral-100'}`}>
                         {department.image ? (
                             <>
                                 <Image
                                     src={department.image}
                                     alt={`Khan Hub ${department.name} - Professional Welfare Services`}
                                     fill
-                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    className="object-cover transition-opacity duration-300 group-hover:scale-105"
                                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                    loading={priority ? 'eager' : 'lazy'}
-                                    priority={priority}
+                                    priority={priority || index < 3}
+                                    onLoad={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        if (target.src.indexOf('data:image') < 0) {
+                                            target.classList.remove('opacity-0');
+                                            target.parentElement?.classList.remove('shimmer');
+                                        }
+                                    }}
                                 />
                                 {/* Gradient overlay with theme color */}
                                 <div
@@ -96,14 +102,6 @@ const DepartmentCard = memo(function DepartmentCard({
                                 <span style={styles.primaryText}>{department.category}</span>
                             </span>
                         </div>
-
-                        {/* Shimmer effect on hover */}
-                        <div
-                            className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none"
-                            style={{
-                                background: `linear-gradient(90deg, transparent, ${theme.light}80, transparent)`
-                            }}
-                        />
                     </div>
 
                     {/* Content Section */}

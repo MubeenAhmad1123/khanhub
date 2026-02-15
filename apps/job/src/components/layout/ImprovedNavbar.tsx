@@ -3,14 +3,18 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { LogOut, User, Users, Settings, LayoutDashboard, Search, Briefcase, PlusCircle, BookmarkCheck, Shield, Menu, X, ChevronDown, Sparkles } from 'lucide-react';
+import RegisteredBadge from '@/components/ui/RegisteredBadge';
 
 export default function ImprovedNavbar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading, hasPaymentApproved } = useAuth();
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const profileMenuRef = useRef<HTMLDivElement>(null);
 
     const handleLogout = async () => {
         try {
@@ -24,6 +28,29 @@ export default function ImprovedNavbar() {
         }
     };
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+                setShowProfileMenu(false);
+            }
+        };
+
+        if (showProfileMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showProfileMenu]);
+
+    // Close dropdown on navigation
+    useEffect(() => {
+        setShowProfileMenu(false);
+        setShowMobileMenu(false);
+    }, [pathname]);
+
     const isActive = (path: string) => pathname === path;
 
     // Don't show navbar on auth pages
@@ -33,252 +60,285 @@ export default function ImprovedNavbar() {
 
     // Navigation items based on path and user role
     const getNavItems = () => {
-        // If on the landing page, show a more general menu
-        if (pathname === '/') {
+        if (!user || pathname === '/') {
             return [
-                { name: 'Home', path: '/', icon: '🏠' },
-                { name: 'Browse Jobs', path: '/search', icon: '🔍' },
-                { name: 'For Employers', path: '/auth/register', icon: '🏢' },
+                { name: 'Browse Jobs', path: '/search', icon: <Search className="w-4 h-4" /> },
+                { name: 'For Employers', path: '/auth/register?role=employer', icon: <Briefcase className="w-4 h-4" /> },
             ];
         }
 
-        if (!user) {
+        if (user.role === 'admin') {
             return [
-                { name: 'Home', path: '/', icon: '🏠' },
-                { name: 'Browse Jobs', path: '/search', icon: '🔍' },
-            ];
-        }
-
-        // Context-aware navigation
-        if (pathname?.startsWith('/admin') && user.role === 'admin') {
-            return [
-                { name: 'Stats', path: '/admin', icon: '📊' },
-                { name: 'Payments', path: '/admin/payments', icon: '💰' },
-                { name: 'Jobs', path: '/admin/jobs', icon: '✅' },
-                { name: 'Users', path: '/admin/users', icon: '👥' },
+                { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard className="w-4 h-4" /> },
+                { name: 'Payments', path: '/admin/payments', icon: <Sparkles className="w-4 h-4" /> },
+                { name: 'Jobs', path: '/admin/jobs', icon: <BookmarkCheck className="w-4 h-4" /> },
+                { name: 'Users', path: '/admin/users', icon: <Users className="w-4 h-4" /> },
+                { name: 'Browse Jobs', path: '/search', icon: <Search className="w-4 h-4" /> },
             ];
         }
 
         if (pathname?.startsWith('/employer') || user.role === 'employer') {
             return [
-                { name: 'Dashboard', path: '/employer/dashboard', icon: '📊' },
-                { name: 'Post Job', path: '/employer/post-job', icon: '➕' },
-                { name: 'My Jobs', path: '/employer/jobs', icon: '💼' },
-                { name: 'Applications', path: '/employer/applications', icon: '📋' },
+                { name: 'Dashboard', path: '/employer/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+                { name: 'Post Job', path: '/employer/post-job', icon: <PlusCircle className="w-4 h-4" /> },
+                { name: 'Applications', path: '/employer/applications', icon: <BookmarkCheck className="w-4 h-4" /> },
             ];
         }
 
-        // Default or Seeker
+        // Seeker Dashboard
         return [
-            { name: 'Dashboard', path: '/dashboard', icon: '📊' },
-            { name: 'Find Jobs', path: '/search', icon: '🔍' },
-            { name: 'Applications', path: '/dashboard/applications', icon: '📝' },
-            { name: 'Profile', path: '/dashboard/profile', icon: '👤' },
+            { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+            { name: 'Find Jobs', path: '/search', icon: <Search className="w-4 h-4" /> },
+            { name: 'Applications', path: '/dashboard/applications', icon: <BookmarkCheck className="w-4 h-4" /> },
+            { name: 'Profile', path: '/dashboard/profile', icon: <User className="w-4 h-4" /> },
         ];
     };
 
     const navItems = getNavItems();
 
     return (
-        <nav className="bg-white shadow-lg sticky top-0 z-50">
+        <nav className="sticky top-0 z-[100] w-full border-b border-gray-100 bg-white shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
-                    {/* Logo */}
-                    <Link href={user ? (user.role === 'admin' ? '/admin' : user.role === 'employer' ? '/employer/dashboard' : '/dashboard') : '/'} className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold text-teal-600">KhanHub</h1>
-                        {user?.role === 'admin' && (
-                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-semibold">
-                                ADMIN
-                            </span>
-                        )}
-                    </Link>
+                <div className="flex justify-between items-center h-16 sm:h-20">
+                    {/* Logo - Always goes to Home */}
+                    <div className="flex items-center gap-8">
+                        <Link href={user?.role === 'admin' ? '/admin' : '/'} className="group flex items-center gap-2">
+                            <h1 className="text-2xl font-black text-teal-600 tracking-tight">
+                                KhanHub
+                            </h1>
+                        </Link>
 
-                    {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center gap-1">
-                        {navItems.map((item) => (
-                            <Link
-                                key={item.path}
-                                href={item.path}
-                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${isActive(item.path)
-                                    ? 'bg-teal-600 text-white'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
-                            >
-                                <span className="mr-1">{item.icon}</span>
-                                {item.name}
-                            </Link>
-                        ))}
+                        {/* Desktop Links */}
+                        <div className="hidden lg:flex items-center gap-1">
+                            {navItems.map((item) => {
+                                const active = isActive(item.path);
+                                const isDashboard = item.name === 'Dashboard';
+
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        href={item.path}
+                                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${active
+                                            ? isDashboard
+                                                ? 'bg-teal-600 text-white shadow-md shadow-teal-500/20'
+                                                : 'text-teal-600'
+                                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {item.icon}
+                                        {item.name}
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    {/* Right Side - Auth Buttons or Profile */}
-                    <div className="hidden md:flex items-center gap-4">
+                    {/* Right Controls */}
+                    <div className="flex items-center gap-3 sm:gap-4">
                         {loading ? (
-                            <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="w-5 h-5 border-2 border-teal-600/30 border-t-teal-600 rounded-full animate-spin"></div>
                         ) : user ? (
-                            <div className="relative">
+                            <div className="relative" ref={profileMenuRef}>
                                 <button
-                                    onClick={() => setShowProfileMenu(!showProfileMenu)}
-                                    className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowProfileMenu(!showProfileMenu);
+                                    }}
+                                    className="flex items-center gap-3 pl-1.5 pr-2 py-1.5 rounded-full hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100 focus:outline-none group"
+                                    aria-expanded={showProfileMenu}
                                 >
-                                    <div className="w-9 h-9 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold">
-                                        {user.email ? user.email[0].toUpperCase() : '?'}
+                                    <div className="relative">
+                                        {user.photoURL ? (
+                                            <Image
+                                                src={user.photoURL}
+                                                alt="Profile"
+                                                width={36}
+                                                height={36}
+                                                className={`w-9 h-9 rounded-full object-cover border shadow-sm ${user.role === 'admin' ? 'border-indigo-200' : 'border-gray-100'}`}
+                                            />
+                                        ) : (
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-black text-sm border shadow-sm ${user.role === 'admin' ? 'bg-indigo-900 border-indigo-700' : 'bg-teal-600 border-gray-100'
+                                                }`}>
+                                                {user.role === 'admin' ? <Shield className="w-4 h-4" /> : (user.email ? user.email[0].toUpperCase() : '?')}
+                                            </div>
+                                        )}
+                                        <div className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white rounded-full ${user.role === 'admin' ? 'bg-indigo-500' : 'bg-green-500'}`}></div>
                                     </div>
-                                    <div className="text-left">
-                                        <p className="text-sm font-medium text-gray-900">{user.email || 'No email'}</p>
-                                        <p className="text-xs text-gray-500 capitalize">
-                                            {user.role?.replace('_', ' ') || 'User'}
-                                        </p>
+
+                                    <div className="hidden md:flex flex-col items-start leading-tight">
+                                        <span className="text-sm font-bold text-gray-900 truncate max-w-[150px]">
+                                            {user.email}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            {hasPaymentApproved && user.role === 'job_seeker' && (
+                                                <RegisteredBadge size={12} />
+                                            )}
+                                            {user.role === 'admin' && (
+                                                <Shield className="w-2.5 h-2.5 text-indigo-600 fill-indigo-600" />
+                                            )}
+                                            <span className={`text-[10px] font-bold uppercase tracking-widest ${user.role === 'admin' ? 'text-indigo-600' : 'text-gray-500'
+                                                }`}>
+                                                {user.role?.replace('_', ' ') || 'User'}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
+                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
                                 </button>
 
-                                {/* Dropdown Menu */}
+                                {/* Profile Dropdown */}
                                 {showProfileMenu && (
-                                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
-                                        {user.role === 'admin' && (
+                                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 animate-in fade-in zoom-in-95 duration-200 origin-top-right z-[110]">
+                                        <div className="px-5 py-3 mb-1 border-b border-gray-50">
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                                            <p className="text-sm font-black text-gray-900 truncate">{user.email}</p>
+                                        </div>
+
+                                        <div className="border-t border-gray-50 my-1"></div>
+
+                                        <div className="p-2 space-y-1">
                                             <Link
-                                                href="/admin"
-                                                className="block px-4 py-2 text-purple-600 font-bold hover:bg-purple-50"
-                                                onClick={() => setShowProfileMenu(false)}
+                                                href={user.role === 'admin' ? '/admin' : user.role === 'employer' ? '/employer/dashboard' : '/dashboard'}
+                                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors"
                                             >
-                                                🔐 Admin Portal
+                                                <LayoutDashboard className="w-4 h-4 text-gray-400" />
+                                                My Dashboard
                                             </Link>
-                                        )}
-                                        {user.role === 'job_seeker' && (
-                                            <>
-                                                <Link
-                                                    href="/dashboard/profile"
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                                                    onClick={() => setShowProfileMenu(false)}
-                                                >
-                                                    👤 My Profile
-                                                </Link>
-                                                <Link
-                                                    href="/dashboard/premium"
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                                                    onClick={() => setShowProfileMenu(false)}
-                                                >
-                                                    💎 Upgrade Premium
-                                                </Link>
-                                            </>
-                                        )}
-                                        {user.role === 'employer' && (
                                             <Link
-                                                href="/employer/profile"
-                                                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                                                onClick={() => setShowProfileMenu(false)}
+                                                href={user.role === 'employer' ? '/employer/profile' : '/dashboard/profile'}
+                                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors"
                                             >
-                                                🏢 Company Profile
+                                                <User className="w-4 h-4 text-gray-400" />
+                                                Profile Settings
                                             </Link>
-                                        )}
-                                        <div className="border-t border-gray-200 my-2"></div>
-                                        <button
-                                            onClick={() => {
-                                                handleLogout();
-                                                setShowProfileMenu(false);
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
-                                        >
-                                            🚪 Logout
-                                        </button>
+                                        </div>
+
+                                        <div className="p-2 mt-1 border-t border-gray-50">
+                                            <button
+                                                onClick={() => {
+                                                    handleLogout();
+                                                    setShowProfileMenu(false);
+                                                }}
+                                                className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                                <LogOut className="w-4 h-4" />
+                                                Log Out
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <>
+                            <div className="flex items-center gap-2">
                                 <Link
                                     href="/auth/login"
-                                    className="px-6 py-2 text-teal-600 font-medium hover:bg-teal-50 rounded-lg transition-colors"
+                                    className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-teal-600 transition-colors"
                                 >
-                                    Login
+                                    Log in
                                 </Link>
                                 <Link
                                     href="/auth/register"
-                                    className="px-6 py-2 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors shadow-md"
+                                    className="px-5 py-2.5 bg-gray-900 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-gray-200 active:scale-95"
                                 >
-                                    Sign Up
+                                    Join Now
                                 </Link>
-                            </>
+                            </div>
                         )}
+
+                        {/* Mobile Menu Toggle */}
+                        <button
+                            onClick={() => setShowMobileMenu(!showMobileMenu)}
+                            className="lg:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 active:scale-95 transition-all"
+                            aria-label="Toggle menu"
+                        >
+                            {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                        </button>
                     </div>
-
-                    {/* Mobile Menu Button */}
-                    <button
-                        onClick={() => setShowMobileMenu(!showMobileMenu)}
-                        className="md:hidden p-2 rounded-lg hover:bg-gray-100"
-                    >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            {showMobileMenu ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            )}
-                        </svg>
-                    </button>
                 </div>
+            </div>
 
-                {/* Mobile Menu */}
-                {showMobileMenu && (
-                    <div className="md:hidden py-4 border-t border-gray-200">
-                        <div className="space-y-2">
+            {/* Mobile Navigation Dropdown */}
+            {showMobileMenu && (
+                <div className="lg:hidden bg-white border-t border-gray-100 animate-in slide-in-from-top-4 duration-300">
+                    <div className="px-4 py-6 space-y-4">
+                        <div className="grid grid-cols-1 gap-2">
                             {navItems.map((item) => (
                                 <Link
                                     key={item.path}
                                     href={item.path}
-                                    onClick={() => setShowMobileMenu(false)}
-                                    className={`block px-4 py-2 rounded-lg font-medium ${isActive(item.path)
-                                        ? 'bg-teal-600 text-white'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-bold transition-all ${isActive(item.path)
+                                        ? 'bg-teal-50 text-teal-700'
+                                        : 'text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
-                                    <span className="mr-2">{item.icon}</span>
+                                    {item.icon}
                                     {item.name}
                                 </Link>
                             ))}
                         </div>
 
-                        {/* Mobile Auth Buttons */}
                         {!user && (
-                            <div className="mt-4 space-y-2 pt-4 border-t border-gray-200">
+                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
                                 <Link
                                     href="/auth/login"
-                                    onClick={() => setShowMobileMenu(false)}
-                                    className="block text-center px-4 py-2 border border-teal-600 text-teal-600 font-medium rounded-lg hover:bg-teal-50"
+                                    className="flex items-center justify-center h-12 rounded-xl text-sm font-bold text-gray-700 border border-gray-200"
                                 >
-                                    Login
+                                    Log in
                                 </Link>
                                 <Link
                                     href="/auth/register"
-                                    onClick={() => setShowMobileMenu(false)}
-                                    className="block text-center px-4 py-2 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700"
+                                    className="flex items-center justify-center h-12 rounded-xl text-sm font-bold text-white bg-teal-600"
                                 >
-                                    Sign Up
+                                    Join Now
                                 </Link>
                             </div>
                         )}
 
-                        {/* Mobile Logout */}
                         {user && (
-                            <div className="mt-4 pt-4 border-t border-gray-200">
-                                <div className="px-4 py-2 text-sm text-gray-600">
-                                    Logged in as: <strong>{user.email}</strong>
+                            <div className="pt-4 border-t border-gray-100">
+                                <div className="flex items-center gap-4 px-4 py-4 mb-2 bg-gray-50 rounded-2xl">
+                                    <div className="relative">
+                                        {user.photoURL ? (
+                                            <Image
+                                                src={user.photoURL}
+                                                alt="Profile"
+                                                width={48}
+                                                height={48}
+                                                className={`w-12 h-12 rounded-full object-cover border-2 shadow-sm ${user.role === 'admin' ? 'border-indigo-100' : 'border-white'}`}
+                                            />
+                                        ) : (
+                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg shadow-sm ${user.role === 'admin' ? 'bg-indigo-900' : 'bg-teal-600'}`}>
+                                                {user.role === 'admin' ? <Shield className="w-6 h-6" /> : (user.email ? user.email[0].toUpperCase() : '?')}
+                                            </div>
+                                        )}
+                                        <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white rounded-full ${user.role === 'admin' ? 'bg-indigo-500' : 'bg-green-500'}`}></div>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-black text-gray-900 truncate max-w-[200px]">{user.displayName || user.email}</span>
+                                        <div className="flex items-center gap-1.5">
+                                            {hasPaymentApproved && user.role === 'job_seeker' && (
+                                                <RegisteredBadge size={14} />
+                                            )}
+                                            {user.role === 'admin' && (
+                                                <Shield className="w-3 h-3 text-indigo-600 fill-indigo-600" />
+                                            )}
+                                            <span className={`text-[11px] font-bold uppercase tracking-widest ${user.role === 'admin' ? 'text-indigo-600' : 'text-gray-500'}`}>
+                                                {user.role?.replace('_', ' ') || 'User'}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <button
-                                    onClick={() => {
-                                        handleLogout();
-                                        setShowMobileMenu(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                    onClick={handleLogout}
+                                    className="flex items-center gap-3 w-full px-4 py-4 rounded-xl text-base font-bold text-red-600 bg-red-50"
                                 >
-                                    🚪 Logout
+                                    <LogOut className="w-5 h-5" />
+                                    Sign Out from Device
                                 </button>
                             </div>
                         )}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </nav>
     );
 }

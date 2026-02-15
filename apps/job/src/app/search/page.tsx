@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Search, MapPin, Briefcase, DollarSign, X, SlidersHorizontal, Loader2, Filter } from 'lucide-react';
@@ -12,14 +12,14 @@ import type { QueryConstraint } from 'firebase/firestore';
 
 export default function SearchPage() {
     const searchParams = useSearchParams();
-    const { profile } = useAuth();
+    const { profile, loading: authLoading } = useAuth();
 
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false); // Added loadingMore state
     const [showFilters, setShowFilters] = useState(false);
     const [totalResults, setTotalResults] = useState(0);
-    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+    const lastDocRef = useRef<QueryDocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
 
     // Filter states
@@ -36,8 +36,17 @@ export default function SearchPage() {
 
     const fetchJobs = useCallback(async (reset = false) => {
         try {
-            setLoading(true);
-            if (!reset) setLoadingMore(true);
+            // Reset states when starting new search
+            if (reset) {
+                console.log('[Search Debug] Starting new search - resetting states');
+                setLoading(true);
+                setJobs([]);
+                setTotalResults(0);
+                lastDocRef.current = null;
+            } else {
+                console.log('[Search Debug] Loading more results');
+                setLoadingMore(true);
+            }
 
             // Build query constraints
             const constraints: QueryConstraint[] = [
@@ -72,7 +81,7 @@ export default function SearchPage() {
                 'jobs',
                 constraints,
                 PAGE_SIZE,
-                reset ? undefined : (lastDoc || undefined)
+                reset ? undefined : (lastDocRef.current || undefined)
             );
 
             // Filter by search query and salary (client-side post-processing)
@@ -98,21 +107,27 @@ export default function SearchPage() {
 
             if (reset) {
                 setJobs(processedJobs);
+                setTotalResults(processedJobs.length);
+                console.log(`[Search Debug] Search completed: ${processedJobs.length} jobs found`);
             } else {
                 setJobs(prev => [...prev, ...processedJobs]);
+                setTotalResults(prev => prev + processedJobs.length);
+                console.log(`[Search Debug] Loaded ${processedJobs.length} more jobs`);
             }
 
-            setTotalResults(processedJobs.length);
             setHasMore(results.length === PAGE_SIZE);
-            setLastDoc(newLastDoc);
+            lastDocRef.current = newLastDoc;
         } catch (error) {
-            console.error('Error searching jobs:', error);
-            if (reset) setJobs([]);
+            console.error('[Search Error] Failed to fetch jobs:', error);
+            if (reset) {
+                setJobs([]);
+                setTotalResults(0);
+            }
         } finally {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [searchQuery, selectedCategory, selectedLocation, selectedEmploymentType, remoteOnly, sortBy, lastDoc, minSalary, maxSalary]);
+    }, [searchQuery, selectedCategory, selectedLocation, selectedEmploymentType, remoteOnly, sortBy, minSalary, maxSalary]);
 
     useEffect(() => {
         fetchJobs(true);
@@ -337,6 +352,34 @@ export default function SearchPage() {
 
                     {/* Results */}
                     <div className="flex-1">
+                        {/* Auth CTA for non-logged-in users */}
+                        {!authLoading && !profile && (
+                            <div className="bg-gradient-to-r from-teal-600 to-blue-600 text-white p-6 rounded-2xl mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                                <div>
+                                    <h3 className="font-black text-xl mb-1 flex items-center gap-2">
+                                        🚀 Boost Your Career
+                                    </h3>
+                                    <p className="text-white/90 font-medium">
+                                        Create a profile to save jobs, track applications, and get headhunted.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3 whitespace-nowrap">
+                                    <Link
+                                        href="/auth/login"
+                                        className="bg-white/20 hover:bg-white/30 text-white border border-white/40 px-6 py-2 rounded-xl font-bold transition-all backdrop-blur-sm"
+                                    >
+                                        Log In
+                                    </Link>
+                                    <Link
+                                        href="/auth/register"
+                                        className="bg-white text-teal-700 px-6 py-2 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-lg"
+                                    >
+                                        Sign Up
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Results Header */}
                         <div className="flex items-center justify-between mb-6">
                             <div>

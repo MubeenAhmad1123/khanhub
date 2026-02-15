@@ -20,7 +20,7 @@ export default function EnterpriseFooter() {
                         </p>
                         <div className="flex gap-3">
                             <a
-                                href="https://facebook.com"
+                                href="https://facebook.com/khanhub.com.pk/"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-2 bg-gray-800 rounded-full hover:bg-primary-600 transition-colors"
@@ -28,20 +28,12 @@ export default function EnterpriseFooter() {
                                 <Facebook className="h-5 w-5" />
                             </a>
                             <a
-                                href="https://instagram.com"
+                                href="https://instagram.com/khanhub.com.pk/"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-2 bg-gray-800 rounded-full hover:bg-primary-600 transition-colors"
                             >
                                 <Instagram className="h-5 w-5" />
-                            </a>
-                            <a
-                                href="https://linkedin.com"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-2 bg-gray-800 rounded-full hover:bg-primary-600 transition-colors"
-                            >
-                                <Linkedin className="h-5 w-5" />
                             </a>
                         </div>
                     </div>
@@ -113,8 +105,8 @@ export default function EnterpriseFooter() {
                             </li>
                             <li className="flex items-center gap-2">
                                 <Phone className="h-5 w-5 text-primary-400" />
-                                <a href="tel:+92300000000" className="text-gray-400 hover:text-white">
-                                    +92 300 0000000
+                                <a href="tel:03006395220" className="text-gray-400 hover:text-white">
+                                    03006395220
                                 </a>
                             </li>
                             <li className="flex items-center gap-2">

@@ -14,7 +14,19 @@ export interface DepartmentStat {
 
 export interface DepartmentService {
     title: string;
+    description?: string;
+    icon?: string;
+    image?: string;
+    slug?: string;
+}
+
+export interface Program {
+    slug: string;
+    name: string;
     description: string;
+    image?: string;
+    features?: string[];
+    details?: { label: string; value: string }[];
 }
 
 export interface Department {
@@ -32,8 +44,29 @@ export interface Department {
 
     // Additional fields for individual department pages
     colorHex?: string;
-    programs: string[];
+    programs: string[] | Program[];
     facilities: string[];
     contactPhone: string;
     contactEmail: string;
+
+    // Enhanced structure for Institute of Health Sciences
+    subDepartments?: SubDepartment[];
+    features?: string[];
+    gallery?: {
+        title: string;
+        images: { url: string; alt: string; }[];
+    }[];
+}
+
+export interface SubDepartment {
+    title: string;
+    description?: string;
+    courses: Course[];
+}
+
+export interface Course {
+    name: string;
+    duration: string;
+    eligibility: string;
+    description?: string;
 }

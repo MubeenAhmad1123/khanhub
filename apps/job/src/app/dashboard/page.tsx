@@ -163,6 +163,32 @@ export default function DashboardPage() {
         if (user) {
             loadJobs();
 
+            // Self-healing: Recalculate and update profile strength if needed
+            const updateStrength = async () => {
+                try {
+                    const { calculateProfileStrength } = await import('@/lib/services/pointsSystem');
+                    const { updateUserProfile } = await import('@/lib/firebase/auth');
+
+                    const currentStrength = user.profile?.profileStrength || 0;
+                    const calculatedStrength = calculateProfileStrength(user);
+
+                    if (currentStrength !== calculatedStrength) {
+                        console.log(`♻️ Syncing profile strength: ${currentStrength}% -> ${calculatedStrength}%`);
+                        await updateUserProfile(user.uid, {
+                            profile: {
+                                profileStrength: calculatedStrength
+                            }
+                        } as any);
+                        // Refresh profile to reflect change in UI
+                        await refreshProfile();
+                    }
+                } catch (error) {
+                    console.error('Error syncing profile strength:', error);
+                }
+            };
+
+            updateStrength();
+
             // Animation for profile strength
             const strength = user.profile?.profileStrength || 0;
             if (strength > 0) {
@@ -172,7 +198,7 @@ export default function DashboardPage() {
                 return () => clearTimeout(timer);
             }
         }
-    }, [user, loadJobs]);
+    }, [user, loadJobs, refreshProfile]);
 
     // Auto-refresh profile every 30 seconds when payment is pending
     useEffect(() => {
@@ -522,6 +548,10 @@ function JobCard({ job }: { job: Job }) {
                             ? `Rs. ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`
                             : 'Salary not specified'}
                     </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span>🕒</span>
+                    <span>{(job as any).experience || 'Fresh'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span>⏰</span>

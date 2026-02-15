@@ -5,6 +5,7 @@
 // ============================================================================
 
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { PageHero, SectionHeader } from '@/components/ui';
 import { SITE } from '@/data/site';
 import { AnimatedCounter } from '@/components/animated-counter';
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   title: 'About Khan Hub - Pakistan\'s Leading Welfare Organization | Our Mission & Values',
   description:
     'Discover Khan Hub\'s mission to provide accessible healthcare, education, and welfare services across Pakistan. Learn about our 16 departments, 10+ years of community service, and 50,000+ lives impacted since 2015.',
-  
+
   keywords: [
     'Khan Hub about',
     'welfare organization Pakistan',
@@ -186,9 +187,9 @@ const TRUST_POINTS = [
 // REUSABLE STYLES - DRY principle
 // ============================================================================
 const cardClass =
-  'relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300';
+  'relative overflow-hidden rounded-2xl border border-neutral-200/60 bg-white/70 backdrop-blur-md shadow-sm hover:shadow-xl hover:shadow-primary-500/10 hover:border-primary-300 transition-all duration-500 hover:-translate-y-1.5 group';
 const cardOverlayClass =
-  'pointer-events-none absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-success-50 opacity-90';
+  'pointer-events-none absolute inset-0 bg-gradient-to-br from-primary-50/30 via-transparent to-success-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500';
 
 // ============================================================================
 // PAGE COMPONENT
@@ -198,12 +199,23 @@ export default function AboutPage() {
     <>
       {/* Semantic HTML: article element for main content */}
       <article itemScope itemType="https://schema.org/NGO">
-        {/* Hero Section - Uses existing PageHero component */}
+        {/* Hero Section - Uses enhanced PageHero component with Split layout */}
         <PageHero
+          type="split"
           badge="About Khan Hub"
           title="Built for people, not just patients"
           subtitle="Khan Hub is a connected ecosystem of clinics, institutes, and welfare services designed so that one visit can open many doors of support."
-        />
+          image="/images/about-hero.webp"
+          cta={
+            <Link href="/contact" className="btn-primary">
+              Contact Our Team
+            </Link>
+          }
+        >
+          <Link href="/donate" className="btn-secondary">
+            Support Our Mission
+          </Link>
+        </PageHero>
 
         {/* ============================================================================ */}
         {/* SECTION 1: Organization Story & Impact Statistics */}
@@ -420,8 +432,10 @@ export default function AboutPage() {
                       style={{ animationDelay: `${index * 80}ms` }}
                     >
                       <div className="md:w-1/2 flex items-center gap-3">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary-50 border-2 border-primary-200 flex items-center justify-center text-xs sm:text-sm font-bold text-primary-700 flex-shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-white shadow-lg shadow-primary-500/10 border border-primary-100 flex items-center justify-center text-sm font-bold text-primary-600 flex-shrink-0 relative z-10 group-hover:scale-110 transition-transform duration-300">
                           {step.year}
+                          {/* Inner dot */}
+                          <div className="absolute -right-1 -top-1 w-3 h-3 bg-success-500 rounded-full border-2 border-white" />
                         </div>
                         <div className="md:text-right flex-1">
                           <h4 className="font-display font-semibold text-sm sm:text-base text-neutral-900">
@@ -502,7 +516,7 @@ export default function AboutPage() {
                 <div className="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-neutral-200">
                   <p className="text-[11px] sm:text-xs text-neutral-700 leading-relaxed">
                     For detailed registration numbers or documents, please contact our admin office at{' '}
-                    <a 
+                    <a
                       href={`mailto:${SITE.email}`}
                       className="text-primary-600 font-medium hover:text-primary-700 transition-colors underline decoration-primary-300 underline-offset-2"
                     >

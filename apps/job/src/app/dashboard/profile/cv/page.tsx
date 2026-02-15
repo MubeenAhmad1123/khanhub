@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { parseCV } from '@/lib/cvParser';
 
 export default function CVUploadPage() {
     const router = useRouter();
@@ -34,20 +33,17 @@ export default function CVUploadPage() {
         setError(null);
 
         try {
-            // 1. Parse CV locally to extract skills/experience
-            const parsedData = await parseCV(file);
-
-            // 2. Upload file to Cloudinary
+            // 1. Upload file to Cloudinary
             const { uploadCV } = await import('@/lib/services/cloudinaryUpload');
             const cvUrl = await uploadCV(file, user.uid);
 
+            // 2. Update profile with CV URL (preserve existing data)
             await updateProfile({
                 profile: {
-                    ...user.profile,
+                    ...(user.profile || {}), // Safely spread existing profile
                     cvUrl,
                     cvFileName: file.name,
                     cvUploadedAt: new Date(),
-                    skills: parsedData.extractedData.skills,
                 }
             } as any);
 
@@ -89,8 +85,14 @@ export default function CVUploadPage() {
                         </div>
                         <h1 className="text-2xl font-bold text-gray-900">Upload Your CV</h1>
                         <p className="text-gray-600 mt-2">
-                            We'll automatically extract your skills and experience to boost your profile
+                            Upload your CV to showcase your qualifications to employers
                         </p>
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800">
+                                💡 <strong>Note:</strong> Automatic skill extraction is currently being enhanced.
+                                Your CV will be uploaded successfully for employers to view.
+                            </p>
+                        </div>
                     </div>
 
                     {success ? (

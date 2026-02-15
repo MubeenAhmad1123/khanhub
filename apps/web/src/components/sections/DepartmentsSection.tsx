@@ -40,8 +40,8 @@ const CategoryButton = memo(function CategoryButton({
     <button
       onClick={handleClick}
       className={`group relative px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm font-semibold transition-all duration-300 border-2 touch-manipulation min-h-[44px] ${isActive
-          ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/30'
-          : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-400 hover:shadow-md'
+        ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/30'
+        : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-400 hover:shadow-md'
         }`}
       aria-pressed={isActive}
       aria-label={`Filter by ${label}, ${count} departments`}
@@ -51,8 +51,8 @@ const CategoryButton = memo(function CategoryButton({
         <span className="text-xs sm:text-sm">{label}</span>
         <span
           className={`inline-flex items-center justify-center min-w-[20px] sm:min-w-[24px] h-5 sm:h-6 px-1.5 sm:px-2 rounded-full text-xs font-bold transition-colors ${isActive
-              ? 'bg-white/20 text-white'
-              : 'bg-neutral-100 text-neutral-600 group-hover:bg-primary-100 group-hover:text-primary-700'
+            ? 'bg-white/20 text-white'
+            : 'bg-neutral-100 text-neutral-600 group-hover:bg-primary-100 group-hover:text-primary-700'
             }`}
         >
           {count}
@@ -205,7 +205,7 @@ export default function DepartmentsSection() {
               itemScope
               itemType="https://schema.org/GovernmentService"
             >
-              <DepartmentCard department={dept} />
+              <DepartmentCard department={dept} index={index} />
             </div>
           ))}
         </div>

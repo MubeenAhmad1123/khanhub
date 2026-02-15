@@ -13,6 +13,10 @@ export const metadata: Metadata = {
     title: 'Khanhub Surgical - Medical & Enterprise Solutions',
     description: 'Quality surgical equipment and office supplies for professionals across Pakistan',
     keywords: 'surgical equipment, medical instruments, office supplies, Pakistan',
+    icons: {
+        icon: '/logo.webp',
+        apple: '/logo.webp',
+    },
 };
 
 export default function RootLayout({
