@@ -17,5 +17,8 @@
     "build:enterprise": "npm --prefix apps/enterprise run build",
     "build:jobs": "npm --prefix apps/job run build",
     "build:transport": "npm --prefix apps/transport run build"
+  },
+  "dependencies": {
+    "lottie-web": "^5.13.0"
   }
 }
