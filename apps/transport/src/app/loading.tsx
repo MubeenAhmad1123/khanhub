@@ -1,3 +1,5 @@
+import TransportLoader from './animations/TransportLoader';
+
 export default function Loading() {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  return <TransportLoader />;
 }
