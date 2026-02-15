@@ -1,7 +1,7 @@
 "use client";
 
 import Lottie from "lottie-react";
-import loaderAnimation from "./loader.json";
+import loaderAnimation from "./Loader.json";
 
 export default function TransportLoader() {
   return (
