@@ -11,7 +11,6 @@ import { getAllBrands, getSubcategoriesByCategory, getPriceRange } from '@/data'
 const ITEMS_PER_PAGE = 100;
 
 export default function SurgicalPage() {
-    const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
     const { products, filters, updateFilters, resetFilters, isLoading } = useProducts({
@@ -22,18 +21,10 @@ export default function SurgicalPage() {
     const subcategories = getSubcategoriesByCategory('surgical');
     const priceRange = getPriceRange();
 
-    // Filter products based on search
-    const filteredProducts = searchQuery
-        ? products.filter(p =>
-            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.description.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : products;
-
     // Pagination
-    const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const paginatedProducts = products.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
@@ -51,9 +42,9 @@ export default function SurgicalPage() {
                     </p>
                     <div className="max-w-2xl">
                         <SearchSuggestions
-                            value={searchQuery}
+                            value={filters.searchQuery || ''}
                             onChange={(value) => {
-                                setSearchQuery(value);
+                                updateFilters({ searchQuery: value });
                                 setCurrentPage(1); // Reset to page 1 on search
                             }}
                             placeholder="Search surgical equipment..."
@@ -84,8 +75,8 @@ export default function SurgicalPage() {
                         {/* Results Count */}
                         <div className="mb-6">
                             <p className="text-gray-600">
-                                Showing <span className="font-semibold text-gray-900">{startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length)}</span> of{' '}
-                                <span className="font-semibold text-gray-900">{filteredProducts.length}</span> products
+                                Showing <span className="font-semibold text-gray-900">{startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, products.length)}</span> of{' '}
+                                <span className="font-semibold text-gray-900">{products.length}</span> products
                             </p>
                         </div>
 

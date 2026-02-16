@@ -122,6 +122,7 @@ import Footer from '@/components/layout/Footer'
 import { Toaster } from 'react-hot-toast'
 import '@/styles/globals.css'
 import SocialMediaSidebar from '@/components/SocialMediaSidebar'
+import FloatingDonateButton from '@/components/FloatingDonateButton'
 
 const sora = Sora({
   subsets: ['latin'],
@@ -148,6 +149,7 @@ export default function RootLayout({
           {children}
         </main>
         <SocialMediaSidebar />
+        <FloatingDonateButton />
         <Footer />
         <Toaster position="bottom-right" />
       </body>
@@ -158,7 +160,7 @@ export default function RootLayout({
 // Additional Performance Optimizations
 
 // 1. Font Optimization
-export const fontConfig = {
+const fontConfig = {
   inter: {
     preload: true,
     display: 'swap',
@@ -172,7 +174,7 @@ export const fontConfig = {
 }
 
 // 2. Image Optimization Settings
-export const imageConfig = {
+const imageConfig = {
   domains: ['khanhub.com.pk'],
   formats: ['image/webp', 'image/avif'],
   deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -181,7 +183,7 @@ export const imageConfig = {
 }
 
 // 3. PWA Configuration (optional)
-export const pwaConfig = {
+const pwaConfig = {
   name: 'Khan Hub',
   short_name: 'KhanHub',
   description: 'Pakistan\'s Leading Welfare Organization',
@@ -207,7 +209,7 @@ export const pwaConfig = {
 }
 
 // 4. Security Headers (add to next.config.js)
-export const securityHeaders = [
+const securityHeaders = [
   {
     key: 'X-DNS-Prefetch-Control',
     value: 'on'

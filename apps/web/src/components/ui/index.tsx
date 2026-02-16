@@ -194,7 +194,7 @@ export function PageHero({
 
           {/* Image/Graphic Column for Split Layout */}
           {isSplit && (
-            <div className="relative hidden lg:block animate-slide-left opacity-0" style={{ animationDelay: '0.3s', animationFillMode: 'forwards' }}>
+            <div className="relative mt-12 lg:mt-0 block animate-fade-in" style={{ animationDelay: '0.3s' }}>
               {typeof image === 'string' ? (
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10 group">
                   <Image

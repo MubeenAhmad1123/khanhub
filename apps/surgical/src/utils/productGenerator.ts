@@ -172,6 +172,43 @@ export function generateProductCatalog(): Product[] {
             const price = Math.floor(Math.random() * 45000) + 5000;
             const discount = [0, 10, 15, 20, 25, 30][Math.floor(Math.random() * 6)];
 
+            // Assign fallback images based on category
+            let productThumbnail = '/images/products/instruments/scissors-set-premium.webp';
+            const categoryImages: Record<string, string[]> = {
+                diagnostic: [
+                    '/images/products/diagnostic/bp-monitor-digital.webp',
+                    '/images/products/diagnostic/otoscope-ophthalmoscope-set.webp',
+                    '/images/products/diagnostic/pulse-oximeter-pro.webp',
+                    '/images/products/diagnostic/thermometer-infrared.webp',
+                    '/images/products/diagnostic/ultrasound-portable-3d.webp'
+                ],
+                instruments: [
+                    '/images/products/instruments/forceps-dissecting.webp',
+                    '/images/products/instruments/scalpel-handle-set.webp',
+                    '/images/products/instruments/scissors-set-premium.webp',
+                    '/images/products/instruments/stethoscope-cardiology.webp'
+                ],
+                supplies: [
+                    '/images/products/supplies/autoclave-sterilizer-23l.webp',
+                    '/images/products/supplies/gauze-swabs-sterile.webp',
+                    '/images/products/supplies/iv-cannulas-set.webp',
+                    '/images/products/supplies/spinal-needles.webp',
+                    '/images/products/supplies/surgical-gloves-latex.webp',
+                    '/images/products/supplies/surgical-masks-3ply.webp',
+                    '/images/products/supplies/surgical-sutures-pack.webp'
+                ],
+                furniture: ['/images/products/furniture/examination-bed-electric.webp'],
+                lab: [
+                    '/images/products/lab/centrifuge-machine-digital.webp',
+                    '/images/products/lab/hematology-analyzer.webp',
+                    '/images/products/lab/microscope-binocular-1000x.webp'
+                ],
+                'operating-room': ['/images/products/operating-room/surgical-light-led.webp']
+            };
+
+            const pool = categoryImages[categoryKey] || categoryImages.instruments;
+            productThumbnail = pool[Math.floor(Math.random() * pool.length)];
+
             products.push({
                 id: `surg-${String(idCounter++).padStart(4, '0')}`,
                 name: item,
@@ -182,8 +219,8 @@ export function generateProductCatalog(): Product[] {
                 price,
                 originalPrice: discount > 0 ? Math.floor(price / (1 - discount / 100)) : price,
                 discount,
-                images: [],
-                thumbnail: '',
+                images: [productThumbnail],
+                thumbnail: productThumbnail,
                 inStock: Math.random() > 0.05,
                 stockQuantity: Math.floor(Math.random() * 150) + 10,
                 sku: `${categoryKey.toUpperCase().slice(0, 3)}-${String(idCounter).padStart(4, '0')}`,

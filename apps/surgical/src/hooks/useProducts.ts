@@ -24,19 +24,19 @@ export function useProducts(initialFilters?: ProductFilters) {
 
         // Filter by category
         if (filters.category) {
-            result = getProductsByCategory(filters.category);
+            result = result.filter(p => p.category === filters.category);
         }
 
         // Filter by subcategory
         if (filters.subcategory) {
-            result = getProductsBySubcategory(filters.subcategory);
+            result = result.filter(p => p.subcategory === filters.subcategory);
         }
 
         // Filter by price range
         if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
             const min = filters.minPrice || 0;
             const max = filters.maxPrice || Infinity;
-            result = filterByPriceRange(min, max);
+            result = result.filter(p => p.price >= min && p.price <= max);
         }
 
         // Filter by in stock
@@ -51,7 +51,13 @@ export function useProducts(initialFilters?: ProductFilters) {
 
         // Search query
         if (filters.searchQuery) {
-            result = searchProducts(filters.searchQuery);
+            const query = filters.searchQuery.toLowerCase();
+            result = result.filter(p =>
+                p.name.toLowerCase().includes(query) ||
+                p.description.toLowerCase().includes(query) ||
+                p.tags?.some(tag => tag.toLowerCase().includes(query)) ||
+                p.brand?.toLowerCase().includes(query)
+            );
         }
 
         // Sort products
