@@ -98,9 +98,10 @@ const HeroCTAs = memo(function HeroCTAs() {
   );
 });
 
-// Image Carousel Component
+// Image Carousel Component with Optimized Loading
 const ImageCarousel = memo(function ImageCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -109,6 +110,24 @@ const ImageCarousel = memo(function ImageCarousel() {
 
     return () => clearTimeout(timer);
   }, [currentIndex]);
+
+  // Preload next 2 images for smooth transitions
+  useEffect(() => {
+    const preloadImages = [
+      (currentIndex + 1) % DEPARTMENT_IMAGES.length,
+      (currentIndex + 2) % DEPARTMENT_IMAGES.length
+    ];
+
+    preloadImages.forEach(idx => {
+      const img = new window.Image();
+      img.src = DEPARTMENT_IMAGES[idx].src;
+    });
+  }, [currentIndex]);
+
+  const handleImageError = (index: number) => {
+    setImageErrors(prev => new Set(prev).add(index));
+    console.error(`Failed to load image: ${DEPARTMENT_IMAGES[index].src}`);
+  };
 
   return (
     <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96">
@@ -121,15 +140,23 @@ const ImageCarousel = memo(function ImageCarousel() {
           transition={{ duration: 0.5 }}
           className="absolute inset-0"
         >
-          <Image
-            src={DEPARTMENT_IMAGES[currentIndex].src}
-            alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
-            fill
-            className="object-contain drop-shadow-2xl"
-            priority={currentIndex === 0}
-            loading={currentIndex === 0 ? 'eager' : 'lazy'}
-            sizes="(max-width: 640px) 256px, (max-width: 1024px) 320px, 384px"
-          />
+          {!imageErrors.has(currentIndex) ? (
+            <Image
+              src={DEPARTMENT_IMAGES[currentIndex].src}
+              alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
+              fill
+              className="object-contain drop-shadow-2xl"
+              priority={currentIndex === 0} // Only prioritize the first image (logo)
+              loading={currentIndex === 0 ? "eager" : "lazy"}
+              sizes="(max-width: 640px) 256px, (max-width: 1024px) 320px, 384px"
+              onError={() => handleImageError(currentIndex)}
+              quality={85}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-2xl">
+              <span className="text-slate-400 text-sm">Image unavailable</span>
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
 
@@ -230,8 +257,8 @@ export default function HeroSection() {
       <div className="container-custom relative z-10 py-12 sm:py-16 lg:py-20">
         <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
 
-          {/* Left Content */}
-          <div className="space-y-6 sm:space-y-8 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left">
+          {/* Left Content - Swapped order for mobile (order-2) */}
+          <div className="space-y-6 sm:space-y-8 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left order-2 lg:order-1">
             {/* Trust Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -286,13 +313,13 @@ export default function HeroSection() {
             </motion.div>
           </div>
 
-          {/* Right Content - Animated Logo Carousel */}
+          {/* Right Content - Animated Logo Carousel - Swapped order for mobile (order-1) */}
           <motion.div
             ref={logoRef}
             initial={{ opacity: 1, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="relative flex items-center justify-center order-last z-10"
+            className="relative flex items-center justify-center order-1 lg:order-2 z-10"
           >
             {/* Floating Logo Container */}
             <motion.div

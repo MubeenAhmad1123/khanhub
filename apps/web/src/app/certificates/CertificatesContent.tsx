@@ -8,6 +8,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
+import Image from 'next/image';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -37,33 +38,39 @@ type Props = {
 // ============================================================================
 // DATA CONSTANTS
 // ============================================================================
+// Certificate with image path
+type CertificateItemWithImage = CertificateItem & { imagePath?: string };
+
 const RAW_CERTIFICATES = [
   {
     category: 'Registration' as const,
     items: [
       {
-        title: 'Company Registration Certificate',
+        title: 'Certificate of Incorporation',
         issuer: 'Securities & Exchange Commission of Pakistan (SECP)',
         year: 2015,
         icon: '📄',
         type: 'core' as const,
         status: 'Active' as const,
+        imagePath: '/images/certificats/CERTIFICATE OF INCORPORATION.webp',
       },
       {
-        title: 'NGO Registration Certificate',
-        issuer: 'Social Welfare Department, Punjab',
-        year: 2015,
+        title: 'PHC Registration Certificate',
+        issuer: 'Pakistan Humanitarian Council',
+        year: 2018,
         icon: '📄',
         type: 'core' as const,
         status: 'Active' as const,
+        imagePath: '/images/certificats/PHC_RegistrationCertificate.webp',
       },
       {
-        title: 'Tax Exemption Certificate',
-        issuer: 'Federal Board of Revenue (FBR)',
-        year: 2016,
+        title: 'PHC Provisional License',
+        issuer: 'Pakistan Humanitarian Council',
+        year: 2018,
         icon: '📄',
         type: 'core' as const,
-        status: 'Renewed' as const,
+        status: 'Active' as const,
+        imagePath: '/images/certificats/PHC_ProvisionalLicense.webp',
       },
     ],
   },
@@ -71,28 +78,31 @@ const RAW_CERTIFICATES = [
     category: 'Approvals & Compliance' as const,
     items: [
       {
-        title: 'Annual Audit Report',
-        issuer: 'Certified Public Accountants',
+        title: 'MOU with DPO Vehari - Khan Hub Medical Center',
+        issuer: 'District Police Officer, Vehari',
         year: 2024,
         icon: '✅',
         type: 'support' as const,
-        status: 'Issued' as const,
-      },
-      {
-        title: 'SECP Annual Compliance Certificate',
-        issuer: 'Securities & Exchange Commission',
-        year: 2024,
-        icon: '✅',
-        type: 'support' as const,
-        status: 'Issued' as const,
-      },
-      {
-        title: 'Charity Commission Approval',
-        issuer: 'Attorney General Office, Punjab',
-        year: 2017,
-        icon: '✅',
-        type: 'core' as const,
         status: 'Active' as const,
+        imagePath: '/images/certificats/MOU_DPO_Vehari_KhanHubMedicalCenter.webp',
+      },
+      {
+        title: 'MOU with DPO Vehari - Khan Hub Rehab Center',
+        issuer: 'District Police Officer, Vehari',
+        year: 2024,
+        icon: '✅',
+        type: 'support' as const,
+        status: 'Active' as const,
+        imagePath: '/images/certificats/MOU_DPO_Vehari_KhanHubRehabCenter.webp',
+      },
+      {
+        title: 'MOU with South Punjab Institute of Medical Sciences',
+        issuer: 'SPIMS Vehari',
+        year: 2024,
+        icon: '✅',
+        type: 'support' as const,
+        status: 'Active' as const,
+        imagePath: '/images/certificats/mou-dpo-vehari-south-punjab-institute-of-medical-sciences-vehari.webp',
       },
     ],
   },
@@ -100,20 +110,13 @@ const RAW_CERTIFICATES = [
     category: 'Healthcare Accreditation' as const,
     items: [
       {
-        title: 'Medical Facility License',
-        issuer: 'Drug Regulatory Authority of Pakistan (DRAP)',
-        year: 2018,
+        title: 'Memorandum of Understanding - Mumtaz Surgimed',
+        issuer: 'Mumtaz Surgimed Hospital',
+        year: 2024,
         icon: '🏥',
         type: 'core' as const,
         status: 'Active' as const,
-      },
-      {
-        title: 'Health Department Approval',
-        issuer: 'Punjab Health Department',
-        year: 2018,
-        icon: '🏥',
-        type: 'core' as const,
-        status: 'Active' as const,
+        imagePath: '/images/certificats/Memorandum of Understanding mumtaz surgimed.webp',
       },
     ],
   },
@@ -150,6 +153,7 @@ export function CertificatesContent({ siteEmail }: Props) {
   const [activeCategory, setActiveCategory] = useState<CertificateCategory>('All');
   const [activeYearFilter, setActiveYearFilter] = useState<YearFilter>('All');
   const [expandedTitle, setExpandedTitle] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // ============================================================================
   // MEMOIZED FILTERED DATA
@@ -259,11 +263,10 @@ export function CertificatesContent({ siteEmail }: Props) {
                       <button
                         key={cat}
                         onClick={() => handleCategoryChange(cat)}
-                        className={`inline-flex items-center justify-center rounded-full text-[11px] sm:text-xs font-semibold px-3 sm:px-4 py-1.5 sm:py-2 transition-all border min-h-[36px] sm:min-h-[40px] ${
-                          isActive
-                            ? 'bg-primary-500 text-white border-primary-500 shadow-primary-sm'
-                            : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
-                        }`}
+                        className={`inline-flex items-center justify-center rounded-full text-[11px] sm:text-xs font-semibold px-3 sm:px-4 py-1.5 sm:py-2 transition-all border min-h-[36px] sm:min-h-[40px] ${isActive
+                          ? 'bg-primary-500 text-white border-primary-500 shadow-primary-sm'
+                          : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
+                          }`}
                         aria-pressed={isActive}
                         aria-label={cat === 'All' ? 'Show all certificates' : `Filter by ${cat}`}
                       >
@@ -283,11 +286,10 @@ export function CertificatesContent({ siteEmail }: Props) {
                       <button
                         key={filter}
                         onClick={() => handleYearFilterChange(filter)}
-                        className={`rounded-full px-3 sm:px-3.5 py-1.5 transition-all border min-h-[36px] sm:min-h-[40px] flex items-center ${
-                          isActive
-                            ? 'bg-neutral-900 text-white border-neutral-900'
-                            : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
-                        }`}
+                        className={`rounded-full px-3 sm:px-3.5 py-1.5 transition-all border min-h-[36px] sm:min-h-[40px] flex items-center ${isActive
+                          ? 'bg-neutral-900 text-white border-neutral-900'
+                          : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-300 hover:text-primary-600'
+                          }`}
                         aria-pressed={isActive}
                         aria-label={`Filter certificates by ${filter}`}
                       >
@@ -355,11 +357,10 @@ export function CertificatesContent({ siteEmail }: Props) {
                               {cert.year}
                             </span>
                             <span
-                              className={`inline-flex items-center rounded-full text-[10px] px-2 py-0.5 ${
-                                cert.status === 'Active'
-                                  ? 'bg-success-50 text-success-700 border border-success-100'
-                                  : 'bg-primary-50 text-primary-700 border border-primary-100'
-                              }`}
+                              className={`inline-flex items-center rounded-full text-[10px] px-2 py-0.5 ${cert.status === 'Active'
+                                ? 'bg-success-50 text-success-700 border border-success-100'
+                                : 'bg-primary-50 text-primary-700 border border-primary-100'
+                                }`}
                             >
                               {cert.status}
                             </span>
@@ -379,7 +380,7 @@ export function CertificatesContent({ siteEmail }: Props) {
 
                         {/* Expanded Details */}
                         {isExpanded && (
-                          <div 
+                          <div
                             id={`details-${cert.title.replace(/\s+/g, '-')}`}
                             className="mt-3 border-t border-neutral-200 pt-3 text-[11px] sm:text-xs text-neutral-700 space-y-2 animate-fade-in"
                           >
@@ -395,6 +396,14 @@ export function CertificatesContent({ siteEmail }: Props) {
                               <span className="font-semibold">🏛️ Office copy:</span> Available for
                               inspection at Khan Hub head office during working hours.
                             </p>
+                            {(cert as any).imagePath && (
+                              <button
+                                onClick={() => setSelectedImage((cert as any).imagePath)}
+                                className="mt-2 w-full px-3 py-2 bg-primary-50 hover:bg-primary-100 text-primary-700 rounded-lg text-xs font-semibold transition-colors"
+                              >
+                                📄 View Certificate Image
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -465,7 +474,7 @@ export function CertificatesContent({ siteEmail }: Props) {
 
                         {/* Expanded Details */}
                         {isExpanded && (
-                          <div 
+                          <div
                             id={`details-${cert.title.replace(/\s+/g, '-')}`}
                             className="mt-3 border-t border-neutral-200 pt-3 text-[11px] sm:text-xs text-neutral-700 space-y-2 animate-fade-in"
                           >
@@ -477,6 +486,14 @@ export function CertificatesContent({ siteEmail }: Props) {
                               <span className="font-semibold">📊 Scope:</span> Includes financial
                               records, governance, and core compliance checks.
                             </p>
+                            {(cert as any).imagePath && (
+                              <button
+                                onClick={() => setSelectedImage((cert as any).imagePath)}
+                                className="mt-2 w-full px-3 py-2 bg-primary-50 hover:bg-primary-100 text-primary-700 rounded-lg text-xs font-semibold transition-colors"
+                              >
+                                📄 View Certificate Image
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -521,12 +538,12 @@ export function CertificatesContent({ siteEmail }: Props) {
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-primary-600 flex-shrink-0" aria-hidden="true">•</span>
                   <span>Match the certificate title, issuer name, and year with the original scan in
-                  our records.</span>
+                    our records.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-primary-600 flex-shrink-0" aria-hidden="true">•</span>
                   <span>For SECP, FBR, and health licenses, you can cross-check using their public
-                  portals or helplines.</span>
+                    portals or helplines.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-primary-600 flex-shrink-0" aria-hidden="true">•</span>
@@ -542,7 +559,7 @@ export function CertificatesContent({ siteEmail }: Props) {
               </p>
               <p className="leading-relaxed">
                 Email our documentation team at{' '}
-                <a 
+                <a
                   href={`mailto:${siteEmail}`}
                   className="text-primary-700 font-semibold underline decoration-primary-300 underline-offset-2 hover:text-primary-800 transition-colors"
                 >
@@ -558,6 +575,48 @@ export function CertificatesContent({ siteEmail }: Props) {
           </div>
         </div>
       </section>
+
+      {/* Image Modal - Full Screen Certificate Viewer */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative w-full h-full flex items-center justify-center p-4">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="fixed top-4 right-4 z-10 w-12 h-12 flex items-center justify-center bg-white hover:bg-neutral-100 rounded-full shadow-2xl transition-all hover:scale-110"
+              aria-label="Close image"
+            >
+              <span className="text-3xl text-neutral-800 font-light">×</span>
+            </button>
+
+            {/* Image Container with Scroll */}
+            <div
+              className="relative max-w-6xl w-full max-h-full overflow-auto bg-white rounded-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 sm:p-6">
+                <Image
+                  src={selectedImage}
+                  alt="Certificate - Click to close"
+                  width={1200}
+                  height={1600}
+                  className="w-full h-auto"
+                  quality={100}
+                  priority
+                />
+              </div>
+            </div>
+
+            {/* Hint Text */}
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
+              <p className="text-xs text-neutral-700 font-semibold">Click outside or press × to close</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Animation styles */}
       <style jsx>{`

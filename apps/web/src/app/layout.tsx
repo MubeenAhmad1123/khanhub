@@ -148,7 +148,7 @@ export default function RootLayout({
         <main className="min-h-screen">
           {children}
         </main>
-        <SocialMediaSidebar />
+        {/* <SocialMediaSidebar /> */}
         <FloatingDonateButton />
         <Footer />
         <Toaster position="bottom-right" />

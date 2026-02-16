@@ -26,6 +26,7 @@ const NAV_LINKS = [
   { label: 'Home', href: '/', icon: '🏠' },
   { label: 'Departments', href: '/departments', icon: '🏢' },
   { label: 'About', href: '/about', icon: 'ℹ️' },
+  { label: 'Certificates', href: '/certificates', icon: '🏆' },
   { label: 'Media', href: '/media', icon: '📸' },
   { label: 'Contact', href: '/contact', icon: '📞' },
 ] as const;
