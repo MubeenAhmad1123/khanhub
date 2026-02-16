@@ -17,23 +17,23 @@ import { motion, useMotionValue, useSpring, AnimatePresence } from 'framer-motio
 
 // Department images configuration
 const DEPARTMENT_IMAGES = [
-  { src: '/logo.webp', alt: 'Khan Hub', duration: 4000 }, // Logo stays for 4 seconds
-  { src: '/images/education.webp', alt: 'Education Department', duration: 2500 },
-  { src: '/images/enterprises.webp', alt: 'Enterprises', duration: 2500 },
-  { src: '/images/institute-health-sciences.webp', alt: 'Institute of Health Sciences', duration: 2500 },
-  { src: '/images/job.webp', alt: 'Job Department', duration: 2500 },
-  { src: '/images/marketing.webp', alt: 'Marketing', duration: 2500 },
-  { src: '/images/medical-center.webp', alt: 'Medical Center', duration: 2500 },
-  { src: '/images/prosthetic.webp', alt: 'Prosthetic Department', duration: 2500 },
-  { src: '/images/rehab.webp', alt: 'Rehabilitation', duration: 2500 },
-  { src: '/images/residential.webp', alt: 'Residential', duration: 2500 },
-  { src: '/images/skill.webp', alt: 'Skill Development', duration: 2500 },
-  { src: '/images/sukoon.webp', alt: 'Sukoon', duration: 2500 },
-  { src: '/images/surgical-repair.webp', alt: 'Surgical Repair', duration: 2500 },
-  { src: '/images/surgical-services.webp', alt: 'Surgical Services', duration: 2500 },
-  { src: '/images/transport.webp', alt: 'Transport', duration: 2500 },
-  { src: '/images/travel-and-tour.webp', alt: 'Travel and Tour', duration: 2500 },
-  { src: '/images/welfare-organization.webp', alt: 'Welfare Organization', duration: 2500 },
+  { src: '/logo-circle.webp', alt: 'Khan Hub', duration: 4000 }, // Logo stays for 4 seconds
+  { src: '/images/education-circle.webp', alt: 'Education Department', duration: 2500 },
+  { src: '/images/enterprises-circle.webp', alt: 'Enterprises', duration: 2500 },
+  { src: '/images/institute-health-sciences-circle.webp', alt: 'Institute of Health Sciences', duration: 2500 },
+  { src: '/images/job-circle.webp', alt: 'Job Department', duration: 2500 },
+  { src: '/images/marketing-circle.webp', alt: 'Marketing', duration: 2500 },
+  { src: '/images/medical-center-circle.webp', alt: 'Medical Center', duration: 2500 },
+  { src: '/images/prosthetic-circle.webp', alt: 'Prosthetic Department', duration: 2500 },
+  { src: '/images/rehab-circle.webp', alt: 'Rehabilitation', duration: 2500 },
+  { src: '/images/residential-circle.webp', alt: 'Residential', duration: 2500 },
+  { src: '/images/skill-circle.webp', alt: 'Skill Development', duration: 2500 },
+  { src: '/images/sukoon-circle.webp', alt: 'Sukoon', duration: 2500 },
+  { src: '/images/surgical-repair-circle.webp', alt: 'Surgical Repair', duration: 2500 },
+  { src: '/images/surgical-services-circle.webp', alt: 'Surgical Services', duration: 2500 },
+  { src: '/images/transport-circle.webp', alt: 'Transport', duration: 2500 },
+  { src: '/images/travel-and-tour-circle.webp', alt: 'Travel and Tour', duration: 2500 },
+  { src: '/images/welfare-organization-circle.webp', alt: 'Welfare Organization', duration: 2500 },
 ];
 
 // Memoized Stats Component
@@ -130,7 +130,7 @@ const ImageCarousel = memo(function ImageCarousel() {
   };
 
   return (
-    <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96">
+    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] my-8 sm:my-12">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -148,9 +148,9 @@ const ImageCarousel = memo(function ImageCarousel() {
               className="object-contain drop-shadow-2xl"
               priority={currentIndex === 0} // Only prioritize the first image (logo)
               loading={currentIndex === 0 ? "eager" : "lazy"}
-              sizes="(max-width: 640px) 256px, (max-width: 1024px) 320px, 384px"
+              sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
               onError={() => handleImageError(currentIndex)}
-              quality={85}
+              quality={95}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-2xl">
@@ -254,11 +254,11 @@ export default function HeroSection() {
       </div>
 
       {/* Main Content */}
-      <div className="container-custom relative z-10 py-12 sm:py-16 lg:py-20">
+      <div className="container-custom relative z-10 py-16 sm:py-20 lg:py-24">
         <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
 
           {/* Left Content - Swapped order for mobile (order-2) */}
-          <div className="space-y-6 sm:space-y-8 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left order-2 lg:order-1">
+          <div className="space-y-8 sm:space-y-10 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left order-2 lg:order-1">
             {/* Trust Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -501,7 +501,7 @@ export default function HeroSection() {
             name: 'Khan Hub',
             description: 'Leading Pakistan\'s social welfare transformation with 16+ specialized departments',
             url: 'https://khanhub.com.pk',
-            logo: 'https://khanhub.com.pk/logo.webp',
+            logo: 'https://khanhub.com.pk/logo-circle.webp',
             contactPoint: {
               '@type': 'ContactPoint',
               telephone: '+92-67-3364220',

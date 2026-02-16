@@ -68,7 +68,7 @@ const DepartmentCard = memo(function DepartmentCard({
                                     src={department.image}
                                     alt={`Khan Hub ${department.name} - Professional Welfare Services`}
                                     fill
-                                    className="object-cover transition-opacity duration-300 group-hover:scale-105"
+                                    className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
                                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                     priority={priority || index < 3}
                                     onLoad={(e) => {
