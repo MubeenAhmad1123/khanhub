@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, memo } from 'react';
-import { ArrowRight, Shield, MapPin, Award, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Shield, MapPin, Award, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -39,6 +39,15 @@ interface Stat {
   decimals?: number;
 }
 
+interface Review {
+  id: number;
+  quote: string;
+  quoteUrdu: string;
+  name: string;
+  city: string;
+  rating: number;
+}
+
 // Constants
 const FLEET_VEHICLES: Vehicle[] = [
   {
@@ -46,8 +55,8 @@ const FLEET_VEHICLES: Vehicle[] = [
     name: 'Executive Sedan',
     nameUrdu: 'ایگزیکٹو سیڈان',
     capacity: 4,
-    description: 'Optimal for city transit and professional medical commutes with premium comfort and style.',
-    descriptionUrdu: 'شہر کے اندر سفر اور میڈیکل وزٹ کے لیے آرام دہ اور معیاری گاڑی۔',
+    description: 'Perfect for daily office commute, business meetings, and city rides with premium comfort.',
+    descriptionUrdu: 'روزانہ دفتر جانے، کاروباری میٹنگز اور شہر کے اندر سفر کے لیے بہترین اور آرام دہ۔',
     image: '/images/1.webp',
   },
   {
@@ -55,17 +64,17 @@ const FLEET_VEHICLES: Vehicle[] = [
     name: 'Premium SUV',
     nameUrdu: 'پریمیئم ایس یو وی',
     capacity: 5,
-    description: 'High-end comfort for patient transfers and long-distance medical travel with spacious interior.',
-    descriptionUrdu: 'مریضوں کو ایک جگہ سے دوسری جگہ لے جانے اور لمبے سفر کے لیے آرام دہ گاڑی۔',
+    description: 'Ideal for family trips, weekend getaways, and long-distance travel with spacious comfort.',
+    descriptionUrdu: 'خاندان کے ساتھ سفر، ویک اینڈ کی تفریح اور لمبے سفر کے لیے کشادہ اور آرام دہ۔',
     image: '/images/2.webp',
   },
   {
     id: 3,
-    name: 'Medical Van',
-    nameUrdu: 'میڈیکل وین',
+    name: 'Business Van',
+    nameUrdu: 'بزنس وین',
     capacity: 8,
-    description: 'Spacious and accessible for small groups with full wheelchair support and medical equipment.',
-    descriptionUrdu: 'کشادہ گاڑی، چھوٹے گروپ اور وہیل چیئر کی سہولت کے ساتھ آسان سفر کے لیے۔',
+    description: 'Spacious transport for teams, events, group outings, and inter-city trips with flexible seating.',
+    descriptionUrdu: 'ٹیموں، تقریبات، گروپ کے سفر اور شہروں کے درمیان سفر کے لیے لچکدار نشستوں کے ساتھ۔',
     image: '/images/3.webp',
   },
 ];
@@ -73,21 +82,21 @@ const FLEET_VEHICLES: Vehicle[] = [
 const FEATURES: Feature[] = [
   {
     icon: <Shield className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" aria-hidden="true" />,
-    title: 'Medical-Grade Safety / میڈیکل معیار کی حفاظت',
+    title: 'Safe & Verified Rides / محفوظ اور تصدیق شدہ سواری',
     description:
-      'All vehicles strictly sanitized with hospital-grade protocols after every journey for maximum patient protection. ہر سفر کے بعد گاڑیوں کو ہسپتال کے معیار کے مطابق صاف کیا جاتا ہے تاکہ مریض مکمل حفاظت کے ساتھ سفر کر سکیں۔',
+      'Regular vehicle inspections and background-verified drivers ensure safe travel for office commutes, family trips, and late-night rides. گاڑیوں کا باقاعدہ معائنہ اور تصدیق شدہ ڈرائیورز دفتر، خاندان اور رات کے سفر میں مکمل حفاظت یقینی بناتے ہیں۔',
   },
   {
     icon: <MapPin className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" aria-hidden="true" />,
-    title: 'Real-Time Tracking / ریئل ٹائم ٹریکنگ',
+    title: 'Live Tracking & Updates / لائیو ٹریکنگ اور اپڈیٹس',
     description:
-      'Hospitals and families can track patient locations in real-time with complete journey transparency. ہسپتال اور گھر والے مریض کی لوکیشن کو ریئل ٹائم میں دیکھ سکتے ہیں، تاکہ پورے سفر کی مکمل معلومات سامنے رہے۔',
+      'Track your ride in real-time, share trip status with family, and see pickup-to-drop updates throughout your journey. اپنی سواری کو ریئل ٹائم میں ٹریک کریں، خاندان کے ساتھ شیئر کریں اور شروع سے آخر تک اپڈیٹس دیکھیں۔',
   },
   {
     icon: <Award className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" aria-hidden="true" />,
-    title: 'Trained Professionals / تربیت یافتہ ڈرائیور',
+    title: 'Professional Service / پیشہ ورانہ سروس',
     description:
-      'Our drivers undergo specialized training in medical etiquette and emergency response procedures. ہمارے ڈرائیورز میڈیکل آداب اور ایمرجنسی کی صورت میں درست ردِ عمل کے لیے خصوصی تربیت یافتہ ہیں۔',
+      'Courteous, trained drivers and dedicated support ensure punctual, smooth rides for office, family, and personal travel. شائستہ اور تربیت یافتہ ڈرائیورز دفتر، خاندان اور ذاتی سفر میں وقت پر اور آرام دہ سروس فراہم کرتے ہیں۔',
   },
 ];
 
@@ -95,27 +104,54 @@ const STATS: Stat[] = [
   {
     value: 10,
     suffix: 'k+',
-    label: 'Total Rides',
+    label: 'Total Trips',
     labelUrdu: 'کل مکمل کیے گئے سفر',
   },
   {
     value: 50,
     suffix: '+',
-    label: 'Expert Drivers',
-    labelUrdu: 'تجربہ کار اور تربیت یافتہ ڈرائیور',
+    label: 'Partner Drivers',
+    labelUrdu: 'شریک اور تجربہ کار ڈرائیورز',
   },
   {
     value: 36,
     suffix: '+',
-    label: 'Hospitals Linked',
-    labelUrdu: 'ملک بھر کے منسلک ہسپتال',
+    label: 'Cities Covered',
+    labelUrdu: 'ملک بھر میں کور کیے گئے شہر',
   },
   {
     value: 4.2,
     suffix: '',
-    label: 'Patient Rating',
-    labelUrdu: 'مریضوں کی اطمینان بخش ریٹنگ',
+    label: 'Customer Rating',
+    labelUrdu: 'کسٹمرز کی اطمینان بخش ریٹنگ',
     decimals: 1,
+  },
+];
+
+const REVIEWS: Review[] = [
+  {
+    id: 1,
+    quote: 'KhanHub makes my daily office commute so much easier. Professional drivers and always on time!',
+    quoteUrdu: 'روزانہ دفتر جانا بہت آسان ہو گیا',
+    name: 'Ahsan Khan',
+    city: 'Lahore',
+    rating: 5,
+  },
+  {
+    id: 2,
+    quote: 'Booked for a family trip to Murree. The SUV was spacious and comfortable. Highly recommend!',
+    quoteUrdu: 'خاندان کے ساتھ بہترین سفر',
+    name: 'Sara Ahmed',
+    city: 'Karachi',
+    rating: 5,
+  },
+  {
+    id: 3,
+    quote: 'Safe, reliable, and affordable. Perfect for late-night rides from work. Great service!',
+    quoteUrdu: 'محفوظ اور قابل اعتماد سروس',
+    name: 'Bilal Raza',
+    city: 'Islamabad',
+    rating: 4,
   },
 ];
 
@@ -199,7 +235,7 @@ const StatCard = memo(({ stat, index, isVisible }: { stat: Stat; index: number; 
       <div className="text-[#2F5D50] font-semibold uppercase tracking-wider text-[10px] sm:text-xs">
         {stat.label}
       </div>
-      <div className="text-xs sm:text-sm text-[#2F5D50]/70 mt-1">
+      <div className="text-sm sm:text-base text-[#2F5D50]/70 mt-1">
         {stat.labelUrdu}
       </div>
     </div>
@@ -401,7 +437,7 @@ const FleetSlider = memo(() => {
           <p className="text-sm sm:text-base lg:text-lg text-white/90 font-medium leading-relaxed mb-1 max-w-3xl mx-auto">
             {currentVehicle.description}
           </p>
-          <p className="text-xs sm:text-sm lg:text-base text-white/70 leading-relaxed max-w-3xl mx-auto mb-6">
+          <p className="text-sm sm:text-base lg:text-base text-white/80 leading-relaxed max-w-3xl mx-auto mb-6">
             {currentVehicle.descriptionUrdu}
           </p>
 
@@ -411,7 +447,7 @@ const FleetSlider = memo(() => {
           >
             <span className="flex flex-col leading-tight">
               <span>Book This Vehicle</span>
-              <span className="text-xs font-normal text-white/90">
+              <span className="text-sm font-normal text-white/90">
                 یہ گاڑی ابھی بُک کریں
               </span>
             </span>
@@ -421,7 +457,7 @@ const FleetSlider = memo(() => {
           {/* Navigation Hint Text */}
           <div className="flex flex-col items-center gap-3 mt-6">
             <p className="text-white/60 text-xs sm:text-sm font-medium">
-              Swipe or use arrows to view all vehicles • تمام گاڑیاں دیکھنے کے لیے سوائپ کریں یا تیر استعمال کریں
+              Swipe or use arrows to view all vehicles • <span className="text-white/70">تمام گاڑیاں دیکھنے کے لیے سوائپ کریں یا تیر استعمال کریں</span>
             </p>
 
             {/* Slide Indicators / Dots */}
@@ -521,6 +557,36 @@ const FeatureCard = memo(({ feature, index }: { feature: Feature; index: number 
 
 FeatureCard.displayName = 'FeatureCard';
 
+const ReviewCard = memo(({ review, index, isVisible }: { review: Review; index: number; isVisible: boolean }) => {
+  return (
+    <article
+      className="bg-gray-50 p-6 sm:p-8 rounded-xl border border-gray-100 hover:border-[#3FA58E]/20 hover:shadow-lg transition-opacity duration-300"
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transitionDelay: `${index * 100}ms`,
+      }}
+    >
+      <div className="flex gap-1 mb-4">
+        {Array.from({ length: review.rating }).map((_, i) => (
+          <Star key={i} className="w-4 h-4 fill-[#3FA58E] text-[#3FA58E]" />
+        ))}
+      </div>
+      <p className="text-[#2F5D50]/80 font-medium leading-relaxed text-sm sm:text-base mb-3 italic">
+        &quot;{review.quote}&quot;
+      </p>
+      <p className="text-[#2F5D50]/60 text-sm mb-4">
+        {review.quoteUrdu}
+      </p>
+      <div className="border-t border-gray-200 pt-4">
+        <p className="text-[#2F5D50] font-bold text-sm">{review.name}</p>
+        <p className="text-[#2F5D50]/60 text-xs">{review.city}</p>
+      </div>
+    </article>
+  );
+});
+
+ReviewCard.displayName = 'ReviewCard';
+
 function HeroSection() {
   const [showContent, setShowContent] = useState(false);
 
@@ -537,7 +603,7 @@ function HeroSection() {
       <div className="absolute inset-0 z-0">
         <Image
           src="/images/Home hero.webp"
-          alt="Premium medical transport services in Pakistan"
+          alt="KhanHub transport service in Pakistan with premium vehicles for office, family, and city rides"
           fill
           sizes="100vw"
           className="object-cover object-center"
@@ -565,10 +631,10 @@ function HeroSection() {
           >
             <Shield className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-              <span>Pakistan&apos;s Most Trusted Medical Transport Platform</span>
+              <span>Pakistan&apos;s All-in-One Transport Platform</span>
               <span className="hidden sm:inline text-white/80">•</span>
-              <span className="text-white/90 text-[10px] sm:text-xs">
-                پاکستان کی قابلِ اعتماد میڈیکل ٹرانسپورٹ سروس
+              <span className="text-white/90 text-xs sm:text-sm">
+                پاکستان کی ہمہ گیر اور قابلِ اعتماد ٹرانسپورٹ سروس
               </span>
             </div>
           </div>
@@ -579,27 +645,26 @@ function HeroSection() {
             className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black mb-3 text-white leading-[1.05] tracking-tight transition-opacity duration-700 drop-shadow-2xl"
             style={{ opacity: showContent ? 1 : 0, transitionDelay: '150ms' }}
           >
-            Care That{' '}
+            Rides That{' '}
             <span className="bg-gradient-to-r from-[#3FA58E] to-[#2dd4bf] bg-clip-text text-transparent">
-              Moves
-            </span>{' '}
-            You
+              Move Your World
+            </span>
           </h1>
 
           <p
             className="text-base sm:text-lg lg:text-xl text-white/95 mb-4 font-semibold drop-shadow-lg transition-opacity duration-700"
             style={{ opacity: showContent ? 1 : 0, transitionDelay: '300ms' }}
           >
-            خیال جو آپ کو منزل تک پہنچائے
+            <span className="text-white">سفر جو آپ کی روزمرہ زندگی کو آسان بنا دے</span>
           </p>
 
           <p
             className="text-sm sm:text-base lg:text-lg xl:text-xl mb-8 sm:mb-10 text-white/95 leading-relaxed max-w-2xl font-medium drop-shadow-lg transition-opacity duration-700"
             style={{ opacity: showContent ? 1 : 0, transitionDelay: '450ms' }}
           >
-            Bridging the gap between home and healthcare with premium, hospital-grade transport solutions.
-            <span className="text-white/90 text-xs sm:text-sm lg:text-base block mt-2">
-              گھر اور ہسپتال کے درمیان محفوظ، آرام دہ اور معیاری سفر کی مکمل سہولت۔
+            From daily office commutes to family outings and inter-city journeys, we make every trip comfortable, safe, and reliable across Pakistan.
+            <span className="text-white/90 text-sm sm:text-base lg:text-lg block mt-2">
+              روزمرہ دفتر کے سفر سے لے کر خاندانی گشت اور شہروں کے درمیان سفر تک، ہم ہر سفر کو پاکستان بھر میں آرام دہ، محفوظ اور قابلِ اعتماد بناتے ہیں۔
             </span>
           </p>
 
@@ -614,7 +679,7 @@ function HeroSection() {
             >
               <span className="flex flex-col leading-tight">
                 <span>Book Your Ride</span>
-                <span className="text-xs font-normal text-white/90 group-hover:text-[#2F5D50]/80">
+                <span className="text-sm font-normal text-white/90 group-hover:text-[#2F5D50]/80">
                   اپنی سواری ابھی بُک کریں
                 </span>
               </span>
@@ -627,7 +692,7 @@ function HeroSection() {
             >
               <span className="flex flex-col leading-tight">
                 <span>Get Started</span>
-                <span className="text-xs font-normal text-white/90">
+                <span className="text-sm font-normal text-white/90">
                   اپنا اکاؤنٹ بنائیں
                 </span>
               </span>
@@ -647,7 +712,7 @@ function YourCareOnTheMoveSection() {
     <section
       ref={sectionRef}
       className="relative bg-gradient-to-br from-[#1a362e] via-[#2F5D50] to-[#1a362e] py-12 sm:py-16 lg:py-20 overflow-hidden"
-      aria-label="Your care on the move"
+      aria-label="Your ride on the move"
     >
       <div
         className="absolute top-0 right-0 w-[500px] lg:w-[600px] h-[500px] lg:h-[600px] bg-[#3FA58E]/10 rounded-full blur-3xl pointer-events-none"
@@ -666,16 +731,16 @@ function YourCareOnTheMoveSection() {
             style={{ opacity: isVisible ? 1 : 0 }}
           >
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-3 leading-tight">
-              Your Care,{' '}
+              Your Ride,{' '}
               <span className="bg-gradient-to-r from-[#3FA58E] to-[#2dd4bf] bg-clip-text text-transparent">
-                On The Move
+                Always On Time
               </span>
             </h2>
             <p className="text-base sm:text-lg text-white/85 max-w-2xl mx-auto lg:mx-0 leading-relaxed mb-2">
-              Experience seamless medical transport with our advanced tracking and specialized care.
+              Plan your everyday travel, urgent trips, and late-night rides with smart scheduling and real-time tracking.
             </p>
-            <p className="text-sm text-white/65 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-              ہماری جدید ٹریکنگ اور خصوصی نگہداشت کے ساتھ آسان میڈیکل ٹرانسپورٹ کا تجربہ کریں۔
+            <p className="text-sm sm:text-base text-white/75 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+              روزمرہ سفر، ایمرجنسی، رات کے سفر اور خاندانی گشت — سب آسان ٹریکنگ اور شیڈولنگ کے ساتھ۔
             </p>
           </div>
 
@@ -720,10 +785,50 @@ function StatsSection() {
   );
 }
 
+function ReviewsSection() {
+  const reviewsRef = useRef<HTMLElement>(null);
+  const isVisible = useIntersectionObserver(reviewsRef);
+
+  return (
+    <section
+      ref={reviewsRef}
+      className="py-16 sm:py-20 lg:py-28 bg-white"
+      aria-labelledby="reviews-heading"
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-12 xl:px-16 max-w-7xl">
+        <header className="text-center mb-12 lg:mb-16 max-w-3xl mx-auto">
+          <h2
+            id="reviews-heading"
+            className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#2F5D50] mb-3 tracking-tight"
+          >
+            Trusted by Riders Across Pakistan
+          </h2>
+          <p className="text-sm sm:text-base text-[#2F5D50]/75 mb-4 font-medium">
+            پاکستان بھر کے ہزاروں صارفین کا اعتماد
+          </p>
+          <div className="w-20 h-1.5 bg-[#3FA58E] mx-auto rounded-full mb-6" aria-hidden="true"></div>
+          <p className="text-base sm:text-lg text-[#2F5D50]/70 font-medium leading-relaxed">
+            Over 10,000+ trips completed with a 4.2★ rating. Riders trust KhanHub for everyday commutes and special journeys.
+            <span className="text-[#2F5D50]/65 text-sm sm:text-base block mt-2">
+              ۱۰,۰۰۰+ سفر مکمل اور ۴.۲ ستاروں کی ریٹنگ کے ساتھ۔ روزمرہ اور خاص سفر کے لیے صارفین کا اعتماد۔
+            </span>
+          </p>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          {REVIEWS.map((review, index) => (
+            <ReviewCard key={review.id} review={review} index={index} isVisible={isVisible} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FeaturesSection() {
   return (
     <section
-      className="py-16 sm:py-20 lg:py-28 bg-white"
+      className="py-16 sm:py-20 lg:py-28 bg-gradient-to-b from-gray-50 to-white"
       aria-labelledby="features-heading"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-12 xl:px-16 max-w-7xl">
@@ -732,16 +837,16 @@ function FeaturesSection() {
             id="features-heading"
             className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#2F5D50] mb-3 tracking-tight"
           >
-            Standard of Excellence
+            Why Riders Choose KhanHub
           </h2>
           <p className="text-sm sm:text-base text-[#2F5D50]/75 mb-4 font-medium">
-            معیاری اور محفوظ میڈیکل ٹرانسپورٹ کا اعلی معیار
+            اعلیٰ معیار کی ٹرانسپورٹ سروس
           </p>
           <div className="w-20 h-1.5 bg-[#3FA58E] mx-auto rounded-full mb-6" aria-hidden="true"></div>
           <p className="text-base sm:text-lg text-[#2F5D50]/70 font-medium leading-relaxed">
-            Every journey is backed by our commitment to safety, reliability, and professional care.
-            <span className="text-[#2F5D50]/65 text-sm block mt-2">
-              ہر سفر میں ہماری ترجیح حفاظت، اعتماد اور پیشہ ورانہ خیال رکھنا ہے۔
+            Every journey is powered by safety, punctuality, and professional service for office trips, family outings, and inter-city travel.
+            <span className="text-[#2F5D50]/65 text-sm sm:text-base block mt-2">
+              ہر سفر میں حفاظت، وقت کی پابندی اور پیشہ ورانہ سروس — دفتر، خاندانی گشت اور شہروں کے درمیان سفر کے لیے۔
             </span>
           </p>
         </header>
@@ -759,7 +864,7 @@ function FeaturesSection() {
 function FleetSection() {
   return (
     <section
-      className="py-16 sm:py-20 lg:py-28 bg-gradient-to-b from-gray-50 to-white"
+      className="py-16 sm:py-20 lg:py-28 bg-white"
       aria-labelledby="fleet-heading"
     >
       <div className="w-full">
@@ -775,9 +880,9 @@ function FleetSection() {
           </p>
           <div className="w-20 h-1.5 bg-[#3FA58E] mx-auto rounded-full mb-6" aria-hidden="true"></div>
           <p className="text-base sm:text-lg text-[#2F5D50]/70 font-medium max-w-3xl mx-auto leading-relaxed">
-            Choose the perfect vehicle for your medical journey with comfort, safety, and professionalism.
-            <span className="text-[#2F5D50]/65 text-sm block mt-2">
-              اپنے میڈیکل سفر کے لیے ایسی گاڑی منتخب کریں جو آرام دہ، محفوظ اور پیشہ ورانہ معیار کے مطابق ہو۔
+            Choose the perfect vehicle for office commute, inter-city trips, events, and daily city travel.
+            <span className="text-[#2F5D50]/65 text-sm sm:text-base block mt-2">
+              دفتر، شہروں کے درمیان سفر، تقریبات اور روزمرہ شہری سفر کے لیے بہترین گاڑی منتخب کریں۔
             </span>
           </p>
         </header>
@@ -795,7 +900,7 @@ function CTASection() {
   return (
     <section
       ref={ctaRef}
-      className="py-16 sm:py-20 lg:py-28 bg-white"
+      className="py-16 sm:py-20 lg:py-28 bg-gradient-to-b from-gray-50 to-white"
       aria-labelledby="cta-heading"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-12 xl:px-16 max-w-7xl">
@@ -808,16 +913,16 @@ function CTASection() {
               id="cta-heading"
               className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#2F5D50] mb-3 leading-tight tracking-tight"
             >
-              Your Journey to Wellness Starts Here
+              Your Next Ride Starts Here
             </h2>
             <p className="text-sm sm:text-base text-[#2F5D50]/80 mb-6">
-              آپ کی صحت مند زندگی کا سفر یہیں سے شروع ہوتا ہے
+              آپ کا اگلا سفر یہیں سے شروع ہوتا ہے
             </p>
 
             <blockquote className="text-lg sm:text-xl lg:text-2xl text-[#2F5D50]/70 mb-10 font-medium italic">
-              &quot;We aren&apos;t just a transport service. We are your partner in healing.&quot;
+              &quot;We don&apos;t just move people — we move plans, families, and important moments.&quot;
               <cite className="not-italic text-sm sm:text-base text-[#2F5D50]/80 block mt-2">
-                ہم صرف ٹرانسپورٹ سروس نہیں، بلکہ آپ کے علاج اور صحت یابی کے سفر کے ساتھی ہیں۔
+                ہم صرف لوگوں کو نہیں، بلکہ ان کے منصوبوں، خاندانوں اور اہم لمحات کو منزل تک پہنچاتے ہیں۔
               </cite>
             </blockquote>
 
@@ -827,9 +932,9 @@ function CTASection() {
                 className="px-10 py-5 bg-[#2F5D50] hover:bg-[#3FA58E] text-white font-bold rounded-lg transition-opacity duration-300 shadow-lg hover:scale-105"
               >
                 <span className="flex flex-col leading-tight">
-                  <span>Schedule Appointment</span>
-                  <span className="text-xs font-normal text-white/90">
-                    اپنی سواری یا اپوائنٹمنٹ شیڈول کریں
+                  <span>Book a Ride</span>
+                  <span className="text-sm font-normal text-white/90">
+                    اپنی اگلی سواری ابھی شیڈول کریں
                   </span>
                 </span>
               </Link>
@@ -840,8 +945,8 @@ function CTASection() {
               >
                 <span className="flex flex-col leading-tight">
                   <span>Open Account</span>
-                  <span className="text-xs font-normal text-[#2F5D50]/80">
-                    اپنا خان ہب اکاؤنٹ بنائیں
+                  <span className="text-sm font-normal text-[#2F5D50]/80">
+                    اپنا خان ہب اکاؤنٹ بنائیں اور سفر مینیج کرنا آسان بنائیں
                   </span>
                 </span>
               </Link>
@@ -860,6 +965,7 @@ export default function MedicalTransportPage() {
       <HeroSection />
       <YourCareOnTheMoveSection />
       <StatsSection />
+      <ReviewsSection />
       <FeaturesSection />
       <FleetSection />
       <CTASection />
