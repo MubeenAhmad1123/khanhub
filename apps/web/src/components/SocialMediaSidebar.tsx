@@ -194,7 +194,7 @@ export default function SocialMediaSidebar() {
         // Previously it was "fixed left-0 top...". 
         // Let's stick to Left side for consistency, but maybe toggle moves it?
         // Let's keep strict position: Fixed Left, vertically centered.
-        'left-0 top-[20%] sm:top-1/2 -translate-y-1/2'
+        'left-0 top-32 sm:top-1/2 sm:-translate-y-1/2'
         }`}
     >
       <div className="flex flex-col gap-4 pl-2">

@@ -306,8 +306,8 @@ export default function Navbar() {
               <UserMenu />
             </div>
 
-            {/* Mobile Social Icons Row */}
-            <div className="md:hidden flex items-center gap-2 flex-1 justify-end mr-1">
+            {/* Mobile Icons Row - Compact to fit all 7 items */}
+            <div className="md:hidden flex items-center gap-0.5 flex-1 justify-end mr-0.5">
               {Object.entries(SITE.social).map(([platform, url]) => {
                 if (!url && platform !== 'linkedin') return null;
                 const Icon = platform === 'facebook' ? Facebook :
@@ -323,16 +323,16 @@ export default function Navbar() {
                     href={url || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1.5 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors"
+                    className="p-1 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0"
                     aria-label={platform}
                   >
                     <Icon className="w-4 h-4" />
                   </a>
                 );
               })}
-              {/* Added Download App Image */}
-              <a href="/download-app" className="p-1.5 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors">
-                <Image src="/app-download.webp" alt="Download App" width={20} height={20} className="rounded-sm" />
+              {/* Download App Image - Forced Visibility */}
+              <a href="/download-app" className="p-1 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0">
+                <Image src="/app-download.webp" alt="Download App" width={22} height={22} className="rounded-sm" />
               </a>
             </div>
 
@@ -481,8 +481,40 @@ export default function Navbar() {
                 <span aria-hidden="true">💝</span> Donate Now
               </Link>
 
-              <div className="flex justify-center pt-2">
+              <div className="flex flex-col items-center gap-4 pt-4 border-t border-neutral-100">
                 <UserMenu />
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  {Object.entries(SITE.social).map(([platform, url]) => {
+                    if (!url && platform !== 'linkedin') return null;
+                    const Icon = platform === 'facebook' ? Facebook :
+                      platform === 'instagram' ? Instagram :
+                        platform === 'youtube' ? Youtube :
+                          platform === 'tiktok' ? SiTiktok :
+                            platform === 'whatsapp' ? SiWhatsapp :
+                              platform === 'linkedin' ? Linkedin : null;
+                    if (!Icon) return null;
+                    return (
+                      <a
+                        key={platform}
+                        href={url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-full bg-neutral-50 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-colors border border-neutral-200"
+                        aria-label={platform}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </a>
+                    );
+                  })}
+                  {/* Added Download App image to the menu as well */}
+                  <a
+                    href="/download-app"
+                    className="p-2 rounded-full bg-neutral-50 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-colors border border-neutral-200 flex-shrink-0"
+                    aria-label="Download App"
+                  >
+                    <Image src="/app-download.webp" alt="Download App" width={20} height={20} className="rounded-sm" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
