@@ -441,64 +441,83 @@ export function CertificatesContent({ siteEmail }: Props) {
                   return (
                     <article
                       key={cert.title}
-                      className="relative overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300 animate-fade-up"
+                      className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-neutral-sm hover:shadow-primary-md hover:-translate-y-1 transition-all duration-300 animate-fade-up flex flex-col h-full"
                       style={{ animationDelay: `${index * 60}ms` }}
                       itemScope
                       itemType="https://schema.org/Certification"
                     >
-                      <div className="relative p-4 sm:p-5 flex flex-col h-full">
-                        {/* Certificate Header */}
-                        <div className="flex items-start gap-3 mb-3">
-                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-lg sm:text-xl flex-shrink-0" aria-hidden="true">
+                      {/* Image Preview / Header */}
+                      <div className="relative h-48 w-full overflow-hidden bg-neutral-100 border-b border-neutral-100 group-cursor-pointer" onClick={() => (cert as any).imagePath && setSelectedImage((cert as any).imagePath)}>
+                        {(cert as any).imagePath ? (
+                          <>
+                            <Image
+                              src={(cert as any).imagePath}
+                              alt={`Preview of ${cert.title}`}
+                              fill
+                              className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+                              sizes="(max-width: 768px) 100vw, 33vw"
+                            />
+                            {/* Overlay with Eye Icon */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-2">
+                                <span className="text-xl">👁️</span>
+                                <span className="text-sm font-semibold text-neutral-800">View Certificate</span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-4xl grayscale opacity-30">
                             {cert.icon}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-display font-semibold text-neutral-900 text-sm sm:text-base leading-snug" itemProp="name">
-                              {cert.title}
-                            </h3>
-                            <p className="text-[11px] sm:text-xs text-neutral-600 mt-0.5" itemProp="issuedBy">
-                              {cert.issuer}
-                            </p>
-                          </div>
-                          <span className="inline-flex items-center rounded-lg bg-white text-neutral-800 text-[10px] sm:text-xs font-semibold px-2 py-0.5 border border-neutral-200 flex-shrink-0" itemProp="dateIssued">
-                            {cert.year}
+                        )}
+
+                        {/* Status Badge */}
+                        <div className="absolute top-3 right-3">
+                          <span
+                            className={`inline-flex items-center rounded-full text-[10px] px-2.5 py-1 font-medium shadow-sm border ${cert.status === 'Active'
+                              ? 'bg-success-50 text-success-700 border-success-100'
+                              : 'bg-primary-50 text-primary-700 border-primary-100'
+                              }`}
+                          >
+                            {cert.status}
                           </span>
                         </div>
+                      </div>
 
-                        {/* Expand/Collapse Button */}
-                        <button
-                          onClick={() => toggleExpanded(cert.title)}
-                          className="mt-auto inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-primary-700 hover:text-primary-800 transition-colors min-h-[32px]"
-                          aria-expanded={isExpanded}
-                          aria-controls={`details-${cert.title.replace(/\s+/g, '-')}`}
-                        >
-                          {isExpanded ? 'Hide details' : 'Why this matters'}
-                          <span aria-hidden="true">{isExpanded ? '▲' : '▼'}</span>
-                        </button>
+                      <div className="relative p-4 sm:p-5 flex flex-col flex-grow">
+                        {/* Title & Issuer */}
+                        <div className="mb-4">
+                          <h3 className="font-display font-bold text-neutral-900 text-base leading-snug mb-1 group-hover:text-primary-600 transition-colors" itemProp="name">
+                            {cert.title}
+                          </h3>
+                          <p className="text-xs text-neutral-600 font-medium" itemProp="issuedBy">
+                            {cert.issuer}
+                          </p>
+                        </div>
 
-                        {/* Expanded Details */}
-                        {isExpanded && (
-                          <div
-                            id={`details-${cert.title.replace(/\s+/g, '-')}`}
-                            className="mt-3 border-t border-neutral-200 pt-3 text-[11px] sm:text-xs text-neutral-700 space-y-2 animate-fade-in"
-                          >
-                            <p>
-                              <span className="font-semibold">✅ Assurance:</span> Confirms that our
-                              accounts and processes are being reviewed by external professionals.
-                            </p>
-                            <p>
-                              <span className="font-semibold">📊 Scope:</span> Includes financial
-                              records, governance, and core compliance checks.
-                            </p>
-                            {(cert as any).imagePath && (
-                              <button
-                                onClick={() => setSelectedImage((cert as any).imagePath)}
-                                className="mt-2 w-full px-3 py-2 bg-primary-50 hover:bg-primary-100 text-primary-700 rounded-lg text-xs font-semibold transition-colors"
-                              >
-                                📄 View Certificate Image
-                              </button>
-                            )}
+                        {/* Metadata Grid */}
+                        <div className="grid grid-cols-2 gap-y-2 text-xs text-neutral-500 mb-4 mt-auto">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">Issued</span>
+                            <span className="font-medium text-neutral-700">{cert.year}</span>
                           </div>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">Type</span>
+                            <span className="font-medium text-neutral-700">{cert.category}</span>
+                          </div>
+                        </div>
+
+                        {/* View Action */}
+                        {(cert as any).imagePath && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedImage((cert as any).imagePath);
+                            }}
+                            className="w-full mt-2 py-2.5 rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-600 text-xs font-semibold hover:bg-primary-50 hover:text-primary-700 hover:border-primary-100 transition-all flex items-center justify-center gap-2"
+                          >
+                            <span>📄</span> View Full Certificate
+                          </button>
                         )}
                       </div>
                     </article>

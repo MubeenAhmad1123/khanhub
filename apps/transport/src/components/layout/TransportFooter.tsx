@@ -87,7 +87,7 @@ export default function TransportFooter() {
                                 </li>
                                 <li className="flex items-center gap-4 group">
                                     <Mail className="w-4 h-4 text-[#6B8E7F] group-hover:text-white transition-colors shrink-0" />
-                                    <a href="mailto:transport@khanhub.com.pk" className="text-sm hover:text-white transition-colors break-all">transport@khanhub.com.pk</a>
+                                    <a href="mailto:khanhubnetwork@gmail.com" className="text-sm hover:text-white transition-colors break-all">khanhubnetwork@gmail.com</a>
                                 </li>
                             </ul>
                         </div>

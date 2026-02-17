@@ -13,11 +13,12 @@ export const SITE = {
   phone: '03006395220',
   emergency: '03006395220',
   whatsapp: '03006395220',
-  email: 'info@khanhub.com.pk',
+  email: 'khanhubnetwork@gmail.com',
   address: 'KHAN HUB (PVT.) LTD. Multan road Pir Murad, Vehari',
   googleMaps: 'https://maps.app.goo.gl/WMHn4MpwPqEDmVkHA',
   founded: 2015,
   social: {
+    whatsapp: 'https://wa.me/923006395220',
     facebook: 'https://facebook.com/khanhub.com.pk/',
     instagram: 'https://instagram.com/khanhub.com.pk/',
     youtube: 'https://youtube.com/channel/UC43UJw8xOdkp9y_iJIznINg',

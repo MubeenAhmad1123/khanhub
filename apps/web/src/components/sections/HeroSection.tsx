@@ -63,6 +63,16 @@ const HeroCTAs = memo(function HeroCTAs() {
   return (
     <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
       <Link
+        href="/donate"
+        className="px-6 sm:px-8 py-3 sm:py-4 bg-success-500 hover:bg-success-600 rounded-xl font-semibold text-white transition-all duration-300 hover:scale-105 shadow-success-md hover:shadow-success-lg inline-flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
+      >
+        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+        </svg>
+        <span className="text-sm sm:text-base">Make a Difference</span>
+      </Link>
+
+      <Link
         href="/departments"
         className="group relative px-6 sm:px-8 py-3 sm:py-4 bg-primary-500 hover:bg-primary-600 rounded-xl font-semibold text-white transition-all duration-300 hover:scale-105 shadow-primary-md hover:shadow-primary-lg inline-flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
       >
@@ -76,16 +86,6 @@ const HeroCTAs = memo(function HeroCTAs() {
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
-      </Link>
-
-      <Link
-        href="/donate"
-        className="px-6 sm:px-8 py-3 sm:py-4 bg-success-500 hover:bg-success-600 rounded-xl font-semibold text-white transition-all duration-300 hover:scale-105 shadow-success-md hover:shadow-success-lg inline-flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
-      >
-        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-        </svg>
-        <span className="text-sm sm:text-base">Make a Difference</span>
       </Link>
 
       <Link
@@ -130,7 +130,7 @@ const ImageCarousel = memo(function ImageCarousel() {
   };
 
   return (
-    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] my-8 sm:my-12">
+    <div className="relative w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem] mt-8 mb-24 sm:my-12">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -160,15 +160,15 @@ const ImageCarousel = memo(function ImageCarousel() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Progress Indicators */}
-      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5">
+      {/* Progress Indicators - FIXED STATIC SIZE */}
+      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex gap-2">
         {DEPARTMENT_IMAGES.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentIndex(idx)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex
-              ? 'w-8 bg-primary-500'
-              : 'w-1.5 bg-neutral-300 hover:bg-primary-300'
+            className={`h-2 w-2 rounded-full transition-colors duration-300 ${idx === currentIndex
+              ? 'bg-primary-500'
+              : 'bg-neutral-300 hover:bg-primary-300'
               }`}
             aria-label={`Go to slide ${idx + 1}`}
           />
@@ -264,6 +264,7 @@ export default function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
+              className="mb-6"
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 border border-primary-100">
                 <span className="w-2 h-2 bg-primary-500 rounded-full animate-pulse" aria-hidden="true" />
@@ -272,6 +273,7 @@ export default function HeroSection() {
                 </span>
               </div>
             </motion.div>
+
 
             {/* Main Heading - SEO Optimized */}
             <motion.div

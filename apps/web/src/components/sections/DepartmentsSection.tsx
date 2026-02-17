@@ -154,27 +154,34 @@ export default function DepartmentsSection() {
           className="mt-8 sm:mt-12 mb-8 sm:mb-10"
           aria-label="Department categories filter"
         >
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-4xl mx-auto px-2">
-            <CategoryButton
-              categoryKey="all"
-              label="All Departments"
-              icon=""
-              count={stats.all}
-              isActive={activeCategory === 'all'}
-              onClick={handleCategoryChange}
-            />
+          <div className="flex flex-col items-center gap-4 sm:gap-6 max-w-4xl mx-auto px-2">
 
-            {DEPARTMENT_CATEGORIES.map((cat) => (
+            {/* Top Row: All Departments */}
+            <div>
               <CategoryButton
-                key={cat.key}
-                categoryKey={cat.key}
-                label={cat.label}
-                icon={cat.icon}
-                count={stats[cat.key as keyof typeof stats]}
-                isActive={activeCategory === cat.key}
+                categoryKey="all"
+                label="All Departments"
+                icon=""
+                count={stats.all}
+                isActive={activeCategory === 'all'}
                 onClick={handleCategoryChange}
               />
-            ))}
+            </div>
+
+            {/* Bottom Row: Categories */}
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+              {DEPARTMENT_CATEGORIES.map((cat) => (
+                <CategoryButton
+                  key={cat.key}
+                  categoryKey={cat.key}
+                  label={cat.label}
+                  icon={cat.icon}
+                  count={stats[cat.key as keyof typeof stats]}
+                  isActive={activeCategory === cat.key}
+                  onClick={handleCategoryChange}
+                />
+              ))}
+            </div>
           </div>
         </nav>
 

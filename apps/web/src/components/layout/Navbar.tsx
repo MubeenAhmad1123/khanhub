@@ -18,7 +18,7 @@ import { usePathname } from 'next/navigation';
 import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
 import { cn } from '@/lib/utils';
 import { Menu, X, ChevronDown, Facebook, Instagram, Youtube, Linkedin } from 'lucide-react';
-import { SiTiktok } from 'react-icons/si';
+import { SiTiktok, SiWhatsapp } from 'react-icons/si';
 import { SITE } from '@/data/site';
 
 // Navigation links - memoized constant
@@ -314,7 +314,8 @@ export default function Navbar() {
                   platform === 'instagram' ? Instagram :
                     platform === 'youtube' ? Youtube :
                       platform === 'tiktok' ? SiTiktok :
-                        platform === 'linkedin' ? Linkedin : null;
+                        platform === 'whatsapp' ? SiWhatsapp :
+                          platform === 'linkedin' ? Linkedin : null;
                 if (!Icon) return null;
                 return (
                   <a
@@ -329,6 +330,10 @@ export default function Navbar() {
                   </a>
                 );
               })}
+              {/* Added Download App Image */}
+              <a href="/download-app" className="p-1.5 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors">
+                <Image src="/app-download.webp" alt="Download App" width={20} height={20} className="rounded-sm" />
+              </a>
             </div>
 
             {/* Mobile Hamburger Button */}

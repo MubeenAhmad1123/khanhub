@@ -128,7 +128,7 @@ export default function EnterpriseFooter() {
                                                         </li>
                                                         <li className="flex items-center gap-4 group">
                                                             <Mail className="w-4 h-4 text-zinc-700 group-hover:text-indigo-500 transition-colors shrink-0" />
-                                                            <a href="mailto:info@khanhub.com" className="text-sm hover:text-white transition-colors">corporate@khanhub.com</a>
+                                                            <a href="mailto:khanhubnetwork@gmail.com" className="text-sm hover:text-white transition-colors">khanhubnetwork@gmail.com</a>
                                                         </li>
                                                     </ul>
                                                 </div>

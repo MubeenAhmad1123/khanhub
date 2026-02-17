@@ -1,4 +1,5 @@
 'use client';
+
 // src/components/layout/Footer.tsx - PREMIUM GLASSMORPHISM VERSION
 // ─────────────────────────────────────────────────────────────────
 // Modern glassmorphism footer with light, elegant design
@@ -36,6 +37,7 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   const socialMedia = [
+    { platform: 'whatsapp', url: 'https://wa.me/923006395220', icon: SiWhatsapp, label: 'WhatsApp', hoverClass: 'hover:bg-green-50 hover:border-green-400 hover:text-green-600' },
     { platform: 'facebook', url: SITE.social.facebook, icon: Facebook, label: 'Facebook', hoverClass: 'hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600' },
     { platform: 'instagram', url: SITE.social.instagram, icon: Instagram, label: 'Instagram', hoverClass: 'hover:bg-pink-50 hover:border-pink-400 hover:text-pink-600' },
     { platform: 'youtube', url: SITE.social.youtube, icon: Youtube, label: 'YouTube', hoverClass: 'hover:bg-red-50 hover:border-red-400 hover:text-red-600' },
@@ -78,18 +80,18 @@ export default function Footer() {
             </p>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-3 bg-primary-50/50 border border-primary-100 px-4 py-2.5 rounded-xl backdrop-blur-sm">
-                <CheckCircle2 className="w-4 h-4 text-primary-600" />
-                <span className="text-xs font-bold text-primary-800">Registered NGO, Punjab</span>
+              <div className="flex items-center gap-3 bg-success-50/50 border border-success-100 px-4 py-3 rounded-xl backdrop-blur-sm group hover:bg-success-50 transition-colors">
+                <span className="text-2xl font-black text-success-600">✓</span>
+                <span className="text-base font-bold text-success-800">16+ Active Departments</span>
               </div>
-              <div className="flex items-center gap-3 bg-success-50/50 border border-success-100 px-4 py-2.5 rounded-xl backdrop-blur-sm">
-                <CheckCircle2 className="w-4 h-4 text-success-600" />
-                <span className="text-xs font-bold text-success-800">16+ Active Departments</span>
+              <div className="flex items-center gap-3 bg-primary-50/50 border border-primary-100 px-4 py-3 rounded-xl backdrop-blur-sm group hover:bg-primary-50 transition-colors">
+                <CheckCircle2 className="w-6 h-6 text-primary-600 fill-primary-100" />
+                <span className="text-sm font-bold text-primary-800">Registered NGO, Punjab</span>
               </div>
             </div>
 
             <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest pt-4">
-              © {currentYear} Khan Hub (Pvt.) Ltd.. All rights reserved.
+              © {currentYear} Khan Hub (Pvt.) Ltd. All rights reserved.
             </p>
           </div>
 
@@ -100,10 +102,10 @@ export default function Footer() {
               <h4 className="font-black text-xs uppercase tracking-widest text-neutral-900">Organization</h4>
             </div>
             <ul className="space-y-4">
-              {['About Us', 'Departments', 'Certificates', 'Media'].map((item) => (
+              {['Media', 'About Us', 'Certificates', 'Departments'].map((item) => (
                 <li key={item} className="flex items-center gap-3 group">
                   <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 group-hover:bg-primary-500 transition-all duration-300 group-hover:scale-125"></div>
-                  <Link href={`/${item.toLowerCase().replace(' ', '-')}`} className="text-neutral-600 hover:text-primary-600 text-sm font-semibold transition-all duration-300 group-hover:translate-x-1">
+                  <Link href={`/${item.toLowerCase().replace(' ', '-')}`} className="text-neutral-600 hover:text-primary-600 text-sm transition-all duration-300 group-hover:translate-x-1">
                     {item}
                   </Link>
                 </li>
@@ -118,14 +120,30 @@ export default function Footer() {
               <h4 className="font-black text-xs uppercase tracking-widest text-neutral-900">Services</h4>
             </div>
             <ul className="space-y-4">
-              {['Donate', 'Emergency', 'Download App', 'Contact'].map((item) => (
-                <li key={item} className="flex items-center gap-3 group">
-                  <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 group-hover:bg-success-500 transition-all duration-300 group-hover:scale-125"></div>
-                  <Link href={`/${item.toLowerCase().replace(' ', '-')}`} className="text-neutral-600 hover:text-success-600 text-sm font-semibold transition-all duration-300 group-hover:translate-x-1">
-                    {item}
-                  </Link>
-                </li>
-              ))}
+              <li className="flex items-center gap-3 group">
+                <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 group-hover:bg-success-500 transition-all duration-300 group-hover:scale-125"></div>
+                <Link href="/donate" className="text-neutral-600 hover:text-success-600 text-sm transition-all duration-300 group-hover:translate-x-1">
+                  Donate
+                </Link>
+              </li>
+              <li className="flex items-center gap-3 group">
+                <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 group-hover:bg-success-500 transition-all duration-300 group-hover:scale-125"></div>
+                <Link href="/contact" className="text-neutral-600 hover:text-success-600 text-sm transition-all duration-300 group-hover:translate-x-1">
+                  Contact
+                </Link>
+              </li>
+              <li className="flex items-center gap-3 group">
+                <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 group-hover:bg-success-500 transition-all duration-300 group-hover:scale-125"></div>
+                <Link href="/emergency" className="text-neutral-600 hover:text-success-600 text-sm transition-all duration-300 group-hover:translate-x-1">
+                  Emergency
+                </Link>
+              </li>
+              <li className="flex items-center gap-3 group pt-2">
+                <Image src="/app-download.webp" alt="Download App" width={24} height={24} className="rounded-md" />
+                <Link href="/download-app" className="text-neutral-600 hover:text-success-600 text-sm transition-all duration-300 group-hover:translate-x-1">
+                  Download App
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -136,29 +154,29 @@ export default function Footer() {
               <h4 className="font-black text-xs uppercase tracking-widest text-neutral-900">Contact Us</h4>
             </div>
             <ul className="space-y-6">
-              <li className="flex gap-4 group hover:translate-x-1 transition-transform">
-                <MapPin className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 transition-colors shrink-0" />
-                <span className="text-neutral-600 group-hover:text-neutral-900 text-sm font-medium leading-relaxed transition-colors">
-                  {SITE.address}
-                </span>
-              </li>
               <li className="flex items-center gap-4 group hover:translate-x-1 transition-transform">
                 <Phone className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 transition-colors shrink-0" />
-                <a href={`tel:${SITE.phone}`} className="text-neutral-800 font-bold text-sm hover:text-primary-600 transition-colors">
+                <a href={`tel:${SITE.phone}`} className="text-neutral-600 text-sm hover:text-primary-600 transition-colors">
                   {SITE.phone}
                 </a>
               </li>
               <li className="flex items-center gap-4 group hover:translate-x-1 transition-transform">
+                <MessageCircle className="w-5 h-5 text-neutral-400 group-hover:text-success-600 transition-colors shrink-0" />
+                <Link href="/whatsapp" className="text-neutral-600 hover:text-success-600 text-sm transition-colors">
+                  Whatsapp
+                </Link>
+              </li>
+              <li className="flex items-center gap-4 group hover:translate-x-1 transition-transform">
                 <Mail className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 transition-colors shrink-0" />
-                <a href={`mailto:${SITE.email}`} className="text-neutral-600 hover:text-primary-600 transition-colors text-sm font-semibold truncate">
+                <a href={`mailto:${SITE.email}`} className="text-neutral-600 hover:text-primary-600 transition-colors text-sm truncate">
                   {SITE.email}
                 </a>
               </li>
-              <li className="flex items-center gap-4 group hover:translate-x-1 transition-transform">
-                <MessageCircle className="w-5 h-5 text-neutral-400 group-hover:text-success-600 transition-colors shrink-0" />
-                <Link href="/whatsapp" className="text-neutral-600 hover:text-success-600 text-sm font-semibold transition-colors">
-                  WhatsApp Us
-                </Link>
+              <li className="flex gap-4 group hover:translate-x-1 transition-transform">
+                <MapPin className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 transition-colors shrink-0" />
+                <span className="text-neutral-600 group-hover:text-neutral-900 text-sm leading-relaxed transition-colors">
+                  Location
+                </span>
               </li>
             </ul>
 
@@ -200,7 +218,7 @@ export default function Footer() {
                 <Link
                   key={dept.slug}
                   href={`/departments/${dept.slug}`}
-                  className="group flex items-center gap-3 text-neutral-600 hover:text-primary-600 transition-all bg-white/80 backdrop-blur-sm hover:bg-white p-3 rounded-xl border border-neutral-200/60 hover:border-primary-300 shadow-sm hover:shadow-md hover:scale-105"
+                  className="group flex items-center gap-3 text-neutral-500 hover:text-primary-600 transition-all bg-white/80 backdrop-blur-sm hover:bg-white p-3 rounded-xl border border-neutral-200/60 hover:border-primary-300 shadow-sm hover:shadow-md hover:scale-105"
                 >
                   <span className="w-10 h-10 rounded-lg bg-gradient-to-br from-neutral-50 to-neutral-100 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 group-hover:from-primary-50 group-hover:to-primary-100 transition-all border border-neutral-100 group-hover:border-primary-200">
                     {dept.icon}

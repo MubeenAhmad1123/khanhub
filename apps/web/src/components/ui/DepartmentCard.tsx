@@ -226,7 +226,7 @@ const DepartmentCard = memo(function DepartmentCard({
                                     <div
                                         className="w-2 h-2 rounded-full"
                                         style={{
-                                            backgroundColor: theme.primary,
+                                            backgroundColor: '#25D366',
                                             animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
                                         }}
                                     />

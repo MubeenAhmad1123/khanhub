@@ -8,28 +8,28 @@ import { Department, DepartmentCategory } from '@/types/department';
 
 export const DEPARTMENT_CATEGORIES: DepartmentCategory[] = [
   {
-    key: 'social',
-    label: 'Social Services',
+    key: 'medical-services',
+    label: 'Medical Services',
     icon: '🏥',
-    description: 'Health, education, and community welfare'
+    description: 'Comprehensive healthcare and medical facilities'
   },
   {
-    key: 'infrastructure',
-    label: 'Infrastructure',
-    icon: '🏗️',
-    description: 'Development and public works'
+    key: 'educational-services',
+    label: 'Educational Services',
+    icon: '📚',
+    description: 'Schools, colleges, and skill development'
   },
   {
-    key: 'governance',
-    label: 'Governance',
-    icon: '⚖️',
-    description: 'Administration and legal services'
+    key: 'mental-health',
+    label: 'Mental Health',
+    icon: '🧠',
+    description: 'Psychological support and rehabilitation'
   },
   {
-    key: 'economy',
-    label: 'Economy',
-    icon: '💼',
-    description: 'Finance, trade, and employment'
+    key: 'welfare',
+    label: 'Welfare',
+    icon: '🤝',
+    description: 'Community support and social services'
   }
 ];
 
@@ -157,7 +157,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'IHS',
     icon: '🏥',
     image: '/images/institute-health-sciences.webp',
-    category: 'social',
+    category: 'educational-services',
     tagline: 'Excellence in Medical Education & Healthcare Training',
     description: 'A premier institution dedicated to producing skilled healthcare professionals through state-of-the-art education and practical training.',
     services: ['Medical Education', 'Paramedical Training', 'Nursing Programs', 'Pharmacy Technician'],
@@ -260,7 +260,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Education',
     icon: '📚',
     image: '/images/education.webp',
-    category: 'social',
+    category: 'educational-services',
     tagline: 'Quality education for every child',
     description: 'Managing schools, colleges, and educational programs to ensure quality education for all.',
     services: ['Public Schools', 'Scholarships', 'Teacher Training', 'Curriculum Development'],
@@ -337,7 +337,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Medical Center',
     icon: '🏥',
     image: '/images/medical-center.webp',
-    category: 'social',
+    category: 'medical-services',
     tagline: 'Comprehensive healthcare services',
     description: 'State-of-the-art medical facilities providing comprehensive healthcare services to communities nationwide. Our medical center is equipped with modern technology and staffed by experienced healthcare professionals dedicated to patient care.',
     services: ['Emergency Care', 'Specialized Treatment', 'Diagnostics', 'Patient Care'],
@@ -414,7 +414,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Transport',
     icon: '🚗',
     image: '/images/transport.webp',
-    category: 'infrastructure',
+    category: 'welfare',
     tagline: 'Safe and efficient transportation',
     description: 'Regulating transportation, issuing licenses, and managing public transport systems.',
     services: ['Driving Licenses', 'Vehicle Registration', 'Public Transport', 'Traffic Management'],
@@ -469,7 +469,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Surgical Services',
     icon: '⚕️',
     image: '/images/surgical-services.webp',
-    category: 'social',
+    category: 'medical-services',
     tagline: 'Expert surgical care',
     description: 'Advanced surgical facilities with expert medical teams providing specialized surgical services.',
     services: ['General Surgery', 'Specialized Procedures', 'Post-Op Care', 'Emergency Surgery'],
@@ -490,7 +490,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Surgical Repair',
     icon: '🔧',
     image: '/images/surgical-repair.webp',
-    category: 'social',
+    category: 'medical-services',
     tagline: 'Reconstructive and repair surgery',
     description: 'Specialized center for reconstructive and repair surgical procedures with modern facilities.',
     services: ['Reconstructive Surgery', 'Plastic Surgery', 'Burn Treatment', 'Trauma Care'],
@@ -511,7 +511,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Social Welfare',
     icon: '🤝',
     image: '/images/welfare-organization.webp',
-    category: 'social',
+    category: 'welfare',
     tagline: 'Supporting communities in need',
     description: 'Supporting vulnerable communities through welfare programs and financial assistance.',
     services: ['Pension Programs', 'Disability Support', 'Child Protection', 'Women Empowerment'],
@@ -577,7 +577,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Job Placement',
     icon: '💼',
     image: '/images/job.webp',
-    category: 'economy',
+    category: 'welfare',
     tagline: 'Connecting talent with opportunity',
     description: 'Facilitating employment opportunities and career development for job seekers across all sectors.',
     services: ['Job Listings', 'Career Counseling', 'Skill Training', 'Placement Support'],
@@ -643,7 +643,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Skill Development',
     icon: '🎓',
     image: '/images/skill.webp',
-    category: 'economy',
+    category: 'educational-services',
     tagline: 'Building skills for tomorrow',
     description: 'Vocational training and skill development programs to enhance employability and entrepreneurship.',
     services: ['Technical Training', 'Vocational Courses', 'Certification Programs', 'Apprenticeships'],
@@ -664,7 +664,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Residential',
     icon: '🏘️',
     image: '/images/residential.webp',
-    category: 'infrastructure',
+    category: 'welfare',
     tagline: 'Quality housing solutions',
     description: 'Developing housing schemes and providing affordable residential solutions for citizens.',
     services: ['Housing Schemes', 'Building Approvals', 'Urban Planning', 'Low-Cost Housing'],
@@ -685,7 +685,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Rehabilitation',
     icon: '♿',
     image: '/images/rehab.webp',
-    category: 'social',
+    category: 'medical-services',
     tagline: 'Recovery and rehabilitation support',
     description: 'Comprehensive rehabilitation services for physical, mental, and social recovery programs.',
     services: ['Physical Therapy', 'Mental Health', 'Addiction Treatment', 'Counseling'],
@@ -751,7 +751,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Tourism',
     icon: '🏔️',
     image: '/images/travel-and-tour.webp',
-    category: 'economy',
+    category: 'welfare',
     tagline: 'Explore the beauty of Pakistan',
     description: 'Promoting tourism, heritage sites, and cultural attractions across Pakistan.',
     services: ['Tourist Info', 'Heritage Sites', 'Travel Permits', 'Hospitality Training'],
@@ -772,7 +772,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Marketing',
     icon: '📢',
     image: '/images/marketing.webp',
-    category: 'economy',
+    category: 'welfare',
     tagline: 'Promoting growth and opportunities',
     description: 'Strategic marketing and promotional services to support business growth and economic development.',
     services: ['Business Promotion', 'Trade Support', 'Export Facilitation', 'Market Research'],
@@ -793,152 +793,62 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Prosthetics',
     icon: '🦾',
     image: '/images/prosthetic.webp',
-    category: 'social',
+    category: 'medical-services',
     tagline: 'Restoring mobility and independence',
     description: 'Advanced prosthetic and orthotic services to help individuals regain mobility and independence.',
     services: ['Prosthetic Limbs', 'Orthotic Devices', 'Fitting Services', 'Rehabilitation'],
     stats: [
-      { value: '5K+', label: 'Devices' },
+      { value: '1K+', label: 'Patients' },
       { value: '95%', label: 'Satisfaction' }
     ],
     isActive: true,
     colorHex: '#4F46E5',
-    programs: ['Artificial Limbs', 'Orthotic Braces', 'Custom Fitting', 'Physiotherapy', 'Follow-up Care'],
-    facilities: ['Manufacturing Workshop', 'Fitting Rooms', 'Rehabilitation Area', 'Assessment Center'],
-    contactPhone: '+92-300-3456012',
-    contactEmail: 'prosthetic@khanhub.pk'
+    programs: ['Custom Prosthetics', 'Orthotic Solutions', 'Adaptive Technology', 'Mobility Training'],
+    facilities: ['Prosthetic Labs', 'Assessment Rooms', 'Training Centers'],
+    contactPhone: '+92-300-7654321',
+    contactEmail: 'prosthetics@khanhub.pk'
   },
   {
     slug: 'enterprises',
-    name: 'Enterprise Development',
+    name: 'Khan Hub Enterprises',
     shortName: 'Enterprises',
     icon: '🏢',
     image: '/images/enterprises.webp',
-    category: 'economy',
-    tagline: 'Empowering entrepreneurs',
-    description: 'Supporting enterprise development through business incubation, funding, and mentorship programs.',
-    services: ['Business Incubation', 'Funding Support', 'Mentorship', 'Networking'],
+    category: 'welfare',
+    tagline: 'Building sustainable businesses',
+    description: 'Fostering entrepreneurship and supporting small to medium enterprises with resources and guidance.',
+    services: ['Business Incubation', 'Funding Access', 'Mentorship', 'Workspace'],
     stats: [
-      { value: '2K+', label: 'Startups' },
-      { value: '80%', label: 'Success Rate' }
+      { value: '50+', label: 'Startups' },
+      { value: '500+', label: 'Jobs Created' }
     ],
     isActive: true,
     colorHex: '#7C3AED',
-    programs: [
-      {
-        slug: 'startup-incubation',
-        name: 'Startup Incubation',
-        description: 'Nurturing early-stage startups with office space, mentorship, and access to a massive network of investors.',
-        image: '/images/enterprises/incubation.webp',
-        features: ['Office Space', 'Mentorship', 'Investor Network'],
-        details: [
-          { label: 'Service', value: 'Incubation' },
-          { label: 'Access', value: 'Full Network' }
-        ]
-      },
-      {
-        slug: 'business-loans',
-        name: 'Business Loans',
-        description: 'Easy access to low-interest capital for small and medium enterprises to scale their operations.',
-        image: '/images/enterprises/loans.webp',
-        features: ['Low Interest', 'Quick Approval', 'Scalable Capital'],
-        details: [
-          { label: 'Type', value: 'Financial Aid' },
-          { label: 'Limit', value: 'Based on Need' }
-        ]
-      },
-      {
-        slug: 'mentorship',
-        name: 'Mentorship Programs',
-        description: 'Connecting aspiring entrepreneurs with seasoned business leaders for strategic guidance and growth.',
-        image: '/images/enterprises/mentorship.webp',
-        features: ['Strategic Guidance', 'Business Strategy', 'Networking'],
-        details: [
-          { label: 'Format', value: 'Mentorship' },
-          { label: 'Experts', value: 'Industry Leaders' }
-        ]
-      },
-      {
-        slug: 'digital-transformation',
-        name: 'Digital Transformation',
-        description: 'Helping traditional businesses adopt modern technologies and reach global markets through e-commerce.',
-        image: '/images/enterprises/digital.webp',
-        features: ['E-commerce', 'Tech Adoption', 'Global Reach'],
-        details: [
-          { label: 'Goal', value: 'Modernization' },
-          { label: 'Approach', value: 'Tech-First' }
-        ]
-      }
-    ],
-    facilities: ['Incubation Centers', 'Co-working Spaces', 'Meeting Rooms', 'Resource Centers'],
-    contactPhone: '+92-300-4560123',
-    contactEmail: 'enterprise@khanhub.pk'
+    programs: ['Startup Incubator', 'SME Support', 'Investment Network', 'Business Training'],
+    facilities: ['Co-working Spaces', 'Meeting Rooms', 'Innovation Hubs'],
+    contactPhone: '+92-300-9876543',
+    contactEmail: 'enterprises@khanhub.pk'
   },
   {
     slug: 'sukoon-center',
-    name: 'Sukoon Mental Health',
+    name: 'Khan Hub Sukoon Center',
     shortName: 'Sukoon',
     icon: '🧠',
     image: '/images/sukoon.webp',
-    category: 'social',
-    tagline: 'Peace of mind, path to wellness',
-    description: 'Comprehensive mental health services providing counseling, therapy, and psychiatric care.',
-    services: ['Counseling', 'Therapy', 'Psychiatric Care', 'Support Groups'],
+    category: 'mental-health',
+    tagline: 'Mental peace and well-being',
+    description: 'Dedicated center for mental health support, stress management, and emotional well-being.',
+    services: ['Mental Health Counseling', 'Stress Management', 'Meditation Sessions', 'Support Groups'],
     stats: [
-      { value: '20K+', label: 'Patients' },
-      { value: '24/7', label: 'Helpline' }
+      { value: '1K+', label: 'Members' },
+      { value: '98%', label: 'Positive Feedback' }
     ],
     isActive: true,
     colorHex: '#14B8A6',
-    programs: [
-      {
-        slug: 'individual-therapy',
-        name: 'Individual Therapy',
-        description: 'Private and confidential one-on-one sessions with licensed therapists to address personal mental health challenges.',
-        image: '/images/sukoon/individual.webp',
-        features: ['Confidential', 'Expert Therapists', 'Personalized'],
-        details: [
-          { label: 'Format', value: 'One-on-One' },
-          { label: 'Privacy', value: '100%' }
-        ]
-      },
-      {
-        slug: 'group-therapy',
-        name: 'Group Support',
-        description: 'Safe community spaces where individuals can share experiences and grow together under professional guidance.',
-        image: '/images/sukoon/group.webp',
-        features: ['Community Space', 'Shared Growth', 'Safe Environment'],
-        details: [
-          { label: 'Type', value: 'Group Session' },
-          { label: 'Support', value: 'Peer-to-Peer' }
-        ]
-      },
-      {
-        slug: 'family-counseling',
-        name: 'Family Counseling',
-        description: "Helping families navigate conflicts, improve communication, and support each other's mental well-being.",
-        image: '/images/sukoon/family.webp',
-        features: ['Conflict Resolution', 'Better Communication', 'Supportive'],
-        details: [
-          { label: 'Focus', value: 'Family Wellness' },
-          { label: 'Outcome', value: 'Better Relatioships' }
-        ]
-      },
-      {
-        slug: 'crisis-helpline',
-        name: 'Crisis Helpline',
-        description: '24/7 immediate support for individuals experiencing mental health emergencies or emotional distress.',
-        image: '/images/sukoon/helpline.webp',
-        features: ['24/7 Support', 'Immediate Crisis Aid', 'Compassionate'],
-        details: [
-          { label: 'Service', value: 'Helpline' },
-          { label: 'Availability', value: 'Always Open' }
-        ]
-      }
-    ],
-    facilities: ['Counseling Rooms', 'Group Therapy Halls', 'Crisis Center', '24/7 Helpline', 'Psychiatric Ward'],
-    contactPhone: '+92-300-SUKOON-1',
-    contactEmail: 'help@sukoon.khanhub.pk'
+    programs: ['Individual Counseling', 'Group Therapy', 'Mindfulness Workshops', 'Yoga & Meditation'],
+    facilities: ['Meditation Rooms', 'Therapy Suites', 'Relaxation Gardens'],
+    contactPhone: '+92-300-1122334',
+    contactEmail: 'sukoon@khanhub.pk'
   }
 ];
 

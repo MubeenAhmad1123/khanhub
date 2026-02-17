@@ -1,4 +1,5 @@
 'use client';
+
 // src/components/sections/MissionSection.tsx - OPTIMIZED VERSION
 // ─────────────────────────────────────────────────────────────────
 // Optimizations:
@@ -57,9 +58,10 @@ const KeyPoints = memo(function KeyPoints() {
 // Memoized Trust Badges Component
 const TrustBadges = memo(function TrustBadges() {
   const trustBadges = [
-    { label: 'Registered', icon: '✓' },
     { label: 'Verified', icon: '✓' },
+    { label: 'Certified', icon: '✓' },
     { label: 'Licensed', icon: '✓' },
+    { label: 'Registered', icon: '✓' },
   ];
 
   return (
@@ -185,18 +187,18 @@ export function MissionSection() {
             {/* CTAs - Mobile Optimized */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-2">
               <Link
+                href="/about"
+                className="px-6 sm:px-8 py-3 sm:py-4 bg-white border-2 border-neutral-200 hover:border-primary-300 rounded-xl font-semibold text-neutral-700 hover:text-primary-600 transition-all duration-300 inline-flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
+              >
+                <span className="text-sm sm:text-base">Our Story</span>
+              </Link>
+
+              <Link
                 href="/departments"
                 className="group px-6 sm:px-8 py-3 sm:py-4 bg-primary-500 hover:bg-primary-600 rounded-xl font-semibold text-white transition-all duration-300 hover:scale-105 shadow-primary-md hover:shadow-primary-lg inline-flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
               >
                 <span className="text-sm sm:text-base">Explore Our Services</span>
                 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-              </Link>
-
-              <Link
-                href="/about"
-                className="px-6 sm:px-8 py-3 sm:py-4 bg-white border-2 border-neutral-200 hover:border-primary-300 rounded-xl font-semibold text-neutral-700 hover:text-primary-600 transition-all duration-300 inline-flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
-              >
-                <span className="text-sm sm:text-base">Our Story</span>
               </Link>
             </div>
           </motion.div>

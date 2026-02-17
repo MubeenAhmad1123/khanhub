@@ -30,7 +30,7 @@ export default function Footer() {
                     <div>
                         <h4 className="font-bold text-lg mb-6 uppercase tracking-widest text-slate-500">Contact</h4>
                         <ul className="space-y-4 font-medium text-slate-300">
-                            <li className="flex items-center gap-3">📧 support@khanhub.pk</li>
+                            <li className="flex items-center gap-3">📧 khanhubnetwork@gmail.com</li>
                             <li className="flex items-center gap-3">📞 03006395220</li>
                             <li className="flex items-center gap-3">📍 Islamabad, Pakistan</li>
                         </ul>

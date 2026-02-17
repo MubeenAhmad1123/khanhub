@@ -75,7 +75,7 @@ export default function JobFooter() {
                                 </li>
                                 <li className="flex items-center gap-3 group">
                                     <Mail className="w-4 h-4 text-slate-500 group-hover:text-teal-500 transition-colors shrink-0" />
-                                    <a href="mailto:support@khanhub.com" className="text-sm hover:text-teal-400 transition-colors">support@khanhub.com</a>
+                                    <a href="mailto:khanhubnetwork@gmail.com" className="text-sm hover:text-teal-400 transition-colors">khanhubnetwork@gmail.com</a>
                                 </li>
                             </ul>
                             <div className="flex gap-4 pt-2">

@@ -138,7 +138,7 @@ export default function SurgicalFooter() {
                                     <div className="p-2 bg-slate-800 rounded-lg text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
                                         <Mail className="h-4 w-4" />
                                     </div>
-                                    <a href="mailto:info@khanhub.com.pk" className="text-xs text-white hover:text-blue-400 transition-colors">info@khanhub.com.pk</a>
+                                    <a href="mailto:khanhubnetwork@gmail.com" className="text-xs text-white hover:text-blue-400 transition-colors">khanhubnetwork@gmail.com</a>
                                 </li>
                             </ul>
                         </div>
