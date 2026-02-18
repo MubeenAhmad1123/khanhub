@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: 'Official Certificates & Legal Registration | Khan Hub Pakistan',
   description:
     'View Khan Hub\'s official registration certificates, NGO approvals, healthcare accreditations, and legal compliance documents. Verified welfare organization registered with SECP, FBR, and Punjab Health Department since 2015.',
-  
+
   keywords: [
     'Khan Hub certificates',
     'NGO registration Pakistan',
@@ -84,6 +84,7 @@ export default function CertificatesPage() {
       <article itemScope itemType="https://schema.org/AboutPage">
         {/* Hero Section - SEO optimized with clear messaging */}
         <PageHero
+          backgroundImage="/certificate.webp"
           badge="Transparency & Trust"
           title="Certificates & Legal Approvals"
           subtitle="Official registrations, licenses, and compliance certificates demonstrating Khan Hub's legitimacy as a verified welfare and healthcare organization in Pakistan since 2015."

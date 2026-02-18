@@ -28,6 +28,7 @@ const NAV_LINKS = [
   { label: 'About', href: '/about', icon: 'ℹ️' },
   { label: 'Certificates', href: '/certificates', icon: '🏆' },
   { label: 'Media', href: '/media', icon: '📸' },
+  { label: 'Success Stories', href: '/success-stories', icon: '🌟', mobileOnly: true },
   { label: 'Contact', href: '/contact', icon: '📞' },
 ] as const;
 
@@ -214,7 +215,7 @@ export default function Navbar() {
 
             {/* Desktop/Tablet Nav */}
             <div className="hidden md:flex items-center gap-0.5 lg:gap-1 flex-1 justify-center max-w-2xl">
-              {NAV_LINKS.map((link) =>
+              {NAV_LINKS.filter(link => !(link as any).mobileOnly).map((link) =>
                 link.label === 'Departments' ? (
                   // Departments dropdown
                   <div key={link.label} className="relative" ref={dropdownRef}>

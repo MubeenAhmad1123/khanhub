@@ -175,12 +175,12 @@ export default function Footer() {
               <li className="flex gap-4 group hover:translate-x-1 transition-transform">
                 <MapPin className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 transition-colors shrink-0" />
                 <span className="text-neutral-600 group-hover:text-neutral-900 text-sm leading-relaxed transition-colors">
-                  Location
+                  Khan Hub (Pvt.) Ltd. Multan Road Peer Muraad Vehari
                 </span>
               </li>
             </ul>
 
-            <div className="flex gap-3 pt-2 flex-wrap">
+            <div className="grid grid-cols-3 gap-3 pt-2 w-fit">
               {socialMedia.map(({ platform, url, icon: Icon, label, hoverClass }) => (
                 <a
                   key={platform}

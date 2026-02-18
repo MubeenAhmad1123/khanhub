@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
-type MediaTab = 'videos' | 'photos' | 'events';
+type MediaTab = 'videos' | 'photos' | 'events' | 'stories';
 
 type VideoCategory = 'healthcare' | 'education' | 'welfare' | 'services' | 'digital';
 
@@ -722,14 +722,28 @@ export default function MediaPage() {
               {/* Tab Navigation - Mobile Optimized */}
               <nav aria-label="Media gallery tabs" className="mb-8 sm:mb-10">
                 <div className="flex justify-center gap-2 sm:gap-4 overflow-x-auto pb-2 sm:pb-0 px-4 sm:px-0 scrollbar-hide">
-                  {(['videos', 'photos', 'events'] as const).map((tab) => {
+                  {(['videos', 'photos', 'events', 'stories'] as const).map((tab) => {
                     const labels = {
                       videos: { emoji: '🎬', text: 'Videos' },
                       photos: { emoji: '📷', text: 'Photos' },
                       events: { emoji: '🎪', text: 'Events' },
+                      stories: { emoji: '🌟', text: 'Success Stories' },
                     };
-                    const label = labels[tab];
+                    const label = labels[tab as keyof typeof labels];
                     const isActive = activeTab === tab;
+
+                    if (tab === 'stories') {
+                      return (
+                        <Link
+                          key={tab}
+                          href="/success-stories"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider px-5 sm:px-8 py-2.5 sm:py-3.5 transition-all duration-300 border-2 whitespace-nowrap bg-white border-primary-100 text-primary-600 hover:border-primary-500 hover:bg-primary-50"
+                        >
+                          <span aria-hidden="true">{label.emoji}</span>
+                          <span>{label.text}</span>
+                        </Link>
+                      );
+                    }
 
                     return (
                       <button
@@ -847,6 +861,44 @@ export default function MediaPage() {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+        </section>
+
+        {/* Success Stories CTA Section */}
+        <section className="py-16 sm:py-24 bg-primary-50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-success-600/5 blur-3xl rounded-full -translate-x-1/2 translate-y-1/2" />
+
+          <div className="container-custom relative z-10">
+            <div className="bg-white rounded-[2rem] p-8 sm:p-12 md:p-16 shadow-xl shadow-primary-500/5 border border-primary-100 flex flex-col md:grid md:grid-cols-2 gap-10 items-center">
+              <div>
+                <span className="badge-primary mb-6">Patient Impact</span>
+                <h2 className="font-display font-bold text-3xl sm:text-4xl text-neutral-900 mb-6 leading-tight">
+                  Beyond Images: <br />
+                  <span className="text-primary-600">Stories of Hope</span>
+                </h2>
+                <p className="text-neutral-600 text-lg mb-8 leading-relaxed">
+                  Our gallery shows what we do, but our success stories show why we do it. See the real human impact of our medical and welfare services.
+                </p>
+                <Link
+                  href="/success-stories"
+                  className="btn-primary px-8 py-4 text-lg group"
+                >
+                  View Success Stories
+                  <svg className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </Link>
+              </div>
+              <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
+                <img
+                  src="/images/success-stories-preview.webp"
+                  alt="Success Stories Preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              </div>
             </div>
           </div>
         </section>

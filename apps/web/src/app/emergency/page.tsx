@@ -7,6 +7,16 @@ export default function EmergencyPage() {
     <div className="min-h-screen bg-neutral-950 flex flex-col">
       {/* ── Full-screen emergency hero ── */}
       <section className="flex-1 flex flex-col items-center justify-center px-4 pt-20 text-center relative overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/emergency.webp"
+            alt=""
+            className="w-full h-full object-cover opacity-20 grayscale"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/80 to-neutral-950/40" />
+        </div>
+
         {/* Red glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-red-600 opacity-[0.06] blur-3xl rounded-full pointer-events-none" />
 

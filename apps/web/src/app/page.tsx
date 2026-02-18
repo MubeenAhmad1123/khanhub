@@ -8,6 +8,7 @@ import HeroSection from '@/components/sections/HeroSection';
 import { DonateCTASection } from '@/components/sections/Donationsection';
 import DepartmentsSection from '@/components/sections/DepartmentsSection';
 import { MissionSection } from '@/components/sections/MissionSection';
+import { SuccessStoriesSection } from '@/components/sections/SuccessStoriesSection';
 
 export default function HomePage() {
   return (
@@ -15,6 +16,7 @@ export default function HomePage() {
       <HeroSection />
       <MissionSection />
       <DepartmentsSection />
+      <SuccessStoriesSection />
       <DonateCTASection />
     </>
   );
