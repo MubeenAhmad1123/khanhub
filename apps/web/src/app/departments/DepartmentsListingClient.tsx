@@ -173,21 +173,21 @@ export default function DepartmentsListingClient() {
                         aria-label="Department categories filter"
                         className={`mb-6 sm:mb-8 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}
                     >
-                        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-5xl mx-auto">
+                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap justify-center gap-2 sm:gap-3 max-w-5xl mx-auto">
                             {/* All */}
                             <button
                                 onClick={() => handleCategoryChange('all')}
-                                className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 border-2 min-h-[44px] flex items-center gap-1.5 sm:gap-2 touch-manipulation ${activeCategory === 'all'
-                                        ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/30'
-                                        : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-400 hover:shadow-md'
+                                className={`col-span-2 sm:col-span-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 border-2 min-h-[44px] flex items-center justify-center gap-1.5 sm:gap-2 touch-manipulation ${activeCategory === 'all'
+                                    ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/30'
+                                    : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-400 hover:shadow-md'
                                     }`}
                                 aria-pressed={activeCategory === 'all'}
                             >
                                 <span className="text-xs sm:text-sm">All Departments</span>
                                 <span
                                     className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold ${activeCategory === 'all'
-                                            ? 'bg-white/20 text-white'
-                                            : 'bg-neutral-100 text-neutral-600'
+                                        ? 'bg-white/20 text-white'
+                                        : 'bg-neutral-100 text-neutral-600'
                                         }`}
                                 >
                                     {stats.all}
@@ -199,9 +199,9 @@ export default function DepartmentsListingClient() {
                                 <button
                                     key={cat.key}
                                     onClick={() => handleCategoryChange(cat.key)}
-                                    className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 border-2 min-h-[44px] flex items-center gap-1.5 sm:gap-2 touch-manipulation ${activeCategory === cat.key
-                                            ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/30'
-                                            : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-400 hover:shadow-md'
+                                    className={`px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 border-2 min-h-[44px] flex items-center justify-center gap-1.5 sm:gap-2 touch-manipulation ${activeCategory === cat.key
+                                        ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/30'
+                                        : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-400 hover:shadow-md'
                                         }`}
                                     aria-pressed={activeCategory === cat.key}
                                     aria-label={`Filter by ${cat.label}`}
@@ -209,12 +209,11 @@ export default function DepartmentsListingClient() {
                                     <span className="text-base sm:text-lg" aria-hidden="true">
                                         {cat.icon}
                                     </span>
-                                    <span className="hidden sm:inline">{cat.label}</span>
-                                    <span className="sm:hidden">{cat.label.split(' ')[0]}</span>
+                                    <span className="text-[11px] sm:text-sm leading-tight text-center">{cat.label}</span>
                                     <span
-                                        className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold ${activeCategory === cat.key
-                                                ? 'bg-white/20 text-white'
-                                                : 'bg-neutral-100 text-neutral-600'
+                                        className={`inline-flex items-center justify-center min-w-[18px] h-5 px-1 rounded-full text-xs font-bold flex-shrink-0 ${activeCategory === cat.key
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-neutral-100 text-neutral-600'
                                             }`}
                                     >
                                         {stats[cat.key as keyof typeof stats]}

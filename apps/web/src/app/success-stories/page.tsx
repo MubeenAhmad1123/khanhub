@@ -14,11 +14,21 @@ export default function SuccessStoriesPage() {
         <article className="overflow-x-hidden">
             {/* Hero Section */}
             <PageHero
-                backgroundImage="/success-stories.webp"
+                type="split"
                 badge="Success Stories"
                 title="Impact We Create Together"
                 subtitle="Read real-life transformations from our patients and students who have benefited from Khan Hub's diverse services."
-            />
+                image="/success-stories.webp"
+                cta={
+                    <Link href="#all-reviews" className="btn-primary">
+                        📖 Read Stories
+                    </Link>
+                }
+            >
+                <Link href="/contact" className="btn-secondary">
+                    🤝 Share Your Story
+                </Link>
+            </PageHero>
 
             {/* Main Content */}
             <section className="section bg-gradient-light">

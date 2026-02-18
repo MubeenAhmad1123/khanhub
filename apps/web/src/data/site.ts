@@ -10,9 +10,9 @@ export const SITE = {
   tagline: 'Healthcare • Education • Hope',
   description: 'Khan Hub is a multi-department welfare organization dedicated to providing healthcare, education, employment, and social services to underprivileged communities across Pakistan.',
   url: 'https://khanhub.com.pk',
-  phone: '03006395220',
-  emergency: '03006395220',
-  whatsapp: '03006395220',
+  phone: '0300-6395220',
+  emergency: '0300-6395220',
+  whatsapp: '0300-6395220',
   email: 'khanhubnetwork@gmail.com',
   address: 'KHAN HUB (PVT.) LTD. Multan road Pir Murad, Vehari',
   googleMaps: 'https://maps.app.goo.gl/WMHn4MpwPqEDmVkHA',
@@ -42,11 +42,12 @@ export interface NavLink {
 
 export const NAV_LINKS: NavLink[] = [
   { label: 'Home', href: '/', icon: '🏠' },
-  { label: 'About Us', href: '/about', icon: '🏛️' },
   { label: 'Departments', href: '/departments', icon: '📂' },
   { label: 'Media', href: '/media', icon: '🎬' },
-  { label: 'Certificates', href: '/certificates', icon: '📜' },
   { label: 'Contact', href: '/contact', icon: '📍' },
+  { label: 'Certificates', href: '/certificates', icon: '📜' },
+  { label: 'Success Stories', href: '/success-stories', icon: '🌟' },
+  { label: 'About Us', href: '/about', icon: '🏛️' },
 ];
 
 export const NAV_CTA: NavLink[] = [

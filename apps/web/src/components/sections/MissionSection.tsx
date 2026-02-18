@@ -2,34 +2,24 @@
 
 // src/components/sections/MissionSection.tsx - OPTIMIZED VERSION
 // ─────────────────────────────────────────────────────────────────
-// Optimizations:
 // ✅ Performance optimized with lazy loading and reduced animations
 // ✅ SEO optimized with semantic HTML and schema markup
 // ✅ Mobile-first responsive design
 // ✅ Accessibility improvements
-// ✅ Better video loading with poster and preload
+// ✅ Scroll-triggered autoplay: plays when in view, pauses when out
 // ─────────────────────────────────────────────────────────────────
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { memo } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
 // Memoized Key Points Component
 const KeyPoints = memo(function KeyPoints() {
   const keyPoints = [
-    {
-      text: '50,000+ lives impacted across Pakistan since 2015',
-      delay: 0
-    },
-    {
-      text: '16 specialized departments for healthcare, education & welfare',
-      delay: 0.1
-    },
-    {
-      text: '100% transparent operations with verified certifications',
-      delay: 0.2
-    }
+    { text: '50,000+ lives impacted across Pakistan since 2015', delay: 0 },
+    { text: '16 specialized departments for healthcare, education & welfare', delay: 0.1 },
+    { text: '100% transparent operations with verified certifications', delay: 0.2 },
   ];
 
   return (
@@ -83,7 +73,7 @@ const StatsCard = memo(function StatsCard() {
   const stats = [
     { value: '50,000+', label: 'Lives Impacted', color: 'text-primary-600' },
     { value: '16+', label: 'Departments', color: 'text-success-600' },
-    { value: '24/7', label: 'Emergency', color: 'text-primary-600' }
+    { value: '24/7', label: 'Emergency', color: 'text-primary-600' },
   ];
 
   return (
@@ -114,6 +104,33 @@ const StatsCard = memo(function StatsCard() {
 });
 
 export function MissionSection() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // ── Scroll-triggered autoplay ──────────────────────────────────
+  // Plays (muted) when ≥50% of the video is visible; pauses when it leaves.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            video.play().catch(() => {
+              // Autoplay blocked by browser — silently ignore
+            });
+          } else {
+            video.pause();
+          }
+        });
+      },
+      { threshold: 0.5 } // trigger when 50% visible
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <section
       className="section bg-white"
@@ -132,11 +149,14 @@ export function MissionSection() {
             transition={{ duration: 0.6 }}
             className="relative space-y-4 sm:space-y-6 order-last lg:order-first"
           >
-            {/* Main Video - Optimized Loading */}
+            {/* Main Video - Scroll Autoplay */}
             <div className="relative h-[400px] sm:h-[600px] lg:h-[800px] rounded-2xl overflow-hidden shadow-2xl bg-neutral-900">
               <video
+                ref={videoRef}
                 className="w-full h-full object-cover"
                 controls
+                muted
+                loop
                 poster="/images/medical-center.webp"
                 preload="metadata"
                 playsInline
@@ -169,7 +189,7 @@ export function MissionSection() {
               <span className="text-xs sm:text-sm font-semibold text-primary-700">Our Mission</span>
             </div>
 
-            {/* Headline - SEO Optimized */}
+            {/* Headline */}
             <h2
               id="mission-heading"
               className="font-display font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-neutral-900 leading-tight"
@@ -178,13 +198,10 @@ export function MissionSection() {
               Building a Pakistan where <span className="text-gradient">no one is left behind</span>
             </h2>
 
-            {/* Key Points - Accessible */}
             <KeyPoints />
-
-            {/* Trust Indicators */}
             <TrustBadges />
 
-            {/* CTAs - Mobile Optimized */}
+            {/* CTAs */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-2">
               <Link
                 href="/about"
@@ -221,24 +238,20 @@ export function MissionSection() {
               numberOfEmployees: {
                 '@type': 'QuantitativeValue',
                 value: '50000+',
-                description: 'Lives impacted'
-              }
-            }
-          })
+                description: 'Lives impacted',
+              },
+            },
+          }),
         }}
       />
 
-      {/* Optimized Styles */}
       <style jsx>{`
-        /* Improve touch targets on mobile */
         @media (max-width: 640px) {
           .touch-manipulation {
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
           }
         }
-
-        /* Optimize video loading */
         video {
           content-visibility: auto;
         }

@@ -138,12 +138,6 @@ export default function Footer() {
                   Emergency
                 </Link>
               </li>
-              <li className="flex items-center gap-3 group pt-2">
-                <Image src="/app-download.webp" alt="Download App" width={24} height={24} className="rounded-md" />
-                <Link href="/download-app" className="text-neutral-600 hover:text-success-600 text-sm transition-all duration-300 group-hover:translate-x-1">
-                  Download App
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -155,16 +149,19 @@ export default function Footer() {
             </div>
             <ul className="space-y-6">
               <li className="flex items-center gap-4 group hover:translate-x-1 transition-transform">
+                <div className="relative">
+                  <MessageCircle className="w-5 h-5 text-neutral-400 group-hover:text-success-600 transition-colors shrink-0" />
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-success-500 border-2 border-white rounded-full"></span>
+                </div>
+                <Link href="/whatsapp" className="text-neutral-600 hover:text-success-600 text-sm transition-colors font-medium">
+                  Whatsapp
+                </Link>
+              </li>
+              <li className="flex items-center gap-4 group hover:translate-x-1 transition-transform">
                 <Phone className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 transition-colors shrink-0" />
                 <a href={`tel:${SITE.phone}`} className="text-neutral-600 text-sm hover:text-primary-600 transition-colors">
                   {SITE.phone}
                 </a>
-              </li>
-              <li className="flex items-center gap-4 group hover:translate-x-1 transition-transform">
-                <MessageCircle className="w-5 h-5 text-neutral-400 group-hover:text-success-600 transition-colors shrink-0" />
-                <Link href="/whatsapp" className="text-neutral-600 hover:text-success-600 text-sm transition-colors">
-                  Whatsapp
-                </Link>
               </li>
               <li className="flex items-center gap-4 group hover:translate-x-1 transition-transform">
                 <Mail className="w-5 h-5 text-neutral-400 group-hover:text-primary-600 transition-colors shrink-0" />
@@ -187,10 +184,11 @@ export default function Footer() {
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`w-10 h-10 rounded-xl bg-white border-2 border-neutral-200 flex items-center justify-center text-neutral-500 transition-all duration-300 hover:scale-110 hover:-rotate-3 shadow-sm hover:shadow-md ${hoverClass}`}
+                  className={`relative w-10 h-10 rounded-xl bg-white border-2 border-neutral-200 flex items-center justify-center text-neutral-500 transition-all duration-300 hover:scale-110 hover:-rotate-3 shadow-sm hover:shadow-md ${hoverClass}`}
                   aria-label={label}
                 >
                   <Icon className="w-4 h-4" />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-success-500 border-2 border-white rounded-full shadow-sm"></span>
                 </a>
               ))}
             </div>

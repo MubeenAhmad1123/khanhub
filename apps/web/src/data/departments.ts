@@ -152,10 +152,540 @@ export const DEPARTMENT_THEMES = {
 
 export const DEPARTMENTS: Department[] = [
   {
-    slug: 'institute-health-sciences',
-    name: 'Khan Hub Institute of Health & Sciences',
-    shortName: 'IHS',
+    slug: 'medical-center',
+    name: 'Khan Hub Medical Center',
+    shortName: 'Medical Center',
     icon: '🏥',
+    image: '/images/medical-center.webp',
+    category: 'medical-services',
+    tagline: 'Comprehensive healthcare services',
+    description: 'State-of-the-art medical facilities providing comprehensive healthcare services to communities nationwide. Our medical center is equipped with modern technology and staffed by experienced healthcare professionals dedicated to patient care.',
+    services: ['Emergency Care', 'Specialized Treatment', 'Diagnostics', 'Patient Care'],
+    stats: [
+      { value: '1,000+', label: 'Beds' },
+      { value: '24/7', label: 'Emergency' }
+    ],
+    isActive: true,
+    colorHex: '#DC2626',
+    programs: [
+      {
+        slug: 'emergency-services',
+        name: 'Emergency Services',
+        description: '24/7 emergency care with state-of-the-art trauma facilities and expert medical staff.',
+        image: '/emergency.webp',
+        features: ['24/7 Availability', 'Trauma Care', 'Rapid Response'],
+        details: [
+          { label: 'Service', value: 'Emergency' },
+          { label: 'Response', value: 'Immediate' }
+        ]
+      },
+      {
+        slug: 'general-medicine',
+        name: 'General Medicine',
+        description: 'Comprehensive evaluation and treatment of common illnesses and chronic conditions.',
+        image: '/images/medical/medicine.webp',
+        features: ['Full Checkup', 'Chronic Care', 'Consultations'],
+        details: [
+          { label: 'Type', value: 'Outpatient' },
+          { label: 'Care', value: 'Primary' }
+        ]
+      },
+      {
+        slug: 'cardiology',
+        name: 'Cardiology',
+        description: 'Specialized heart care including diagnostics, treatment, and preventive cardiology.',
+        image: '/images/medical/cardiology.webp',
+        features: ['ECG/Echo', 'TMT Tests', 'Heart Care'],
+        details: [
+          { label: 'Specialty', value: 'Heart' },
+          { label: 'Tech', value: 'Digital Diagnostics' }
+        ]
+      },
+      {
+        slug: 'pediatrics',
+        name: 'Pediatrics',
+        description: 'Dedicated healthcare for infants, children, and adolescents with a child-friendly environment.',
+        image: '/images/medical/pediatrics.webp',
+        features: ['Child Wellness', 'Vaccinations', 'Specialized Care'],
+        details: [
+          { label: 'Focus', value: 'Child Health' },
+          { label: 'Ages', value: '0 - 18' }
+        ]
+      }
+    ],
+    facilities: [
+      '24/7 Emergency Department',
+      'Modern ICU Units',
+      'Advanced Operating Theaters',
+      'CT Scan & MRI',
+      'Digital X-Ray',
+      'Fully Equipped Laboratory',
+      'Pharmacy',
+      'Blood Bank',
+      'Ambulance Service',
+      'Patient Wards'
+    ],
+    contactPhone: '0300-6395220',
+    contactEmail: 'emergency@medicalcenter.khanhub.pk'
+  },
+  {
+    slug: 'rehabilitation',
+    name: 'Khan Hub Rehabilitation Center',
+    shortName: 'Rehabilitation',
+    icon: '♿',
+    image: '/images/rehab.webp',
+    category: 'medical-services',
+    tagline: 'Recovery and rehabilitation support',
+    description: 'Comprehensive rehabilitation services for physical, mental, and social recovery programs.',
+    services: ['Physical Therapy', 'Mental Health', 'Addiction Treatment', 'Counseling'],
+    stats: [
+      { value: '10K+', label: 'Patients' },
+      { value: '90%', label: 'Recovery' }
+    ],
+    isActive: true,
+    colorHex: '#0891B2',
+    programs: [
+      {
+        slug: 'physical-rehabilitation',
+        name: 'Physical Therapy',
+        description: 'Advanced physiotherapy and exercise programs to help patients recover mobility after injury or surgery.',
+        image: '/images/rehab/physical.webp',
+        features: ['Mobility Recovery', 'Pain Management', 'Expert Therapists'],
+        details: [
+          { label: 'Type', value: 'Physical' },
+          { label: 'Care', value: 'Individualized' }
+        ]
+      },
+      {
+        slug: 'drug-rehab',
+        name: 'Drug Rehabilitation',
+        description: 'Holistic recovery programs combining medical detox with psychological counseling and community support.',
+        image: '/images/rehab/drug.webp',
+        features: ['Medical Detox', 'Counseling', 'Aftercare'],
+        details: [
+          { label: 'Program', value: 'Inpatient' },
+          { label: 'Support', value: '24/7' }
+        ]
+      },
+      {
+        slug: 'psychological-counseling',
+        name: 'Psychological Counseling',
+        description: 'Expert-led sessions focusing on trauma recovery, depression, and mental resilience.',
+        image: '/images/rehab/counseling.webp',
+        features: ['Trauma Recovery', 'Mental Resilience', 'Safe Space'],
+        details: [
+          { label: 'Focus', value: 'Mental Health' },
+          { label: 'Format', value: 'One-on-One' }
+        ]
+      },
+      {
+        slug: 'vocational-rehab',
+        name: 'Vocational Rehab',
+        description: 'Helping recovering patients learn new skills and find meaningful employment during their recovery journey.',
+        image: '/images/rehab/vocational.webp',
+        features: ['Skill Building', 'Job Placement', 'Workshops'],
+        details: [
+          { label: 'Goal', value: 'Independence' },
+          { label: 'Benefit', value: 'Career Skills' }
+        ]
+      }
+    ],
+    facilities: ['Therapy Rooms', 'Counseling Centers', 'Residential Units', 'Exercise Areas', 'Group Therapy Halls'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'rehab@khanhub.pk'
+  },
+  {
+    slug: 'education',
+    name: 'Khan Hub Education Center',
+    shortName: 'Education',
+    icon: '🎓',
+    image: '/images/education.webp',
+    category: 'educational-services',
+    tagline: 'Quality education for every child',
+    description: 'Managing schools, colleges, and educational programs to ensure quality education for all.',
+    services: ['Public Schools', 'Scholarships', 'Teacher Training', 'Curriculum Development'],
+    stats: [
+      { value: '50,000+', label: 'Schools' },
+      { value: '15M+', label: 'Students' }
+    ],
+    isActive: true,
+    colorHex: '#059669',
+    programs: [
+      {
+        slug: 'primary-education',
+        name: 'Primary Education',
+        description: 'Foundational learning for children aged 5-11, focusing on core literacy, numeracy, and social skills.',
+        image: '/images/education/primary.webp',
+        features: ['Focused Curriculum', 'Holistic Development', 'Expert Educators'],
+        details: [
+          { label: 'Ages', value: '5 - 11 Years' },
+          { label: 'Focus', value: 'Foundational Literacy' }
+        ]
+      },
+      {
+        slug: 'secondary-education',
+        name: 'Secondary Education',
+        description: 'Comprehensive education for adolescents, preparing them for higher studies or vocational paths.',
+        image: '/images/education/secondary.webp',
+        features: ['Subject Specialization', 'Career Guidance', 'Modern Labs'],
+        details: [
+          { label: 'Ages', value: '11 - 16 Years' },
+          { label: 'Level', value: 'Middle & High School' }
+        ]
+      },
+      {
+        slug: 'higher-secondary',
+        name: 'Higher Secondary',
+        description: 'Advanced schooling focused on specialized streams like Pre-Medical, Pre-Engineering, and ICS.',
+        image: '/images/education/higher-secondary.webp',
+        features: ['Stream Selection', 'Board Exam Prep', 'Practical Training'],
+        details: [
+          { label: 'Duration', value: '2 Years' },
+          { label: 'Streams', value: 'Medical, Engineering, IT' }
+        ]
+      },
+      {
+        slug: 'special-education',
+        name: 'Special Education',
+        description: 'Tailored educational programs for children with diverse learning needs and abilities.',
+        image: '/images/education/special.webp',
+        features: ['Individualized Plans', 'Therapeutic Support', 'Inclusive Environment'],
+        details: [
+          { label: 'Focus', value: 'Inclusivity' },
+          { label: 'Support', value: 'Specialized Staff' }
+        ]
+      },
+      {
+        slug: 'adult-literacy',
+        name: 'Adult Literacy',
+        description: 'Empowering adults with essential reading, writing, and life skills for better opportunities.',
+        image: '/images/education/adult.webp',
+        features: ['Flexible Timing', 'Functional Skills', 'Community Based'],
+        details: [
+          { label: 'Focus', value: 'Lifelong Learning' },
+          { label: 'Eligibility', value: 'Ages 18+' }
+        ]
+      }
+    ],
+    facilities: ['District Offices', 'Training Centers', 'Assessment Centers', 'Resource Libraries'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'info@education.khanhub.pk'
+  },
+  {
+    slug: 'sukoon-center',
+    name: 'Khan Hub Sukoon Center',
+    shortName: 'Sukoon',
+    icon: '🧘',
+    image: '/images/sukoon.webp',
+    category: 'mental-health',
+    tagline: 'Mental peace and well-being',
+    description: 'Dedicated center for mental health support, stress management, and emotional well-being.',
+    services: ['Mental Health Counseling', 'Stress Management', 'Meditation Sessions', 'Support Groups'],
+    stats: [
+      { value: '1K+', label: 'Members' },
+      { value: '98%', label: 'Positive Feedback' }
+    ],
+    isActive: true,
+    colorHex: '#14B8A6',
+    programs: ['Individual Counseling', 'Group Therapy', 'Mindfulness Workshops', 'Yoga & Meditation'],
+    facilities: ['Meditation Rooms', 'Therapy Suites', 'Relaxation Gardens'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'sukoon@khanhub.pk'
+  },
+  {
+    slug: 'job-placement',
+    name: 'Khan Hub Job Center',
+    shortName: 'Job Center',
+    icon: '💼',
+    image: '/images/job.webp',
+    category: 'welfare',
+    tagline: 'Connecting talent with opportunity',
+    description: 'Facilitating employment opportunities and career development for job seekers across all sectors.',
+    services: ['Job Listings', 'Career Counseling', 'Skill Training', 'Placement Support'],
+    stats: [
+      { value: '50K+', label: 'Jobs/Year' },
+      { value: '85%', label: 'Success Rate' }
+    ],
+    isActive: true,
+    colorHex: '#0EA5E9',
+    programs: [
+      {
+        slug: 'job-portal',
+        name: 'Job Portal',
+        description: 'A modern platform connecting job seekers with top employers across Pakistan with real-time tracking.',
+        image: '/images/jobs/portal.webp',
+        features: ['Real-time Tracking', 'Mobile Friendly', 'Verified Jobs'],
+        details: [
+          { label: 'Service', value: 'Online Portal' },
+          { label: 'Coverage', value: 'National' }
+        ]
+      },
+      {
+        slug: 'career-counseling',
+        name: 'Career Counseling',
+        description: 'Personalized sessions with industry experts to help you identify your strengths and map your career path.',
+        image: '/images/jobs/counseling.webp',
+        features: ['Expert Guidance', 'Skill Assessment', 'Roadmaps'],
+        details: [
+          { label: 'Type', value: 'One-on-One' },
+          { label: 'Format', value: 'Online/In-person' }
+        ]
+      },
+      {
+        slug: 'resume-building',
+        name: 'Resume Building',
+        description: 'Professional ATS-friendly resume and cover letter writing services to make you stand out.',
+        image: '/images/jobs/resume.webp',
+        features: ['ATS Optimization', 'Visual Design', 'Cover Letters'],
+        details: [
+          { label: 'Goal', value: 'Increase Interviews' },
+          { label: 'Style', value: 'Modern & Pro' }
+        ]
+      },
+      {
+        slug: 'interview-prep',
+        name: 'Interview Prep',
+        description: 'Mock interviews and feedback sessions to help you ace your next big opportunity with confidence.',
+        image: '/images/jobs/interview.webp',
+        features: ['Mock Interviews', 'Expert Feedback', 'Body Language'],
+        details: [
+          { label: 'Support', value: 'High Success' },
+          { label: 'Benefit', value: 'Boost Confidence' }
+        ]
+      }
+    ],
+    facilities: ['Career Centers', 'Computer Labs', 'Interview Rooms', 'Resource Libraries'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'jobs@khanhub.pk'
+  },
+  {
+    slug: 'skill-development',
+    name: 'Khan Hub Skills Center',
+    shortName: 'Skills Center',
+    icon: '🛠️',
+    image: '/images/skill.webp',
+    category: 'educational-services',
+    tagline: 'Building skills for tomorrow',
+    description: 'Vocational training and skill development programs to enhance employability and entrepreneurship.',
+    services: ['Technical Training', 'Vocational Courses', 'Certification Programs', 'Apprenticeships'],
+    stats: [
+      { value: '100K+', label: 'Trained' },
+      { value: '200+', label: 'Courses' }
+    ],
+    isActive: true,
+    colorHex: '#EA580C',
+    programs: ['IT Training', 'Welding & Fabrication', 'Electrical Work', 'Plumbing', 'Beautician Courses', 'Tailoring'],
+    facilities: ['Training Workshops', 'Computer Labs', 'Practice Areas', 'Certification Centers'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'skills@khanhub.pk'
+  },
+  {
+    slug: 'surgical-repair',
+    name: 'Khan Hub Surgical Repair Center',
+    shortName: 'Surgical Repair',
+    icon: '🔧',
+    image: '/images/surgical-repair.webp',
+    category: 'medical-services',
+    tagline: 'Reconstructive and repair surgery',
+    description: 'Specialized center for reconstructive and repair surgical procedures with modern facilities.',
+    services: ['Reconstructive Surgery', 'Plastic Surgery', 'Burn Treatment', 'Trauma Care'],
+    stats: [
+      { value: '5K+', label: 'Procedures' },
+      { value: '24/7', label: 'Available' }
+    ],
+    isActive: true,
+    colorHex: '#DB2777',
+    programs: ['Reconstructive Surgery', 'Cosmetic Surgery', 'Burn Unit', 'Trauma Surgery', 'Microsurgery'],
+    facilities: ['Specialized Operating Theaters', 'Burn Unit', 'Recovery Rooms', 'Physiotherapy', 'Counseling Center'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'info@surgicalrepair.khanhub.pk'
+  },
+  {
+    slug: 'transport',
+    name: 'Khan Hub Transport Services',
+    shortName: 'Transport',
+    icon: '🚐',
+    image: '/images/transport.webp',
+    category: 'welfare',
+    tagline: 'Safe and efficient transportation',
+    description: 'Regulating transportation, issuing licenses, and managing public transport systems.',
+    services: ['Driving Licenses', 'Vehicle Registration', 'Public Transport', 'Traffic Management'],
+    stats: [
+      { value: '500+', label: 'Routes' },
+      { value: '5M+', label: 'Licenses' }
+    ],
+    isActive: true,
+    colorHex: '#F59E0B',
+    programs: [
+      {
+        slug: 'driving-license',
+        name: 'Driving License',
+        description: 'Simplified process for issuing and renewing driving licenses for all vehicle categories.',
+        image: '/images/transport/license.webp',
+        features: ['Quick Processing', 'Digital Tracking', 'Renewals'],
+        details: [
+          { label: 'Level', value: 'All Categories' },
+          { label: 'Process', value: 'Digital/Manual' }
+        ]
+      },
+      {
+        slug: 'vehicle-registration',
+        name: 'Vehicle Registration',
+        description: 'New vehicle registration and ownership transfer services with transparent procedures.',
+        image: '/images/transport/registration.webp',
+        features: ['New Reg', 'Transfer', 'Number Plates'],
+        details: [
+          { label: 'Efficiency', value: 'Same Day' },
+          { label: 'Security', value: 'Verified' }
+        ]
+      },
+      {
+        slug: 'route-permits',
+        name: 'Route Permits',
+        description: 'Issuance and management of route permits for commercial and public transport vehicles.',
+        image: '/images/transport/permits.webp',
+        features: ['Route Allotment', 'Permit Renewal', 'Safety Check'],
+        details: [
+          { label: 'Sector', value: 'Commercial' },
+          { label: 'Validity', value: 'Annual' }
+        ]
+      }
+    ],
+    facilities: ['License Centers', 'Registration Offices', 'Testing Tracks', 'Customer Service Centers'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'info@transport.khanhub.pk'
+  },
+  {
+    slug: 'surgical-services',
+    name: 'Khan Hub Surgical Services',
+    shortName: 'Surgical Services',
+    icon: '🏨',
+    image: '/images/surgical-services.webp',
+    category: 'medical-services',
+    tagline: 'Expert surgical care',
+    description: 'Advanced surgical facilities with expert medical teams providing specialized surgical services.',
+    services: ['General Surgery', 'Specialized Procedures', 'Post-Op Care', 'Emergency Surgery'],
+    stats: [
+      { value: '10K+', label: 'Surgeries' },
+      { value: '95%', label: 'Success Rate' }
+    ],
+    isActive: true,
+    colorHex: '#7C3AED',
+    programs: ['General Surgery', 'Orthopedic Surgery', 'Cardiac Surgery', 'Neurosurgery', 'Laparoscopic Surgery'],
+    facilities: ['Modern Operating Rooms', 'Recovery Wards', 'ICU', 'Surgical Equipment', 'Sterilization Units'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'info@surgical.khanhub.pk'
+  },
+  {
+    slug: 'prosthetic-services',
+    name: 'Khan Hub Prosthetic Services',
+    shortName: 'Prosthetics',
+    icon: '🦾',
+    image: '/images/prosthetic.webp',
+    category: 'medical-services',
+    tagline: 'Restoring mobility and independence',
+    description: 'Advanced prosthetic and orthotic services to help individuals regain mobility and independence.',
+    services: ['Prosthetic Limbs', 'Orthotic Devices', 'Fitting Services', 'Rehabilitation'],
+    stats: [
+      { value: '1K+', label: 'Patients' },
+      { value: '95%', label: 'Satisfaction' }
+    ],
+    isActive: true,
+    colorHex: '#4F46E5',
+    programs: ['Custom Prosthetics', 'Orthotic Solutions', 'Adaptive Technology', 'Mobility Training'],
+    facilities: ['Prosthetic Labs', 'Assessment Rooms', 'Training Centers'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'prosthetics@khanhub.pk'
+  },
+  {
+    slug: 'residential-services',
+    name: 'Khan Hub Residential Services',
+    shortName: 'Residential',
+    icon: '🏡',
+    image: '/images/residential.webp',
+    category: 'welfare',
+    tagline: 'Quality housing solutions',
+    description: 'Developing housing schemes and providing affordable residential solutions for citizens.',
+    services: ['Housing Schemes', 'Building Approvals', 'Urban Planning', 'Low-Cost Housing'],
+    stats: [
+      { value: '50+', label: 'Projects' },
+      { value: '200K+', label: 'Units' }
+    ],
+    isActive: true,
+    colorHex: '#7C3AED',
+    programs: ['Affordable Housing', 'Urban Development', 'Building Permits', 'Infrastructure Development'],
+    facilities: ['Planning Offices', 'Approval Centers', 'Display Centers', 'Customer Service'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'housing@khanhub.pk'
+  },
+  {
+    slug: 'tourism',
+    name: 'Khan Hub Travel & Tours',
+    shortName: 'Tourism',
+    icon: '✈️',
+    image: '/images/travel-and-tour.webp',
+    category: 'welfare',
+    tagline: 'Explore the beauty of Pakistan',
+    description: 'Promoting tourism, heritage sites, and cultural attractions across Pakistan.',
+    services: ['Tourist Info', 'Heritage Sites', 'Travel Permits', 'Hospitality Training'],
+    stats: [
+      { value: '100+', label: 'Sites' },
+      { value: '2M+', label: 'Visitors' }
+    ],
+    isActive: true,
+    colorHex: '#16A34A',
+    programs: ['Tourist Guides', 'Heritage Conservation', 'Tourism Promotion', 'Hospitality Training'],
+    facilities: ['Information Centers', 'Tourist Facilitation Centers', 'Heritage Museums', 'Rest Areas'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'tourism@khanhub.pk'
+  },
+  {
+    slug: 'marketing',
+    name: 'Khan Hub Marketing Agency',
+    shortName: 'Marketing',
+    icon: '📱',
+    image: '/images/marketing.webp',
+    category: 'welfare',
+    tagline: 'Promoting growth and opportunities',
+    description: 'Strategic marketing and promotional services to support business growth and economic development.',
+    services: ['Business Promotion', 'Trade Support', 'Export Facilitation', 'Market Research'],
+    stats: [
+      { value: '500+', label: 'Campaigns' },
+      { value: '1K+', label: 'Businesses' }
+    ],
+    isActive: true,
+    colorHex: '#EF4444',
+    programs: ['Digital Marketing', 'Trade Fairs', 'Export Support', 'Brand Development', 'Market Analysis'],
+    facilities: ['Marketing Centers', 'Exhibition Halls', 'Conference Rooms', 'Media Studios'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'marketing@khanhub.pk'
+  },
+  {
+    slug: 'enterprises',
+    name: 'Khan Hub Enterprises',
+    shortName: 'Enterprises',
+    icon: '🏢',
+    image: '/images/enterprises.webp',
+    category: 'welfare',
+    tagline: 'Building sustainable businesses',
+    description: 'Fostering entrepreneurship and supporting small to medium enterprises with resources and guidance.',
+    services: ['Business Incubation', 'Funding Access', 'Mentorship', 'Workspace'],
+    stats: [
+      { value: '50+', label: 'Startups' },
+      { value: '500+', label: 'Jobs Created' }
+    ],
+    isActive: true,
+    colorHex: '#7C3AED',
+    programs: ['Startup Incubator', 'SME Support', 'Investment Network', 'Business Training'],
+    facilities: ['Co-working Spaces', 'Meeting Rooms', 'Innovation Hubs'],
+    contactPhone: '0300-6395220',
+    contactEmail: 'enterprises@khanhub.pk'
+  },
+  {
+    slug: 'institute-health-sciences',
+    name: 'Khan Hub Medical Institute',
+    shortName: 'Medical Institute',
+    icon: '🩺',
     image: '/images/institute-health-sciences.webp',
     category: 'educational-services',
     tagline: 'Excellence in Medical Education & Healthcare Training',
@@ -170,7 +700,7 @@ export const DEPARTMENTS: Department[] = [
     colorHex: '#2563EB',
     programs: ['Pharmacy Technician', 'LHV', 'CNA', 'OTT', 'MLT'],
     facilities: ['Modern Labs', 'Hostel Facility', 'Digital Library', 'Clinical Training'],
-    contactPhone: '+92-300-6395220',
+    contactPhone: '0300-6395220',
     contactEmail: 'info@ihs.khanhub.pk',
     features: [
       'Less Fee Structure',
@@ -255,261 +785,10 @@ export const DEPARTMENTS: Department[] = [
     ]
   },
   {
-    slug: 'education',
-    name: 'Khan Hub Education Department',
-    shortName: 'Education',
-    icon: '📚',
-    image: '/images/education.webp',
-    category: 'educational-services',
-    tagline: 'Quality education for every child',
-    description: 'Managing schools, colleges, and educational programs to ensure quality education for all.',
-    services: ['Public Schools', 'Scholarships', 'Teacher Training', 'Curriculum Development'],
-    stats: [
-      { value: '50,000+', label: 'Schools' },
-      { value: '15M+', label: 'Students' }
-    ],
-    isActive: true,
-    colorHex: '#059669',
-    programs: [
-      {
-        slug: 'primary-education',
-        name: 'Primary Education',
-        description: 'Foundational learning for children aged 5-11, focusing on core literacy, numeracy, and social skills.',
-        image: '/images/education/primary.webp',
-        features: ['Focused Curriculum', 'Holistic Development', 'Expert Educators'],
-        details: [
-          { label: 'Ages', value: '5 - 11 Years' },
-          { label: 'Focus', value: 'Foundational Literacy' }
-        ]
-      },
-      {
-        slug: 'secondary-education',
-        name: 'Secondary Education',
-        description: 'Comprehensive education for adolescents, preparing them for higher studies or vocational paths.',
-        image: '/images/education/secondary.webp',
-        features: ['Subject Specialization', 'Career Guidance', 'Modern Labs'],
-        details: [
-          { label: 'Ages', value: '11 - 16 Years' },
-          { label: 'Level', value: 'Middle & High School' }
-        ]
-      },
-      {
-        slug: 'higher-secondary',
-        name: 'Higher Secondary',
-        description: 'Advanced schooling focused on specialized streams like Pre-Medical, Pre-Engineering, and ICS.',
-        image: '/images/education/higher-secondary.webp',
-        features: ['Stream Selection', 'Board Exam Prep', 'Practical Training'],
-        details: [
-          { label: 'Duration', value: '2 Years' },
-          { label: 'Streams', value: 'Medical, Engineering, IT' }
-        ]
-      },
-      {
-        slug: 'special-education',
-        name: 'Special Education',
-        description: 'Tailored educational programs for children with diverse learning needs and abilities.',
-        image: '/images/education/special.webp',
-        features: ['Individualized Plans', 'Therapeutic Support', 'Inclusive Environment'],
-        details: [
-          { label: 'Focus', value: 'Inclusivity' },
-          { label: 'Support', value: 'Specialized Staff' }
-        ]
-      },
-      {
-        slug: 'adult-literacy',
-        name: 'Adult Literacy',
-        description: 'Empowering adults with essential reading, writing, and life skills for better opportunities.',
-        image: '/images/education/adult.webp',
-        features: ['Flexible Timing', 'Functional Skills', 'Community Based'],
-        details: [
-          { label: 'Focus', value: 'Lifelong Learning' },
-          { label: 'Eligibility', value: 'Ages 18+' }
-        ]
-      }
-    ],
-    facilities: ['District Offices', 'Training Centers', 'Assessment Centers', 'Resource Libraries'],
-    contactPhone: '+92-300-2345678',
-    contactEmail: 'info@education.khanhub.pk'
-  },
-  {
-    slug: 'medical-center',
-    name: 'Khan Hub Medical Center',
-    shortName: 'Medical Center',
-    icon: '🏥',
-    image: '/images/medical-center.webp',
-    category: 'medical-services',
-    tagline: 'Comprehensive healthcare services',
-    description: 'State-of-the-art medical facilities providing comprehensive healthcare services to communities nationwide. Our medical center is equipped with modern technology and staffed by experienced healthcare professionals dedicated to patient care.',
-    services: ['Emergency Care', 'Specialized Treatment', 'Diagnostics', 'Patient Care'],
-    stats: [
-      { value: '1,000+', label: 'Beds' },
-      { value: '24/7', label: 'Emergency' }
-    ],
-    isActive: true,
-    colorHex: '#DC2626',
-    programs: [
-      {
-        slug: 'emergency-services',
-        name: 'Emergency Services',
-        description: '24/7 emergency care with state-of-the-art trauma facilities and expert medical staff.',
-        image: '/images/medical/emergency.webp',
-        features: ['24/7 Availability', 'Trauma Care', 'Rapid Response'],
-        details: [
-          { label: 'Service', value: 'Emergency' },
-          { label: 'Response', value: 'Immediate' }
-        ]
-      },
-      {
-        slug: 'general-medicine',
-        name: 'General Medicine',
-        description: 'Comprehensive evaluation and treatment of common illnesses and chronic conditions.',
-        image: '/images/medical/medicine.webp',
-        features: ['Full Checkup', 'Chronic Care', 'Consultations'],
-        details: [
-          { label: 'Type', value: 'Outpatient' },
-          { label: 'Care', value: 'Primary' }
-        ]
-      },
-      {
-        slug: 'cardiology',
-        name: 'Cardiology',
-        description: 'Specialized heart care including diagnostics, treatment, and preventive cardiology.',
-        image: '/images/medical/cardiology.webp',
-        features: ['ECG/Echo', 'TMT Tests', 'Heart Care'],
-        details: [
-          { label: 'Specialty', value: 'Heart' },
-          { label: 'Tech', value: 'Digital Diagnostics' }
-        ]
-      },
-      {
-        slug: 'pediatrics',
-        name: 'Pediatrics',
-        description: 'Dedicated healthcare for infants, children, and adolescents with a child-friendly environment.',
-        image: '/images/medical/pediatrics.webp',
-        features: ['Child Wellness', 'Vaccinations', 'Specialized Care'],
-        details: [
-          { label: 'Focus', value: 'Child Health' },
-          { label: 'Ages', value: '0 - 18' }
-        ]
-      }
-    ],
-    facilities: [
-      '24/7 Emergency Department',
-      'Modern ICU Units',
-      'Advanced Operating Theaters',
-      'CT Scan & MRI',
-      'Digital X-Ray',
-      'Fully Equipped Laboratory',
-      'Pharmacy',
-      'Blood Bank',
-      'Ambulance Service',
-      'Patient Wards'
-    ],
-    contactPhone: '+92-300-MEDICAL-1',
-    contactEmail: 'emergency@medicalcenter.khanhub.pk'
-  },
-  {
-    slug: 'transport',
-    name: 'Khan Hub Transport Department',
-    shortName: 'Transport',
-    icon: '🚗',
-    image: '/images/transport.webp',
-    category: 'welfare',
-    tagline: 'Safe and efficient transportation',
-    description: 'Regulating transportation, issuing licenses, and managing public transport systems.',
-    services: ['Driving Licenses', 'Vehicle Registration', 'Public Transport', 'Traffic Management'],
-    stats: [
-      { value: '500+', label: 'Routes' },
-      { value: '5M+', label: 'Licenses' }
-    ],
-    isActive: true,
-    colorHex: '#F59E0B',
-    programs: [
-      {
-        slug: 'driving-license',
-        name: 'Driving License',
-        description: 'Simplified process for issuing and renewing driving licenses for all vehicle categories.',
-        image: '/images/transport/license.webp',
-        features: ['Quick Processing', 'Digital Tracking', 'Renewals'],
-        details: [
-          { label: 'Level', value: 'All Categories' },
-          { label: 'Process', value: 'Digital/Manual' }
-        ]
-      },
-      {
-        slug: 'vehicle-registration',
-        name: 'Vehicle Registration',
-        description: 'New vehicle registration and ownership transfer services with transparent procedures.',
-        image: '/images/transport/registration.webp',
-        features: ['New Reg', 'Transfer', 'Number Plates'],
-        details: [
-          { label: 'Efficiency', value: 'Same Day' },
-          { label: 'Security', value: 'Verified' }
-        ]
-      },
-      {
-        slug: 'route-permits',
-        name: 'Route Permits',
-        description: 'Issuance and management of route permits for commercial and public transport vehicles.',
-        image: '/images/transport/permits.webp',
-        features: ['Route Allotment', 'Permit Renewal', 'Safety Check'],
-        details: [
-          { label: 'Sector', value: 'Commercial' },
-          { label: 'Validity', value: 'Annual' }
-        ]
-      }
-    ],
-    facilities: ['License Centers', 'Registration Offices', 'Testing Tracks', 'Customer Service Centers'],
-    contactPhone: '+92-300-3456789',
-    contactEmail: 'info@transport.khanhub.pk'
-  },
-  {
-    slug: 'surgical-services',
-    name: 'Khan Hub Surgical Services',
-    shortName: 'Surgical Services',
-    icon: '⚕️',
-    image: '/images/surgical-services.webp',
-    category: 'medical-services',
-    tagline: 'Expert surgical care',
-    description: 'Advanced surgical facilities with expert medical teams providing specialized surgical services.',
-    services: ['General Surgery', 'Specialized Procedures', 'Post-Op Care', 'Emergency Surgery'],
-    stats: [
-      { value: '10K+', label: 'Surgeries' },
-      { value: '95%', label: 'Success Rate' }
-    ],
-    isActive: true,
-    colorHex: '#7C3AED',
-    programs: ['General Surgery', 'Orthopedic Surgery', 'Cardiac Surgery', 'Neurosurgery', 'Laparoscopic Surgery'],
-    facilities: ['Modern Operating Rooms', 'Recovery Wards', 'ICU', 'Surgical Equipment', 'Sterilization Units'],
-    contactPhone: '+92-300-4567890',
-    contactEmail: 'info@surgical.khanhub.pk'
-  },
-  {
-    slug: 'surgical-repair',
-    name: 'Khan Hub Surgical Repair Center',
-    shortName: 'Surgical Repair',
-    icon: '🔧',
-    image: '/images/surgical-repair.webp',
-    category: 'medical-services',
-    tagline: 'Reconstructive and repair surgery',
-    description: 'Specialized center for reconstructive and repair surgical procedures with modern facilities.',
-    services: ['Reconstructive Surgery', 'Plastic Surgery', 'Burn Treatment', 'Trauma Care'],
-    stats: [
-      { value: '5K+', label: 'Procedures' },
-      { value: '24/7', label: 'Available' }
-    ],
-    isActive: true,
-    colorHex: '#DB2777',
-    programs: ['Reconstructive Surgery', 'Cosmetic Surgery', 'Burn Unit', 'Trauma Surgery', 'Microsurgery'],
-    facilities: ['Specialized Operating Theaters', 'Burn Unit', 'Recovery Rooms', 'Physiotherapy', 'Counseling Center'],
-    contactPhone: '+92-300-5678901',
-    contactEmail: 'info@surgicalrepair.khanhub.pk'
-  },
-  {
     slug: 'social-welfare',
-    name: 'Khan Hub Social Welfare',
-    shortName: 'Social Welfare',
-    icon: '🤝',
+    name: 'Khan Hub Welfare Org',
+    shortName: 'Welfare Org',
+    icon: '❤️',
     image: '/images/welfare-organization.webp',
     category: 'welfare',
     tagline: 'Supporting communities in need',
@@ -568,287 +847,8 @@ export const DEPARTMENTS: Department[] = [
       }
     ],
     facilities: ['Welfare Centers', 'Community Halls', 'Support Offices', 'Distribution Points'],
-    contactPhone: '+92-300-6789012',
+    contactPhone: '0300-6395220',
     contactEmail: 'info@welfare.khanhub.pk'
-  },
-  {
-    slug: 'job-placement',
-    name: 'Khan Hub Job Placement Services',
-    shortName: 'Job Placement',
-    icon: '💼',
-    image: '/images/job.webp',
-    category: 'welfare',
-    tagline: 'Connecting talent with opportunity',
-    description: 'Facilitating employment opportunities and career development for job seekers across all sectors.',
-    services: ['Job Listings', 'Career Counseling', 'Skill Training', 'Placement Support'],
-    stats: [
-      { value: '50K+', label: 'Jobs/Year' },
-      { value: '85%', label: 'Success Rate' }
-    ],
-    isActive: true,
-    colorHex: '#0EA5E9',
-    programs: [
-      {
-        slug: 'job-portal',
-        name: 'Job Portal',
-        description: 'A modern platform connecting job seekers with top employers across Pakistan with real-time tracking.',
-        image: '/images/jobs/portal.webp',
-        features: ['Real-time Tracking', 'Mobile Friendly', 'Verified Jobs'],
-        details: [
-          { label: 'Service', value: 'Online Portal' },
-          { label: 'Coverage', value: 'National' }
-        ]
-      },
-      {
-        slug: 'career-counseling',
-        name: 'Career Counseling',
-        description: 'Personalized sessions with industry experts to help you identify your strengths and map your career path.',
-        image: '/images/jobs/counseling.webp',
-        features: ['Expert Guidance', 'Skill Assessment', 'Roadmaps'],
-        details: [
-          { label: 'Type', value: 'One-on-One' },
-          { label: 'Format', value: 'Online/In-person' }
-        ]
-      },
-      {
-        slug: 'resume-building',
-        name: 'Resume Building',
-        description: 'Professional ATS-friendly resume and cover letter writing services to make you stand out.',
-        image: '/images/jobs/resume.webp',
-        features: ['ATS Optimization', 'Visual Design', 'Cover Letters'],
-        details: [
-          { label: 'Goal', value: 'Increase Interviews' },
-          { label: 'Style', value: 'Modern & Pro' }
-        ]
-      },
-      {
-        slug: 'interview-prep',
-        name: 'Interview Prep',
-        description: 'Mock interviews and feedback sessions to help you ace your next big opportunity with confidence.',
-        image: '/images/jobs/interview.webp',
-        features: ['Mock Interviews', 'Expert Feedback', 'Body Language'],
-        details: [
-          { label: 'Support', value: 'High Success' },
-          { label: 'Benefit', value: 'Boost Confidence' }
-        ]
-      }
-    ],
-    facilities: ['Career Centers', 'Computer Labs', 'Interview Rooms', 'Resource Libraries'],
-    contactPhone: '+92-300-7890123',
-    contactEmail: 'jobs@khanhub.pk'
-  },
-  {
-    slug: 'skill-development',
-    name: 'Khan Hub Skill Development',
-    shortName: 'Skill Development',
-    icon: '🎓',
-    image: '/images/skill.webp',
-    category: 'educational-services',
-    tagline: 'Building skills for tomorrow',
-    description: 'Vocational training and skill development programs to enhance employability and entrepreneurship.',
-    services: ['Technical Training', 'Vocational Courses', 'Certification Programs', 'Apprenticeships'],
-    stats: [
-      { value: '100K+', label: 'Trained' },
-      { value: '200+', label: 'Courses' }
-    ],
-    isActive: true,
-    colorHex: '#EA580C',
-    programs: ['IT Training', 'Welding & Fabrication', 'Electrical Work', 'Plumbing', 'Beautician Courses', 'Tailoring'],
-    facilities: ['Training Workshops', 'Computer Labs', 'Practice Areas', 'Certification Centers'],
-    contactPhone: '+92-300-8901234',
-    contactEmail: 'skills@khanhub.pk'
-  },
-  {
-    slug: 'residential-services',
-    name: 'Khan Hub Residential Services',
-    shortName: 'Residential',
-    icon: '🏘️',
-    image: '/images/residential.webp',
-    category: 'welfare',
-    tagline: 'Quality housing solutions',
-    description: 'Developing housing schemes and providing affordable residential solutions for citizens.',
-    services: ['Housing Schemes', 'Building Approvals', 'Urban Planning', 'Low-Cost Housing'],
-    stats: [
-      { value: '50+', label: 'Projects' },
-      { value: '200K+', label: 'Units' }
-    ],
-    isActive: true,
-    colorHex: '#7C3AED',
-    programs: ['Affordable Housing', 'Urban Development', 'Building Permits', 'Infrastructure Development'],
-    facilities: ['Planning Offices', 'Approval Centers', 'Display Centers', 'Customer Service'],
-    contactPhone: '+92-300-9012345',
-    contactEmail: 'housing@khanhub.pk'
-  },
-  {
-    slug: 'rehabilitation',
-    name: 'Khan Hub Rehabilitation Center',
-    shortName: 'Rehabilitation',
-    icon: '♿',
-    image: '/images/rehab.webp',
-    category: 'medical-services',
-    tagline: 'Recovery and rehabilitation support',
-    description: 'Comprehensive rehabilitation services for physical, mental, and social recovery programs.',
-    services: ['Physical Therapy', 'Mental Health', 'Addiction Treatment', 'Counseling'],
-    stats: [
-      { value: '10K+', label: 'Patients' },
-      { value: '90%', label: 'Recovery' }
-    ],
-    isActive: true,
-    colorHex: '#0891B2',
-    programs: [
-      {
-        slug: 'physical-rehabilitation',
-        name: 'Physical Therapy',
-        description: 'Advanced physiotherapy and exercise programs to help patients recover mobility after injury or surgery.',
-        image: '/images/rehab/physical.webp',
-        features: ['Mobility Recovery', 'Pain Management', 'Expert Therapists'],
-        details: [
-          { label: 'Type', value: 'Physical' },
-          { label: 'Care', value: 'Individualized' }
-        ]
-      },
-      {
-        slug: 'drug-rehab',
-        name: 'Drug Rehabilitation',
-        description: 'Holistic recovery programs combining medical detox with psychological counseling and community support.',
-        image: '/images/rehab/drug.webp',
-        features: ['Medical Detox', 'Counseling', 'Aftercare'],
-        details: [
-          { label: 'Program', value: 'Inpatient' },
-          { label: 'Support', value: '24/7' }
-        ]
-      },
-      {
-        slug: 'psychological-counseling',
-        name: 'Psychological Counseling',
-        description: 'Expert-led sessions focusing on trauma recovery, depression, and mental resilience.',
-        image: '/images/rehab/counseling.webp',
-        features: ['Trauma Recovery', 'Mental Resilience', 'Safe Space'],
-        details: [
-          { label: 'Focus', value: 'Mental Health' },
-          { label: 'Format', value: 'One-on-One' }
-        ]
-      },
-      {
-        slug: 'vocational-rehab',
-        name: 'Vocational Rehab',
-        description: 'Helping recovering patients learn new skills and find meaningful employment during their recovery journey.',
-        image: '/images/rehab/vocational.webp',
-        features: ['Skill Building', 'Job Placement', 'Workshops'],
-        details: [
-          { label: 'Goal', value: 'Independence' },
-          { label: 'Benefit', value: 'Career Skills' }
-        ]
-      }
-    ],
-    facilities: ['Therapy Rooms', 'Counseling Centers', 'Residential Units', 'Exercise Areas', 'Group Therapy Halls'],
-    contactPhone: '+92-300-0123456',
-    contactEmail: 'rehab@khanhub.pk'
-  },
-  {
-    slug: 'tourism',
-    name: 'Khan Hub Travel & Tourism',
-    shortName: 'Tourism',
-    icon: '🏔️',
-    image: '/images/travel-and-tour.webp',
-    category: 'welfare',
-    tagline: 'Explore the beauty of Pakistan',
-    description: 'Promoting tourism, heritage sites, and cultural attractions across Pakistan.',
-    services: ['Tourist Info', 'Heritage Sites', 'Travel Permits', 'Hospitality Training'],
-    stats: [
-      { value: '100+', label: 'Sites' },
-      { value: '2M+', label: 'Visitors' }
-    ],
-    isActive: true,
-    colorHex: '#16A34A',
-    programs: ['Tourist Guides', 'Heritage Conservation', 'Tourism Promotion', 'Hospitality Training'],
-    facilities: ['Information Centers', 'Tourist Facilitation Centers', 'Heritage Museums', 'Rest Areas'],
-    contactPhone: '+92-300-1234560',
-    contactEmail: 'tourism@khanhub.pk'
-  },
-  {
-    slug: 'marketing',
-    name: 'Khan Hub Marketing & Promotion',
-    shortName: 'Marketing',
-    icon: '📢',
-    image: '/images/marketing.webp',
-    category: 'welfare',
-    tagline: 'Promoting growth and opportunities',
-    description: 'Strategic marketing and promotional services to support business growth and economic development.',
-    services: ['Business Promotion', 'Trade Support', 'Export Facilitation', 'Market Research'],
-    stats: [
-      { value: '500+', label: 'Campaigns' },
-      { value: '1K+', label: 'Businesses' }
-    ],
-    isActive: true,
-    colorHex: '#EF4444',
-    programs: ['Digital Marketing', 'Trade Fairs', 'Export Support', 'Brand Development', 'Market Analysis'],
-    facilities: ['Marketing Centers', 'Exhibition Halls', 'Conference Rooms', 'Media Studios'],
-    contactPhone: '+92-300-2345601',
-    contactEmail: 'marketing@khanhub.pk'
-  },
-  {
-    slug: 'prosthetic-services',
-    name: 'Khan Hub Prosthetic Services',
-    shortName: 'Prosthetics',
-    icon: '🦾',
-    image: '/images/prosthetic.webp',
-    category: 'medical-services',
-    tagline: 'Restoring mobility and independence',
-    description: 'Advanced prosthetic and orthotic services to help individuals regain mobility and independence.',
-    services: ['Prosthetic Limbs', 'Orthotic Devices', 'Fitting Services', 'Rehabilitation'],
-    stats: [
-      { value: '1K+', label: 'Patients' },
-      { value: '95%', label: 'Satisfaction' }
-    ],
-    isActive: true,
-    colorHex: '#4F46E5',
-    programs: ['Custom Prosthetics', 'Orthotic Solutions', 'Adaptive Technology', 'Mobility Training'],
-    facilities: ['Prosthetic Labs', 'Assessment Rooms', 'Training Centers'],
-    contactPhone: '+92-300-7654321',
-    contactEmail: 'prosthetics@khanhub.pk'
-  },
-  {
-    slug: 'enterprises',
-    name: 'Khan Hub Enterprises',
-    shortName: 'Enterprises',
-    icon: '🏢',
-    image: '/images/enterprises.webp',
-    category: 'welfare',
-    tagline: 'Building sustainable businesses',
-    description: 'Fostering entrepreneurship and supporting small to medium enterprises with resources and guidance.',
-    services: ['Business Incubation', 'Funding Access', 'Mentorship', 'Workspace'],
-    stats: [
-      { value: '50+', label: 'Startups' },
-      { value: '500+', label: 'Jobs Created' }
-    ],
-    isActive: true,
-    colorHex: '#7C3AED',
-    programs: ['Startup Incubator', 'SME Support', 'Investment Network', 'Business Training'],
-    facilities: ['Co-working Spaces', 'Meeting Rooms', 'Innovation Hubs'],
-    contactPhone: '+92-300-9876543',
-    contactEmail: 'enterprises@khanhub.pk'
-  },
-  {
-    slug: 'sukoon-center',
-    name: 'Khan Hub Sukoon Center',
-    shortName: 'Sukoon',
-    icon: '🧠',
-    image: '/images/sukoon.webp',
-    category: 'mental-health',
-    tagline: 'Mental peace and well-being',
-    description: 'Dedicated center for mental health support, stress management, and emotional well-being.',
-    services: ['Mental Health Counseling', 'Stress Management', 'Meditation Sessions', 'Support Groups'],
-    stats: [
-      { value: '1K+', label: 'Members' },
-      { value: '98%', label: 'Positive Feedback' }
-    ],
-    isActive: true,
-    colorHex: '#14B8A6',
-    programs: ['Individual Counseling', 'Group Therapy', 'Mindfulness Workshops', 'Yoga & Meditation'],
-    facilities: ['Meditation Rooms', 'Therapy Suites', 'Relaxation Gardens'],
-    contactPhone: '+92-300-1122334',
-    contactEmail: 'sukoon@khanhub.pk'
   }
 ];
 

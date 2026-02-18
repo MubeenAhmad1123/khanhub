@@ -25,11 +25,11 @@ import { SITE } from '@/data/site';
 const NAV_LINKS = [
   { label: 'Home', href: '/', icon: '🏠' },
   { label: 'Departments', href: '/departments', icon: '🏢' },
-  { label: 'About', href: '/about', icon: 'ℹ️' },
-  { label: 'Certificates', href: '/certificates', icon: '🏆' },
   { label: 'Media', href: '/media', icon: '📸' },
-  { label: 'Success Stories', href: '/success-stories', icon: '🌟', mobileOnly: true },
   { label: 'Contact', href: '/contact', icon: '📞' },
+  { label: 'Certificates', href: '/certificates', icon: '🏆' },
+  { label: 'Success Stories', href: '/success-stories', icon: '🌟', mobileOnly: true },
+  { label: 'About', href: '/about', icon: 'ℹ️' },
 ] as const;
 
 // Memoized Logo Component

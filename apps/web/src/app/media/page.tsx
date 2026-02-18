@@ -694,17 +694,18 @@ export default function MediaPage() {
       <article itemScope itemType="https://schema.org/MediaGallery" className="overflow-x-hidden">
         {/* Hero Section - Cinematic Background version */}
         <PageHero
-          backgroundImage="/images/media-hero.webp"
+          type="split"
           badge="Media Gallery"
           title="Our Stories in Action"
           subtitle="Watch real stories from our clinics, institutes, and welfare centers — told through the people we serve."
+          image="/images/media-hero.webp"
           cta={
             <Link href="#media-heading" className="btn-success">
               📽️ Browse Gallery
             </Link>
           }
         >
-          <Link href="/donate" className="btn-secondary bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20">
+          <Link href="/donate" className="btn-secondary">
             💝 Support Our Work
           </Link>
         </PageHero>
