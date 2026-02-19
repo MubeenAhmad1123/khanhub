@@ -39,18 +39,18 @@ const CategoryButton = memo(function CategoryButton({
   return (
     <button
       onClick={handleClick}
-      className={`group relative px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm font-semibold transition-all duration-300 border-2 touch-manipulation min-h-[44px] ${isActive
+      className={`group relative px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-sm font-semibold transition-all duration-300 border-2 touch-manipulation min-h-[40px] sm:min-h-[44px] ${isActive
         ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/30'
         : 'bg-white border-neutral-200 text-neutral-700 hover:border-primary-400 hover:shadow-md'
         }`}
       aria-pressed={isActive}
       aria-label={`Filter by ${label}, ${count} departments`}
     >
-      <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
-        {categoryKey !== 'all' && <span className="text-base sm:text-lg" aria-hidden="true">{icon}</span>}
-        <span className="text-xs sm:text-sm">{label}</span>
+      <span className="relative z-10 flex items-center justify-center gap-1.5 sm:gap-2">
+        {categoryKey !== 'all' && <span className="text-sm sm:text-lg" aria-hidden="true">{icon}</span>}
+        <span className="text-[10px] sm:text-sm whitespace-nowrap">{label}</span>
         <span
-          className={`inline-flex items-center justify-center min-w-[20px] sm:min-w-[24px] h-5 sm:h-6 px-1.5 sm:px-2 rounded-full text-xs font-bold transition-colors ${isActive
+          className={`inline-flex items-center justify-center min-w-[18px] sm:min-w-[24px] h-4.5 sm:h-6 px-1 sm:px-2 rounded-full text-[9px] sm:text-xs font-bold transition-colors ${isActive
             ? 'bg-white/20 text-white'
             : 'bg-neutral-100 text-neutral-600 group-hover:bg-primary-100 group-hover:text-primary-700'
             }`}
@@ -168,8 +168,8 @@ export default function DepartmentsSection() {
               />
             </div>
 
-            {/* Bottom Row: Categories */}
-            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+            {/* Bottom Row: Categories - Grid on mobile, Flex on desktop */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap justify-center gap-2 sm:gap-3 w-full sm:w-auto">
               {DEPARTMENT_CATEGORIES.map((cat) => (
                 <CategoryButton
                   key={cat.key}
