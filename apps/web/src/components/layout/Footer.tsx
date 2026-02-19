@@ -177,7 +177,7 @@ export default function Footer() {
               </li>
             </ul>
 
-            <div className="grid grid-cols-3 gap-3 pt-2 w-fit">
+            <div className="flex flex-row items-center gap-2 sm:gap-3 pt-2 w-full sm:w-fit">
               {socialMedia.map(({ platform, url, icon: Icon, label, hoverClass }) => (
                 <a
                   key={platform}
