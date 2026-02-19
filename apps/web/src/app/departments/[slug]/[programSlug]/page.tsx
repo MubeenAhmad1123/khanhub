@@ -11,17 +11,30 @@ type Params = Promise<{ slug: string; programSlug: string }>;
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
     const { slug, programSlug } = await params;
     const department = getDepartmentBySlug(slug);
-    const program = typeof department?.programs !== 'string' && Array.isArray(department?.programs)
+
+    // Find in programs
+    let programData: any = typeof department?.programs !== 'string' && Array.isArray(department?.programs)
         ? department.programs.find(p => typeof p !== 'string' && p.slug === programSlug)
         : null;
 
-    if (!department || !program || typeof program === 'string') {
-        return { title: 'Program Not Found' };
+    // Find in courses if not found in programs
+    if (!programData && department?.subDepartments) {
+        for (const sub of department.subDepartments) {
+            const course = sub.courses.find(c => c.slug === programSlug);
+            if (course) {
+                programData = course;
+                break;
+            }
+        }
+    }
+
+    if (!department || !programData) {
+        return { title: 'Not Found | Khan Hub' };
     }
 
     return {
-        title: `${program.name} - ${department.name} | Khan Hub`,
-        description: program.description,
+        title: `${programData.name} - ${department.name} | Khan Hub`,
+        description: programData.description || `${programData.name} program details at Khan Hub.`,
     };
 }
 
@@ -29,12 +42,33 @@ export default async function ProgramDetailPage({ params }: { params: Params }) 
     const { slug, programSlug } = await params;
     const department = getDepartmentBySlug(slug);
 
-    const program = department && Array.isArray(department.programs)
+    // Find in programs
+    let programData: any = department && Array.isArray(department.programs)
         ? department.programs.find(p => typeof p !== 'string' && p.slug === programSlug)
         : null;
 
-    if (!department || !program || typeof program === 'string') {
+    // Find in courses if not found in programs
+    if (!programData && department?.subDepartments) {
+        for (const sub of department.subDepartments) {
+            const course = sub.courses.find(c => c.slug === programSlug);
+            if (course) {
+                programData = course;
+                break;
+            }
+        }
+    }
+
+    if (!department || !programData) {
         notFound();
+    }
+
+    // Map course-specific fields to detail labels if available
+    const quickDetails = programData.details || [];
+    if (programData.duration && !quickDetails.some((d: any) => d.label === 'Duration')) {
+        quickDetails.push({ label: 'Duration', value: programData.duration });
+    }
+    if (programData.eligibility && !quickDetails.some((d: any) => d.label === 'Eligibility')) {
+        quickDetails.push({ label: 'Eligibility', value: programData.eligibility });
     }
 
     const theme = getDepartmentTheme(department.slug);
@@ -60,10 +94,10 @@ export default async function ProgramDetailPage({ params }: { params: Params }) 
                     <div className="grid lg:grid-cols-2 gap-12 items-center">
                         <div className="text-white">
                             <h1 className="font-display font-bold text-4xl lg:text-5xl mb-6 leading-tight">
-                                {program.name}
+                                {programData.name}
                             </h1>
                             <p className="text-xl text-white/90 mb-8 leading-relaxed">
-                                {program.description}
+                                {programData.description}
                             </p>
 
                             <div className="flex flex-wrap gap-4">
@@ -82,11 +116,11 @@ export default async function ProgramDetailPage({ params }: { params: Params }) 
                             </div>
                         </div>
 
-                        {program.image && (
+                        {programData.image && (
                             <div className="relative h-64 lg:h-96 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
                                 <Image
-                                    src={program.image}
-                                    alt={program.name}
+                                    src={programData.image}
+                                    alt={programData.name}
                                     fill
                                     className="object-cover"
                                     priority
@@ -103,19 +137,19 @@ export default async function ProgramDetailPage({ params }: { params: Params }) 
                     <div className="grid lg:grid-cols-3 gap-12">
                         <div className="lg:col-span-2 space-y-12">
                             {/* Features */}
-                            {program.features && (
+                            {programData.features && (
                                 <div className="bg-white rounded-3xl p-8 border border-neutral-200 shadow-sm">
                                     <h2 className="text-2xl font-bold text-neutral-900 mb-8 font-display">
-                                        Key Features of {program.name}
+                                        Key Features of {programData.name}
                                     </h2>
                                     <div className="grid sm:grid-cols-2 gap-6">
-                                        {program.features.map((feature, idx) => (
+                                        {(programData.features as string[]).map((feature: string, idx: number) => (
                                             <div key={idx} className="flex items-start gap-4">
                                                 <div
                                                     className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                                                     style={{ backgroundColor: theme.light }}
                                                 >
-                                                    <Check className="w-5 h-5 text-white" style={{ color: theme.primary }} />
+                                                    <Check className="w-5 h-5" style={{ color: theme.primary }} />
                                                 </div>
                                                 <span className="text-lg text-neutral-700 font-medium">{feature}</span>
                                             </div>
@@ -128,7 +162,7 @@ export default async function ProgramDetailPage({ params }: { params: Params }) 
                             <div className="prose prose-lg max-w-none text-neutral-700">
                                 <h2 className="text-3xl font-bold text-neutral-900 font-display">Program Overview</h2>
                                 <p>
-                                    The {program.name} program at {department.name} is designed to provide comprehensive
+                                    The {programData.name} program at {department.name} is designed to provide comprehensive
                                     knowledge and practical skills essential for success in this field. Our curriculum
                                     is regularly updated to align with the latest industry standards and educational
                                     requirements in Pakistan.
@@ -142,13 +176,13 @@ export default async function ProgramDetailPage({ params }: { params: Params }) 
 
                         {/* Sidebar */}
                         <div className="space-y-8">
-                            {program.details && (
+                            {quickDetails && quickDetails.length > 0 && (
                                 <div className="bg-white rounded-3xl p-8 border border-neutral-200 shadow-sm">
                                     <h3 className="text-xl font-bold text-neutral-900 mb-6 font-display">
                                         Quick Details
                                     </h3>
                                     <div className="space-y-4">
-                                        {program.details.map((detail, idx) => (
+                                        {quickDetails.map((detail: { label: string; value: string }, idx: number) => (
                                             <div key={idx} className="flex justify-between items-center py-3 border-b border-neutral-100 last:border-0">
                                                 <span className="text-neutral-500 font-medium">{detail.label}</span>
                                                 <span className="text-neutral-900 font-bold">{detail.value}</span>

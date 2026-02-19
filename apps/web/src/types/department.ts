@@ -66,7 +66,18 @@ export interface SubDepartment {
 
 export interface Course {
     name: string;
+    slug?: string;
     duration: string;
     eligibility: string;
     description?: string;
+    degree?: string;
+    image?: string;
+    features?: string[];
+    details?: { label: string; value: string }[];
+}
+
+export interface DepartmentTheme {
+    primary: string;
+    secondary: string;
+    light: string;
 }

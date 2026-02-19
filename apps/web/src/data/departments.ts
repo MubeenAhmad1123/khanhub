@@ -715,39 +715,38 @@ export const DEPARTMENTS: Department[] = [
         title: 'Department of Pharmacy',
         courses: [
           {
+            name: 'Pharm-D (Doctor of Pharmacy)',
+            slug: 'pharm-d',
+            duration: '5 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 60% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/pharm-d.webp',
+            description: 'The Doctor of Pharmacy (Pharm-D) is a professional degree that prepares students for a career in the pharmaceutical sciences. Our program focuses on clinical pharmacy, drug interactions, and patient care.',
+            features: [
+              'Modern Pharmaceutical Labs',
+              'Hospital Pharmacy Training',
+              'Expert Faculty from Industry',
+              'Research Opportunities'
+            ],
+            details: [
+              { label: 'Level', value: 'Doctorate' },
+              { label: 'Credits', value: '198 Credit Hours' },
+              { label: 'Affiliation', value: 'Pharmacy Council' }
+            ]
+          },
+          {
             name: 'Pharmacy Technician (Category-B)',
+            slug: 'pharmacy-technician-category-b',
             duration: '2 Years',
-            eligibility: 'Matric (Science) - No minimum division required'
-          }
-        ]
-      },
-      {
-        title: 'FSc Paramedical Courses',
-        courses: [
-          {
-            name: 'Operation Theater Technology (OTT)',
-            duration: '2 Years',
-            eligibility: 'Matric (Science) or above - Min 45% marks'
-          },
-          {
-            name: 'Medical Lab Technology (MLT)',
-            duration: '2 Years',
-            eligibility: 'Matric (Science) or above - Min 45% marks'
-          },
-          {
-            name: 'Radiography & Imaging Technology (RIT)',
-            duration: '2 Years',
-            eligibility: 'Matric (Science) or above - Min 45% marks'
-          },
-          {
-            name: 'Dispenser',
-            duration: '2 Years',
-            eligibility: 'Matric (Science) or above - Min 45% marks'
-          },
-          {
-            name: 'Dialysis Technician',
-            duration: '2 Years',
-            eligibility: 'Matric (Science) or above - Min 45% marks'
+            eligibility: 'Matric (Science) - Min 45% marks',
+            degree: 'Diploma Program',
+            image: '/images/ihs/courses/pharmacy-technician.webp',
+            description: 'This diploma program provides foundational knowledge in pharmacy assistance, drug dispensing, and retail pharmacy management.',
+            features: [
+              'Retail Pharmacy Practical',
+              'Drug Dispensing Skills',
+              'Medical Store Management'
+            ]
           }
         ]
       },
@@ -755,19 +754,201 @@ export const DEPARTMENTS: Department[] = [
         title: 'Department of Nursing',
         courses: [
           {
-            name: 'Lady Health Visitor (LHV)',
+            name: 'BS Nursing (Generic)',
+            slug: 'bs-nursing-generic',
+            duration: '4 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 50% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/bs-nursing.webp',
+            description: 'Our BS Nursing program develops skilled nursing professionals capable of providing high-quality healthcare in diverse clinical settings.',
+            features: [
+              'Clinical Rotations in Top Hospitals',
+              'Advanced Simulation Labs',
+              'Community Health Outreach'
+            ]
+          },
+          {
+            name: 'Post RN BSN',
+            slug: 'post-rn-bsn',
             duration: '2 Years',
-            eligibility: 'Matric (Science) or above - Min 45% marks'
+            eligibility: 'Diploma in Nursing + 1 year experience',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/post-rn-bsn.webp'
+          },
+          {
+            name: 'Lady Health Visitor (LHV)',
+            slug: 'lhv',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma',
+            image: '/images/ihs/courses/lhv.webp'
           },
           {
             name: 'Community Midwife (CMW)',
+            slug: 'cmw',
             duration: '2 Years',
-            eligibility: 'Matric (Science) or above - Min 45% marks'
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma',
+            image: '/images/ihs/courses/cmw.webp'
           },
           {
             name: 'Certified Nursing Assistant (CNA)',
+            slug: 'cna',
             duration: '2 Years',
-            eligibility: 'Matric (Science) or above - Min 45% marks'
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma',
+            image: '/images/ihs/courses/cna.webp'
+          }
+        ]
+      },
+      {
+        title: 'Department of Allied Health Sciences & Technology',
+        courses: [
+          {
+            name: 'BS Optometry',
+            slug: 'bs-optometry',
+            duration: '4 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/optometry.webp'
+          },
+          {
+            name: 'BS Forensic Science',
+            slug: 'bs-forensic-science',
+            duration: '4 Years',
+            eligibility: 'FSc Pre-Medical/Pre-Engineering or equivalent',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/forensic-science.webp'
+          },
+          {
+            name: 'BS Clinical Psychology',
+            slug: 'bs-clinical-psychology',
+            duration: '4 Years',
+            eligibility: 'FSc or equivalent - Min 45% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/clinical-psychology.webp'
+          },
+          {
+            name: 'BS Human Nutrition & Dietetics',
+            slug: 'bs-hnd',
+            duration: '4 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/nutrition-dietetics.webp'
+          },
+          {
+            name: 'BS Food Science & Technology',
+            slug: 'bs-food-science',
+            duration: '4 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/food-science.webp'
+          },
+          {
+            name: 'BS Operation Theater Technology',
+            slug: 'bs-ott',
+            duration: '4 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/ott-bs.webp'
+          },
+          {
+            name: 'BS Cosmetology & Dermatology',
+            slug: 'bs-cosmetology',
+            duration: '4 Years',
+            eligibility: 'FSc or equivalent - Min 45% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/cosmetology.webp'
+          },
+          {
+            name: 'BS Medical Laboratory Technology',
+            slug: 'bs-mlt',
+            duration: '4 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/mlt-bs.webp'
+          },
+          {
+            name: 'BS Radiology & Imaging Technology',
+            slug: 'bs-rit',
+            duration: '4 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/radiology-bs.webp'
+          }
+        ]
+      },
+      {
+        title: 'Department of Physical Therapy',
+        courses: [
+          {
+            name: 'Doctor of Physical Therapy (DPT)',
+            slug: 'dpt',
+            duration: '5 Years',
+            eligibility: 'FSc Pre-Medical or equivalent - Min 50% marks',
+            degree: 'Degree Program',
+            image: '/images/ihs/courses/dpt.webp'
+          }
+        ]
+      },
+      {
+        title: 'Department of FSc Paramedical Courses',
+        courses: [
+          {
+            name: 'Dispenser',
+            slug: 'dispenser',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma (Equal to FSc Pre-Medical)',
+            image: '/images/ihs/courses/dispenser.webp'
+          },
+          {
+            name: 'Operation Theater Technician (OTT)',
+            slug: 'ott',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma (Equal to FSc Pre-Medical)',
+            image: '/images/ihs/courses/ott.webp'
+          },
+          {
+            name: 'Medical Laboratory Technician (MLT)',
+            slug: 'mlt',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma (Equal to FSc Pre-Medical)',
+            image: '/images/ihs/courses/mlt.webp'
+          },
+          {
+            name: 'Radiography & Imaging Technician (RIT)',
+            slug: 'rit',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma (Equal to FSc Pre-Medical)',
+            image: '/images/ihs/courses/rit.webp'
+          },
+          {
+            name: 'Dental Technician',
+            slug: 'dental-technician',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma',
+            image: '/images/ihs/courses/dental-technician.webp'
+          },
+          {
+            name: 'Dialysis Technician',
+            slug: 'dialysis-technician',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma',
+            image: '/images/ihs/courses/dialysis-technician.webp'
+          },
+          {
+            name: 'Anesthesia Technician',
+            slug: 'anesthesia-technician',
+            duration: '2 Years',
+            eligibility: 'Matric (Science) or above - Min 45% marks',
+            degree: 'Diploma',
+            image: '/images/ihs/courses/anesthesia-technician.webp'
           }
         ]
       }
@@ -852,9 +1033,16 @@ export const DEPARTMENTS: Department[] = [
   }
 ];
 
+// ── HERO IMAGE HELPER ──
+// Derives the hero image path from the card image path
+// Example: /images/job.webp → /images/job-hero.webp
+export function getDepartmentHeroImage(imagePath: string): string {
+  return imagePath.replace('.webp', '-hero.webp');
+}
+
 // ── HELPER FUNCTIONS ──
-export function getDepartmentBySlug(slug: string): Department | undefined {
-  return DEPARTMENTS.find(dept => dept.slug === slug);
+export function getDepartmentBySlug(slug: string) {
+  return DEPARTMENTS.find(d => d.slug === slug);
 }
 
 export function getDepartmentTheme(slug: string) {
