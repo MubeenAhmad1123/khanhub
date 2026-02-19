@@ -35,7 +35,7 @@ const NAV_LINKS = [
 // Memoized Logo Component
 const Logo = memo(function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group flex-shrink-0" aria-label="Khan Hub Home">
+    <Link href="/" className="flex items-center gap-1.5 sm:gap-2.5 group flex-shrink-0" aria-label="Khan Hub Home">
       <div className="relative w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30 group-hover:shadow-primary-500/50 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
         <Image
           src="/logo.webp"
@@ -48,7 +48,7 @@ const Logo = memo(function Logo() {
         />
         <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-gradient-to-tr from-white/0 via-white/20 to-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </div>
-      <span className="font-display font-bold text-base sm:text-lg lg:text-xl text-neutral-900 group-hover:text-primary-600 transition-colors duration-300">
+      <span className="font-display font-bold text-sm sm:text-lg lg:text-xl text-neutral-900 group-hover:text-primary-600 transition-colors duration-300">
         Khan<span className="text-primary-600 group-hover:text-primary-700">Hub</span>
       </span>
     </Link>
@@ -308,7 +308,7 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Icons Row - Compact to fit all 7 items */}
-            <div className="md:hidden flex items-center gap-0.5 flex-1 justify-end mr-0.5">
+            <div className="md:hidden flex items-center gap-0 flex-1 justify-end mr-0.5">
               {Object.entries(SITE.social).map(([platform, url]) => {
                 if (!url && platform !== 'linkedin') return null;
                 const Icon = platform === 'facebook' ? Facebook :
@@ -327,13 +327,13 @@ export default function Navbar() {
                     className="p-1 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0"
                     aria-label={platform}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5 sm:w-4 h-4" />
                   </a>
                 );
               })}
               {/* Download App Image - Forced Visibility */}
               <a href="/download-app" className="p-1 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0">
-                <Image src="/app-download.webp" alt="Download App" width={22} height={22} className="rounded-sm" />
+                <Image src="/app-download.webp" alt="Download App" width={20} height={20} className="rounded-sm" />
               </a>
             </div>
 
