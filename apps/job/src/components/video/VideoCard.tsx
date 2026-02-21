@@ -11,7 +11,6 @@ import Image from 'next/image';
 
 interface VideoCardProps {
     seekerId: string;
-    seekerName: string;
     role: 'jobseeker' | 'employer';
     industry: string;
     subcategory: string;
@@ -22,7 +21,6 @@ interface VideoCardProps {
 
 export default function VideoCard({
     seekerId,
-    seekerName,
     role,
     industry,
     subcategory,
@@ -118,7 +116,7 @@ export default function VideoCard({
                             {thumbnailUrl ? (
                                 <Image
                                     src={thumbnailUrl}
-                                    alt={seekerName}
+                                    alt={subcategory}
                                     fill
                                     className="object-cover"
                                 />
@@ -159,12 +157,9 @@ export default function VideoCard({
                 <div className="p-4 flex flex-col gap-3">
                     <div className="flex justify-between items-start gap-2">
                         <div className="min-w-0">
-                            <h3 className="text-slate-900 font-black text-sm uppercase tracking-tight truncate">
-                                {seekerName}
-                            </h3>
-                            <p className="text-blue-600 text-[10px] font-black uppercase tracking-widest truncate">
+                            <h4 className="text-blue-600 text-sm font-black uppercase tracking-widest truncate">
                                 {subcategory}
-                            </p>
+                            </h4>
                         </div>
                     </div>
 
@@ -206,7 +201,6 @@ export default function VideoCard({
                 isOpen={showVideoModal}
                 onClose={() => setShowVideoModal(false)}
                 videoUrl={videoUrl}
-                seekerName={seekerName}
                 role={role}
                 industry={industry}
                 subcategory={subcategory}
@@ -219,7 +213,6 @@ export default function VideoCard({
                 isOpen={showConnectModal}
                 onClose={() => setShowConnectModal(false)}
                 seekerId={seekerId}
-                seekerName={seekerName}
             />
         </>
     );

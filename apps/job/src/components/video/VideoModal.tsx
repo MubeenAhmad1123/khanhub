@@ -8,7 +8,6 @@ interface VideoModalProps {
     isOpen: boolean;
     onClose: () => void;
     videoUrl: string;
-    seekerName: string;
     role: 'jobseeker' | 'employer';
     industry: string;
     subcategory: string;
@@ -21,7 +20,6 @@ export default function VideoModal({
     isOpen,
     onClose,
     videoUrl,
-    seekerName,
     role,
     industry,
     subcategory,
@@ -69,7 +67,7 @@ export default function VideoModal({
                     </div>
 
                     <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-1">
-                        {seekerName}
+                        🔒 Hidden Profile
                     </h2>
                     <p className="text-blue-400 font-bold uppercase tracking-widest text-xs">
                         {subcategory}

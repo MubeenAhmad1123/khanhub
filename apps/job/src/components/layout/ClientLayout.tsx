@@ -16,6 +16,7 @@ export default function ClientLayout({
 }) {
     const pathname = usePathname();
     const isAdminRoute = pathname?.startsWith('/admin');
+    const isAuthRoute = pathname?.startsWith('/dashboard') || pathname?.startsWith('/employer');
 
     return (
         <AuthProviderWrapper>
@@ -23,7 +24,7 @@ export default function ClientLayout({
                 {!isAdminRoute && <ImprovedNavbar />}
                 <LoginModal />
                 <main>{children}</main>
-                {!isAdminRoute && <Footer />}
+                {!isAdminRoute && !isAuthRoute && <Footer />}
             </ToastProvider>
         </AuthProviderWrapper>
     );

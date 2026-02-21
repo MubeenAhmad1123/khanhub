@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { Loader2, Upload, Video, StopCircle, Play, X, CheckCircle, AlertCircle, Info, ChevronRight, UserCircle, Clock } from 'lucide-react';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, query, where, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
+import { Loader2, Upload, Video, StopCircle, Play, X, CheckCircle, AlertCircle, Info, ChevronRight, UserCircle, Clock, Check, ArrowRight, ShieldCheck } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function VideoUploadPage() {
@@ -35,57 +36,79 @@ export default function VideoUploadPage() {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null);
     const [canUpload, setCanUpload] = useState(true);
+    const [videoData, setVideoData] = useState<any>(null);
 
     // Max duration constant (60 seconds)
     const MAX_DURATION = 60;
 
-    // Permissions and Profile Check
+    // 1. Fetch Video Status & Data
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        const q = query(
+            collection(db, 'videos'),
+            where('userId', '==', user.uid),
+            where('is_live', '==', true)
+        );
+
+        const unsubscribe = onSnapshot(q, (snap) => {
+            if (!snap.empty) {
+                const data = snap.docs[0].data();
+                setVideoData(data);
+
+                // 2. Check Monthly Limit (30 days) - Only if NOT rejected
+                if (data.admin_status !== 'rejected') {
+                    const lastUpload = data.createdAt;
+                    if (lastUpload) {
+                        const lastUploadDate = lastUpload.toDate ? lastUpload.toDate() : new Date(lastUpload);
+                        const now = new Date();
+                        const diffTime = Math.abs(now.getTime() - lastUploadDate.getTime());
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                        if (diffDays < 30) {
+                            setCanUpload(false);
+                            setCooldownRemaining(30 - diffDays);
+                        } else {
+                            setCanUpload(true);
+                            setCooldownRemaining(null);
+                        }
+                    }
+                } else {
+                    setCanUpload(true);
+                    setCooldownRemaining(null);
+                }
+            } else {
+                setVideoData(null);
+                setCanUpload(true);
+                setCooldownRemaining(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [user?.uid]);
+
+    // 2. Profile Completion Check for Video Gate (Prompt 5)
     useEffect(() => {
         if (!authLoading && user) {
-            // Check if onboarding is completed
-            if (!user.onboardingCompleted) {
-                setIsProfileIncomplete(true);
-            }
+            const missingFields = [];
+            if (!user.profile?.fullName && !user.displayName) missingFields.push('fullName');
+            if (!user.profile?.phone) missingFields.push('phone');
+            if ((user.profile?.bio?.length || 0) < 50) missingFields.push('bio');
+            if ((user.profile?.skills?.length || 0) < 3) missingFields.push('skills');
 
-            // Check Monthly Limit (30 days)
-            const lastUpload = (user as any).lastVideoUpload;
-            if (lastUpload) {
-                const lastUploadDate = lastUpload.toDate ? lastUpload.toDate() : new Date(lastUpload);
-                const now = new Date();
-                const diffTime = Math.abs(now.getTime() - lastUploadDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                if (diffDays < 30) {
-                    setCanUpload(false);
-                    setCooldownRemaining(30 - diffDays);
-                }
-            }
+            setIsProfileIncomplete(missingFields.length > 0);
         }
     }, [user, authLoading]);
 
-    // Cleanup stream on unmount
-    useEffect(() => {
-        return () => {
-            stopStream();
-        };
-    }, []);
 
-    // Timer effect for limit enforcement
-    useEffect(() => {
-        if (isRecording && recordingTime >= MAX_DURATION) {
-            stopRecording();
-            setError("Maximum duration of 1 minute reached.");
-        }
-    }, [isRecording, recordingTime]);
-
-    const stopStream = () => {
+    const stopStream = useCallback(() => {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
-    };
+    }, []);
 
-    const startCamera = async () => {
+    const startCamera = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -102,9 +125,35 @@ export default function VideoUploadPage() {
             console.error('Error accessing camera:', err);
             setError('Could not access camera/microphone. Please check permissions.');
         }
-    };
+    }, [activeTab]);
 
-    const startRecording = () => {
+    const stopRecording = useCallback(() => {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            setIsRecording(false);
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+            stopStream();
+        }
+    }, [mediaRecorder, isRecording, stopStream]);
+
+    // Cleanup stream on unmount
+    useEffect(() => {
+        return () => {
+            stopStream();
+        };
+    }, [stopStream]);
+
+    // Timer effect for limit enforcement
+    useEffect(() => {
+        if (isRecording && recordingTime >= MAX_DURATION) {
+            stopRecording();
+            setError("Maximum duration of 1 minute reached.");
+        }
+    }, [isRecording, recordingTime, stopRecording]);
+
+    const startRecording = useCallback(() => {
         if (!streamRef.current) return;
 
         const recorder = new MediaRecorder(streamRef.current);
@@ -124,18 +173,7 @@ export default function VideoUploadPage() {
         timerRef.current = setInterval(() => {
             setRecordingTime((prev) => prev + 1);
         }, 1000);
-    };
-
-    const stopRecording = () => {
-        if (mediaRecorder && isRecording) {
-            mediaRecorder.stop();
-            setIsRecording(false);
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-            }
-            stopStream();
-        }
-    };
+    }, []); // Note: Removed isRecording dependency as it was unnecessary
 
     // Handle File Selection
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -292,25 +330,9 @@ export default function VideoUploadPage() {
         return null;
     }
 
-    // Modal for Incomplete Profile
+    // Profile Gate (Prompt 5)
     if (isProfileIncomplete) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                <div className="bg-white max-w-md w-full rounded-3xl p-8 shadow-2xl text-center border border-slate-100">
-                    <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-500">
-                        <UserCircle className="w-12 h-12" />
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-900 mb-3">Complete Your Profile first!</h2>
-                    <p className="text-slate-600 mb-8 font-medium">To provide the best context in your video, we need a few details about your profession and industry first.</p>
-                    <Link
-                        href="/auth/onboarding"
-                        className="block w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20"
-                    >
-                        Finish Onboarding
-                    </Link>
-                </div>
-            </div>
-        );
+        return <ProfileGate user={user} onComplete={() => setIsProfileIncomplete(false)} />;
     }
 
     return (
@@ -352,21 +374,48 @@ export default function VideoUploadPage() {
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
                                     <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${user.profile_status === 'active'
-                                            ? 'bg-emerald-100 text-emerald-700'
-                                            : 'bg-yellow-100 text-yellow-700'
-                                            }`}>
-                                            {user.profile_status === 'active' ? 'Live on Profile' : 'Under Review'}
-                                        </span>
+                                        {videoData?.admin_status === 'approved' && (
+                                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">
+                                                ✅ Approved
+                                            </span>
+                                        )}
+                                        {videoData?.admin_status === 'pending' && (
+                                            <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-black uppercase tracking-widest">
+                                                🕒 Pending Review
+                                            </span>
+                                        )}
+                                        {videoData?.admin_status === 'rejected' && (
+                                            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest">
+                                                ❌ Rejected
+                                            </span>
+                                        )}
                                         <span className="text-slate-300 text-xs">|</span>
                                         <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Introduction Video</span>
                                     </div>
                                     <h3 className="text-2xl font-black text-slate-900 mb-2 italic tracking-tight">Your Current Video</h3>
-                                    <p className="text-slate-500 text-sm font-medium mb-6 leading-relaxed">
-                                        {user.profile_status === 'active'
-                                            ? "Recruiters can see this video when they view your profile. It's your digital handshake!"
-                                            : "Our team is currently reviewing your submission. You'll be notified via email once it's live."}
-                                    </p>
+
+                                    <div className="mb-6">
+                                        {videoData?.admin_status === 'approved' && (
+                                            <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                                                Recruiters can see this video when they view your profile. It's your digital handshake!
+                                            </p>
+                                        )}
+                                        {videoData?.admin_status === 'pending' && (
+                                            <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                                                Your video is currently under review by our team. This usually takes under 30 minutes. Once approved, it will be visible to employers.
+                                            </p>
+                                        )}
+                                        {videoData?.admin_status === 'rejected' && (
+                                            <div className="space-y-2">
+                                                <p className="text-red-600 text-sm font-bold leading-relaxed">
+                                                    Your video was not approved for the following reason:
+                                                </p>
+                                                <p className="bg-red-50 p-3 rounded-xl text-red-700 text-xs italic border border-red-100">
+                                                    "{videoData?.rejection_reason || 'Video does not meet our quality guidelines.'}"
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
                                         <button
                                             onClick={() => window.open(user.profile.videoResume, '_blank')}
@@ -473,6 +522,14 @@ export default function VideoUploadPage() {
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-6">
+                                                        {/* Privacy Warning Banner */}
+                                                        <div className="bg-orange-50 border border-orange-100 p-4 rounded-2xl flex items-start gap-3">
+                                                            <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                                                            <p className="text-orange-800 text-[11px] font-bold leading-relaxed uppercase tracking-wide">
+                                                                Important: Do not mention your phone number, email, or exact location in your video. This is for your privacy and safety.
+                                                            </p>
+                                                        </div>
+
                                                         <div className="relative aspect-video bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white">
                                                             <video
                                                                 ref={videoRef}
@@ -635,7 +692,7 @@ export default function VideoUploadPage() {
                                     </div>
                                     <div>
                                         <p className="text-xs font-black text-slate-900 uppercase">1 Upload Monthly</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Update your profile every 30 days</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Re-upload anytime if rejected — no extra charge</p>
                                     </div>
                                 </div>
                             </div>
@@ -650,6 +707,178 @@ export default function VideoUploadPage() {
                                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                                     <ChevronRight className="w-4 h-4" />
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Profile Gate Sub-component (Prompt 5)
+function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }) {
+    const [formData, setFormData] = useState({
+        fullName: user?.profile?.fullName || user?.displayName || '',
+        phone: user?.profile?.phone || '',
+        bio: user?.profile?.bio || '',
+        skills: user?.profile?.skills?.join(', ') || ''
+    });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const checklist = [
+        { id: 'fullName', label: 'Full Name', complete: !!formData.fullName.trim() },
+        { id: 'phone', label: 'Phone Number', complete: !!formData.phone.trim() },
+        { id: 'bio', label: 'Biography (50+ chars)', complete: formData.bio.trim().length >= 50 },
+        { id: 'skills', label: 'At least 3 Skills', complete: formData.skills.split(',').filter(s => s.trim()).length >= 3 }
+    ];
+
+    const completedCount = checklist.filter(i => i.complete).length;
+    const progress = (completedCount / checklist.length) * 100;
+    const isReady = completedCount === checklist.length;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isReady) return;
+
+        try {
+            setSaving(true);
+            setError(null);
+
+            const { updateUserProfile } = await import('@/lib/firebase/auth');
+            await updateUserProfile(user.uid, {
+                profile: {
+                    ...user.profile,
+                    fullName: formData.fullName.trim(),
+                    phone: formData.phone.trim(),
+                    bio: formData.bio.trim(),
+                    skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean)
+                }
+            } as any);
+
+            onComplete();
+        } catch (err: any) {
+            setError(err.message || 'Failed to update profile');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center animate-in fade-in duration-700">
+            <div className="max-w-xl w-full">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden">
+                    <div className="p-8 md:p-10">
+                        <div className="flex items-center justify-between mb-8">
+                            <h2 className="text-3xl font-black text-slate-900 italic tracking-tighter uppercase">Profile Check</h2>
+                            <div className="text-right">
+                                <span className="text-blue-600 font-black text-xl italic">{Math.round(progress)}%</span>
+                                <div className="w-24 h-2 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                                    <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${progress}%` }} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-blue-50/50 rounded-2xl p-6 mb-8 border border-blue-100">
+                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">Required for Video Upload</h3>
+                            <ul className="grid grid-cols-2 gap-3">
+                                {checklist.map(item => (
+                                    <li key={item.id} className="flex items-center gap-2">
+                                        <div className={cn(
+                                            "w-4 h-4 rounded-full flex items-center justify-center border transition-colors",
+                                            item.complete ? "bg-green-500 border-green-500 text-white" : "bg-white border-slate-200"
+                                        )}>
+                                            {item.complete && <Check className="w-2.5 h-2.5 stroke-[4]" />}
+                                        </div>
+                                        <span className={cn(
+                                            "text-[10px] font-bold uppercase tracking-tight",
+                                            item.complete ? "text-slate-900" : "text-slate-400"
+                                        )}>{item.label}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Full Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.fullName}
+                                        onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                                        placeholder="Enter your name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        value={formData.phone}
+                                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                                        placeholder="+92 XXX XXXXXXX"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Bio (Internal Pitch)</label>
+                                <textarea
+                                    value={formData.bio}
+                                    onChange={e => setFormData({ ...formData, bio: e.target.value })}
+                                    rows={3}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none resize-none"
+                                    placeholder="Briefly describe your expertise (min 50 characters)..."
+                                />
+                                <div className="flex justify-between mt-1">
+                                    <span className="text-[9px] text-slate-400 font-bold uppercase">{formData.bio.length} characters</span>
+                                    {formData.bio.length < 50 && <span className="text-[9px] text-orange-500 font-black uppercase">Min 50 required</span>}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Skills (Comma separated)</label>
+                                <input
+                                    type="text"
+                                    value={formData.skills}
+                                    onChange={e => setFormData({ ...formData, skills: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                                    placeholder="React, Next.js, TypeScript..."
+                                />
+                                <div className="flex justify-between mt-1">
+                                    <span className="text-[9px] text-slate-400 font-bold uppercase">{formData.skills.split(',').filter(s => s.trim()).length} skills added</span>
+                                    {formData.skills.split(',').filter(s => s.trim()).length < 3 && <span className="text-[9px] text-orange-500 font-black uppercase">Min 3 required</span>}
+                                </div>
+                            </div>
+
+                            {error && (
+                                <p className="text-red-500 text-[10px] font-black uppercase text-center">{error}</p>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={!isReady || saving}
+                                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-slate-900/10 disabled:opacity-30 disabled:grayscale hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                            >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save & Continue'}
+                                {!saving && <ArrowRight className="w-4 h-4" />}
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="bg-orange-50 p-8 border-t border-orange-100">
+                        <div className="flex gap-4">
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-orange-500 shadow-sm flex-shrink-0">
+                                <ShieldCheck className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-black text-orange-600 uppercase tracking-widest mb-1">Your Privacy Matters</h3>
+                                <p className="text-[11px] text-orange-800 font-bold leading-relaxed uppercase tracking-wide">
+                                    Only your Industry and Role are public. Contact details like Phone and precise Bio are only visible after you mutually connect with an employer.
+                                </p>
                             </div>
                         </div>
                     </div>

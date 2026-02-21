@@ -153,7 +153,7 @@ export default function EmployerDashboard() {
 
 
                         {/* 1. Pitch Video Under Review */}
-                        {userData?.profile_status === 'video_submitted' && (
+                        {userData?.profile_status === 'video_pending' && (
                             <div className="bg-yellow-50 border border-yellow-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
                                 <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
                                     <Loader2 className="w-10 h-10 text-yellow-600 animate-spin" />
@@ -169,7 +169,7 @@ export default function EmployerDashboard() {
                         )}
 
                         {/* 1b. Pitch Video Pending */}
-                        {userData?.profile_status !== 'video_submitted' &&
+                        {userData?.profile_status !== 'video_pending' &&
                             !userData?.profile?.videoResume && (
                                 <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
                                     <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">

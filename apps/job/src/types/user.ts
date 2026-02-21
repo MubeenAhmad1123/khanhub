@@ -183,6 +183,8 @@ export interface User {
     profile_status: 'incomplete' | 'payment_pending' | 'video_pending' | 'active';
     industry?: string;
     subcategory?: string;
+    videos_watched?: number;
+    profile_views?: number;
 }
 
 // ==================== ROLE-SPECIFIC USER TYPES ====================

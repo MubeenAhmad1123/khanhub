@@ -23,16 +23,16 @@ import { useAuth } from '@/hooks/useAuth';
 
 // Dummy Video Data
 const DUMMY_VIDEOS = [
-    { seekerId: 'user1', seekerName: 'Ahmad Ali', role: 'jobseeker', industry: 'Technology', subcategory: 'Software Engineer' },
-    { seekerId: 'user2', seekerName: 'Sara Khan', role: 'employer', industry: 'Healthcare', subcategory: 'Hospital Admin' },
-    { seekerId: 'user3', seekerName: 'Zainab Bibi', role: 'jobseeker', industry: 'Finance', subcategory: 'Accountant' },
-    { seekerId: 'user4', seekerName: 'Bilal Ahmad', role: 'jobseeker', industry: 'Education', subcategory: 'Teacher' },
-    { seekerId: 'user5', seekerName: 'Fatima Zahra', role: 'employer', industry: 'Technology', subcategory: 'UI/UX Designer' },
-    { seekerId: 'user6', seekerName: 'Hamza Malik', role: 'jobseeker', industry: 'Engineering', subcategory: 'Civil Engineer' },
-    { seekerId: 'user7', seekerName: 'Mubeen Ahmad', role: 'employer', industry: 'Retail', subcategory: 'Store Manager' },
-    { seekerId: 'user8', seekerName: 'Ayesha Omer', role: 'jobseeker', industry: 'Healthcare', subcategory: 'Nurse' },
-    { seekerId: 'user9', seekerName: 'Usman Ghani', role: 'jobseeker', industry: 'Technology', subcategory: 'Data Analyst' },
-    { seekerId: 'user10', seekerName: 'Hafsa Qasim', role: 'employer', industry: 'Finance', subcategory: 'Banker' },
+    { seekerId: 'user1', role: 'jobseeker', industry: 'Technology', subcategory: 'Software Engineer' },
+    { seekerId: 'user2', role: 'employer', industry: 'Healthcare', subcategory: 'Hospital Admin' },
+    { seekerId: 'user3', role: 'jobseeker', industry: 'Finance', subcategory: 'Accountant' },
+    { seekerId: 'user4', role: 'jobseeker', industry: 'Education', subcategory: 'Teacher' },
+    { seekerId: 'user5', role: 'employer', industry: 'Technology', subcategory: 'UI/UX Designer' },
+    { seekerId: 'user6', role: 'jobseeker', industry: 'Engineering', subcategory: 'Civil Engineer' },
+    { seekerId: 'user7', role: 'employer', industry: 'Retail', subcategory: 'Store Manager' },
+    { seekerId: 'user8', role: 'jobseeker', industry: 'Healthcare', subcategory: 'Nurse' },
+    { seekerId: 'user9', role: 'jobseeker', industry: 'Technology', subcategory: 'Data Analyst' },
+    { seekerId: 'user10', role: 'employer', industry: 'Finance', subcategory: 'Banker' },
 ].map(v => ({
     ...v,
     id: v.seekerId,
@@ -60,8 +60,7 @@ export default function BrowsePage() {
             const industryMatch = !selectedIndustry || video.industry === selectedIndustry;
             const searchMatch = !searchQuery ||
                 video.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                video.subcategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                video.seekerName.toLowerCase().includes(searchQuery.toLowerCase());
+                video.subcategory.toLowerCase().includes(searchQuery.toLowerCase());
 
             return roleMatch && industryMatch && searchMatch;
         });

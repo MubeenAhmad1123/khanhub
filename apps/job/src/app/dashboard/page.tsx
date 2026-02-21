@@ -29,49 +29,60 @@ export default function JobSeekerDashboard() {
     const { user, loading } = useAuth();
     const [userData, setUserData] = useState<User | null>(null);
     const [stats, setStats] = useState({
-        videosWatched: 0,
+        videos_watched: 0,
         connectionsMade: 0,
-        profileViews: 0
+        profile_views: 0
     });
+    const [userVideoStatus, setUserVideoStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
     const [hasSubmittedPayment, setHasSubmittedPayment] = useState(false);
     const [checkingPayment, setCheckingPayment] = useState(true);
 
     useEffect(() => {
         if (!user?.uid) return;
 
-        const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+        // 1. User Data & Basic Stats (Profile Views, Videos Watched)
+        const unsubscribeUser = onSnapshot(doc(db, 'users', user.uid), (doc) => {
             if (doc.exists()) {
                 const data = doc.data() as User;
                 setUserData(data);
-                // In a real app, we'd also fetch stats here or from a separate collection
                 setStats(prev => ({
                     ...prev,
-                    videosWatched: data.premiumJobsViewed || 0,
+                    videos_watched: data.videos_watched || data.premiumJobsViewed || 0,
+                    profile_views: data.profile_views || 0,
                 }));
             }
         });
 
-        const checkPayment = async () => {
-            try {
-                const paymentRef = doc(db, 'payments', user.uid);
-                const paymentSnap = await getDoc(paymentRef);
-                setHasSubmittedPayment(paymentSnap.exists() && paymentSnap.data()?.status === 'pending');
-            } catch (err) {
-                console.error('Error checking payment status:', err);
-            } finally {
-                setCheckingPayment(false);
-            }
-        };
-
-        checkPayment();
-
-        // Real-time connections count
-        const connQ = query(collection(db, 'connections'), where('seekerId', '==', user.uid), where('status', '==', 'approved'));
-        const unsubscribeConn = onSnapshot(connQ, (snap: any) => {
+        // 2. Connections Stats
+        const connQ = query(
+            collection(db, 'connections'),
+            where('from_user_id', '==', user.uid),
+            where('status', '==', 'active')
+        );
+        const unsubscribeConn = onSnapshot(connQ, (snap) => {
             setStats(prev => ({ ...prev, connectionsMade: snap.size }));
         });
 
-        return () => { unsubscribe(); unsubscribeConn(); };
+        // 3. User's Video Status (for the button logic)
+        const videoQ = query(
+            collection(db, 'videos'),
+            where('userId', '==', user.uid),
+            where('is_live', '==', true)
+        );
+        const unsubscribeVideo = onSnapshot(videoQ, (snap) => {
+            if (!snap.empty) {
+                const videoData = snap.docs[0].data();
+                setUserVideoStatus(videoData.admin_status);
+            } else {
+                setUserVideoStatus(null);
+            }
+        });
+
+        return () => {
+            unsubscribeUser();
+            unsubscribeConn();
+            unsubscribeVideo();
+        };
     }, [user?.uid]);
 
     if (loading) {
@@ -85,7 +96,7 @@ export default function JobSeekerDashboard() {
     const sidebarLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
         { href: '/dashboard/video', label: 'My Video', icon: <Video className="w-5 h-5" /> },
-        { href: '/dashboard/connections', label: 'Reveals', icon: <Users className="w-5 h-5" /> },
+        { href: '/dashboard/connections', label: 'Connections', icon: <Users className="w-5 h-5" /> },
         { href: '/dashboard/notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
         { href: '/dashboard/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
     ];
@@ -151,7 +162,13 @@ export default function JobSeekerDashboard() {
                             <div className="flex items-center gap-2 mt-2">
                                 <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wider">Candidate</span>
                                 <span className="text-slate-400 text-sm font-medium">
-                                    {userData?.industry || 'General'} • {userData?.subcategory || 'N/A'}
+                                    {userData?.industry || 'General'} • {userData?.subcategory ? (
+                                        userData.subcategory
+                                    ) : (
+                                        <Link href="/dashboard/profile/edit" className="text-blue-600 hover:underline">
+                                            Select subcategory →
+                                        </Link>
+                                    )}
                                 </span>
                             </div>
                         </div>
@@ -175,18 +192,42 @@ export default function JobSeekerDashboard() {
                                     <Video className="w-10 h-10 text-purple-600" />
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
-                                    <h2 className="text-xl font-bold text-purple-900 mb-2">Upload Your Introduction (FREE)</h2>
+                                    <h2 className="text-xl font-bold text-purple-900 mb-2">Build Your Presence</h2>
                                     <p className="text-purple-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
-                                        Record or upload a 60-second video to introduce yourself to employers. It's completely free to upload!
+                                        Record or upload a 60-second video to introduce yourself to employers. It's the best way to stand out.
                                     </p>
-                                    <Link
-                                        href="/dashboard/video"
 
-                                        className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 text-white rounded-full font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all"
-                                    >
-                                        <Plus className="w-5 h-5" />
-                                        Upload Video
-                                    </Link>
+                                    {!userData?.video_upload_enabled ? (
+                                        <Link
+                                            href="/dashboard/video-payment"
+                                            className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 text-white rounded-full font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                            Enable Video Upload
+                                        </Link>
+                                    ) : userVideoStatus === 'pending' ? (
+                                        <button
+                                            disabled
+                                            className="inline-flex items-center gap-2 px-8 py-4 bg-slate-200 text-slate-500 rounded-full font-bold cursor-not-allowed"
+                                        >
+                                            ⏳ Video Under Review
+                                        </button>
+                                    ) : userVideoStatus === 'approved' ? (
+                                        <Link
+                                            href="/dashboard/upload-video"
+                                            className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
+                                        >
+                                            ✏️ Update Video
+                                        </Link>
+                                    ) : (
+                                        <Link
+                                            href="/dashboard/upload-video"
+                                            className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 text-white rounded-full font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                            Upload Video
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -232,9 +273,9 @@ export default function JobSeekerDashboard() {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                         {[
-                            { label: 'Videos Watched', value: stats.videosWatched.toString(), icon: <Play className="w-5 h-5 text-blue-600" /> },
+                            { label: 'Videos Watched', value: stats.videos_watched.toString(), icon: <Play className="w-5 h-5 text-blue-600" /> },
                             { label: 'Connections Made', value: stats.connectionsMade.toString(), icon: <Users className="w-5 h-5 text-orange-600" /> },
-                            { label: 'Profile Views', value: stats.profileViews.toString(), icon: <Clock className="w-5 h-5 text-purple-600" /> }
+                            { label: 'Profile Views', value: stats.profile_views.toString(), icon: <Clock className="w-5 h-5 text-purple-600" /> }
                         ].map((stat, idx) => (
                             <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                                 <div className="flex items-center justify-between mb-4">
@@ -256,7 +297,7 @@ export default function JobSeekerDashboard() {
                         <div className="relative z-10">
                             <h3 className="text-2xl font-bold text-[#0F172A] mb-2">Ready to explore?</h3>
                             <p className="text-slate-500 mb-8 max-w-sm">
-                                Browse thousands of company pitch videos and find the workplace that matches your energy.
+                                Browse employer and candidate videos filtered to your industry. Connect when you find the right match.
                             </p>
                             <Link
                                 href="/browse"

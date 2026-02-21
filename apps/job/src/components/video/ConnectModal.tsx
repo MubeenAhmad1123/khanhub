@@ -8,14 +8,13 @@ import { Timestamp } from 'firebase/firestore';
 
 interface ConnectModalProps {
     seekerId: string;
-    seekerName: string;
     isOpen: boolean;
     onClose: () => void;
 }
 
 type ModalState = 'REQUEST' | 'PAYMENT' | 'SUCCESS';
 
-export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: ConnectModalProps) {
+export default function ConnectModal({ seekerId, isOpen, onClose }: ConnectModalProps) {
     const { requestConnection, loading: connectionLoading } = useConnections();
     const { user } = useAuth();
     const [modalState, setModalState] = useState<ModalState>('REQUEST');
@@ -41,7 +40,7 @@ export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: 
         try {
             setIsSubmitting(true);
             setError(null);
-            await requestConnection(seekerId, seekerName, message);
+            await requestConnection(seekerId, 'Anonymous Candidate', message);
             setModalState('PAYMENT');
         } catch (err: any) {
             setError(err.message || 'Failed to send request');
@@ -73,7 +72,7 @@ export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: 
                         {modalState === 'SUCCESS' && <CheckCircle2 className="w-8 h-8 text-green-600" />}
                     </div>
                     <h2 className="text-xl font-black text-gray-900 leading-tight">
-                        {modalState === 'REQUEST' && `Connect with ${seekerName}`}
+                        {modalState === 'REQUEST' && 'Connect with Candidate'}
                         {modalState === 'PAYMENT' && 'Activate Your Video Profile'}
                         {modalState === 'SUCCESS' && 'Request Sent!'}
                     </h2>
@@ -103,7 +102,7 @@ export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: 
                     {modalState === 'PAYMENT' && (
                         <div className="space-y-4 text-center">
                             <p className="text-sm text-gray-600">
-                                Active profiles with videos get 10x more engagement. To reveal <span className="font-bold">{seekerName}'s</span> direct contact info, pay the one-time activation fee.
+                                Active profiles with videos get 10x more engagement. To reveal direct contact info, pay the one-time activation fee.
                             </p>
                             <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100">
                                 <p className="text-xs font-bold text-orange-800 uppercase tracking-widest mb-1">Activation Fee</p>

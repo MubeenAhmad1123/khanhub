@@ -5,7 +5,6 @@ interface VideoGridProps {
     items: Array<{
         id: string;
         seekerId: string;
-        seekerName: string;
         role: 'jobseeker' | 'employer';
         industry: string;
         subcategory: string;
@@ -24,7 +23,6 @@ export default function VideoGrid({ items, className }: VideoGridProps) {
                 <VideoCard
                     key={video.id + idx}
                     seekerId={video.seekerId}
-                    seekerName={video.seekerName}
                     role={video.role}
                     industry={video.industry}
                     subcategory={video.subcategory}

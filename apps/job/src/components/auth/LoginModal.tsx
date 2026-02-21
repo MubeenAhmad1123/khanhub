@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,15 +29,7 @@ export default function LoginModal() {
         }
     }, [user]);
 
-    // Redirection logic after login within modal
-    useEffect(() => {
-        if (user && isOpen) {
-            handlePostLoginNavigation();
-            setIsOpen(false);
-        }
-    }, [user, isOpen]);
-
-    const handlePostLoginNavigation = () => {
+    const handlePostLoginNavigation = useCallback(() => {
         if (!user) return;
 
         // Admin gets immediate access
@@ -63,7 +55,15 @@ export default function LoginModal() {
                 router.push('/auth/verify-payment');
             }
         }
-    };
+    }, [user, router]);
+
+    // Redirection logic after login within modal
+    useEffect(() => {
+        if (user && isOpen) {
+            handlePostLoginNavigation();
+            setIsOpen(false);
+        }
+    }, [user, isOpen, handlePostLoginNavigation]);
 
     const handleClose = () => {
         setIsOpen(false);
