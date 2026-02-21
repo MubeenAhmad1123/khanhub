@@ -22,28 +22,27 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    match /jobs/{jobId} {
-      allow read: if true;
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId);
       allow create: if isAuthenticated();
-      allow update: if isAdmin() || (isAuthenticated() && resource.data.employerId == request.auth.uid);
-      allow delete: if isAdmin() || (isAuthenticated() && resource.data.employerId == request.auth.uid);
-    }
-    
-    match /applications/{applicationId} {
-      allow read: if isAdmin() || 
-                     isOwner(resource.data.candidateId) || 
-                     isOwner(resource.data.jobSeekerId) ||
-                     isOwner(resource.data.employerId);
-      allow create: if isAuthenticated() && 
-                       (request.auth.uid == request.resource.data.candidateId ||
-                        request.auth.uid == request.resource.data.jobSeekerId);
-      allow update: if isAdmin() || 
-                       isOwner(resource.data.employerId) || 
-                       isOwner(resource.data.candidateId) ||
-                       isOwner(resource.data.jobSeekerId);
+      allow update: if isOwner(resource.data.userId) || isAdmin();
       allow delete: if isAdmin();
     }
-    
+
+    match /activity_log/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /connections/{connectionId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.seekerId || 
+        request.auth.uid == resource.data.employerId || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated(); 
+      allow update: if isAdmin();
+    }
+
     match /payments/{paymentId} {
       allow read: if isAdmin() || isOwner(resource.data.userId);
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;

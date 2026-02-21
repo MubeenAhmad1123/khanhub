@@ -21,11 +21,11 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
     const [isWithinWindow, setIsWithinWindow] = useState(true);
 
     useEffect(() => {
-        if (!payment.submittedAt) return;
+        if (!payment.createdAt) return;
 
         const timer = setInterval(() => {
-            const submittedAt = toDate(payment.submittedAt);
-            const expiryTime = addMinutes(submittedAt, 30);
+            const createdAt = toDate(payment.createdAt);
+            const expiryTime = addMinutes(createdAt, 30);
             const now = new Date();
             const diff = differenceInSeconds(expiryTime, now);
 
@@ -42,11 +42,11 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [payment.submittedAt]);
+    }, [payment.createdAt]);
 
     // Calculate time since submission
-    const timeAgo = payment.submittedAt
-        ? formatDistanceToNow(toDate(payment.submittedAt), { addSuffix: true })
+    const timeAgo = payment.createdAt
+        ? formatDistanceToNow(toDate(payment.createdAt), { addSuffix: true })
         : 'Unknown time';
 
     const handleApprove = async () => {

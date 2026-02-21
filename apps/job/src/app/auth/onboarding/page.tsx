@@ -21,6 +21,7 @@ export default function OnboardingPage() {
         skills: '',
         experience: '',
         location: '',
+        industry: '',
         primarySkill: '',
     });
 
@@ -59,8 +60,8 @@ export default function OnboardingPage() {
 
     // totalSteps:
     // - Employer: 3 steps
-    // - Job Seeker: 4 steps
-    const totalSteps = isEmployer ? 3 : (isJobSeeker ? 4 : 1);
+    // - Job Seeker: 5 steps
+    const totalSteps = isEmployer ? 3 : (isJobSeeker ? 5 : 1);
 
     const handleJobSeekerSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,6 +77,7 @@ export default function OnboardingPage() {
             await updateProfile({
                 role: 'job_seeker',
                 onboardingCompleted: true,
+                industry: jobSeekerData.industry,
                 profile: {
                     ...(user?.profile as any),
                     skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
@@ -83,9 +85,11 @@ export default function OnboardingPage() {
                     location: jobSeekerData.location,
                     preferredJobTitle: jobSeekerData.primarySkill,
                     profileStrength: calculateProfileStrength({
-                        skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
-                        yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
-                        experience: [{ id: 'temp', title: jobSeekerData.primarySkill, company: 'Previous', startDate: '2020', isCurrent: true }], // Dummy to count as 1
+                        profile: {
+                            skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
+                            yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
+                            experience: [{ id: 'temp', title: jobSeekerData.primarySkill, company: 'Previous', startDate: '2020', isCurrent: true }], // Dummy to count as 1
+                        } as any
                     }),
                     completedSections: {
                         basicInfo: true,
@@ -222,7 +226,7 @@ export default function OnboardingPage() {
                     <p className="text-gray-600 mt-2 font-medium">
                         {isEmployer ?
                             "Tell us about your business to attract the best talent" :
-                            "Just 4 quick questions to help us find you the best jobs"}
+                            "Just 5 quick questions to help us find you the best jobs"}
                     </p>
                 </div>
 
@@ -284,7 +288,7 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                             value={formData.primarySkill}
                             onChange={(e) => setFormData({ ...formData, primarySkill: e.target.value })}
                             className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium shadow-sm hover:border-gray-200"
-                            placeholder="e.g. Frontend Developer"
+                            placeholder="e.g. Doctor, Nurse, Surgeon"
                             autoFocus
                         />
                         <p className="text-gray-400 text-sm">We'll use this to match you with relevant jobs</p>
@@ -293,6 +297,35 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
             )}
 
             {step === 2 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
+                    <div className="flex justify-center mb-2">
+                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
+                            <Globe className="h-10 w-10 text-teal-600" />
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <label className="text-xl font-bold text-gray-800 block">What industry do you work in?</label>
+                        <select
+                            required
+                            value={formData.industry}
+                            onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                            className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium appearance-none bg-white shadow-sm hover:border-gray-200"
+                        >
+                            <option value="">Select Industry</option>
+                            <option value="healthcare">Healthcare / Medical</option>
+                            <option value="technology">Technology / IT</option>
+                            <option value="education">Education / Teaching</option>
+                            <option value="finance">Finance / Banking</option>
+                            <option value="engineering">Engineering</option>
+                            <option value="transportation">Transportation</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <p className="text-gray-400 text-sm">This helps us filter jobs in your field</p>
+                    </div>
+                </div>
+            )}
+
+            {step === 3 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
                     <div className="flex justify-center mb-2">
                         <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
@@ -319,7 +352,7 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                 </div>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex justify-center mb-2">
                         <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
@@ -335,7 +368,7 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                                 value={formData.skills}
                                 onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
                                 className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="React, UI Design, Marketing"
+                                placeholder="e.g. Surgery, Patient Care, Diagnostics"
                                 autoFocus
                             />
                         </div>
@@ -354,7 +387,7 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                 </div>
             )}
 
-            {step === 4 && (
+            {step === 5 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
                     <div className="flex justify-center mb-2">
                         <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">

@@ -8,37 +8,33 @@ import {
     Certification,
     PointsHistoryEntry
 } from './user';
-import { Job, SavedJob, JobStatus, EmploymentType, JobCategory, ExperienceLevel } from './job';
-import { Application, ApplicationStatus } from './application';
 import { Payment, PaymentType, PaymentMethod } from './payment';
+import { Connection, ConnectionStatus } from './connection';
 import { AdminDashboardData } from './admin';
 
 // Re-export all types
 export * from './user';
-export * from './job';
-export * from './application';
 export * from './payment';
+export * from './connection';
 export * from './admin';
 
 // Re-export specific types that might be missing from * exports due to isolation
 export type { PaymentStatus } from './payment';
-export type { Application, ApplicationStatus } from './application';
+export type { Connection, ConnectionStatus } from './connection';
 
 // Aliases for backward compatibility or clarity
 export type BaseUser = User;
 
 export type PointsHistory = PointsHistoryEntry;
 
-// Placement Type (Reconstructed as it was missing from file list)
+// Placement Type (Kept for historical hiring tracking)
 export interface Placement {
     id: string;
-    jobId: string;
-    applicationId: string;
     candidateId: string;
     employerId: string;
+    connectionId?: string; // Links to the connection that led to this placement
 
     // Details
-    jobTitle: string;
     candidateName: string;
     companyName: string;
 
@@ -59,11 +55,9 @@ export interface Placement {
 // Database Collection Names
 export const COLLECTIONS = {
     USERS: 'users',
-    JOBS: 'jobs',
-    APPLICATIONS: 'applications',
+    CONNECTIONS: 'connections',
     PAYMENTS: 'payments',
     PLACEMENTS: 'placements',
-    SAVED_JOBS: 'saved_jobs',
     ADMIN_ACTIONS: 'admin_actions',
     NOTIFICATIONS: 'notifications',
     REPORTS: 'reports',
@@ -76,7 +70,6 @@ export const POINTS = {
     CV_UPLOADED: 15,
     VIDEO_UPLOADED: 20,
     PROFILE_COMPLETED: 10, // Bonus for 100%
-    JOB_APPLIED: 5,
     PROFILE_VIEWED: 3,
 } as const;
 

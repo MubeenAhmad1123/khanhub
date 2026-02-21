@@ -1,447 +1,273 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
-    Briefcase,
+    LayoutDashboard,
+    Video,
     Users,
-    Clock,
-    TrendingUp,
+    Bell,
+    Settings,
+    Home,
     Plus,
-    FileText,
+    Building2,
+    CheckCircle2,
+    CreditCard,
+    ArrowRight,
+    Briefcase,
+    Search,
     Loader2,
+    Clock,
+    AlertCircle
 } from 'lucide-react';
-import { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { useEmployerDashboard } from '@/hooks/useEmployerRealtime';
-import JobCard from '@/components/jobs/JobCard';
+import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { doc, onSnapshot, collection, query, where, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase-config';
+import { User } from '@/types/user';
 
-export default function EmployerDashboardPage() {
-    const router = useRouter();
-    const { user, loading, isEmployer } = useAuth();
-
-    // ✨ REAL-TIME HOOK - Automatically updates when admin changes job status
-    const {
-        jobs: allJobs,
-        applications,
-        recentJobs,
-        stats,
-        loading: fetchingData,
-        error,
-    } = useEmployerDashboard(user?.uid);
-
-    // Payment Status Logic
-    const [showPaymentStatusChange, setShowPaymentStatusChange] = useState(false);
-    const [paymentStatusMessage, setPaymentStatusMessage] = useState('');
+export default function EmployerDashboard() {
+    const { user, loading } = useAuth();
+    const [userData, setUserData] = useState<User | null>(null);
+    const [revealCount, setRevealCount] = useState(0);
+    const [hasSubmittedPayment, setHasSubmittedPayment] = useState(false);
+    const [checkingPayment, setCheckingPayment] = useState(true);
 
     useEffect(() => {
         if (!user?.uid) return;
 
-        let unsubscribe: (() => void) | undefined;
-        let isMounted = true;
-
-        const setupPaymentListener = async () => {
-            // Listen to payment status changes in real-time
-            const { doc, onSnapshot } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/firebase-config');
-
-            if (!isMounted) return;
-
-            const paymentsQuery = doc(db, 'payments', user.uid);
-
-            unsubscribe = onSnapshot(paymentsQuery, async (snapshot: any) => {
-                if (snapshot.exists()) {
-                    const paymentData = snapshot.data();
-                    const newStatus = paymentData.status;
-
-                    // If status changed, show notification
-                    if (user.paymentStatus !== newStatus) {
-                        if (newStatus === 'approved') {
-                            setPaymentStatusMessage('🎉 Your payment has been approved! You can now start hiring.');
-                            setShowPaymentStatusChange(true);
-
-                            // Refresh to get updated claims
-                            window.location.reload();
-                        } else if (newStatus === 'rejected') {
-                            setPaymentStatusMessage('❌ Your payment was rejected. Reason: ' + (paymentData.rejectionReason || 'Contact support.'));
-                            setShowPaymentStatusChange(true);
-
-                            setTimeout(() => {
-                                router.push('/auth/verify-payment');
-                            }, 5000);
-                        }
-                    }
-                }
-            });
-        };
-
-        setupPaymentListener();
-
-        return () => {
-            isMounted = false;
-            if (unsubscribe) unsubscribe();
-        };
-    }, [user?.uid, user?.paymentStatus, router]);
-
-    useEffect(() => {
-        if (!loading) {
-            if (!user) {
-                router.push('/auth/login');
-            } else if (!isEmployer) {
-                router.push('/dashboard');
+        const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+            if (doc.exists()) {
+                setUserData(doc.data() as User);
             }
-        }
-    }, [loading, user, isEmployer, router]);
+        });
 
-    if (loading || !user || (fetchingData && recentJobs.length === 0)) {
+        const checkPayment = async () => {
+            try {
+                const paymentRef = doc(db, 'payments', user.uid);
+                const paymentSnap = await getDoc(paymentRef);
+                setHasSubmittedPayment(paymentSnap.exists() && paymentSnap.data()?.status === 'pending');
+            } catch (err) {
+                console.error('Error checking payment status:', err);
+            } finally {
+                setCheckingPayment(false);
+            }
+        };
+
+        checkPayment();
+
+        // Real-time connections count
+        const connQ = query(collection(db, 'connections'), where('employerId', '==', user.uid));
+        const unsubscribeConn = onSnapshot(connQ, (snap: any) => {
+            setRevealCount(snap.size);
+        });
+
+        return () => { unsubscribe(); unsubscribeConn(); };
+    }, [user?.uid]);
+
+    if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-jobs-neutral">
-                <div className="text-center">
-                    <Loader2 className="h-12 w-12 animate-spin text-jobs-primary mx-auto mb-4" />
-                    <p className="text-jobs-dark/60 font-medium">Loading your dashboard...</p>
-                </div>
+            <div className="min-h-screen bg-[#F8FAFF] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
             </div>
         );
     }
 
-    if (error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-jobs-neutral">
-                <div className="text-center">
-                    <p className="text-red-600 font-medium">Error: {error}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="mt-4 px-6 py-2 bg-jobs-primary text-white rounded-lg"
-                    >
-                        Retry
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    const PaymentStatusBanner = () => {
-        if (showPaymentStatusChange) {
-            return (
-                <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
-                    <div className={`max-w-md rounded-xl shadow-2xl p-6 ${user?.paymentStatus === 'approved' || paymentStatusMessage.includes('approved')
-                        ? 'bg-green-500 text-white'
-                        : 'bg-red-500 text-white'
-                        }`}>
-                        <div className="flex items-start gap-4">
-                            <span className="text-2xl">🔔</span>
-                            <div>
-                                <h3 className="font-bold text-lg mb-1">Status Updated!</h3>
-                                <p className="text-sm">{paymentStatusMessage}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-        return null;
-    };
+    const sidebarLinks = [
+        { href: '/employer/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+        { href: '/employer/my-videos', label: 'Company Videos', icon: <Video className="w-5 h-5" /> },
+        { href: '/employer/connections', label: 'Contact Reveals', icon: <Users className="w-5 h-5" /> },
+        { href: '/employer/notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
+        { href: '/employer/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
+    ];
 
     return (
-        <div className="min-h-screen bg-jobs-neutral py-8 px-4">
-            <PaymentStatusBanner />
-            <div className="max-w-7xl mx-auto">
-                {/* Payment Pending Banner */}
-                {user?.paymentStatus === 'pending' && (
-                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-8 shadow-md">
-                        <div className="flex items-start gap-4">
-                            <Clock className="h-8 w-8 text-yellow-600 flex-shrink-0 animate-pulse" />
-                            <div className="flex-1">
-                                <h3 className="text-xl font-bold text-yellow-900 mb-2">
-                                    ⏳ Verification In Progress
-                                </h3>
-                                <p className="text-yellow-800 mb-2">
-                                    Your payment is being verified by our team. You can browse the dashboard but job posts will remain pending until approved.
-                                </p>
-                                <p className="text-sm font-semibold text-yellow-800">
-                                    Expected time: Within 30 minutes
-                                </p>
-                            </div>
+        <div className="min-h-screen bg-[#F8FAFF] flex">
+            {/* Sidebar */}
+            <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col flex-shrink-0 sticky top-0 h-screen">
+                <div className="p-6">
+                    <Link href="/" className="flex items-center gap-2 mb-10">
+                        <div className="w-8 h-8 bg-[#F97316] rounded-lg flex items-center justify-center transition-transform hover:scale-110">
+                            <Building2 className="w-5 h-5 text-white" />
                         </div>
-                    </div>
-                )}
-
-                {/* Payment Rejected Banner */}
-                {user?.paymentStatus === 'rejected' && (
-                    <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg mb-8 shadow-md">
-                        <div className="flex items-start gap-4">
-                            <span className="text-2xl">❌</span>
-                            <div className="flex-1">
-                                <h3 className="text-xl font-bold text-red-900 mb-2">
-                                    Payment Rejected
-                                </h3>
-                                <p className="text-red-800 mb-4">
-                                    Your payment verification failed. Please try again.
-                                </p>
-                                <Link
-                                    href="/auth/verify-payment"
-                                    className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700"
-                                >
-                                    Resubmit Payment
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-black text-jobs-dark mb-2">
-                        Welcome to your Company Dashboard, {user.company?.name || user.displayName}! 🏢
-                    </h1>
-                    <p className="text-jobs-dark/60">
-                        Manage your HR profile, post jobs, and find top talent.
-                        {/* Real-time indicator */}
-                        <span className="ml-2 inline-flex items-center gap-1 text-xs text-green-600">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                            </span>
-                            Live Updates
+                        <span className="text-xl font-black text-[#0F172A] tracking-tight">
+                            KhanHub<span className="text-[#F97316]">Hiring</span>
                         </span>
-                    </p>
-                    {(!user.company?.name || !user.company?.description) && (
-                        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <span className="text-2xl">📋</span>
-                                <div>
-                                    <p className="font-bold text-blue-900">Complete your HR Profile</p>
-                                    <p className="text-sm text-blue-700">
-                                        Add company details to attract more candidates.
+                    </Link>
+
+                    <nav className="space-y-1">
+                        {sidebarLinks.map((link) => (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+                                    link.href === '/employer/dashboard'
+                                        ? "bg-orange-50 text-[#F97316]"
+                                        : "text-slate-600 hover:bg-slate-50"
+                                )}
+                            >
+                                {link.icon}
+                                {link.label}
+                            </Link>
+                        ))}
+                    </nav>
+                </div>
+
+                <div className="mt-auto p-6">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Back to</p>
+                        <Link href="/" className="flex items-center gap-2 text-sm font-bold text-slate-700 hover:text-[#1B4FD8] transition-colors">
+                            <Home className="w-4 h-4" />
+                            Main Portal
+                        </Link>
+                    </div>
+                </div>
+            </aside>
+
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto p-4 md:p-10">
+                <div className="max-w-5xl mx-auto">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+                        <div>
+                            <h1 className="text-3xl font-black text-[#0F172A]">Corporate Dashboard</h1>
+                            <div className="flex items-center gap-2 mt-2">
+                                <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider">Employer</span>
+                                <span className="text-slate-400 text-sm font-medium">
+                                    {(userData as any)?.companyName || (userData as any)?.displayName || 'Company'} • {(userData as any)?.industry || 'General'}
+                                </span>
+                            </div>
+                        </div>
+                        <Link
+                            href="/browse"
+                            className="bg-white border border-slate-200 px-6 py-3 rounded-full text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                        >
+                            Find Candidates
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </div>
+
+                    {/* Status Card Logic */}
+                    <div className="mb-8">
+                        {/* 1. Payment Verification (Proof Submitted) */}
+                        {userData?.paymentStatus === 'pending' && hasSubmittedPayment && (
+                            <div className="bg-orange-50 border border-orange-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                                <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
+                                    <Clock className="w-10 h-10 text-orange-600" />
+                                </div>
+                                <div className="flex-1 text-center md:text-left">
+                                    <h2 className="text-xl font-bold text-orange-900 mb-2">Registration Under Review</h2>
+                                    <p className="text-orange-700 text-sm opacity-90 leading-relaxed max-w-lg">
+                                        We've received your company's payment proof. Our team is currently verifying it.
+                                        This involves vetting the company details for candidate safety.
                                     </p>
                                 </div>
                             </div>
-                            <Link
-                                href="/employer/profile"
-                                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm"
-                            >
-                                Setup Now
-                            </Link>
-                        </div>
-                    )}
-                </div>
+                        )}
 
-                {/* Quick Post Button */}
-                <div className="mb-8">
-                    <Link
-                        href="/employer/post-job"
-                        className="inline-flex items-center gap-2 bg-jobs-accent text-white px-8 py-4 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-jobs-accent/30"
-                    >
-                        <Plus className="h-5 w-5" />
-                        Post a New Job
-                    </Link>
-                </div>
-
-                {/* Stats Grid - Updates in real-time */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="bg-blue-100 p-3 rounded-xl">
-                                <Briefcase className="h-6 w-6 text-blue-600" />
-                            </div>
-                        </div>
-                        <div className="text-3xl font-black text-jobs-dark">{stats.activeJobs}</div>
-                        <div className="text-sm text-jobs-dark/60">Active Jobs</div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="bg-green-100 p-3 rounded-xl">
-                                <Users className="h-6 w-6 text-green-600" />
-                            </div>
-                        </div>
-                        <div className="text-3xl font-black text-jobs-dark">
-                            {stats.totalApplications}
-                        </div>
-                        <div className="text-sm text-jobs-dark/60">Total Applications</div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="bg-yellow-100 p-3 rounded-xl">
-                                <Clock className="h-6 w-6 text-yellow-600" />
-                            </div>
-                        </div>
-                        <div className="text-3xl font-black text-jobs-dark">{stats.pendingReview}</div>
-                        <div className="text-sm text-jobs-dark/60">Pending Review</div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="bg-purple-100 p-3 rounded-xl">
-                                <TrendingUp className="h-6 w-6 text-purple-600" />
-                            </div>
-                        </div>
-                        <div className="text-3xl font-black text-jobs-dark">{stats.totalViews}</div>
-                        <div className="text-sm text-jobs-dark/60">Total Views</div>
-                    </div>
-                </div>
-
-                {/* Main Content Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column - Recent Jobs */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-black text-jobs-dark">
-                                    Recent Job Postings
-                                </h2>
-                                <Link
-                                    href="/employer/jobs"
-                                    className="text-sm font-bold text-jobs-primary hover:underline"
-                                >
-                                    View All
-                                </Link>
-                            </div>
-
-                            {recentJobs.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {recentJobs.map((job) => (
-                                        <JobCard key={job.id} job={job} />
-                                    ))}
+                        {/* 1b. Payment Required (No Proof Submitted) */}
+                        {userData?.paymentStatus === 'pending' && !hasSubmittedPayment && !checkingPayment && (
+                            <div className="bg-red-50 border border-red-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <AlertCircle className="w-10 h-10 text-red-600" />
                                 </div>
-                            ) : (
-                                <div className="text-center py-12">
-                                    <Briefcase className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                    <p className="text-gray-500 mb-4">No job postings yet</p>
+                                <div className="flex-1 text-center md:text-left">
+                                    <h2 className="text-xl font-bold text-red-900 mb-2">Account Activation Required</h2>
+                                    <p className="text-red-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
+                                        To protect our candidates, every hiring account must be verified. Pay the one-time
+                                        setup fee of PKR 1,000 to start viewing candidate videos.
+                                    </p>
                                     <Link
-                                        href="/employer/post-job"
-                                        className="inline-flex items-center gap-2 bg-jobs-primary text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition"
+                                        href="/auth/verify-payment"
+                                        className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 text-white rounded-full font-bold shadow-lg shadow-red-500/20 hover:scale-105 transition-all"
                                     >
-                                        <Plus className="h-5 w-5" />
-                                        Post Your First Job
+                                        <CreditCard className="w-5 h-5" />
+                                        Activate My Company
                                     </Link>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Recent Applications */}
-                        <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-black text-jobs-dark">
-                                    Recent Applications
-                                </h2>
-                                <Link
-                                    href="/employer/applications"
-                                    className="text-sm font-bold text-jobs-primary hover:underline"
-                                >
-                                    View All
-                                </Link>
                             </div>
+                        )}
 
-                            {applications.length > 0 ? (
-                                <div className="space-y-3">
-                                    {applications.slice(0, 5).map((app) => (
-                                        <div
-                                            key={app.id}
-                                            className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:border-jobs-primary transition-colors"
-                                        >
-                                            <div>
-                                                <p className="font-bold text-jobs-dark">
-                                                    {app.applicantName}
-                                                </p>
-                                                <p className="text-sm text-jobs-dark/60">
-                                                    {app.jobTitle}
-                                                </p>
-                                            </div>
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-xs font-bold ${app.status === 'applied'
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : app.status === 'shortlisted'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-gray-100 text-gray-800'
-                                                    }`}
-                                            >
-                                                {app.status}
-                                            </span>
-                                        </div>
-                                    ))}
+                        {/* 2. Pitch Video Pending (Only if payment approved) */}
+                        {userData?.paymentStatus === 'approved' && !userData?.profile?.videoResume && (
+                            <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8">
+                                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Plus className="w-10 h-10 text-blue-600" />
                                 </div>
-                            ) : (
-                                <div className="text-center py-12">
-                                    <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                    <p className="text-gray-500">Applications will appear here</p>
+                                <div className="flex-1 text-center md:text-left">
+                                    <h2 className="text-xl font-bold text-blue-900 mb-2">Pitch Your Company</h2>
+                                    <p className="text-blue-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
+                                        Upload a "Life at {(userData as any)?.companyName || 'Company'}" video to showcase your culture
+                                        and attract higher quality candidates.
+                                    </p>
+                                    <Link
+                                        href="/employer/videos"
+                                        className="inline-flex items-center gap-2 px-8 py-4 bg-[#1B4FD8] text-white rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
+                                    >
+                                        Post Company Pitch
+                                    </Link>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
+
+                        {/* 3. Account Fully Active */}
+                        {userData?.paymentStatus === 'approved' && userData?.profile?.videoResume && (
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8">
+                                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                                </div>
+                                <div className="flex-1 text-center md:text-left">
+                                    <h2 className="text-xl font-bold text-emerald-900 mb-2">Hiring Account Active</h2>
+                                    <p className="text-emerald-700 text-sm opacity-90 leading-relaxed">
+                                        Your company profile is verified. You can now browse all candidates
+                                        and connect with them directly.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Right Column - Quick Actions & Tips */}
-                    <div className="space-y-6">
-                        {/* Quick Actions */}
-                        <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
-                            <h3 className="font-black text-jobs-dark mb-4">Quick Actions</h3>
-                            <div className="space-y-3">
-                                <Link
-                                    href="/employer/post-job"
-                                    className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl hover:border-jobs-primary hover:bg-jobs-primary/5 transition-all"
-                                >
-                                    <div className="bg-blue-100 p-2 rounded-lg">
-                                        <Plus className="h-5 w-5 text-blue-600" />
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                        {[
+                            { label: 'Candidates Viewed', value: '0', icon: <Search className="w-5 h-5 text-blue-600" /> },
+                            { label: 'Reveals Requested', value: revealCount.toString(), icon: <Users className="w-5 h-5 text-orange-600" /> },
+                            { label: 'Video Pitches', value: '0', icon: <Briefcase className="w-5 h-5 text-purple-600" /> }
+                        ].map((stat, idx) => (
+                            <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center">
+                                        {stat.icon}
                                     </div>
-                                    <span className="font-bold text-jobs-dark text-sm">Post New Job</span>
-                                </Link>
-
-                                <Link
-                                    href="/employer/applications"
-                                    className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all"
-                                >
-                                    <div className="bg-green-100 p-2 rounded-lg">
-                                        <Users className="h-5 w-5 text-green-600" />
-                                    </div>
-                                    <span className="font-bold text-jobs-dark text-sm">
-                                        View Applications
-                                    </span>
-                                </Link>
-
-                                <Link
-                                    href="/employer/profile"
-                                    className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all"
-                                >
-                                    <div className="bg-purple-100 p-2 rounded-lg">
-                                        <FileText className="h-5 w-5 text-purple-600" />
-                                    </div>
-                                    <span className="font-bold text-jobs-dark text-sm">
-                                        Edit Company Profile
-                                    </span>
-                                </Link>
+                                    <span className="text-2xl font-black text-[#0F172A]">{stat.value}</span>
+                                </div>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
                             </div>
+                        ))}
+                    </div>
+
+                    {/* Bottom CTA Card */}
+                    <div className="bg-[#0F172A] p-8 rounded-[2rem] shadow-xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                            <Users className="w-32 h-32 text-orange-500" />
                         </div>
-
-                        {/* Tips Card */}
-                        <div className="bg-gradient-to-br from-jobs-primary to-blue-600 p-6 rounded-3xl shadow-lg text-white">
-                            <h3 className="font-black mb-4">💡 Hiring Tips</h3>
-                            <div className="space-y-3 text-sm">
-                                <p>✓ Write clear, detailed job descriptions</p>
-                                <p>✓ List specific skills and requirements</p>
-                                <p>✓ Offer competitive salaries</p>
-                                <p>✓ Respond to applications quickly</p>
-                                <p>✓ Use match scores to find best candidates</p>
-                            </div>
-                        </div>
-
-                        {/* Commission Info */}
-                        <div className="bg-yellow-50 p-6 rounded-3xl border border-yellow-100">
-                            <h3 className="font-black text-yellow-900 mb-3">📊 Commission Structure</h3>
-                            <p className="text-sm text-yellow-800 mb-3">
-                                When you hire a candidate through our platform:
+                        <div className="relative z-10 text-center md:text-left">
+                            <h3 className="text-2xl font-bold text-white mb-2">Discover New Talent</h3>
+                            <p className="text-slate-400 mb-8 max-w-sm mx-auto md:mx-0">
+                                Watch video introductions from over 10,000 verified candidates across Pakistan.
                             </p>
-                            <div className="bg-white p-4 rounded-xl">
-                                <div className="text-2xl font-black text-jobs-accent">50%</div>
-                                <div className="text-xs text-jobs-dark/60">of first month salary</div>
-                            </div>
-                            <p className="text-xs text-yellow-700 mt-3">
-                                You'll receive an invoice after marking a candidate as hired
-                            </p>
+                            <Link
+                                href="/browse"
+                                className="inline-flex items-center gap-2 px-8 py-4 bg-[#F97316] text-white rounded-full font-bold hover:scale-105 transition-all shadow-lg shadow-orange-500/20"
+                            >
+                                Start Discovery
+                                <ArrowRight className="w-5 h-5" />
+                            </Link>
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 }

@@ -13,26 +13,21 @@ export default function Sidebar() {
     // Job Seeker Menu Items
     const jobSeekerMenu = [
         { name: 'Dashboard', path: '/dashboard', icon: '📊' },
-        { name: 'Find Jobs', path: '/search', icon: '🔍' },
-        { name: 'My Applications', path: '/dashboard/applications', icon: '📝' },
-        { name: 'Saved Jobs', path: '/dashboard/saved-jobs', icon: '⭐' },
-        { name: 'Profile', path: '/dashboard/profile', icon: '👤' },
-        { name: 'Premium', path: '/dashboard/premium', icon: '💎' },
+        { name: 'Browse Videos', path: '/browse', icon: '🔍' },
+        { name: 'My Profile', path: '/dashboard/profile', icon: '👤' },
     ];
 
     // Employer Menu Items
     const employerMenu = [
         { name: 'Dashboard', path: '/employer/dashboard', icon: '📊' },
-        { name: 'Post Job', path: '/employer/post-job', icon: '➕' },
-        { name: 'My Jobs', path: '/employer/jobs', icon: '💼' },
-        { name: 'Applications', path: '/employer/applications', icon: '📋' },
+        { name: 'My Videos', path: '/employer/my-videos', icon: '➕' },
+        { name: 'Candidates', path: '/browse', icon: '📋' },
     ];
 
     // Admin Menu Items
     const adminMenu = [
         { name: 'Dashboard', path: '/admin', icon: '📊' },
         { name: 'Payments', path: '/admin/payments', icon: '💰' },
-        { name: 'Job Approvals', path: '/admin/jobs', icon: '✅' },
         { name: 'Users', path: '/admin/users', icon: '👥' },
         { name: 'Placements', path: '/admin/placements', icon: '🎯' },
         { name: 'Analytics', path: '/admin/analytics', icon: '📈' },

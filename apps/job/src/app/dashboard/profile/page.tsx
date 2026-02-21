@@ -40,7 +40,7 @@ export default function ProfilePage() {
 
                     // Sync strength if mismatch
                     const currentStrength = userData.profile?.profileStrength || 0;
-                    const calculatedStrength = calculateProfileStrength(userData);
+                    const calculatedStrength = calculateProfileStrength(userData as any);
 
                     if (currentStrength !== calculatedStrength) {
                         console.log(`♻️ Syncing profile strength on profile page: ${currentStrength}% -> ${calculatedStrength}%`);

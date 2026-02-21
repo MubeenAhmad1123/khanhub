@@ -90,7 +90,7 @@ export async function updateUserProfile(uid: string, updates: Partial<User>): Pr
             };
 
             // Calculate new strength using full user object
-            const newStrength = calculateProfileStrength(mergedUser);
+            const newStrength = calculateProfileStrength(mergedUser as any);
 
             // Apply new strength to updates (ensuring we preserve other profile fields)
             finalUpdates = {

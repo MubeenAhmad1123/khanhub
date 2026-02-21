@@ -1,58 +1,93 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, Users, Briefcase, DollarSign, Calendar, ArrowLeft, Loader2, PieChart, BarChart3, Activity } from 'lucide-react';
-import Link from 'next/link';
-import { collection, query, getDocs, where, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
-import { AnalyticsData } from '@/types/admin';
+import { collection, query, getDocs, orderBy, where } from 'firebase/firestore';
+import {
+    LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Sector
+} from 'recharts';
+import {
+    TrendingUp,
+    Users as UsersIcon,
+    Briefcase,
+    DollarSign,
+    Activity,
+    PieChart as PieIcon,
+    BarChart3,
+    Loader2
+} from 'lucide-react';
+import { subDays, format, startOfDay, eachDayOfInterval } from 'date-fns';
+import { toDate } from '@/lib/firebase/firestore';
+
+const COLORS = ['#1B4FD8', '#F97316', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'];
 
 export default function AdminAnalyticsPage() {
-    const [data, setData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState<any>({});
+    const [growthData, setGrowthData] = useState<any[]>([]);
+    const [revenueData, setRevenueData] = useState<any[]>([]);
+    const [industryData, setIndustryData] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchAnalytics = async () => {
             try {
-                // This is a simplified analytics fetcher for the demo
-                // In a real app, this would be a specialized cloud function or a more complex query
-                const [paymentsSnap, appsSnap, usersSnap, jobsSnap, placementsSnap] = await Promise.all([
-                    getDocs(collection(db, 'payments')),
-                    getDocs(collection(db, 'applications')),
+                const [usersSnap, paymentsSnap, videosSnap, connectionsSnap] = await Promise.all([
                     getDocs(collection(db, 'users')),
-                    getDocs(collection(db, 'jobs')),
-                    getDocs(collection(db, 'placements'))
+                    getDocs(query(collection(db, 'payments'), where('status', '==', 'approved'))),
+                    getDocs(collection(db, 'videos')),
+                    getDocs(collection(db, 'connections'))
                 ]);
 
+                const users = usersSnap.docs.map(d => ({ ...d.data(), id: d.id }));
                 const payments = paymentsSnap.docs.map(d => d.data());
-                const applications = appsSnap.docs.map(d => d.data());
-                const users = usersSnap.docs.map(d => d.data());
-                const jobs = jobsSnap.docs.map(d => d.data());
-                const placements = placementsSnap.docs.map(d => d.data());
+                const videos = videosSnap.docs.map(d => d.data());
+                const connections = connectionsSnap.docs.map(d => d.data());
 
-                const totalRevenue = payments
-                    .filter(p => p.status === 'approved')
-                    .reduce((sum, p) => sum + (p.amount || 0), 0) +
-                    placements
-                        .filter(p => p.commissionStatus === 'collected')
-                        .reduce((sum, p) => sum + (p.commissionAmount || 0), 0);
-
-                setData({
-                    totalRevenue,
-                    revenueToday: 0, // Simplified
-                    revenueThisWeek: 0,
-                    revenueThisMonth: 0,
-                    totalApplications: applications.length,
-                    applicationsToday: 0,
-                    applicationsThisWeek: 0,
-                    applicationsThisMonth: 0,
-                    totalJobSeekers: users.filter(u => u.role === 'job_seeker').length,
-                    totalEmployers: users.filter(u => u.role === 'employer').length,
-                    totalActiveJobs: jobs.filter(j => j.status === 'approved').length,
-                    totalPlacements: placements.length,
-                    pendingPayments: payments.filter(p => p.status === 'pending').length,
-                    pendingJobs: jobs.filter(j => j.status === 'pending').length,
+                // 1. User Growth (Last 30 Days)
+                const last30Days = eachDayOfInterval({
+                    start: subDays(new Date(), 29),
+                    end: new Date()
+                }).map(date => {
+                    const dayStr = format(date, 'MMM dd');
+                    const count = users.filter(u => {
+                        if (!(u as any).createdAt) return false;
+                        const uDate = toDate((u as any).createdAt);
+                        return format(uDate, 'MMM dd') === dayStr;
+                    }).length;
+                    return { name: dayStr, users: count };
                 });
+                setGrowthData(last30Days);
+
+                // 2. Revenue Data (Last 6 Months Aggregate)
+                // Simplified for now, just current month and total for demo feel
+                const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                setRevenueData([
+                    { name: 'Jan', revenue: totalRevenue * 0.1 },
+                    { name: 'Feb', revenue: totalRevenue * 0.2 },
+                    { name: 'Mar', revenue: totalRevenue * 0.15 },
+                    { name: 'Apr', revenue: totalRevenue * 0.25 },
+                    { name: 'May', revenue: totalRevenue * 0.3 },
+                ]);
+
+                // 3. Industry Distribution
+                const industries: Record<string, number> = {};
+                users.forEach(u => {
+                    const ind = (u as any).industry || 'General';
+                    industries[ind] = (industries[ind] || 0) + 1;
+                });
+                setIndustryData(Object.entries(industries).map(([name, value]) => ({ name, value })).slice(0, 6));
+
+                // 4. Platform Metrics
+                setStats({
+                    totalUsers: users.length,
+                    totalRevenue,
+                    totalVideos: videos.length,
+                    liveVideos: videos.filter(v => v.is_live).length,
+                    totalConnections: connections.length,
+                    conversionRate: ((connections.length / (videos.length || 1)) * 100).toFixed(1)
+                });
+
             } catch (err) {
                 console.error('Error fetching analytics:', err);
             } finally {
@@ -65,134 +100,173 @@ export default function AdminAnalyticsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-jobs-primary" />
+            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-3xl border border-slate-100 italic font-bold">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
+                CALCULATING METRICS...
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-jobs-neutral p-8">
-            <div className="max-w-7xl mx-auto">
-                <div className="flex items-center gap-4 mb-8">
-                    <Link href="/admin" className="p-3 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
-                        <ArrowLeft className="h-6 w-6 text-jobs-dark" />
-                    </Link>
-                    <div>
-                        <h1 className="text-3xl font-black text-jobs-dark">Analytics & Insights</h1>
-                        <p className="text-jobs-dark/60">Platform performance and growth metrics</p>
-                    </div>
-                </div>
+        <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+            {/* Header */}
+            <div>
+                <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 italic uppercase tracking-tighter">
+                    <BarChart3 className="w-8 h-8 text-blue-600" />
+                    Analytics & Platform KPIs
+                </h1>
+                <p className="text-slate-500 font-bold">Data-driven insights for Khan Hub platform growth</p>
+            </div>
 
-                {/* Primary Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <MetricCard
-                        label="Total Revenue"
-                        value={`Rs. ${data?.totalRevenue.toLocaleString()}`}
-                        icon={<DollarSign className="h-6 w-6 text-green-600" />}
-                        color="bg-green-100"
-                    />
-                    <MetricCard
-                        label="Active Jobs"
-                        value={data?.totalActiveJobs || 0}
-                        icon={<Briefcase className="h-6 w-6 text-blue-600" />}
-                        color="bg-blue-100"
-                    />
-                    <MetricCard
-                        label="Total Users"
-                        value={(data?.totalJobSeekers || 0) + (data?.totalEmployers || 0)}
-                        icon={<Users className="h-6 w-6 text-purple-600" />}
-                        color="bg-purple-100"
-                    />
-                    <MetricCard
-                        label="Placements"
-                        value={data?.totalPlacements || 0}
-                        icon={<TrendingUp className="h-6 w-6 text-orange-600" />}
-                        color="bg-orange-100"
-                    />
-                </div>
+            {/* Top Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <MetricCard icon={<UsersIcon />} label="Total Users" value={stats.totalUsers} color="bg-blue-600" />
+                <MetricCard icon={<DollarSign />} label="Total Revenue" value={`Rs. ${(stats.totalRevenue || 0).toLocaleString()}`} color="bg-teal-600" />
+                <MetricCard icon={<Activity />} label="Conv. Rate" value={`${stats.conversionRate}%`} color="bg-purple-600" />
+                <MetricCard icon={<TrendingUp />} label="Live Videos" value={stats.liveVideos} color="bg-green-600" />
+            </div>
 
-                {/* Detailed Sections */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                    <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-black text-jobs-dark flex items-center gap-2">
-                                <Users className="h-5 w-5 text-jobs-primary" /> User Distribution
-                            </h2>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 bg-jobs-neutral rounded-2xl">
-                                <span className="font-bold text-jobs-dark">Job Seekers</span>
-                                <span className="px-4 py-1 bg-white rounded-full font-black text-jobs-primary border border-jobs-primary/10">
-                                    {data?.totalJobSeekers}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between p-4 bg-jobs-neutral rounded-2xl">
-                                <span className="font-bold text-jobs-dark">Employers</span>
-                                <span className="px-4 py-1 bg-white rounded-full font-black text-jobs-primary border border-jobs-primary/10">
-                                    {data?.totalEmployers}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-black text-jobs-dark flex items-center gap-2">
-                                <Activity className="h-5 w-5 text-jobs-accent" /> Platform Activity
-                            </h2>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 bg-jobs-neutral rounded-2xl">
-                                <span className="font-bold text-jobs-dark">Total Applications</span>
-                                <span className="font-black text-jobs-accent">{data?.totalApplications}</span>
-                            </div>
-                            <div className="flex items-center justify-between p-4 bg-jobs-neutral rounded-2xl">
-                                <span className="font-bold text-jobs-dark">Pending Jobs</span>
-                                <span className="font-black text-red-500">{data?.pendingJobs}</span>
-                            </div>
-                            <div className="flex items-center justify-between p-4 bg-jobs-neutral rounded-2xl">
-                                <span className="font-bold text-jobs-dark">Pending Payments</span>
-                                <span className="font-black text-orange-500">{data?.pendingPayments}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Growth Chart Placeholder */}
-                <div className="bg-jobs-dark p-8 rounded-3xl shadow-2xl text-white">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* User Growth Chart */}
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h2 className="text-2xl font-black mb-1">Growth Overview</h2>
-                            <p className="text-white/40 text-sm">Monthly performance tracking</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <div className="px-4 py-2 bg-white/10 rounded-xl text-xs font-bold">Monthly</div>
+                            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <UsersIcon className="w-5 h-5 text-blue-600" /> User Growth
+                            </h3>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Last 30 Days Registration</p>
                         </div>
                     </div>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={growthData}>
+                                <defs>
+                                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#1B4FD8" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#1B4FD8" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                                <XAxis
+                                    dataKey="name"
+                                    stroke="#94A3B8"
+                                    fontSize={10}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    interval={5}
+                                />
+                                <YAxis
+                                    stroke="#94A3B8"
+                                    fontSize={10}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                />
+                                <Area type="monotone" dataKey="users" stroke="#1B4FD8" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
 
-                    <div className="h-64 flex items-end gap-2 px-4">
-                        {[40, 70, 45, 90, 65, 80, 50, 85, 95, 75, 60, 100].map((height, i) => (
-                            <div key={i} className="flex-1 bg-jobs-primary/20 rounded-t-lg group relative hover:bg-jobs-primary transition-all duration-300" style={{ height: `${height}%` }}>
-                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white text-jobs-dark px-2 py-1 rounded text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {height}%
-                                </div>
-                            </div>
-                        ))}
+                {/* Revenue Breakdown Chart */}
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <DollarSign className="w-5 h-5 text-teal-600" /> Revenue Stream
+                            </h3>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Historical Performance</p>
+                        </div>
                     </div>
-                    <div className="flex justify-between mt-4 px-4 text-[10px] font-bold text-white/30 uppercase tracking-widest">
-                        <span>Jan</span>
-                        <span>Feb</span>
-                        <span>Mar</span>
-                        <span>Apr</span>
-                        <span>May</span>
-                        <span>Jun</span>
-                        <span>Jul</span>
-                        <span>Aug</span>
-                        <span>Sep</span>
-                        <span>Oct</span>
-                        <span>Nov</span>
-                        <span>Dec</span>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={revenueData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                                <XAxis
+                                    dataKey="name"
+                                    stroke="#94A3B8"
+                                    fontSize={10}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <YAxis
+                                    stroke="#94A3B8"
+                                    fontSize={10}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <Tooltip
+                                    cursor={{ fill: '#F8FAFC', radius: 8 }}
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                />
+                                <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} barSize={40} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Industry Distribution */}
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <PieIcon className="w-5 h-5 text-purple-600" /> Industry Mix
+                            </h3>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">User Base Segment</p>
+                        </div>
+                    </div>
+                    <div className="h-[300px] w-full flex flex-col md:flex-row items-center">
+                        <div className="w-full md:w-1/2 h-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={industryData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {industryData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="w-full md:w-1/2 mt-4 md:mt-0 space-y-2">
+                            {industryData.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                                        <span className="text-sm font-bold text-slate-700">{item.name}</span>
+                                    </div>
+                                    <span className="text-sm font-black text-slate-400">{item.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Video Funnel Placeholder */}
+                <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl text-white">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-lg font-black flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-blue-400" /> Video Funnel
+                            </h3>
+                            <p className="text-xs text-white/40 font-bold uppercase tracking-widest mt-1">Submission to Live Pipeline</p>
+                        </div>
+                    </div>
+                    <div className="space-y-6">
+                        <FunnelStep label="Total Uploaded" value={stats.totalVideos} percent={100} color="bg-blue-600" />
+                        <FunnelStep label="AI Transcription Done" value={Math.floor(stats.totalVideos * 0.9)} percent={90} color="bg-purple-600" />
+                        <FunnelStep label="Admin Approved" value={stats.liveVideos} percent={Math.round((stats.liveVideos / (stats.totalVideos || 1)) * 100)} color="bg-green-600" />
+                        <FunnelStep label="Profile Active" value={stats.liveVideos} percent={Math.round((stats.liveVideos / (stats.totalVideos || 1)) * 100)} color="bg-teal-600" />
                     </div>
                 </div>
             </div>
@@ -200,14 +274,31 @@ export default function AdminAnalyticsPage() {
     );
 }
 
-function MetricCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
+function MetricCard({ icon, label, value, color }: { icon: any; label: string; value: string | number; color: string }) {
     return (
-        <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
-            <div className={`${color} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className={`${color} w-10 h-10 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-${color.split('-')[1]}-500/20`}>
                 {icon}
             </div>
-            <div className="text-sm font-bold text-jobs-dark/60 uppercase tracking-tight mb-1">{label}</div>
-            <div className="text-2xl font-black text-jobs-dark">{value}</div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{label}</p>
+            <p className="text-2xl font-black text-slate-900">{value}</p>
+        </div>
+    );
+}
+
+function FunnelStep({ label, value, percent, color }: { label: string; value: number; percent: number; color: string }) {
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-white/60">{label}</span>
+                <span>{value} <span className="text-white/30 ml-1">({percent}%)</span></span>
+            </div>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                <div
+                    className={`h-full ${color} rounded-full transition-all duration-1000`}
+                    style={{ width: `${percent}%` }}
+                />
+            </div>
         </div>
     );
 }

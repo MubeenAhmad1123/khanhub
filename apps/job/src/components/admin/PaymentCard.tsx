@@ -20,14 +20,14 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
     const [rejectReason, setRejectReason] = useState('');
 
     // Calculate time since submission
-    const timeAgo = payment.submittedAt
-        ? formatDistanceToNow(toDate(payment.submittedAt), { addSuffix: true })
-        : 'Unknown time';
+    const timeAgo = payment.createdAt
+        ? formatDistanceToNow(toDate(payment.createdAt), { addSuffix: true })
+        : 'recently';
 
     // Calculate if within 30-min window
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    const isWithinWindow = payment.submittedAt
-        ? toDate(payment.submittedAt) > thirtyMinutesAgo
+    const isWithinWindow = payment.createdAt
+        ? toDate(payment.createdAt) > thirtyMinutesAgo
         : false;
 
     const handleApprove = async () => {
@@ -102,7 +102,16 @@ export default function PaymentCard({ payment, onApprove, onReject }: PaymentCar
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Type</p>
-                            <p className="text-gray-900 capitalize">{payment.type}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tight ${payment.type === 'video_upload' ? 'bg-blue-100 text-blue-700' :
+                                    payment.type === 'premium' ? 'bg-purple-100 text-purple-700' :
+                                        'bg-orange-100 text-orange-700'
+                                    }`}>
+                                    {payment.type === 'video_upload' ? '🎬 Video Upload' :
+                                        payment.type === 'premium' ? '💎 Premium' :
+                                            '📝 Registration'}
+                                </span>
+                            </div>
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Transaction ID</p>

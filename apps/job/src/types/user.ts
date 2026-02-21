@@ -51,26 +51,27 @@ export interface Certification {
 export interface JobSeekerProfile {
     // Basic Info
     fullName?: string;
-    phone: string;
-    location: string;
-    bio: string;
+    phone?: string;
+    location?: string;
+    bio?: string;
 
     // Professional Info
     currentJobTitle?: string;
     preferredJobTitle?: string;
-    yearsOfExperience: number;
-    skills: string[];
+    yearsOfExperience?: number;
+    skills?: string[];
 
     // Experience & Education
-    experience: WorkExperience[];
-    education: Education[];
-    certifications: Certification[];
+    experience?: any[];
+    education?: any[];
+    certifications?: any[];
 
     // Files
     cvUrl?: string;
     cvFileName?: string;
     cvUploadedAt?: Date;
     videoUrl?: string;
+    videoResume?: string; // Legacy alias for videoUrl
     videoFileName?: string;
     videoUploadedAt?: Date;
 
@@ -174,7 +175,14 @@ export interface User {
     isFeatured: boolean; // For premium job seekers
     isBanned: boolean;
     banReason?: string;
-    onboardingCompleted: boolean;
+    onboardingCompleted?: boolean;
+
+    // Video Upload Feature (Phase 2)
+    video_upload_enabled: boolean;
+    video_upload_payment_id?: string;
+    profile_status: 'incomplete' | 'payment_pending' | 'video_pending' | 'active';
+    industry?: string;
+    subcategory?: string;
 }
 
 // ==================== ROLE-SPECIFIC USER TYPES ====================

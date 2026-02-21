@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -52,8 +53,8 @@ export default function LoginPage() {
 
             // Then check payment status
             if (user.paymentStatus === 'pending') {
-                console.log('→ Redirecting to DASHBOARD (payment pending)');
-                router.push('/dashboard');
+                console.log('→ Redirecting to VERIFY PAYMENT (payment pending)');
+                router.push('/auth/verify-payment');
                 return;
             }
 
@@ -160,9 +161,9 @@ export default function LoginPage() {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-600 transition-colors"
                             >
-                                {showPassword ? '🙈' : '👁️'}
+                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                         </div>
                     </div>

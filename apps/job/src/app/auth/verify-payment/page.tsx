@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { usePayment } from '@/hooks/usePayment';
 import { PaymentMethod } from '@/types/payment';
-import { Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, Loader2, Clock } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase-config';
 
 export default function VerifyPaymentPage() {
     const router = useRouter();
@@ -20,8 +22,28 @@ export default function VerifyPaymentPage() {
     const [senderName, setSenderName] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [existingPayment, setExistingPayment] = useState<any>(null);
+    const [checkingPayment, setCheckingPayment] = useState(true);
 
     useEffect(() => {
+        const checkExistingPayment = async () => {
+            if (user?.uid) {
+                try {
+                    const paymentRef = doc(db, 'payments', user.uid);
+                    const paymentSnap = await getDoc(paymentRef);
+                    if (paymentSnap.exists()) {
+                        setExistingPayment(paymentSnap.data());
+                    }
+                } catch (err) {
+                    console.error('Error checking existing payment:', err);
+                } finally {
+                    setCheckingPayment(false);
+                }
+            } else if (!loading) {
+                setCheckingPayment(false);
+            }
+        };
+
         if (!loading && !user) {
             router.push('/auth/login');
             return;
@@ -32,7 +54,11 @@ export default function VerifyPaymentPage() {
             } else {
                 router.push('/dashboard');
             }
+            return;
         }
+
+        checkExistingPayment();
+
         // Pre-fill sender name with user's display name
         if (user?.displayName) {
             setSenderName(user.displayName);
@@ -140,10 +166,41 @@ export default function VerifyPaymentPage() {
     }
 
     // Loading state
-    if (loading) {
+    if (loading || checkingPayment) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-blue-50 flex items-center justify-center">
-                <Loader2 className="h-12 w-12 text-teal-600 animate-spin" />
+                <div className="text-center">
+                    <Loader2 className="h-12 w-12 text-teal-600 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">Checking payment status...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Existing pending payment state
+    if (existingPayment && existingPayment.status === 'pending') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-blue-50 flex items-center justify-center p-4">
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Clock className="h-10 w-10 text-blue-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Verification in Progress</h2>
+                    <p className="text-gray-600 mb-6">
+                        We have received your payment proof (Ref: <span className="font-mono text-gray-900">{existingPayment.transactionId}</span>).
+                        Our team is currently verifying it. This usually takes 1-2 hours but can take up to 24 hours.
+                    </p>
+                    <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-800 text-left mb-6">
+                        <p className="font-bold mb-1">What's next?</p>
+                        <p>Once approved, you'll get full access to the dashboard. We'll send you an email confirmation.</p>
+                    </div>
+                    <button
+                        onClick={() => router.push(user?.role === 'employer' ? '/employer/dashboard' : '/dashboard')}
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                    >
+                        Go to Dashboard
+                    </button>
+                </div>
             </div>
         );
     }

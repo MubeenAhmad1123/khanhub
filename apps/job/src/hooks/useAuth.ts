@@ -75,10 +75,14 @@ export function useAuth() {
     const register = async (
         email: string,
         password: string,
-        displayName: string,
-        role: UserRole
+        additionalData: any, // Accepts object with displayName and others
+        role: UserRole = 'job_seeker'
     ): Promise<void> => {
         const trimmedEmail = email.trim();
+        const { displayName, ...otherData } = typeof additionalData === 'string'
+            ? { displayName: additionalData }
+            : additionalData;
+
         try {
             setAuthState(prev => ({ ...prev, loading: true, error: null }));
 
@@ -97,6 +101,7 @@ export function useAuth() {
                 email: trimmedEmail,
                 displayName,
                 role,
+                ...otherData,
                 emailVerified: false,
                 paymentStatus: 'pending',
                 isPremium: false,
