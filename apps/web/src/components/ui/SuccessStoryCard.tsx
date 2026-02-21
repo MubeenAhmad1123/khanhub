@@ -27,7 +27,7 @@ export const SuccessStoryCard: React.FC<SuccessStoryCardProps> = ({ story, class
             </div>
 
             {/* Image Section (Optional Before/After or After) */}
-            <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100">
+            <div className="relative aspect-video overflow-hidden bg-neutral-100">
                 <img
                     src={story.imageAfter}
                     alt={story.title}

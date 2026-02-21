@@ -82,7 +82,7 @@ export default function ImprovedNavbar() {
         if (pathname?.startsWith('/employer') || user.role === 'employer') {
             return [
                 { name: 'Dashboard', path: '/employer/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-                { name: 'My Videos', path: '/employer/my-videos', icon: <PlusCircle className="w-4 h-4" /> },
+                { name: 'My Videos', path: '/dashboard/video', icon: <PlusCircle className="w-4 h-4" /> },
                 { name: 'Browse Candidates', path: '/browse', icon: <BookmarkCheck className="w-4 h-4" /> },
             ];
         }

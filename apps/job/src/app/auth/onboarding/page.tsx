@@ -102,7 +102,7 @@ export default function OnboardingPage() {
                     }
                 }
             } as any);
-            router.push('/auth/verify-payment');
+            router.push('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Failed to save onboarding details');
         } finally {
@@ -277,29 +277,6 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
                     <div className="flex justify-center mb-2">
                         <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <Target className="h-10 w-10 text-teal-600" />
-                        </div>
-                    </div>
-                    <div className="space-y-4">
-                        <label className="text-xl font-bold text-gray-800 block">What is your primary profession?</label>
-                        <input
-                            type="text"
-                            required
-                            value={formData.primarySkill}
-                            onChange={(e) => setFormData({ ...formData, primarySkill: e.target.value })}
-                            className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium shadow-sm hover:border-gray-200"
-                            placeholder="e.g. Doctor, Nurse, Surgeon"
-                            autoFocus
-                        />
-                        <p className="text-gray-400 text-sm">We'll use this to match you with relevant jobs</p>
-                    </div>
-                </div>
-            )}
-
-            {step === 2 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
-                    <div className="flex justify-center mb-2">
-                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
                             <Globe className="h-10 w-10 text-teal-600" />
                         </div>
                     </div>
@@ -321,6 +298,29 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                             <option value="other">Other</option>
                         </select>
                         <p className="text-gray-400 text-sm">This helps us filter jobs in your field</p>
+                    </div>
+                </div>
+            )}
+
+            {step === 2 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
+                    <div className="flex justify-center mb-2">
+                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
+                            <Target className="h-10 w-10 text-teal-600" />
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <label className="text-xl font-bold text-gray-800 block">What is your primary profession?</label>
+                        <input
+                            type="text"
+                            required
+                            value={formData.primarySkill}
+                            onChange={(e) => setFormData({ ...formData, primarySkill: e.target.value })}
+                            className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium shadow-sm hover:border-gray-200"
+                            placeholder="e.g. Doctor, Nurse, Surgeon"
+                            autoFocus
+                        />
+                        <p className="text-gray-400 text-sm">We'll use this to match you with relevant jobs</p>
                     </div>
                 </div>
             )}
@@ -391,18 +391,18 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
                     <div className="flex justify-center mb-2">
                         <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <CheckCircle className="h-10 w-10 text-teal-600" />
+                            <Video className="h-10 w-10 text-teal-600" />
                         </div>
                     </div>
                     <div className="space-y-4">
-                        <h3 className="text-2xl font-black text-gray-900">All set!</h3>
-                        <p className="text-gray-600 text-lg">One last step to unlock all premium job search features.</p>
+                        <h3 className="text-2xl font-black text-gray-900">Free Video Upload!</h3>
+                        <p className="text-gray-600 text-lg">You can now upload your introduction video for free. This will help employers find you instantly.</p>
                         <div className="bg-teal-50 p-6 rounded-3xl border-2 border-teal-100">
-                            <p className="text-teal-800 font-bold mb-2">Registration Benefits:</p>
+                            <p className="text-teal-800 font-bold mb-2">Next Steps:</p>
                             <ul className="text-left text-sm text-teal-700 space-y-2">
-                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Direct access to employers</li>
-                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> AI Resume Matching</li>
-                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Featured Candidate status</li>
+                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Upload your video (FREE)</li>
+                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Browse employers</li>
+                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Pay PKR 1,000 to activate & connect</li>
                             </ul>
                         </div>
                     </div>

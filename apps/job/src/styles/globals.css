@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "@khanhub/config/tailwind.css";
+@import "../../../../packages/config/tailwind.css";
+
 
 @layer base {
     body {

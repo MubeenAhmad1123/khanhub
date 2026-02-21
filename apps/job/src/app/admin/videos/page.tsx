@@ -15,7 +15,7 @@ interface VideoRequest {
     userId: string;
     userEmail: string;
     cloudinaryUrl: string;
-    admin_status: 'pending' | 'approved' | 'rejected';
+    admin_status: 'pending' | 'approved' | 'rejected' | 'superseded';
     is_live: boolean;
     transcriptionStatus: 'pending' | 'processing' | 'completed' | 'failed';
     transcriptionText?: string;
@@ -33,7 +33,7 @@ export default function AdminVideosPage() {
     const { toast } = useToast();
     const [videos, setVideos] = useState<VideoRequest[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'superseded'>('pending');
 
     useEffect(() => {
         // We fetch everything to have live counts for tabs, but filter client-side
@@ -113,9 +113,10 @@ export default function AdminVideosPage() {
 
             // 2. Update user doc
             await updateDoc(doc(db, 'users', video.userId), {
-                profile_status: 'incomplete', // Allow them to re-upload but profile isn't active
+                profile_status: 'video_pending', // Allow them to re-upload
                 video_upload_enabled: true
             });
+
 
             // 3. Write notification
             await addDoc(collection(db, 'notifications'), {
@@ -148,6 +149,7 @@ export default function AdminVideosPage() {
         pending: videos.filter(v => v.admin_status === 'pending').length,
         approved: videos.filter(v => v.admin_status === 'approved').length,
         rejected: videos.filter(v => v.admin_status === 'rejected').length,
+        superseded: videos.filter(v => v.admin_status === 'superseded').length,
     };
 
     const filteredVideos = videos.filter(v => filter === 'all' || v.admin_status === filter);
@@ -179,13 +181,14 @@ export default function AdminVideosPage() {
                     { id: 'pending', label: 'Pending', count: counts.pending, color: 'orange' },
                     { id: 'approved', label: 'Approved', count: counts.approved, color: 'green' },
                     { id: 'rejected', label: 'Rejected', count: counts.rejected, color: 'red' },
+                    { id: 'superseded', label: 'Superseded', count: counts.superseded, color: 'slate' },
                 ].map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setFilter(tab.id as any)}
                         className={`px-5 py-2.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 border-2 ${filter === tab.id
-                                ? `bg-slate-900 border-slate-900 text-white shadow-lg`
-                                : `bg-white border-slate-100 text-slate-500 hover:border-slate-300`
+                            ? `bg-slate-900 border-slate-900 text-white shadow-lg`
+                            : `bg-white border-slate-100 text-slate-500 hover:border-slate-300`
                             }`}
                     >
                         {tab.label}

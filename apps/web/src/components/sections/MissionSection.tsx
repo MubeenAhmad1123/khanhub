@@ -11,6 +11,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { memo, useRef, useEffect } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
@@ -141,14 +142,32 @@ export function MissionSection() {
       <div className="section-inner">
         <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
 
-          {/* LEFT: Video Showcase */}
+          {/* LEFT: Video Showcase & Success Hero */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="relative space-y-4 sm:space-y-6 order-last lg:order-first"
+            className="relative space-y-8 sm:space-y-12 order-last lg:order-first"
           >
+            <div className="space-y-6">
+              <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
+                <Image
+                  src="/images/khan-hub-success-stories-hero.webp"
+                  alt="Khan Hub Success Stories"
+                  fill
+                  className="object-cover"
+                  quality={90}
+                />
+              </div>
+              <div className="space-y-3 px-2">
+                <h3 className="text-2xl sm:text-3xl font-bold font-display text-neutral-900 tracking-tight">Transforming Lives Together</h3>
+                <p className="text-neutral-600 text-base sm:text-lg leading-relaxed max-w-2xl italic">
+                  "Our journey of impact is made possible by your support. Every success story represents a life changed and a community strengthened."
+                </p>
+              </div>
+            </div>
+
             {/* Main Video - Scroll Autoplay */}
             <div className="relative h-[400px] sm:h-[600px] lg:h-[800px] rounded-2xl overflow-hidden shadow-2xl bg-neutral-900">
               <video

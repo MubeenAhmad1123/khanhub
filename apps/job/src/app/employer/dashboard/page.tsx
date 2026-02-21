@@ -150,69 +150,50 @@ export default function EmployerDashboard() {
 
                     {/* Status Card Logic */}
                     <div className="mb-8">
-                        {/* 1. Payment Verification (Proof Submitted) */}
-                        {userData?.paymentStatus === 'pending' && hasSubmittedPayment && (
-                            <div className="bg-orange-50 border border-orange-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                                <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
-                                    <Clock className="w-10 h-10 text-orange-600" />
+
+
+                        {/* 1. Pitch Video Under Review */}
+                        {userData?.profile_status === 'video_submitted' && (
+                            <div className="bg-yellow-50 border border-yellow-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                                <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Loader2 className="w-10 h-10 text-yellow-600 animate-spin" />
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
-                                    <h2 className="text-xl font-bold text-orange-900 mb-2">Registration Under Review</h2>
-                                    <p className="text-orange-700 text-sm opacity-90 leading-relaxed max-w-lg">
-                                        We've received your company's payment proof. Our team is currently verifying it.
-                                        This involves vetting the company details for candidate safety.
+                                    <h2 className="text-xl font-bold text-yellow-900 mb-2">Company Video Under Review</h2>
+                                    <p className="text-yellow-700 text-sm opacity-90 leading-relaxed max-w-lg">
+                                        Your company pitch video is currently being reviewed by our team.
+                                        Once approved, it will be visible to all candidates on your profile.
                                     </p>
                                 </div>
                             </div>
                         )}
 
-                        {/* 1b. Payment Required (No Proof Submitted) */}
-                        {userData?.paymentStatus === 'pending' && !hasSubmittedPayment && !checkingPayment && (
-                            <div className="bg-red-50 border border-red-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <AlertCircle className="w-10 h-10 text-red-600" />
+                        {/* 1b. Pitch Video Pending */}
+                        {userData?.profile_status !== 'video_submitted' &&
+                            !userData?.profile?.videoResume && (
+                                <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <Plus className="w-10 h-10 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 text-center md:text-left">
+                                        <h2 className="text-xl font-bold text-blue-900 mb-2">Pitch Your Company</h2>
+                                        <p className="text-blue-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
+                                            Upload a "Life at {(userData as any)?.companyName || 'Company'}" video to showcase your culture
+                                            and attract higher quality candidates.
+                                        </p>
+                                        <Link
+                                            href="/dashboard/video"
+                                            className="inline-flex items-center gap-2 px-8 py-4 bg-[#1B4FD8] text-white rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
+                                        >
+                                            <Plus className="w-5 h-5 mr-1" />
+                                            Post Company Pitch
+                                        </Link>
+                                    </div>
                                 </div>
-                                <div className="flex-1 text-center md:text-left">
-                                    <h2 className="text-xl font-bold text-red-900 mb-2">Account Activation Required</h2>
-                                    <p className="text-red-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
-                                        To protect our candidates, every hiring account must be verified. Pay the one-time
-                                        setup fee of PKR 1,000 to start viewing candidate videos.
-                                    </p>
-                                    <Link
-                                        href="/auth/verify-payment"
-                                        className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 text-white rounded-full font-bold shadow-lg shadow-red-500/20 hover:scale-105 transition-all"
-                                    >
-                                        <CreditCard className="w-5 h-5" />
-                                        Activate My Company
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* 2. Pitch Video Pending (Only if payment approved) */}
-                        {userData?.paymentStatus === 'approved' && !userData?.profile?.videoResume && (
-                            <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8">
-                                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Plus className="w-10 h-10 text-blue-600" />
-                                </div>
-                                <div className="flex-1 text-center md:text-left">
-                                    <h2 className="text-xl font-bold text-blue-900 mb-2">Pitch Your Company</h2>
-                                    <p className="text-blue-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
-                                        Upload a "Life at {(userData as any)?.companyName || 'Company'}" video to showcase your culture
-                                        and attract higher quality candidates.
-                                    </p>
-                                    <Link
-                                        href="/employer/videos"
-                                        className="inline-flex items-center gap-2 px-8 py-4 bg-[#1B4FD8] text-white rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
-                                    >
-                                        Post Company Pitch
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 3. Account Fully Active */}
-                        {userData?.paymentStatus === 'approved' && userData?.profile?.videoResume && (
+                        {/* 1c. Account Fully Active */}
+                        {userData?.profile?.videoResume && userData?.profile_status === 'active' && (
                             <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8">
                                 <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
                                     <CheckCircle2 className="w-10 h-10 text-emerald-600" />

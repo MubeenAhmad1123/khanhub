@@ -23,8 +23,9 @@ export interface CloudinaryUploadResult {
     url: string;           // Full HTTPS URL
     secureUrl: string;     // Secure HTTPS URL
     publicId: string;      // Cloudinary public ID
-    width: number;
-    height: number;
+    width?: number;
+    height?: number;
+    duration?: number;     // Added for videos
     format: string;        // jpg, png, etc.
     resourceType: string;  // image, video, etc.
     bytes: number;
@@ -38,12 +39,13 @@ export interface UploadProgress {
 }
 
 /**
- * Upload image to Cloudinary
+ * Upload image or video to Cloudinary
  */
 export async function uploadToCloudinary(
     file: File,
     folder: string = 'payments',
-    onProgress?: (progress: UploadProgress) => void
+    onProgress?: (progress: UploadProgress) => void,
+    resourceType: 'image' | 'video' | 'auto' = 'auto'
 ): Promise<CloudinaryUploadResult> {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
@@ -54,17 +56,32 @@ export async function uploadToCloudinary(
         );
     }
 
+    // Determine actual resource type if 'auto'
+    const actualType = resourceType === 'auto'
+        ? (file.type.startsWith('video/') ? 'video' : 'image')
+        : resourceType;
+
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-        throw new Error('Invalid file type. Please upload JPG, PNG, or WebP');
+    if (actualType === 'image') {
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            throw new Error('Invalid file type. Please upload JPG, PNG, or WebP');
+        }
+        // Validate file size (10MB max for images)
+        if (file.size > 10 * 1024 * 1024) {
+            throw new Error('Image size must be less than 10MB');
+        }
+    } else if (actualType === 'video') {
+        const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
+        if (!validTypes.includes(file.type)) {
+            throw new Error('Invalid video type. Please upload MP4, WebM, or MOV');
+        }
+        // Validate file size (50MB max for videos)
+        if (file.size > 50 * 1024 * 1024) {
+            throw new Error('Video size must be less than 50MB');
+        }
     }
 
-    // Validate file size (10MB max)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-        throw new Error('File size must be less than 10MB');
-    }
 
     try {
         // Create form data
@@ -79,7 +96,7 @@ export async function uploadToCloudinary(
         formData.append('public_id', fileName.replace(/\.[^/.]+$/, '')); // Remove extension
 
         // Upload to Cloudinary
-        const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${actualType}/upload`;
 
         const response = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
@@ -101,12 +118,15 @@ export async function uploadToCloudinary(
             xhr.addEventListener('load', () => {
                 if (xhr.status === 200) {
                     const result = JSON.parse(xhr.responseText);
+                    console.log('[Cloudinary Debug] Raw Response:', result);
+
                     resolve({
-                        url: result.url,
-                        secureUrl: result.secure_url,
+                        url: result.url || result.secure_url,
+                        secureUrl: result.secure_url || result.url,
                         publicId: result.public_id,
                         width: result.width,
                         height: result.height,
+                        duration: result.duration,
                         format: result.format,
                         resourceType: result.resource_type,
                         bytes: result.bytes,

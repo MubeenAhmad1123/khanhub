@@ -166,79 +166,22 @@ export default function JobSeekerDashboard() {
 
                     {/* Status Cards Logic */}
                     <div className="mb-8">
-                        {/* 1. Payment Verification (Proof Submitted) */}
-                        {isPaymentPending && hasSubmittedPayment && (
-                            <div className="bg-orange-50 border border-orange-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                                <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
-                                    <Clock className="w-10 h-10 text-orange-600" />
-                                </div>
-                                <div className="flex-1 text-center md:text-left">
-                                    <h2 className="text-xl font-bold text-orange-900 mb-2">Registration Under Review</h2>
-                                    <p className="text-orange-700 text-sm opacity-90 leading-relaxed max-w-lg">
-                                        We've received your payment proof. Our team is currently verifying it.
-                                        This usually takes 1-2 hours. You'll have full access once approved.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
 
-                        {/* 1b. Payment Required (No Proof Submitted) */}
-                        {isPaymentPending && !hasSubmittedPayment && !checkingPayment && (
-                            <div className="bg-red-50 border border-red-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <AlertCircle className="w-10 h-10 text-red-600" />
-                                </div>
-                                <div className="flex-1 text-center md:text-left">
-                                    <h2 className="text-xl font-bold text-red-900 mb-2">Activation Required</h2>
-                                    <p className="text-red-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
-                                        To start applying for jobs and connecting with employers, you need to pay a one-time registration fee of PKR 1,000.
-                                    </p>
-                                    <Link
-                                        href="/auth/verify-payment"
-                                        className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 text-white rounded-full font-bold shadow-lg shadow-red-500/20 hover:scale-105 transition-all"
-                                    >
-                                        <CreditCard className="w-5 h-5" />
-                                        Pay & Verify Now
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
 
-                        {/* 2. Video Pending (Upload Needed) */}
-                        {(isVideoPending || (isIncomplete && !isPaymentPending)) && !userData?.video_upload_enabled && (
-                            <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8">
-                                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <CreditCard className="w-10 h-10 text-blue-600" />
-                                </div>
-                                <div className="flex-1 text-center md:text-left">
-                                    <h2 className="text-xl font-bold text-blue-900 mb-2">Activate Your Video Profile</h2>
-                                    <p className="text-blue-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
-                                        Active profiles with videos get 10x more engagement. Pay the one-time activation fee of PKR 1,000 to start.
-                                    </p>
-                                    <Link
-                                        href="/dashboard/video-payment"
-                                        className="inline-flex items-center gap-2 px-8 py-4 bg-[#1B4FD8] text-white rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
-                                    >
-                                        <CreditCard className="w-5 h-5" />
-                                        Pay & Activate
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 2b. Video Pending (Payment Done, Just Upload) */}
-                        {(isVideoPending) && userData?.video_upload_enabled && (
+                        {/* 2. Video Pending (Upload Needed) - NOW FREE */}
+                        {isVideoPending && (
                             <div className="bg-purple-50 border border-purple-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8">
                                 <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
                                     <Video className="w-10 h-10 text-purple-600" />
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
-                                    <h2 className="text-xl font-bold text-purple-900 mb-2">Upload Your Introduction</h2>
+                                    <h2 className="text-xl font-bold text-purple-900 mb-2">Upload Your Introduction (FREE)</h2>
                                     <p className="text-purple-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
-                                        Your payment is approved! Record or upload a 60-second video to complete your profile.
+                                        Record or upload a 60-second video to introduce yourself to employers. It's completely free to upload!
                                     </p>
                                     <Link
-                                        href="/dashboard/upload-video"
+                                        href="/dashboard/video"
+
                                         className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 text-white rounded-full font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all"
                                     >
                                         <Plus className="w-5 h-5" />
@@ -247,6 +190,8 @@ export default function JobSeekerDashboard() {
                                 </div>
                             </div>
                         )}
+
+
 
                         {/* 3. Video Submitted (Under Review) */}
                         {isVideoSubmitted && (

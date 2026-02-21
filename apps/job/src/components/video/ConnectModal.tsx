@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Send, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useConnections } from '@/hooks/useConnections';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +22,18 @@ export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: 
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+
+
+    useEffect(() => {
+        if (isOpen) {
+            const isPaid = user?.paymentStatus === 'approved' || user?.profile_status === 'active';
+            setModalState(isPaid ? 'REQUEST' : 'PAYMENT');
+        }
+    }, [isOpen, user?.paymentStatus, user?.profile_status]);
+
+
+
 
     if (!isOpen) return null;
 
@@ -62,7 +74,7 @@ export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: 
                     </div>
                     <h2 className="text-xl font-black text-gray-900 leading-tight">
                         {modalState === 'REQUEST' && `Connect with ${seekerName}`}
-                        {modalState === 'PAYMENT' && 'Reveal Contact Info'}
+                        {modalState === 'PAYMENT' && 'Activate Your Video Profile'}
                         {modalState === 'SUCCESS' && 'Request Sent!'}
                     </h2>
                 </div>
@@ -72,7 +84,7 @@ export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: 
                     {modalState === 'REQUEST' && (
                         <div className="space-y-4">
                             <p className="text-sm text-gray-500">
-                                Interested in this candidate? Send a connection request to initiate the process.
+                                Interested in this candidate? Send a connection request to initiate the process. It's free to request, but activation is needed to view contact details.
                             </p>
                             <div>
                                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">
@@ -91,14 +103,14 @@ export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: 
                     {modalState === 'PAYMENT' && (
                         <div className="space-y-4 text-center">
                             <p className="text-sm text-gray-600">
-                                To reveal <span className="font-bold">{seekerName}'s</span> direct phone number and LinkedIn, a one-time connection fee is required.
+                                Active profiles with videos get 10x more engagement. To reveal <span className="font-bold">{seekerName}'s</span> direct contact info, pay the one-time activation fee.
                             </p>
                             <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100">
-                                <p className="text-xs font-bold text-orange-800 uppercase tracking-widest mb-1">Fee Amount</p>
+                                <p className="text-xs font-bold text-orange-800 uppercase tracking-widest mb-1">Activation Fee</p>
                                 <p className="text-3xl font-black text-orange-600">1,000 PKR</p>
                             </div>
                             <p className="text-[10px] text-gray-400 leading-relaxed">
-                                Once paid, our team will verify the payment and reveal the contact details within 2-4 hours. You'll receive a notification.
+                                Once paid, you'll have lifetime access to connect with anyone on the platform. Our team will verify the payment within 2-4 hours.
                             </p>
                         </div>
                     )}
@@ -142,10 +154,10 @@ export default function ConnectModal({ seekerId, seekerName, isOpen, onClose }: 
 
                     {modalState === 'PAYMENT' && (
                         <button
-                            onClick={handleMockPayment}
+                            onClick={() => window.location.href = '/auth/verify-payment'}
                             className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-orange-500/25 active:scale-95"
                         >
-                            Proceed to Payment
+                            Pay & Activate
                         </button>
                     )}
 

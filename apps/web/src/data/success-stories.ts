@@ -32,7 +32,7 @@ export const SUCCESS_STORIES: SuccessStory[] = [
         content: 'After years of chronic knee pain, the surgical team at Khan Hub performed a miraculous procedure. I am now back on my feet and walking without any support. The post-op care was exceptional.',
         rating: 5,
         date: '2024-01-15',
-        imageAfter: '/images/success/knee-after.webp',
+        imageAfter: '/images/surgical-knee-success-muhammad-ali.webp',
         imageBefore: '/images/success/knee-before.webp',
         avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ali',
         tags: ['Surgery', 'Recovery', 'Patient Review']
@@ -48,7 +48,7 @@ export const SUCCESS_STORIES: SuccessStory[] = [
         content: 'The doctors and nurses at the medical center provided world-class care during my pregnancy. From regular checkups to the delivery day, everything was managed professionally and with great compassion.',
         rating: 5,
         date: '2024-02-10',
-        imageAfter: '/images/success/maternity-success.webp',
+        imageAfter: '/images/maternity-care-fatima-bibi.webp',
         avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima',
         tags: ['Maternity', 'Healthcare', 'Motherhood']
     },
@@ -63,7 +63,7 @@ export const SUCCESS_STORIES: SuccessStory[] = [
         content: 'Completing my Pharmacy Technician course from IHS was the best decision of my life. The practical training and expert guidance helped me secure a high-paying job immediately after graduation.',
         rating: 5,
         date: '2023-11-20',
-        imageAfter: '/images/success/grad-success.webp',
+        imageAfter: '/images/ihs-pharmacy-ahmed-khan.webp',
         avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed',
         tags: ['Education', 'Career', 'Success']
     },

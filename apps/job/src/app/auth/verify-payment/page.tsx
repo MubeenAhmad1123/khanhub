@@ -210,8 +210,8 @@ export default function VerifyPaymentPage() {
             <div className="max-w-2xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8 animate-in fade-in slide-in-from-top-4">
-                    <h1 className="text-4xl font-black text-gray-900 mb-2">Complete Registration</h1>
-                    <p className="text-gray-600">Submit payment proof to activate your account</p>
+                    <h1 className="text-4xl font-black text-gray-900 mb-2">Activate Your Video Profile</h1>
+                    <p className="text-gray-600">Active profiles with videos get 10x more engagement. Pay the one-time activation fee of PKR 1,000 to start.</p>
                 </div>
 
                 {/* Error Alert */}
@@ -249,9 +249,9 @@ export default function VerifyPaymentPage() {
                     {/* Payment Amount */}
                     <div className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-xl p-6 mb-6">
                         <div className="text-center">
-                            <p className="text-sm font-medium opacity-90 mb-1">Registration Fee</p>
+                            <p className="text-sm font-medium opacity-90 mb-1">Profile Activation Fee</p>
                             <p className="text-5xl font-black tracking-tight">Rs. 1,000</p>
-                            <p className="text-sm opacity-75 mt-2">One-time payment • Lifetime access</p>
+                            <p className="text-sm opacity-75 mt-2">One-time payment • Required to connect</p>
                         </div>
                     </div>
 
