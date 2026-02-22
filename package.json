@@ -19,6 +19,7 @@
     "build:transport": "npm --prefix apps/transport run build"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.6.1",
     "lottie-web": "^5.13.0",
     "next-sitemap": "^4.2.3",
     "react-icons": "^5.5.0"

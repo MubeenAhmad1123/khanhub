@@ -13,6 +13,8 @@
     "@khanhub/config": "file:../../packages/config",
     "@khanhub/firebase": "file:../../packages/firebase",
     "@khanhub/shared-ui": "file:../../packages/shared-ui",
+    "@vercel/analytics": "^1.6.1",
+    "@vercel/speed-insights": "^1.3.1",
     "firebase": "^10.0.0",
     "lottie-react": "^2.4.1",
     "lottie-web": "^5.13.0",

@@ -123,6 +123,8 @@ import { Toaster } from 'react-hot-toast'
 import '@/styles/globals.css'
 import SocialMediaSidebar from '@/components/SocialMediaSidebar'
 import FloatingDonateButton from '@/components/FloatingDonateButton'
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const sora = Sora({
   subsets: ['latin'],
@@ -152,6 +154,8 @@ export default function RootLayout({
         <FloatingDonateButton />
         <Footer />
         <Toaster position="bottom-right" />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

@@ -6,6 +6,8 @@ import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 import EnterpriseNavbar from '@/components/layout/EnterpriseNavbar';
 import EnterpriseFooter from '@/components/layout/EnterpriseFooter';
 import '@/styles/globals.css';
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -36,6 +38,8 @@ export default function RootLayout({
                         </OrderProvider>
                     </CartProvider>
                 </AuthProviderWrapper>
+                <Analytics />
+                <SpeedInsights />
             </body>
         </html>
     );
