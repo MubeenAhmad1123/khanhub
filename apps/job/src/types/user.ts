@@ -57,6 +57,7 @@ export interface JobSeekerProfile {
 
     // Professional Info
     currentJobTitle?: string;
+    preferredSubcategory?: string;
     preferredJobTitle?: string;
     yearsOfExperience?: number;
     skills?: string[];

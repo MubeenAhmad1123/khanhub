@@ -8,6 +8,7 @@ import { calculateProfileStrength, getProfileImprovementSteps } from '@/lib/serv
 import { updateUserProfile } from '@/lib/firebase/auth';
 import { Loader2, AlertTriangle, CheckCircle2, Settings2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { INDUSTRIES, getIndustryLabel } from '@/lib/constants/categories';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -186,17 +187,25 @@ export default function ProfilePage() {
                                     </div>
 
                                     <div>
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Industry (Read-only)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Industry</label>
                                         <p className="text-blue-600 font-black text-lg uppercase italic tracking-tighter">
-                                            {profile?.industry || 'General'}
+                                            {getIndustryLabel(profile?.industry)}
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Subcategory (Read-only)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Sub-sector</label>
                                         <p className="text-blue-600 font-black text-lg uppercase italic tracking-tighter">
-                                            {profile?.subcategory || (
+                                            {profile?.subcategory ? (
+                                                INDUSTRIES.find(i => i.id === profile.industry)?.subcategories.find(s => s.id === profile.subcategory)?.label || profile.subcategory
+                                            ) : (
                                                 <Link href="/dashboard/profile/edit" className="text-orange-500 hover:underline">Select Now →</Link>
                                             )}
+                                        </p>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Exact Role / Title</label>
+                                        <p className="text-slate-900 font-bold text-lg">
+                                            {profile?.role_in_category || profile?.profile?.preferredJobTitle || 'Not specified'}
                                         </p>
                                     </div>
 

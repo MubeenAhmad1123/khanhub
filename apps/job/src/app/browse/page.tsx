@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Search,
     Filter,
@@ -13,9 +14,10 @@ import {
     Menu,
     X,
     ArrowRight,
-    Video
+    Video,
+    Loader2
 } from 'lucide-react';
-import { INDUSTRY_CATEGORIES } from '@/lib/data/categories';
+import { INDUSTRIES } from '@/lib/constants/categories';
 import VideoCard from '@/components/video/VideoCard';
 import MobileFilterBar from '@/components/browse/MobileFilterBar';
 import { cn } from '@/lib/utils';
@@ -23,16 +25,16 @@ import { useAuth } from '@/hooks/useAuth';
 
 // Dummy Video Data
 const DUMMY_VIDEOS = [
-    { seekerId: 'user1', role: 'jobseeker', industry: 'Technology', subcategory: 'Software Engineer' },
-    { seekerId: 'user2', role: 'employer', industry: 'Healthcare', subcategory: 'Hospital Admin' },
-    { seekerId: 'user3', role: 'jobseeker', industry: 'Finance', subcategory: 'Accountant' },
-    { seekerId: 'user4', role: 'jobseeker', industry: 'Education', subcategory: 'Teacher' },
-    { seekerId: 'user5', role: 'employer', industry: 'Technology', subcategory: 'UI/UX Designer' },
-    { seekerId: 'user6', role: 'jobseeker', industry: 'Engineering', subcategory: 'Civil Engineer' },
-    { seekerId: 'user7', role: 'employer', industry: 'Retail', subcategory: 'Store Manager' },
-    { seekerId: 'user8', role: 'jobseeker', industry: 'Healthcare', subcategory: 'Nurse' },
-    { seekerId: 'user9', role: 'jobseeker', industry: 'Technology', subcategory: 'Data Analyst' },
-    { seekerId: 'user10', role: 'employer', industry: 'Finance', subcategory: 'Banker' },
+    { seekerId: 'user1', role: 'jobseeker', industry: 'technology', subcategory: 'software_dev' },
+    { seekerId: 'user2', role: 'employer', industry: 'healthcare', subcategory: 'nursing' },
+    { seekerId: 'user3', role: 'jobseeker', industry: 'finance', subcategory: 'accounting' },
+    { seekerId: 'user4', role: 'jobseeker', industry: 'education', subcategory: 'school_teaching' },
+    { seekerId: 'user5', role: 'employer', industry: 'technology', subcategory: 'design' },
+    { seekerId: 'user6', role: 'jobseeker', industry: 'engineering', subcategory: 'civil_eng' },
+    { seekerId: 'user7', role: 'employer', industry: 'retail', subcategory: 'sales' },
+    { seekerId: 'user8', role: 'jobseeker', industry: 'healthcare', subcategory: 'nursing' },
+    { seekerId: 'user9', role: 'jobseeker', industry: 'technology', subcategory: 'software_dev' },
+    { seekerId: 'user10', role: 'employer', industry: 'finance', subcategory: 'banking' },
 ].map(v => ({
     ...v,
     id: v.seekerId,
@@ -40,18 +42,23 @@ const DUMMY_VIDEOS = [
     thumbnailUrl: ''
 }));
 
-export default function BrowsePage() {
+function BrowseContent() {
     const { user } = useAuth();
+    const searchParams = useSearchParams();
     const [selectedRole, setSelectedRole] = useState<'all' | 'jobseeker' | 'employer'>('all');
-    const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
+    const [selectedIndustry, setSelectedIndustry] = useState<string | null>(searchParams.get('industry'));
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Update industry if query param changes
+        const industry = searchParams.get('industry');
+        if (industry) setSelectedIndustry(industry);
+
         // Simulate loading
         const timer = setTimeout(() => setLoading(false), 1000);
         return () => clearTimeout(timer);
-    }, []);
+    }, [searchParams]);
 
     // Filtered Videos
     const filteredVideos = useMemo(() => {
@@ -119,13 +126,13 @@ export default function BrowsePage() {
                             >
                                 All Industries
                             </button>
-                            {INDUSTRY_CATEGORIES.map(cat => (
+                            {INDUSTRIES.map(cat => (
                                 <button
                                     key={cat.id}
-                                    onClick={() => setSelectedIndustry(cat.label)}
+                                    onClick={() => setSelectedIndustry(cat.id)}
                                     className={cn(
                                         "flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-bold transition-all",
-                                        selectedIndustry === cat.label
+                                        selectedIndustry === cat.id
                                             ? "bg-blue-50 text-[#1B4FD8]"
                                             : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                                     )}
@@ -134,7 +141,7 @@ export default function BrowsePage() {
                                         <span>{cat.icon}</span>
                                         <span>{cat.label}</span>
                                     </div>
-                                    <ChevronRight className={cn("w-4 h-4 opacity-0 transition-opacity", selectedIndustry === cat.label && "opacity-100")} />
+                                    <ChevronRight className={cn("w-4 h-4 opacity-0 transition-opacity", selectedIndustry === cat.id && "opacity-100")} />
                                 </button>
                             ))}
                         </div>
@@ -210,5 +217,13 @@ export default function BrowsePage() {
                 </div>
             </main>
         </div>
+    );
+}
+
+export default function BrowsePage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center p-12"><Loader2 className="animate-spin text-blue-600" /></div>}>
+            <BrowseContent />
+        </Suspense>
     );
 }

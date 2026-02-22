@@ -1,6 +1,6 @@
 'use client';
 
-import { INDUSTRY_CATEGORIES } from '@/lib/data/categories';
+import { INDUSTRIES } from '@/lib/constants/categories';
 import { LayoutGrid, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
@@ -32,10 +32,10 @@ export default function CategorySection() {
                 </div>
 
                 <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-6">
-                    {INDUSTRY_CATEGORIES.map((cat) => (
+                    {INDUSTRIES.map((cat) => (
                         <Link
                             key={cat.id}
-                            href={`/browse?industry=${encodeURIComponent(cat.label)}`}
+                            href={`/browse?industry=${cat.id}`}
                             className="bg-white p-4 lg:p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center text-center"
                         >
                             <div className="w-12 h-12 lg:w-16 lg:h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 lg:mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">

@@ -40,6 +40,7 @@ const navSections = [
         label: 'USERS',
         items: [
             { href: '/admin/users', icon: '👥', label: 'All Users' },
+            { href: '/admin/users/add', icon: '👤+', label: 'Add New User' },
         ],
     },
     {
@@ -111,8 +112,8 @@ export default function AdminSidebar({ isOpen, onClose }: SidebarProps) {
                                     href={item.href}
                                     onClick={onClose}
                                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-all text-sm font-medium group relative ${isActive
-                                            ? 'bg-blue-600/20 text-white border-l-2 border-blue-500 pl-[calc(0.75rem-2px)]'
-                                            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border-l-2 border-transparent'
+                                        ? 'bg-blue-600/20 text-white border-l-2 border-blue-500 pl-[calc(0.75rem-2px)]'
+                                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border-l-2 border-transparent'
                                         }`}
                                 >
                                     <span className="text-base">{item.icon}</span>

@@ -6,6 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2, CheckCircle, Building2, Users, Phone, Video, MapPin, Briefcase, Upload, ArrowRight, Target, Globe } from 'lucide-react';
 import Image from 'next/image';
 import { calculateProfileStrength } from '@/lib/services/pointsSystem';
+import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
 export default function OnboardingPage() {
     const router = useRouter();
@@ -22,6 +24,7 @@ export default function OnboardingPage() {
         experience: '',
         location: '',
         industry: '',
+        subcategory: '',
         primarySkill: '',
     });
 
@@ -30,6 +33,7 @@ export default function OnboardingPage() {
         companyWebsite: '',
         companySize: '',
         industry: '',
+        subcategory: '',
         location: '',
         address: '',
         tagline: '',
@@ -78,12 +82,16 @@ export default function OnboardingPage() {
                 role: 'job_seeker',
                 onboardingCompleted: true,
                 industry: jobSeekerData.industry,
+                subcategory: jobSeekerData.subcategory,
                 profile: {
                     ...(user?.profile as any),
+                    fullName: user?.displayName || '',
                     skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
                     yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
                     location: jobSeekerData.location,
                     preferredJobTitle: jobSeekerData.primarySkill,
+                    industry: jobSeekerData.industry,
+                    preferredSubcategory: jobSeekerData.subcategory,
                     profileStrength: calculateProfileStrength({
                         profile: {
                             skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
@@ -102,7 +110,7 @@ export default function OnboardingPage() {
                     }
                 }
             } as any);
-            router.push('/dashboard');
+            router.push('/auth/verify-payment');
         } catch (err: any) {
             setError(err.message || 'Failed to save onboarding details');
         } finally {
@@ -129,25 +137,36 @@ export default function OnboardingPage() {
                 logoUrl = result.secureUrl;
             }
 
+            // Build company object without any undefined values (Firestore doesn't accept undefined)
+            const companyData: Record<string, any> = {
+                name: employerData.companyName || '',
+                website: employerData.companyWebsite || '',
+                size: employerData.companySize || '',
+                industry: employerData.industry || '',
+                subcategory: employerData.subcategory || '',
+                location: employerData.location || '',
+                address: employerData.address || '',
+                tagline: employerData.tagline || '',
+                description: employerData.description || '',
+            };
+            if (employerData.foundedYear) {
+                companyData.foundedYear = parseInt(employerData.foundedYear);
+            }
+            if (logoUrl) {
+                companyData.logo = logoUrl;
+            }
+
             await updateProfile({
                 role: 'employer',
                 onboardingCompleted: true,
-                company: {
-                    name: employerData.companyName,
-                    website: employerData.companyWebsite,
-                    size: employerData.companySize as any,
-                    industry: employerData.industry as any,
-                    location: employerData.location,
-                    address: employerData.address,
-                    tagline: employerData.tagline,
-                    description: employerData.description,
-                    foundedYear: employerData.foundedYear ? parseInt(employerData.foundedYear) : undefined,
-                    logo: logoUrl || undefined,
-                },
-                displayName: employerData.contactPerson,
+                industry: employerData.industry || '',
+                subcategory: employerData.subcategory || '',
+                company: companyData,
+                displayName: employerData.contactPerson || '',
             } as any);
 
-            router.push('/employer/dashboard');
+            // Always go to payment page after onboarding
+            router.push('/auth/verify-payment');
         } catch (err: any) {
             setError(err.message || 'Failed to save company details');
         } finally {
@@ -271,6 +290,14 @@ export default function OnboardingPage() {
 
 // Job Seeker Onboarding Form Component
 function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmit, onBack, isSubmitting, totalSteps, setLocalRole }: any) {
+    const selectedIndustry = INDUSTRIES.find(i => i.id === formData.industry);
+    const subcategories = getSubcategories(formData.industry);
+    const roles = getRoles(formData.industry, formData.subcategory);
+
+    const industryOptions = INDUSTRIES.map(i => ({ id: i.id, label: i.label }));
+    const subcategoryOptions = subcategories.map(s => ({ id: s.id, label: s.label }));
+    const roleOptions = roles.map(r => ({ id: r, label: r }));
+
     return (
         <form onSubmit={onSubmit} className="space-y-6">
             {step === 1 && (
@@ -280,24 +307,15 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                             <Globe className="h-10 w-10 text-teal-600" />
                         </div>
                     </div>
-                    <div className="space-y-4">
-                        <label className="text-xl font-bold text-gray-800 block">What industry do you work in?</label>
-                        <select
-                            required
+                    <div className="space-y-4 text-left">
+                        <label className="text-xl font-bold text-gray-800 block text-center">What industry do you work in?</label>
+                        <SearchableSelect
+                            options={industryOptions}
                             value={formData.industry}
-                            onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                            className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium appearance-none bg-white shadow-sm hover:border-gray-200"
-                        >
-                            <option value="">Select Industry</option>
-                            <option value="healthcare">Healthcare / Medical</option>
-                            <option value="technology">Technology / IT</option>
-                            <option value="education">Education / Teaching</option>
-                            <option value="finance">Finance / Banking</option>
-                            <option value="engineering">Engineering</option>
-                            <option value="transportation">Transportation</option>
-                            <option value="other">Other</option>
-                        </select>
-                        <p className="text-gray-400 text-sm">This helps us filter jobs in your field</p>
+                            onChange={(val) => setFormData({ ...formData, industry: val, subcategory: '', primarySkill: '' })}
+                            placeholder="Search Industry (e.g. Healthcare, Tech)"
+                        />
+                        <p className="text-gray-400 text-sm text-center">This helps us filter jobs in your field</p>
                     </div>
                 </div>
             )}
@@ -309,18 +327,39 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                             <Target className="h-10 w-10 text-teal-600" />
                         </div>
                     </div>
-                    <div className="space-y-4">
-                        <label className="text-xl font-bold text-gray-800 block">What is your primary profession?</label>
-                        <input
-                            type="text"
-                            required
-                            value={formData.primarySkill}
-                            onChange={(e) => setFormData({ ...formData, primarySkill: e.target.value })}
-                            className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium shadow-sm hover:border-gray-200"
-                            placeholder="e.g. Doctor, Nurse, Surgeon"
-                            autoFocus
+                    <div className="space-y-4 text-left">
+                        <label className="text-xl font-bold text-gray-800 block text-center">Specify your sub-sector</label>
+                        <SearchableSelect
+                            options={subcategoryOptions}
+                            value={formData.subcategory}
+                            onChange={(val) => setFormData({ ...formData, subcategory: val, primarySkill: '' })}
+                            placeholder="Search Sub-sector (e.g. Hospital, Software)"
                         />
-                        <p className="text-gray-400 text-sm">We'll use this to match you with relevant jobs</p>
+
+                        {formData.subcategory && (
+                            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                <label className="text-xl font-bold text-gray-800 block text-center">What is your specific role?</label>
+                                {roleOptions.length > 0 ? (
+                                    <SearchableSelect
+                                        options={roleOptions}
+                                        value={formData.primarySkill}
+                                        onChange={(val) => setFormData({ ...formData, primarySkill: val })}
+                                        placeholder="Select your role..."
+                                    />
+                                ) : (
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.primarySkill}
+                                        onChange={(e) => setFormData({ ...formData, primarySkill: e.target.value })}
+                                        className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium shadow-sm hover:border-gray-200"
+                                        placeholder="e.g. Doctor, Nurse, Surgeon"
+                                        autoFocus
+                                    />
+                                )}
+                                <p className="text-gray-400 text-sm text-center italic">Type your specific job title if not listed</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -553,7 +592,7 @@ function EmployerOnboardingForm({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 ml-1">Company Size</label>
                             <select
@@ -572,20 +611,24 @@ function EmployerOnboardingForm({
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 ml-1">Industry</label>
-                            <select
-                                required
+                            <SearchableSelect
+                                options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
                                 value={formData.industry}
-                                onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium appearance-none bg-white shadow-sm hover:border-gray-200"
-                            >
-                                <option value="">Industry</option>
-                                <option value="technology">Tech</option>
-                                <option value="healthcare">Health</option>
-                                <option value="finance">Finance</option>
-                                <option value="education">Education</option>
-                                <option value="other">Other</option>
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, industry: val, subcategory: '' })}
+                                placeholder="Search Industry"
+                            />
                         </div>
+                        {formData.industry && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                <label className="text-sm font-bold text-gray-700 ml-1">Sub-sector / Market</label>
+                                <SearchableSelect
+                                    options={getSubcategories(formData.industry).map(s => ({ id: s.id, label: s.label }))}
+                                    value={formData.subcategory}
+                                    onChange={(val) => setFormData({ ...formData, subcategory: val })}
+                                    placeholder="Search Sub-sector"
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-4">

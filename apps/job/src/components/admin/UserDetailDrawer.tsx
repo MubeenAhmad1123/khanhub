@@ -4,6 +4,7 @@ import React from 'react';
 import { X, User, Mail, Phone, MapPin, Briefcase, Calendar, Shield, CreditCard, Video, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { toDate } from '@/lib/firebase/firestore';
+import Link from 'next/link';
 
 interface UserDetailDrawerProps {
     user: any;
@@ -90,13 +91,21 @@ export default function UserDetailDrawer({ user, isOpen, onClose }: UserDetailDr
 
                     {/* Footer Actions */}
                     <div className="p-6 border-t border-slate-100 bg-slate-50">
-                        <div className="grid grid-cols-2 gap-3">
-                            <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-900 font-bold rounded-xl hover:bg-slate-100 transition-all text-sm">
-                                <Phone className="w-4 h-4" /> Call User
-                            </button>
-                            <button className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-sm shadow-lg shadow-blue-500/20">
-                                Send Message
-                            </button>
+                        <div className="grid grid-cols-1 gap-3">
+                            <Link
+                                href={`/admin/users/${user.uid}/edit`}
+                                className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all text-sm shadow-lg shadow-slate-900/10"
+                            >
+                                <ExternalLink className="w-4 h-4" /> Edit Profile Details
+                            </Link>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-900 font-bold rounded-xl hover:bg-slate-100 transition-all text-sm">
+                                    <Phone className="w-4 h-4" /> Call User
+                                </button>
+                                <button className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-sm shadow-lg shadow-blue-500/20">
+                                    Send Message
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

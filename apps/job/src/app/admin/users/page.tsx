@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
@@ -141,6 +142,13 @@ export default function AdminUsersPage() {
                     <p className="text-slate-500 font-bold">Manage {users.length} registered platform members</p>
                 </div>
                 <div className="flex gap-2">
+                    <Link
+                        href="/admin/users/add"
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black italic rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-95 uppercase tracking-tighter"
+                    >
+                        <UserPlus className="w-5 h-5" />
+                        Add New User
+                    </Link>
                     <div className="px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center gap-2">
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                         <span className="text-xs font-bold text-slate-600 uppercase">

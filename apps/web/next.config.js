@@ -20,6 +20,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.googleusercontent.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
   },

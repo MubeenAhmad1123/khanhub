@@ -13,6 +13,8 @@ export type ActivityActionType =
     | 'user_banned'
     | 'user_unbanned'
     | 'user_deleted'
+    | 'user_created'
+    | 'user_updated'
     | 'placement_confirmed';
 
 export interface ActivityLogEntry {
@@ -71,6 +73,8 @@ export function getActionIcon(actionType: ActivityActionType): string {
         user_banned: '🔒',
         user_unbanned: '🔓',
         user_deleted: '🗑️',
+        user_created: '👤',
+        user_updated: '📝',
         placement_confirmed: '🤝',
     };
     return icons[actionType] || '📝';

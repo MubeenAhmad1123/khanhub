@@ -24,6 +24,7 @@ import { useEffect, useState } from 'react';
 import { doc, onSnapshot, collection, query, where, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { User } from '@/types/user';
+import ProfileEngagement from '@/components/dashboard/ProfileEngagement';
 
 export default function JobSeekerDashboard() {
     const { user, loading } = useAuth();
@@ -268,6 +269,11 @@ export default function JobSeekerDashboard() {
                                 </div>
                             </div>
                         )}
+                    </div>
+
+                    {/* Profile Engagement & Completion Tips */}
+                    <div className="mb-10">
+                        <ProfileEngagement user={userData} />
                     </div>
 
                     {/* Stats Grid */}

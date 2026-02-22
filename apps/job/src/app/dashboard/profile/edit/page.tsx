@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, ArrowLeft, Save, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { Loader2, ArrowLeft, Save, Sparkles } from 'lucide-react';
+import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
 export default function EditProfilePage() {
     const router = useRouter();
@@ -18,6 +20,9 @@ export default function EditProfilePage() {
         experience: 0,
         education: '',
         skills: '',
+        industry: '',
+        subcategory: '',
+        role: '',
     });
 
     useEffect(() => {
@@ -33,6 +38,9 @@ export default function EditProfilePage() {
                 experience: (user as any).profile.yearsOfExperience || (user as any).profile.experience || 0,
                 education: (user as any).profile.education || '',
                 skills: (user as any).profile.skills?.join(', ') || '',
+                industry: (user as any).industry || (user as any).profile?.industry || '',
+                subcategory: (user as any).subcategory || (user as any).profile?.preferredSubcategory || '',
+                role: (user as any).role_in_category || (user as any).profile?.preferredJobTitle || '',
             });
         } else if (user) {
             setFormData((prev: any) => ({
@@ -64,7 +72,13 @@ export default function EditProfilePage() {
                     yearsOfExperience: Number(formData.experience),
                     education: formData.education,
                     skills: skillsArray,
-                }
+                    industry: formData.industry,
+                    preferredSubcategory: formData.subcategory,
+                    preferredJobTitle: formData.role,
+                },
+                industry: formData.industry,
+                subcategory: formData.subcategory,
+                role_in_category: formData.role,
             };
 
             // Award points if this is the first time completing basic info
@@ -190,6 +204,50 @@ export default function EditProfilePage() {
                                     className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
                                     placeholder="e.g. BS Computer Science"
                                 />
+                            </div>
+
+                            {/* Industry */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Industry</label>
+                                <SearchableSelect
+                                    options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
+                                    value={formData.industry}
+                                    onChange={(val) => setFormData({ ...formData, industry: val, subcategory: '', role: '' })}
+                                    placeholder="Select Industry"
+                                />
+                            </div>
+
+                            {/* Subcategory / Profession */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Sub-sector</label>
+                                <SearchableSelect
+                                    options={getSubcategories(formData.industry).map(s => ({ id: s.id, label: s.label }))}
+                                    value={formData.subcategory}
+                                    onChange={(val) => setFormData({ ...formData, subcategory: val, role: '' })}
+                                    placeholder="Select Subcategory"
+                                />
+                            </div>
+
+                            {/* Role / Job Title */}
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Exact Job Title / Role</label>
+                                {getRoles(formData.industry, formData.subcategory).length > 0 ? (
+                                    <SearchableSelect
+                                        options={getRoles(formData.industry, formData.subcategory).map(r => ({ id: r, label: r }))}
+                                        value={formData.role}
+                                        onChange={(val) => setFormData({ ...formData, role: val })}
+                                        placeholder="Select your specific role"
+                                    />
+                                ) : (
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.role}
+                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                        placeholder="e.g. Senior Doctor, Lead Developer"
+                                    />
+                                )}
                             </div>
                         </div>
 

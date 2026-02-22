@@ -1,6 +1,6 @@
 'use client';
 
-import { INDUSTRY_CATEGORIES } from '@/lib/data/categories';
+import { INDUSTRIES } from '@/lib/constants/categories';
 import { cn } from '@/lib/utils';
 import { LayoutGrid, Users, Building2 } from 'lucide-react';
 
@@ -57,13 +57,13 @@ export default function MobileFilterBar({
                 >
                     All
                 </button>
-                {INDUSTRY_CATEGORIES.map(cat => (
+                {INDUSTRIES.map(cat => (
                     <button
                         key={cat.id}
-                        onClick={() => setSelectedIndustry(cat.label)}
+                        onClick={() => setSelectedIndustry(cat.id)}
                         className={cn(
                             "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border",
-                            selectedIndustry === cat.label
+                            selectedIndustry === cat.id
                                 ? "bg-slate-900 border-slate-900 text-white"
                                 : "bg-white border-slate-200 text-slate-500"
                         )}
