@@ -9,11 +9,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     const routes = [
         '',
         '/about',
+        '/blog',
+        '/certificate',
         '/contact',
         '/donate',
         '/emergency',
         '/departments',
         '/media',
+        '/success-stories',
+        '/whatsapp',
+        '/auth/signin',
         '/app-download',
     ].map((route) => ({
         url: `${baseUrl}${route}`,
@@ -30,5 +35,32 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.7,
     }));
 
-    return [...routes, ...departmentRoutes];
+    // Dynamic program pages
+    const programRoutes = DEPARTMENTS.flatMap((dept) => {
+        if (Array.isArray(dept.programs)) {
+            return (dept.programs as any[]).map((program) => ({
+                url: `${baseUrl}/departments/${dept.slug}/${program.slug}`,
+                lastModified: new Date(),
+                changeFrequency: 'weekly' as const,
+                priority: 0.6,
+            }));
+        }
+        return [];
+    });
+
+    // Institute courses
+    const courseRoutes = DEPARTMENTS
+        .filter(dept => dept.slug === 'institute-health-sciences')
+        .flatMap(dept => {
+            return (dept.subDepartments || []).flatMap(sub => {
+                return (sub.courses || []).map(course => ({
+                    url: `${baseUrl}/departments/${dept.slug}/${course.slug}`,
+                    lastModified: new Date(),
+                    changeFrequency: 'weekly' as const,
+                    priority: 0.6,
+                }));
+            });
+        });
+
+    return [...routes, ...departmentRoutes, ...programRoutes, ...courseRoutes];
 }
