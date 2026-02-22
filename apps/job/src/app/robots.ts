@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: ['/admin/', '/api/'],
         },
-        sitemap: 'https://jobs.khanhub.com/sitemap.xml',
+        sitemap: 'https://jobs.khanhub.com.pk/sitemap.xml',
     };
 }

@@ -9,8 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     const routes = [
         '',
         '/about',
-        '/blog',
-        '/certificate',
+        '/certificates',
         '/contact',
         '/donate',
         '/emergency',
@@ -18,6 +17,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
         '/media',
         '/success-stories',
         '/whatsapp',
+        '/privacy-policy',
+        '/terms',
         '/auth/signin',
         '/app-download',
     ].map((route) => ({

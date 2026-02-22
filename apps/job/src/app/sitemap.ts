@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = 'https://jobs.khanhub.com';
+    const baseUrl = 'https://jobs.khanhub.com.pk';
 
     // In a real scenario, you would fetch job IDs and blog slugs here
     // For now, we'll provide the main static routes

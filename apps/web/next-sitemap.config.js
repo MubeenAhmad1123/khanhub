@@ -1,6 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: 'https://www.khanhub.com.pk',
+  siteUrl: 'https://khanhub.com.pk',
   generateRobotsTxt: true,
   robotsTxtOptions: {
     policies: [
