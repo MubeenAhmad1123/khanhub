@@ -70,20 +70,21 @@ const DepartmentCategory = memo(function DepartmentCategory({
     <div className="mb-5 lg:mb-6 last:mb-0">
       <div className="flex items-center gap-2 mb-3 px-1">
         <span className="text-sm lg:text-base" aria-hidden="true">{cat.icon}</span>
-        <span className="text-xs lg:text-sm font-bold text-neutral-600 uppercase tracking-wider">
+        <span className="text-xs lg:text-sm font-bold text-neutral-700 uppercase tracking-wider">
           {cat.label}
         </span>
         <span className="text-xs text-neutral-500">({categoryDepts.length})</span>
         <div className="flex-1 h-px bg-gradient-to-r from-neutral-300/50 to-transparent ml-2" />
       </div>
-      <nav className="grid grid-cols-2 lg:grid-cols-3 gap-1.5" aria-label={`${cat.label} departments`}>
+      <nav className="grid grid-cols-2 lg:grid-cols-3 gap-1.5" role="none">
         {categoryDepts.map((dept) => (
           <Link
             key={dept.slug}
             href={`/departments/${dept.slug}`}
             onClick={onClose}
             className="flex items-center gap-2.5 px-3 lg:px-3.5 py-2.5 lg:py-3 rounded-xl hover:bg-primary-50/70 hover:scale-105 transition-all duration-300 group/item border border-transparent hover:border-primary-200/50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-            aria-label={dept.name}
+            aria-label={`View ${dept.name} department`}
+            role="menuitem"
           >
             <span className="text-sm lg:text-base flex-shrink-0 group-hover/item:scale-110 transition-transform" aria-hidden="true">
               {dept.icon}
@@ -261,6 +262,8 @@ export default function Navbar() {
                               href="/departments"
                               onClick={closeDeptDropdown}
                               className="text-xs lg:text-sm text-primary-600 hover:text-primary-700 font-bold transition-colors inline-flex items-center gap-2 group/all px-4 py-2 rounded-lg hover:bg-primary-50/50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                              aria-label={`View all ${DEPARTMENTS.length} departments`}
+                              role="menuitem"
                             >
                               View All {DEPARTMENTS.length} Departments
                               <svg className="w-4 h-4 group-hover/all:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -324,10 +327,10 @@ export default function Navbar() {
                     href={url || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0"
-                    aria-label={platform}
+                    className="p-2 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                    aria-label={`Visit our ${platform} page`}
                   >
-                    <Icon className="w-3.5 h-3.5 sm:w-4 h-4" />
+                    <Icon className="w-5 h-5" />
                   </a>
                 );
               })}
@@ -425,7 +428,7 @@ export default function Navbar() {
                                   <span className="text-base group-hover/dept:scale-110 transition-transform flex-shrink-0" aria-hidden="true">
                                     {dept.icon}
                                   </span>
-                                  <span className="text-sm text-neutral-700 group-hover/dept:text-primary-700 transition-colors font-semibold leading-tight">
+                                  <span className="text-sm text-neutral-800 group-hover/dept:text-primary-700 transition-colors font-semibold leading-tight">
                                     {dept.name}
                                   </span>
                                 </Link>

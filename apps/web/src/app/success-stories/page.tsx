@@ -5,6 +5,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { PageHero, SectionHeader } from '@/components/ui';
 import { SuccessStoryCard } from '@/components/ui/SuccessStoryCard';
 import { SUCCESS_STORIES } from '@/data/success-stories';
@@ -48,11 +49,21 @@ export default function SuccessStoriesPage() {
                                 <div key={story.id} className="group bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500">
                                     <div className="grid grid-cols-2 gap-px bg-neutral-200">
                                         <div className="relative aspect-[4/5] overflow-hidden">
-                                            <img src={story.imageBefore} alt="Before" className="w-full h-full object-cover" />
+                                            <Image
+                                                src={story.imageBefore || ''}
+                                                alt="Before transformation"
+                                                fill
+                                                className="object-cover"
+                                            />
                                             <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/60 text-white text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">Before</div>
                                         </div>
                                         <div className="relative aspect-[4/5] overflow-hidden">
-                                            <img src={story.imageAfter} alt="After" className="w-full h-full object-cover" />
+                                            <Image
+                                                src={story.imageAfter || ''}
+                                                alt="After transformation"
+                                                fill
+                                                className="object-cover"
+                                            />
                                             <div className="absolute top-4 right-4 px-3 py-1 rounded-lg bg-primary-600 text-white text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">After</div>
                                         </div>
                                     </div>
@@ -62,10 +73,15 @@ export default function SuccessStoriesPage() {
                                             <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{story.department}</span>
                                         </div>
                                         <h3 className="text-xl sm:text-2xl font-display font-bold text-neutral-900 mb-4">{story.title}</h3>
-                                        <p className="text-neutral-600 leading-relaxed italic">"{story.content}"</p>
+                                        <p className="text-neutral-700 leading-relaxed italic">"{story.content}"</p>
                                         <div className="mt-6 flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-neutral-100 overflow-hidden">
-                                                <img src={story.avatar} alt={story.name} className="w-full h-full object-cover" />
+                                            <div className="w-10 h-10 rounded-full bg-neutral-100 overflow-hidden relative">
+                                                <Image
+                                                    src={story.avatar || '/placeholder-avatar.webp'}
+                                                    alt={story.name}
+                                                    fill
+                                                    className="object-cover"
+                                                />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-bold text-neutral-900">{story.name}</p>

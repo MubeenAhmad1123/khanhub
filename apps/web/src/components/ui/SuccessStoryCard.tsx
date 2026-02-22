@@ -5,6 +5,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { SuccessStory } from '@/data/success-stories';
 
@@ -28,10 +29,12 @@ export const SuccessStoryCard: React.FC<SuccessStoryCardProps> = ({ story, class
 
             {/* Image Section (Optional Before/After or After) */}
             <div className="relative aspect-video overflow-hidden bg-neutral-100">
-                <img
+                <Image
                     src={story.imageAfter}
                     alt={story.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 {story.imageBefore && (
                     <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-[10px] text-white font-medium backdrop-blur-sm">
@@ -59,7 +62,7 @@ export const SuccessStoryCard: React.FC<SuccessStoryCardProps> = ({ story, class
                     {story.title}
                 </h3>
 
-                <p className="text-sm text-neutral-600 line-clamp-3 mb-6 leading-relaxed italic">
+                <p className="text-sm text-neutral-700 line-clamp-3 mb-6 leading-relaxed italic">
                     "{story.content}"
                 </p>
 
@@ -67,7 +70,13 @@ export const SuccessStoryCard: React.FC<SuccessStoryCardProps> = ({ story, class
                 <div className="mt-auto flex items-center gap-3 pt-4 border-t border-neutral-100">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-100 flex-shrink-0">
                         {story.avatar ? (
-                            <img src={story.avatar} alt={story.name} className="w-full h-full object-cover" />
+                            <Image
+                                src={story.avatar}
+                                alt={story.name}
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                            />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-lg">👤</div>
                         )}

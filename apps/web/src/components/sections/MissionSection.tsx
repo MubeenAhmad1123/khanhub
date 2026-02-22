@@ -93,7 +93,7 @@ const StatsCard = memo(function StatsCard() {
             <div className={`text-2xl sm:text-3xl font-bold ${stat.color} font-display mb-1`} itemProp="value">
               {stat.value}
             </div>
-            <div className="text-xs sm:text-sm text-neutral-600 mt-1 font-medium" itemProp="description">
+            <div className="text-xs sm:text-sm text-neutral-700 mt-1 font-medium" itemProp="description">
               {stat.label}
             </div>
           </div>
@@ -162,7 +162,7 @@ export function MissionSection() {
               </div>
               <div className="space-y-3 px-2">
                 <h3 className="text-2xl sm:text-3xl font-bold font-display text-neutral-900 tracking-tight">Transforming Lives Together</h3>
-                <p className="text-neutral-600 text-base sm:text-lg leading-relaxed max-w-2xl italic">
+                <p className="text-neutral-700 text-base sm:text-lg leading-relaxed max-w-2xl italic">
                   "Our journey of impact is made possible by your support. Every success story represents a life changed and a community strengthened."
                 </p>
               </div>

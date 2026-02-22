@@ -42,7 +42,7 @@ export default function SectionHeader({
             </h2>
 
             {subtitle && (
-                <p className={`text-lg text-neutral-600 leading-relaxed ${alignmentClasses[align]}`}>
+                <p className={`text-lg text-neutral-700 leading-relaxed ${alignmentClasses[align]}`}>
                     {subtitle}
                 </p>
             )}

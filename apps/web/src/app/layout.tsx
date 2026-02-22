@@ -7,8 +7,8 @@ import type { Metadata, Viewport } from 'next'
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Prevents zoom on iOS when focusing inputs
-  userScalable: false, // Prevents pinch-to-zoom
+  maximumScale: 5, // Allows zoom for accessibility
+  userScalable: true, // Allows pinch-to-zoom
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#005EB8' },
     { media: '(prefers-color-scheme: dark)', color: '#005EB8' }

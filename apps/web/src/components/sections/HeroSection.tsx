@@ -146,8 +146,10 @@ const ImageCarousel = memo(function ImageCarousel() {
               alt={`${DEPARTMENT_IMAGES[currentIndex].alt} - Khan Hub Department`}
               fill
               className="object-contain drop-shadow-2xl"
-              priority={currentIndex === 0} // Only prioritize the first image (logo)
+              priority={currentIndex === 0}
               loading={currentIndex === 0 ? "eager" : "lazy"}
+              // @ts-ignore - fetchPriority is supported in Next.js 14+ but might not be in the types yet
+              fetchPriority={currentIndex === 0 ? "high" : "auto"}
               sizes="(max-width: 640px) 288px, (max-width: 1024px) 384px, 448px"
               onError={() => handleImageError(currentIndex)}
               quality={95}

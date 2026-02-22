@@ -82,7 +82,7 @@ const TrustStats = memo(function TrustStats() {
             <div className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1 font-display`} itemProp="value">
               {stat.value}
             </div>
-            <div className="text-xs sm:text-sm text-neutral-600" itemProp="description">
+            <div className="text-xs sm:text-sm text-neutral-700" itemProp="description">
               {stat.label}
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function DepartmentsSection() {
         {/* Active Category Indicator */}
         {activeCategory !== 'all' && (
           <div className="text-center mb-6 sm:mb-8 animate-fade-in" role="status" aria-live="polite">
-            <p className="text-xs sm:text-sm text-neutral-600">
+            <p className="text-xs sm:text-sm text-neutral-700">
               Showing <span className="font-bold text-primary-600">{filtered.length}</span> department
               {filtered.length !== 1 ? 's' : ''} in{' '}
               <span className="font-bold text-primary-600">{activeCategoryLabel}</span>
@@ -226,7 +226,7 @@ export default function DepartmentsSection() {
               </svg>
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-neutral-900 mb-2">No departments found</h3>
-            <p className="text-sm sm:text-base text-neutral-600 mb-4 sm:mb-6">
+            <p className="text-sm sm:text-base text-neutral-700 mb-4 sm:mb-6">
               No departments are available in this category.
             </p>
             <button
