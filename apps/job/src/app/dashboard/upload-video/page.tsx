@@ -41,7 +41,7 @@ export default function UploadVideoPage() {
 
     // Payment Gate Check
     // A user is considered paid if paymentApproved === true OR paymentStatus === 'approved'
-    const hasPaid = !!(user?.paymentApproved || (user as any)?.paymentStatus === 'approved');
+    const hasPaid = !!((user as any)?.paymentApproved || (user as any)?.paymentStatus === 'approved');
 
     // Recording State
     const [isRecording, setIsRecording] = useState(false);
