@@ -64,7 +64,7 @@ function BrowseContent() {
                     const data = docSnap.data();
                     const videoUrl = data.profile?.videoResume || data.profile?.videoUrl || data.companyProfile?.videoResume || data.company?.videoResume || data.companyProfile?.videoUrl || data.company?.videoUrl;
 
-                    if (videoUrl) {
+                    if (videoUrl && typeof videoUrl === 'string' && videoUrl.length > 10) {
                         loadedVideos.push({
                             id: data.uid || docSnap.id,
                             seekerId: data.uid || docSnap.id,
@@ -74,7 +74,7 @@ function BrowseContent() {
                             videoUrl: videoUrl,
                             thumbnailUrl: data.profile?.photo || data.companyProfile?.logoUrl || data.company?.logo || data.photoURL || '',
                             experience: data.profile?.yearsOfExperience || data.profile?.experience || '',
-                            salary: data.company?.salary || data.companyProfile?.salary || '', // If employers start posting salaries here
+                            salary: data.company?.salary || data.companyProfile?.salary || '',
                         });
                     }
                 });
@@ -120,7 +120,7 @@ function BrowseContent() {
                         </label>
                         <div className="flex flex-col gap-2">
                             {[
-                                { id: 'all', label: 'All Videos', icon: <LayoutGrid className="w-4 h-4" /> },
+                                { id: 'all', label: 'All Content', icon: <LayoutGrid className="w-4 h-4" /> },
                                 { id: 'jobseeker', label: 'Candidates', icon: <Users className="w-4 h-4" /> },
                                 { id: 'employer', label: 'Companies', icon: <Building2 className="w-4 h-4" /> },
                             ].map(role => (
@@ -128,10 +128,10 @@ function BrowseContent() {
                                     key={role.id}
                                     onClick={() => setSelectedRole(role.id as any)}
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all border-2",
+                                        "flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-black transition-all border-2 uppercase tracking-tighter italic",
                                         selectedRole === role.id
-                                            ? "bg-blue-50 border-blue-100 text-[#1B4FD8]"
-                                            : "bg-transparent border-transparent text-slate-600 hover:bg-slate-50"
+                                            ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
+                                            : "bg-transparent border-transparent text-slate-500 hover:bg-slate-50"
                                     )}
                                 >
                                     {role.icon}

@@ -59,30 +59,36 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6">
                 <StatsCard
-                    title="Total Users"
-                    value={stats.totalUsers}
-                    icon="👥"
+                    title="Total Candidates"
+                    value={stats.totalCandidates}
+                    icon="👤"
                     color="blue"
                 />
                 <StatsCard
-                    title="Pending Payments"
-                    value={stats.pendingPayments}
-                    icon="⏳"
-                    color="yellow"
-                />
-                <StatsCard
-                    title="Pending Videos"
-                    value={stats.pendingVideos}
-                    icon="🎬"
-                    color="yellow"
+                    title="Total Companies"
+                    value={stats.totalCompanies}
+                    icon="🏢"
+                    color="purple"
                 />
                 <StatsCard
                     title="Live Videos"
                     value={stats.liveVideos}
-                    icon="✅"
+                    icon="🎬"
                     color="green"
+                />
+                <StatsCard
+                    title="Global Revenue"
+                    value={`Rs. ${stats.totalRevenue.toLocaleString()}`}
+                    icon="💳"
+                    color="teal"
+                />
+                <StatsCard
+                    title="Pending Approvals"
+                    value={stats.pendingVideos + stats.pendingPayments}
+                    icon="⏳"
+                    color="yellow"
                 />
                 <StatsCard
                     title="Total Connections"
@@ -91,10 +97,16 @@ export default function AdminDashboardPage() {
                     color="purple"
                 />
                 <StatsCard
-                    title="Revenue (PKR)"
-                    value={stats.totalRevenue.toLocaleString()}
-                    icon="💰"
-                    color="teal"
+                    title="Active Users"
+                    value={stats.totalUsers}
+                    icon="👥"
+                    color="blue"
+                />
+                <StatsCard
+                    title="Video Rate"
+                    value={`${Math.round((stats.liveVideos / (stats.totalUsers || 1)) * 100)}%`}
+                    icon="📈"
+                    color="green"
                 />
             </div>
 

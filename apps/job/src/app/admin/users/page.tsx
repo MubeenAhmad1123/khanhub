@@ -137,9 +137,9 @@ export default function AdminUsersPage() {
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 italic uppercase tracking-tighter">
                         <UsersIcon className="w-8 h-8 text-blue-600" />
-                        User Management
+                        Platform Members
                     </h1>
-                    <p className="text-slate-500 font-bold">Manage {users.length} registered platform members</p>
+                    <p className="text-slate-500 font-bold">Manage {users.length} registered candidates and companies</p>
                 </div>
                 <div className="flex gap-2">
                     <Link
@@ -176,8 +176,8 @@ export default function AdminUsersPage() {
                     className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold text-slate-700"
                 >
                     <option value="all">All Roles</option>
-                    <option value="job_seeker">Job Seekers</option>
-                    <option value="employer">Employers</option>
+                    <option value="job_seeker">Candidates</option>
+                    <option value="employer">Companies</option>
                     <option value="admin">Admins</option>
                 </select>
                 <select
@@ -223,7 +223,7 @@ export default function AdminUsersPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="text-[11px] font-black text-slate-500 uppercase tracking-tight">
-                                            {u.role?.replace('_', ' ')}
+                                            {u.role === 'job_seeker' ? 'Candidate' : u.role === 'employer' ? 'Company' : u.role}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">

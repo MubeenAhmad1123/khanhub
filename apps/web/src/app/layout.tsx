@@ -7,8 +7,8 @@ import type { Metadata, Viewport } from 'next'
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 5, // Allows zoom for accessibility
-  userScalable: true, // Allows pinch-to-zoom
+  maximumScale: 1, // Fixes auto-zoom on load/focus
+  userScalable: false, // Prevents unintended zoom shifts 
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#005EB8' },
     { media: '(prefers-color-scheme: dark)', color: '#005EB8' }

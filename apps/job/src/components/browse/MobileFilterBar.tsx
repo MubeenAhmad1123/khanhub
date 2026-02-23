@@ -18,7 +18,7 @@ export default function MobileFilterBar({
     setSelectedIndustry
 }: MobileFilterBarProps) {
     const roles = [
-        { id: 'all', label: 'All', icon: <LayoutGrid className="w-4 h-4" /> },
+        { id: 'all', label: 'All Profiles', icon: <LayoutGrid className="w-4 h-4" /> },
         { id: 'jobseeker', label: 'Candidates', icon: <Users className="w-4 h-4" /> },
         { id: 'employer', label: 'Companies', icon: <Building2 className="w-4 h-4" /> },
     ] as const;
@@ -32,9 +32,9 @@ export default function MobileFilterBar({
                         key={role.id}
                         onClick={() => setSelectedRole(role.id)}
                         className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border",
+                            "flex items-center gap-2 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-2 italic",
                             selectedRole === role.id
-                                ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
+                                ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20"
                                 : "bg-slate-50 border-slate-100 text-slate-500"
                         )}
                     >

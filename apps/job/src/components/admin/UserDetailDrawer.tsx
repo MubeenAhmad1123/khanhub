@@ -56,7 +56,7 @@ export default function UserDetailDrawer({ user, isOpen, onClose }: UserDetailDr
                             </p>
                             <div className="mt-4 flex flex-wrap justify-center gap-2">
                                 <span className="px-3 py-1 bg-slate-900 text-white text-[10px] font-black rounded-full uppercase tracking-widest">
-                                    {user.role?.replace('_', ' ') || 'User'}
+                                    {user.role === 'job_seeker' ? 'Candidate' : user.role === 'employer' ? 'Company' : 'User'}
                                 </span>
                                 <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-widest ${user.profile_status === 'active' ? 'bg-green-100 text-green-700' :
                                     user.profile_status === 'video_pending' ? 'bg-blue-100 text-blue-700' :

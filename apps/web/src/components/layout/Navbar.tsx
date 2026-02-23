@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
 import { cn } from '@/lib/utils';
-import { Menu, X, ChevronDown, Facebook, Instagram, Youtube, Linkedin } from 'lucide-react';
+import { Menu, X, ChevronDown, Facebook, Instagram, Youtube } from 'lucide-react';
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
 import { SITE } from '@/data/site';
 
@@ -313,13 +313,12 @@ export default function Navbar() {
             {/* Mobile Icons Row - Compact to fit all 7 items */}
             <div className="md:hidden flex items-center gap-0 flex-1 justify-end mr-0.5">
               {Object.entries(SITE.social).map(([platform, url]) => {
-                if (!url && platform !== 'linkedin') return null;
+                if (!url) return null;
                 const Icon = platform === 'facebook' ? Facebook :
                   platform === 'instagram' ? Instagram :
                     platform === 'youtube' ? Youtube :
                       platform === 'tiktok' ? SiTiktok :
-                        platform === 'whatsapp' ? SiWhatsapp :
-                          platform === 'linkedin' ? Linkedin : null;
+                        platform === 'whatsapp' ? SiWhatsapp : null;
                 if (!Icon) return null;
                 return (
                   <a
@@ -327,28 +326,30 @@ export default function Navbar() {
                     href={url || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                    className="p-1 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0 min-w-[34px] min-h-[34px] flex items-center justify-center"
                     aria-label={`Visit our ${platform} page`}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-4 h-4" />
                   </a>
                 );
               })}
-              {/* Download App - Compact with Text and Flip Animation */}
+              {/* Download App - Compact Icon only Animates */}
               <a
                 href="/download-app"
-                className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 animate-flip"
+                className="flex flex-col items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0"
                 aria-label="Download Mobile App"
               >
-                <Image
-                  src="/app-download.webp"
-                  alt="Download App"
-                  width={22}
-                  height={22}
-                  className="rounded-md shadow-sm"
-                  priority
-                />
-                <span className="text-[8px] font-bold uppercase tracking-tighter leading-none">Mobile App</span>
+                <div className="animate-flip">
+                  <Image
+                    src="/app-download.webp"
+                    alt="Download App"
+                    width={18}
+                    height={18}
+                    className="rounded-md shadow-sm"
+                    priority
+                  />
+                </div>
+                <span className="text-[7px] font-bold uppercase tracking-tighter leading-none">Mobile App</span>
               </a>
             </div>
 
@@ -501,13 +502,12 @@ export default function Navbar() {
                 <UserMenu />
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   {Object.entries(SITE.social).map(([platform, url]) => {
-                    if (!url && platform !== 'linkedin') return null;
+                    if (!url) return null;
                     const Icon = platform === 'facebook' ? Facebook :
                       platform === 'instagram' ? Instagram :
                         platform === 'youtube' ? Youtube :
                           platform === 'tiktok' ? SiTiktok :
-                            platform === 'whatsapp' ? SiWhatsapp :
-                              platform === 'linkedin' ? Linkedin : null;
+                            platform === 'whatsapp' ? SiWhatsapp : null;
                     if (!Icon) return null;
                     return (
                       <a
@@ -515,21 +515,23 @@ export default function Navbar() {
                         href={url || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-2 rounded-full bg-neutral-50 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-colors border border-neutral-200"
+                        className="p-1.5 rounded-full bg-neutral-50 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-colors border border-neutral-200"
                         aria-label={platform}
                       >
-                        <Icon className="w-5 h-5" />
+                        <Icon className="w-4 h-4" />
                       </a>
                     );
                   })}
                   {/* Download App in Menu */}
                   <a
                     href="/download-app"
-                    className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-neutral-50 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-all border border-neutral-200 flex-shrink-0 animate-flip"
+                    className="flex flex-col items-center justify-center gap-1 p-1.5 rounded-xl bg-neutral-50 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-all border border-neutral-200 flex-shrink-0"
                     aria-label="Download Mobile App"
                   >
-                    <Image src="/app-download.webp" alt="Download App" width={24} height={24} className="rounded-md" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Mobile App</span>
+                    <div className="animate-flip">
+                      <Image src="/app-download.webp" alt="Download App" width={18} height={18} className="rounded-md" />
+                    </div>
+                    <span className="text-[8px] font-bold uppercase tracking-wider">Mobile App</span>
                   </a>
                 </div>
               </div>
