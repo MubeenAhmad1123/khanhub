@@ -29,7 +29,22 @@ export default function EditProfilePage() {
         if (!authLoading && !user) {
             router.push('/auth/login');
         }
-        if (user?.profile) {
+        if (user?.role === 'employer' && user?.company) {
+            setFormData({
+                fullName: (user as any).company.name || user.displayName || '',
+                phone: (user as any).company.phone || (user as any).company.contactPhone || '',
+                location: (user as any).company.location || '',
+                bio: (user as any).company.description || '',
+                experience: 0, // Not used for employers
+                education: '', // Not used for employers
+                skills: '', // Not used for employers
+                industry: (user as any).industry || (user as any).company?.industry || '',
+                subcategory: (user as any).subcategory || (user as any).company?.subcategory || '',
+                role: '', // Not used in the same way, but keeping for state shape
+                companySize: (user as any).company.size || '',
+                companyWebsite: (user as any).company.website || '',
+            });
+        } else if (user?.profile) {
             setFormData({
                 fullName: (user as any).profile.fullName || user.displayName || '',
                 phone: (user as any).profile.phone || '',
@@ -61,25 +76,49 @@ export default function EditProfilePage() {
                 .map((s: string) => s.trim())
                 .filter((s: string) => s.length > 0);
 
-            const updates: any = {
+            const isEmployer = user.role === 'employer';
+
+            let updates: any = {
                 displayName: formData.fullName,
-                profile: {
-                    ...(user.profile || {}),
-                    fullName: formData.fullName,
-                    phone: formData.phone,
-                    location: formData.location,
-                    bio: formData.bio,
-                    yearsOfExperience: Number(formData.experience),
-                    education: formData.education,
-                    skills: skillsArray,
-                    industry: formData.industry,
-                    preferredSubcategory: formData.subcategory,
-                    preferredJobTitle: formData.role,
-                },
                 industry: formData.industry,
                 subcategory: formData.subcategory,
-                role_in_category: formData.role,
             };
+
+            if (isEmployer) {
+                updates = {
+                    ...updates,
+                    company: {
+                        ...(user.company || {}),
+                        name: formData.fullName,
+                        phone: formData.phone,
+                        contactPhone: formData.phone,
+                        location: formData.location,
+                        description: formData.bio,
+                        industry: formData.industry,
+                        subcategory: formData.subcategory,
+                        size: formData.companySize || '',
+                        website: formData.companyWebsite || '',
+                    }
+                };
+            } else {
+                updates = {
+                    ...updates,
+                    role_in_category: formData.role,
+                    profile: {
+                        ...(user.profile || {}),
+                        fullName: formData.fullName,
+                        phone: formData.phone,
+                        location: formData.location,
+                        bio: formData.bio,
+                        yearsOfExperience: Number(formData.experience),
+                        education: formData.education,
+                        skills: skillsArray,
+                        industry: formData.industry,
+                        preferredSubcategory: formData.subcategory,
+                        preferredJobTitle: formData.role,
+                    }
+                };
+            }
 
             // Award points if this is the first time completing basic info
             const isFirstTime = !user.profile?.fullName || !user.profile?.phone;
@@ -117,6 +156,8 @@ export default function EditProfilePage() {
         );
     }
 
+    const isEmployer = user?.role === 'employer';
+
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl mx-auto">
@@ -134,23 +175,23 @@ export default function EditProfilePage() {
                     <div className="bg-gradient-to-r from-teal-600 to-emerald-600 px-8 py-8 text-white">
                         <div className="flex items-center gap-3 mb-2">
                             <Sparkles className="w-6 h-6" />
-                            <h1 className="text-3xl font-black">Edit Profile</h1>
+                            <h1 className="text-3xl font-black">{isEmployer ? 'Edit Company Profile' : 'Edit Profile'}</h1>
                         </div>
                         <p className="opacity-90">Complete your profile to unlock all features and earn points.</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Full Name */}
+                            {/* Full Name / Company Name */}
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Full Name</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">{isEmployer ? 'Company Name' : 'Full Name'}</label>
                                 <input
                                     type="text"
                                     required
                                     value={formData.fullName}
                                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                                     className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
-                                    placeholder="Your full name"
+                                    placeholder={isEmployer ? "Your company name" : "Your full name"}
                                 />
                             </div>
 
@@ -180,32 +221,6 @@ export default function EditProfilePage() {
                                 />
                             </div>
 
-                            {/* Experience */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Years of Experience</label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="0"
-                                    value={formData.experience}
-                                    onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
-                                />
-                            </div>
-
-                            {/* Education */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Highest Education</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.education}
-                                    onChange={(e) => setFormData({ ...formData, education: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
-                                    placeholder="e.g. BS Computer Science"
-                                />
-                            </div>
-
                             {/* Industry */}
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Industry</label>
@@ -228,52 +243,117 @@ export default function EditProfilePage() {
                                 />
                             </div>
 
-                            {/* Role / Job Title */}
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Exact Job Title / Role</label>
-                                {getRoles(formData.industry, formData.subcategory).length > 0 ? (
-                                    <SearchableSelect
-                                        options={getRoles(formData.industry, formData.subcategory).map(r => ({ id: r, label: r }))}
-                                        value={formData.role}
-                                        onChange={(val) => setFormData({ ...formData, role: val })}
-                                        placeholder="Select your specific role"
-                                    />
-                                ) : (
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.role}
-                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
-                                        placeholder="e.g. Senior Doctor, Lead Developer"
-                                    />
-                                )}
+                            {/* Job Seeker Only Fields */}
+                            {!isEmployer && (
+                                <>
+                                    {/* Experience */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Years of Experience</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            min="0"
+                                            value={formData.experience}
+                                            onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                        />
+                                    </div>
+
+                                    {/* Education */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Highest Education</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.education}
+                                            onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            placeholder="e.g. BS Computer Science"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Employer Only Fields */}
+                            {isEmployer && (
+                                <>
+                                    {/* Company Size */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Company Size</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.companySize}
+                                            onChange={(e) => setFormData({ ...formData, companySize: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            placeholder="e.g. 1-10, 50-100 employees"
+                                        />
+                                    </div>
+
+                                    {/* Company Website */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Company Website</label>
+                                        <input
+                                            type="url"
+                                            value={formData.companyWebsite}
+                                            onChange={(e) => setFormData({ ...formData, companyWebsite: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            placeholder="https://"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Role / Job Title (Job Seeker Only) */}
+                            {!isEmployer && (
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Exact Job Title / Role</label>
+                                    {getRoles(formData.industry, formData.subcategory).length > 0 ? (
+                                        <SearchableSelect
+                                            options={getRoles(formData.industry, formData.subcategory).map(r => ({ id: r, label: r }))}
+                                            value={formData.role}
+                                            onChange={(val) => setFormData({ ...formData, role: val })}
+                                            placeholder="Select your specific role"
+                                        />
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.role}
+                                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            placeholder="e.g. Senior Doctor, Lead Developer"
+                                        />
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Skills (Job Seeker Only) */}
+                        {!isEmployer && (
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Skills (comma separated)</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={formData.skills}
+                                    onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                    placeholder="React, Node.js, UI/UX, Sales..."
+                                />
                             </div>
-                        </div>
+                        )}
 
-                        {/* Skills */}
+                        {/* Bio / Description */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Skills (comma separated)</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.skills}
-                                onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
-                                placeholder="React, Node.js, UI/UX, Sales..."
-                            />
-                        </div>
-
-                        {/* Bio */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Professional Summary</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">{isEmployer ? 'Company Description' : 'Professional Summary'}</label>
                             <textarea
                                 required
                                 value={formData.bio}
                                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                                 rows={4}
                                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium resize-none"
-                                placeholder="Tell us about yourself..."
+                                placeholder={isEmployer ? "Tell us what your company does..." : "Tell us about yourself..."}
                             />
                         </div>
 

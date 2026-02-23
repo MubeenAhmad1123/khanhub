@@ -16,6 +16,8 @@ interface VideoCardProps {
     subcategory: string;
     videoUrl?: string;
     thumbnailUrl?: string;
+    experience?: string | number;
+    salary?: string;
     className?: string;
 }
 
@@ -26,6 +28,8 @@ export default function VideoCard({
     subcategory,
     videoUrl = 'https://assets.mixkit.co/videos/preview/mixkit-man-working-on-his-laptop-308-large.mp4',
     thumbnailUrl,
+    experience,
+    salary,
     className
 }: VideoCardProps) {
     const [isHovering, setIsHovering] = useState(false);
@@ -144,7 +148,7 @@ export default function VideoCard({
                                 role === 'jobseeker' ? "bg-blue-600/90 text-white" : "bg-orange-500/90 text-white"
                             )}>
                                 {role === 'jobseeker' ? <User className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
-                                {role === 'jobseeker' ? 'Candidate' : 'Employer'}
+                                {role === 'jobseeker' ? 'Candidate (امیدوار)' : 'Company (کمپنی)'}
                             </span>
                             <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[9px] font-bold border border-white/10 uppercase tracking-widest">
                                 {industry}
@@ -155,11 +159,20 @@ export default function VideoCard({
 
                 {/* Info Area (Bottom 25%) */}
                 <div className="p-4 flex flex-col gap-3">
-                    <div className="flex justify-between items-start gap-2">
-                        <div className="min-w-0">
-                            <h4 className="text-blue-600 text-sm font-black uppercase tracking-widest truncate">
-                                {subcategory}
-                            </h4>
+                    <div className="flex flex-col gap-1">
+                        <h4 className="text-blue-600 text-sm font-black uppercase tracking-widest truncate">
+                            {subcategory}
+                        </h4>
+
+                        {/* Conditional Experience / Salary */}
+                        <div className="text-xs font-bold text-slate-500">
+                            {role === 'jobseeker' && experience !== undefined && experience !== '' ? (
+                                <span>Exp: {experience} {Number(experience) === 1 ? 'Year' : 'Years'}</span>
+                            ) : role === 'employer' && salary ? (
+                                <span>Salary: {salary}</span>
+                            ) : (
+                                <span>Featured Profile</span>
+                            )}
                         </div>
                     </div>
 

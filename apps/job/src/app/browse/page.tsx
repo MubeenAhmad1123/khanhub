@@ -34,6 +34,8 @@ interface VideoData {
     subcategory: string;
     videoUrl: string;
     thumbnailUrl: string;
+    experience?: string | number;
+    salary?: string;
 }
 
 function BrowseContent() {
@@ -71,6 +73,8 @@ function BrowseContent() {
                             subcategory: data.subcategory || data.profile?.preferredSubcategory || data.companyProfile?.subcategory || data.company?.subcategory || 'General',
                             videoUrl: videoUrl,
                             thumbnailUrl: data.profile?.photo || data.companyProfile?.logoUrl || data.company?.logo || data.photoURL || '',
+                            experience: data.profile?.yearsOfExperience || data.profile?.experience || '',
+                            salary: data.company?.salary || data.companyProfile?.salary || '', // If employers start posting salaries here
                         });
                     }
                 });
