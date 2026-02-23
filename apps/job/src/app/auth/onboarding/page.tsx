@@ -50,11 +50,83 @@ export default function OnboardingPage() {
     useEffect(() => {
         if (!loading && !user) {
             router.push('/auth/login');
+            return;
         }
+
+        if (user?.onboardingCompleted) {
+            router.push('/auth/verify-payment');
+            return;
+        }
+
         // Only auto-set localRole if it hasn't been manually picked yet
         if (user?.role && !localRole) {
             console.log('Onboarding: Setting detected role from profile:', user.role);
             setLocalRole(user.role);
+
+            if (user.role === 'job_seeker') {
+                const industry = user.industry || '';
+                const subcategory = user.subcategory || '';
+                const primarySkill = user.profile?.preferredJobTitle || '';
+                const experience = String(user.profile?.yearsOfExperience || '');
+                const skills = user.profile?.skills?.join(', ') || '';
+                const location = user.profile?.location || '';
+
+                setJobSeekerData(prev => ({
+                    ...prev,
+                    industry,
+                    subcategory,
+                    primarySkill,
+                    experience: experience === '0' && !user.profile?.yearsOfExperience ? '' : experience,
+                    skills,
+                    location
+                }));
+
+                if (industry && subcategory && primarySkill) {
+                    let startStep = 3;
+                    if (experience !== '' && experience !== 'undefined') {
+                        startStep = 4;
+                        if (skills && location) {
+                            startStep = 5;
+                        }
+                    }
+                    setStep(startStep);
+                }
+            } else if (user.role === 'employer') {
+                const u = user as any;
+                const companyName = u.companyProfile?.companyName || u.company?.name || '';
+                const companyWebsite = u.companyProfile?.website || u.company?.website || '';
+                const companySize = u.companyProfile?.companySize || u.company?.size || '';
+                const industry = u.industry || u.company?.industry || '';
+                const subcategory = u.subcategory || u.company?.subcategory || '';
+                const location = u.companyProfile?.city || u.company?.location || '';
+                const address = u.companyProfile?.address || u.company?.address || '';
+                const phone = u.companyProfile?.contactPhone || u.company?.phone || '';
+                const description = u.company?.description || '';
+                const contactPerson = u.displayName || u.company?.contactPerson || '';
+
+                setEmployerData(prev => ({
+                    ...prev,
+                    companyName,
+                    companyWebsite,
+                    companySize,
+                    industry,
+                    subcategory,
+                    location,
+                    address,
+                    phone,
+                    description,
+                    contactPerson
+                }));
+
+                if (companyName && companySize && industry && subcategory && location) {
+                    let startStep = 3;
+                    if (contactPerson && phone && description) {
+                        // Normally handled by the onboardingCompleted check, but just in case
+                        startStep = 3;
+                    }
+                    setStep(startStep);
+                }
+            }
         }
     }, [user, loading, router, localRole]);
 
@@ -148,6 +220,8 @@ export default function OnboardingPage() {
                 address: employerData.address || '',
                 tagline: employerData.tagline || '',
                 description: employerData.description || '',
+                phone: employerData.phone || '',
+                contactPhone: employerData.phone || '',
             };
             if (employerData.foundedYear) {
                 companyData.foundedYear = parseInt(employerData.foundedYear);

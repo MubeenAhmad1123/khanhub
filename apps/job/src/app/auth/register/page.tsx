@@ -88,6 +88,7 @@ export default function RegisterPage() {
 
     // Redirect if already logged in
     useEffect(() => {
+        if (loading || googleLoading) return;
         if (user) {
             // If onboarding not done → go to onboarding first, then it'll redirect to verify-payment
             if (!user.onboardingCompleted) {
@@ -96,7 +97,7 @@ export default function RegisterPage() {
                 router.push('/auth/verify-payment');
             }
         }
-    }, [user, router]);
+    }, [user, router, loading, googleLoading]);
 
     // Derived options for job seekers
     const industryOptions = INDUSTRIES.map(i => ({ id: i.id, label: i.label }));
