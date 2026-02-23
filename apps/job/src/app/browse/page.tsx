@@ -23,24 +23,18 @@ import MobileFilterBar from '@/components/browse/MobileFilterBar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
-// Dummy Video Data
-const DUMMY_VIDEOS = [
-    { seekerId: 'user1', role: 'jobseeker', industry: 'technology', subcategory: 'software_dev' },
-    { seekerId: 'user2', role: 'employer', industry: 'healthcare', subcategory: 'nursing' },
-    { seekerId: 'user3', role: 'jobseeker', industry: 'finance', subcategory: 'accounting' },
-    { seekerId: 'user4', role: 'jobseeker', industry: 'education', subcategory: 'school_teaching' },
-    { seekerId: 'user5', role: 'employer', industry: 'technology', subcategory: 'design' },
-    { seekerId: 'user6', role: 'jobseeker', industry: 'engineering', subcategory: 'civil_eng' },
-    { seekerId: 'user7', role: 'employer', industry: 'retail', subcategory: 'sales' },
-    { seekerId: 'user8', role: 'jobseeker', industry: 'healthcare', subcategory: 'nursing' },
-    { seekerId: 'user9', role: 'jobseeker', industry: 'technology', subcategory: 'software_dev' },
-    { seekerId: 'user10', role: 'employer', industry: 'finance', subcategory: 'banking' },
-].map(v => ({
-    ...v,
-    id: v.seekerId,
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-working-on-his-laptop-308-large.mp4',
-    thumbnailUrl: ''
-}));
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase-config';
+
+interface VideoData {
+    id: string; // User ID
+    seekerId: string;
+    role: string;
+    industry: string;
+    subcategory: string;
+    videoUrl: string;
+    thumbnailUrl: string;
+}
 
 function BrowseContent() {
     const { user } = useAuth();
@@ -49,20 +43,52 @@ function BrowseContent() {
     const [selectedIndustry, setSelectedIndustry] = useState<string | null>(searchParams.get('industry'));
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
+    const [videos, setVideos] = useState<VideoData[]>([]);
 
     useEffect(() => {
         // Update industry if query param changes
         const industry = searchParams.get('industry');
         if (industry) setSelectedIndustry(industry);
 
-        // Simulate loading
-        const timer = setTimeout(() => setLoading(false), 1000);
-        return () => clearTimeout(timer);
+        const fetchVideos = async () => {
+            try {
+                setLoading(true);
+                // Fetch users that have active/submitted profiles, they are most likely to have videos.
+                // We'll filter client-side to be safe with deeply nested fields.
+                const usersSnap = await getDocs(collection(db, 'users'));
+                const loadedVideos: VideoData[] = [];
+
+                usersSnap.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const videoUrl = data.profile?.videoResume || data.profile?.videoUrl || data.companyProfile?.videoResume || data.company?.videoResume || data.companyProfile?.videoUrl || data.company?.videoUrl;
+
+                    if (videoUrl) {
+                        loadedVideos.push({
+                            id: data.uid || docSnap.id,
+                            seekerId: data.uid || docSnap.id,
+                            role: data.role === 'employer' ? 'employer' : 'jobseeker',
+                            industry: data.industry || (data.profile as any)?.industry || data.companyProfile?.industry || data.company?.industry || 'General',
+                            subcategory: data.subcategory || data.profile?.preferredSubcategory || data.companyProfile?.subcategory || data.company?.subcategory || 'General',
+                            videoUrl: videoUrl,
+                            thumbnailUrl: data.profile?.photo || data.companyProfile?.logoUrl || data.company?.logo || data.photoURL || '',
+                        });
+                    }
+                });
+
+                setVideos(loadedVideos);
+            } catch (error) {
+                console.error("Error fetching videos:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchVideos();
     }, [searchParams]);
 
     // Filtered Videos
     const filteredVideos = useMemo(() => {
-        return DUMMY_VIDEOS.filter(video => {
+        return videos.filter(video => {
             const roleMatch = selectedRole === 'all' || video.role === selectedRole;
             const industryMatch = !selectedIndustry || video.industry === selectedIndustry;
             const searchMatch = !searchQuery ||
@@ -176,7 +202,7 @@ function BrowseContent() {
                 {/* Video Grid */}
                 <div className="p-4 lg:p-8">
                     {loading ? (
-                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-8">
                             {[1, 2, 3, 4, 5, 6].map(i => (
                                 <div key={i} className="animate-pulse flex flex-col gap-3">
                                     <div className="aspect-[9/16] bg-slate-200 rounded-3xl" />
@@ -186,7 +212,7 @@ function BrowseContent() {
                             ))}
                         </div>
                     ) : filteredVideos.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-8 overflow-x-hidden">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 sm:gap-4 lg:gap-8 overflow-x-hidden">
                             {filteredVideos.map((item) => (
                                 <VideoCard
                                     key={item.id}

@@ -198,15 +198,7 @@ export default function JobSeekerDashboard() {
                                         Record or upload a 60-second video to introduce yourself to employers. It's the best way to stand out.
                                     </p>
 
-                                    {!userData?.video_upload_enabled ? (
-                                        <Link
-                                            href="/dashboard/video-payment"
-                                            className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 text-white rounded-full font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all"
-                                        >
-                                            <Plus className="w-5 h-5" />
-                                            Enable Video Upload
-                                        </Link>
-                                    ) : userVideoStatus === 'pending' ? (
+                                    {userVideoStatus === 'pending' ? (
                                         <button
                                             disabled
                                             className="inline-flex items-center gap-2 px-8 py-4 bg-slate-200 text-slate-500 rounded-full font-bold cursor-not-allowed"

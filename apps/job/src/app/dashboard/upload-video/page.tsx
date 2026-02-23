@@ -52,13 +52,9 @@ export default function UploadVideoPage() {
     const streamRef = useRef<MediaStream | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Auth & Permission Check
+    // Auth Check
     useEffect(() => {
-        if (!authLoading && user) {
-            if (!user.video_upload_enabled) {
-                router.push('/dashboard/video-payment');
-            }
-        }
+        // Only redirect based on standard auth checks, remove the redundant video_upload payment gate.
     }, [user, authLoading, router]);
 
     // Cleanup stream on unmount
