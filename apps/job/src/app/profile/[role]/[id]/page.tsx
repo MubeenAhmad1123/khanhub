@@ -1,39 +1,56 @@
-import React from 'react';
-import { notFound } from 'next/navigation';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { notFound, useParams } from 'next/navigation';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import Image from 'next/image';
-import { MapPin, Phone, Building2, User, Play, Briefcase, GraduationCap, Award, Lightbulb } from 'lucide-react';
+import { MapPin, Phone, Building2, User, Play, Briefcase, GraduationCap, Award, Lightbulb, Loader2 } from 'lucide-react';
 
-interface PublicProfileProps {
-    params: {
-        role: string;
-        id: string;
-    };
-}
+export default function PublicProfilePage() {
+    const params = useParams();
+    const role = params.role as string;
+    const id = params.id as string;
 
-async function getProfileData(id: string) {
-    try {
-        const userDoc = await getDoc(doc(db, 'users', id));
-        if (!userDoc.exists()) return null;
-        return { id: userDoc.id, ...userDoc.data() } as any;
-    } catch (error) {
-        console.error("Error fetching user profile:", error);
-        return null;
+    const [userData, setUserData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [notFoundError, setNotFoundError] = useState(false);
+
+    useEffect(() => {
+        if (role !== 'jobseeker' && role !== 'employer') {
+            setNotFoundError(true);
+            setLoading(false);
+            return;
+        }
+
+        const fetchProfile = async () => {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', id));
+                if (!userDoc.exists()) {
+                    setNotFoundError(true);
+                } else {
+                    setUserData({ id: userDoc.id, ...userDoc.data() });
+                }
+            } catch (error) {
+                console.error("Error fetching user profile:", error);
+                setNotFoundError(true);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfile();
+    }, [id, role]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+            </div>
+        );
     }
-}
 
-export default async function PublicProfilePage({ params }: PublicProfileProps) {
-    const { role, id } = params;
-
-    // Validate role
-    if (role !== 'jobseeker' && role !== 'employer') {
-        notFound();
-    }
-
-    const userData = await getProfileData(id);
-
-    if (!userData) {
+    if (notFoundError || !userData) {
         notFound();
     }
 
@@ -74,7 +91,7 @@ export default async function PublicProfilePage({ params }: PublicProfileProps) 
                         <div className="absolute -top-16 sm:-top-20">
                             <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white bg-slate-100 overflow-hidden shadow-lg relative flex items-center justify-center text-4xl font-bold text-slate-400">
                                 {displayPhoto ? (
-                                    <Image src={displayPhoto} alt={displayName} fill className="object-cover" />
+                                    <Image src={displayPhoto} alt={displayName || 'User'} fill className="object-cover" />
                                 ) : (
                                     displayName?.charAt(0) || 'U'
                                 )}
