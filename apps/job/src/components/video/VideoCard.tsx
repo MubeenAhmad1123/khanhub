@@ -183,7 +183,7 @@ export default function VideoCard({
                             className="flex-1 py-2.5 border-2 border-blue-100 rounded-2xl text-[10px] font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
                         >
                             {isOwnVideo ? <User className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            {isOwnVideo ? 'Your Info' : 'View'}
+                            {isOwnVideo ? 'Your Profile' : 'View Profile'}
                         </button>
 
                         <button
