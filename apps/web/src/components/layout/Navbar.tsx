@@ -334,9 +334,21 @@ export default function Navbar() {
                   </a>
                 );
               })}
-              {/* Download App Image - Forced Visibility */}
-              <a href="/download-app" className="p-1 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0">
-                <Image src="/app-download.webp" alt="Download App" width={20} height={20} className="rounded-sm" />
+              {/* Download App - Compact with Text and Flip Animation */}
+              <a
+                href="/download-app"
+                className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 animate-flip"
+                aria-label="Download Mobile App"
+              >
+                <Image
+                  src="/app-download.webp"
+                  alt="Download App"
+                  width={22}
+                  height={22}
+                  className="rounded-md shadow-sm"
+                  priority
+                />
+                <span className="text-[8px] font-bold uppercase tracking-tighter leading-none">Mobile App</span>
               </a>
             </div>
 
@@ -510,13 +522,14 @@ export default function Navbar() {
                       </a>
                     );
                   })}
-                  {/* Added Download App image to the menu as well */}
+                  {/* Download App in Menu */}
                   <a
                     href="/download-app"
-                    className="p-2 rounded-full bg-neutral-50 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-colors border border-neutral-200 flex-shrink-0"
-                    aria-label="Download App"
+                    className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-neutral-50 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-all border border-neutral-200 flex-shrink-0 animate-flip"
+                    aria-label="Download Mobile App"
                   >
-                    <Image src="/app-download.webp" alt="Download App" width={20} height={20} className="rounded-sm" />
+                    <Image src="/app-download.webp" alt="Download App" width={24} height={24} className="rounded-md" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Mobile App</span>
                   </a>
                 </div>
               </div>
@@ -582,6 +595,24 @@ export default function Navbar() {
           button, input, select, textarea {
             font-size: 16px !important;
           }
+        }
+
+        @keyframes flip {
+          0% {
+            transform: perspective(400px) rotateY(0);
+          }
+          100% {
+            transform: perspective(400px) rotateY(360deg);
+          }
+        }
+
+        .animate-flip {
+          animation: flip 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+          transform-style: preserve-3d;
+        }
+
+        .animate-flip:hover {
+          animation-play-state: paused;
         }
       `}</style>
     </>

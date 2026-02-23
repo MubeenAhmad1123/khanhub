@@ -32,6 +32,7 @@ import {
 import { SiTiktok, SiWhatsapp } from 'react-icons/si';
 import { SITE } from '@/data/site';
 import { DEPARTMENTS } from '@/data/departments';
+import GoogleTranslateWidget from '@/components/ui/GoogleTranslateWidget';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -200,7 +201,8 @@ export default function Footer() {
           <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start">
             Built with <Heart className="w-3.5 h-3.5 fill-red-500 text-red-500 animate-pulse" /> for <span className="text-neutral-900">Khan Hub (Pvt.) Ltd.</span> — Empowering Communities Across Pakistan
           </div>
-          <div className="flex gap-6">
+          <div className="flex items-center gap-6 flex-wrap justify-center md:justify-end">
+            <GoogleTranslateWidget />
             <Link href="/privacy-policy" className="hover:text-primary-600 transition-colors hover:underline underline-offset-2">Privacy Policy</Link>
             <Link href="/terms-and-conditions" className="hover:text-primary-600 transition-colors hover:underline underline-offset-2">Terms & Conditions</Link>
           </div>

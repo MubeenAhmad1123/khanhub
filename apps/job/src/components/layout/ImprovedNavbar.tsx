@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { LogOut, User, Users, Settings, LayoutDashboard, Search, Briefcase, PlusCircle, BookmarkCheck, Shield, Menu, X, ChevronDown, Sparkles } from 'lucide-react';
 import RegisteredBadge from '@/components/ui/RegisteredBadge';
 import { useNotifications } from '@/hooks/useNotifications';
+import GoogleTranslateWidget from '@/components/ui/GoogleTranslateWidget';
 
 export default function ImprovedNavbar() {
     const pathname = usePathname();
@@ -152,7 +153,9 @@ export default function ImprovedNavbar() {
                     </div>
 
                     {/* Right: Profile & Actions */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 lg:gap-3">
+                        <GoogleTranslateWidget />
+
                         {!loading && user && (
                             <div className="flex items-center gap-3 lg:gap-4">
                                 <NotificationBell />
