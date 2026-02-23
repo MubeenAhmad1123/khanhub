@@ -240,7 +240,7 @@ export default function ImprovedNavbar() {
                         className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] lg:hidden animate-in fade-in duration-300"
                         onClick={() => setShowMobileMenu(false)}
                     />
-                    <div className="fixed inset-y-0 right-0 w-[280px] bg-white z-[160] lg:hidden shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
+                    <div className="fixed top-0 bottom-0 right-0 w-[280px] h-[100dvh] bg-white z-[160] lg:hidden shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
                         {/* Drawer Header */}
                         <div className="p-6 border-b border-slate-50 flex items-center justify-between">
                             <h2 className="text-xl font-black text-blue-600 italic">KhanHub</h2>
@@ -295,7 +295,7 @@ export default function ImprovedNavbar() {
                         </div>
 
                         {/* Drawer Footer */}
-                        <div className="p-4 border-t border-slate-50 space-y-3">
+                        <div className="p-4 border-t border-slate-50 space-y-3 bg-white mt-auto">
                             {!user ? (
                                 <>
                                     <Link onClick={() => setShowMobileMenu(false)} href="/auth/register" className="flex items-center justify-center gap-2 h-14 bg-[#F97316] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20">
