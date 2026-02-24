@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { calculateProfileStrength } from '@/lib/services/pointsSystem';
-import { updateUserProfile } from '@/lib/firebase/auth';
-import { Loader2, Check, Sparkles, TrendingUp, ShieldCheck } from 'lucide-react';
+import { deleteUserAccount } from '@/lib/firebase/auth';
+import { Loader2, Check, Sparkles, TrendingUp, ShieldCheck, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 // Import Modular Sections
@@ -20,9 +20,12 @@ import JobPreferencesSection from './components/JobPreferencesSection';
 
 export default function ProfilePage() {
     const router = useRouter();
-    const { user, loading: authLoading, updateProfile } = useAuth();
+    const { user, loading: authLoading, updateProfile, logout } = useAuth();
     const [loading, setLoading] = useState(true);
     const [animatedStrength, setAnimatedStrength] = useState(0);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     // Fetch and Sync Strength
     useEffect(() => {
@@ -49,6 +52,26 @@ export default function ProfilePage() {
         } catch (error) {
             console.error('Save section error:', error);
             throw error;
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (!user) return;
+
+        setIsDeleting(true);
+        setDeleteError(null);
+
+        try {
+            // Call the utility function to delete user data and account
+            await deleteUserAccount(user.uid);
+
+            // Log out the user and redirect to login page
+            await logout();
+            router.push('/auth/login');
+        } catch (error: any) {
+            console.error('Error deleting account:', error);
+            setDeleteError(error.message || 'Failed to delete account. Please try again.');
+            setIsDeleting(false);
         }
     };
 
@@ -210,9 +233,69 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
+                        {/* Delete Account Button */}
+                        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-red-500/5 border border-slate-100 p-8 md:p-10">
+                            <div className="flex items-center gap-2 mb-6">
+                                <Trash2 className="w-5 h-5 text-red-600" />
+                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Account Management</h3>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium leading-relaxed mb-6">
+                                Permanently delete your account and all associated data. This action cannot be undone.
+                            </p>
+                            <button
+                                onClick={() => setShowDeleteModal(true)}
+                                className="w-full px-6 py-3 bg-red-600 text-white rounded-xl font-bold uppercase tracking-wide text-sm shadow-lg shadow-red-500/20 hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Delete My Account
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+                        <Trash2 className="w-12 h-12 text-red-500 mx-auto mb-6" />
+                        <h3 className="text-2xl font-black text-slate-900 mb-4">Confirm Account Deletion</h3>
+                        <p className="text-slate-600 mb-6">
+                            Are you absolutely sure you want to delete your account? All your data, including your profile, work history, and video resume, will be permanently removed. This action cannot be undone.
+                        </p>
+                        {deleteError && (
+                            <p className="text-red-500 text-sm mb-4">{deleteError}</p>
+                        )}
+                        <div className="flex justify-center gap-4">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="px-6 py-3 bg-slate-200 text-slate-800 rounded-xl font-bold uppercase tracking-wide text-sm hover:bg-slate-300 transition-all"
+                                disabled={isDeleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteAccount}
+                                className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold uppercase tracking-wide text-sm shadow-lg shadow-red-500/20 hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete Permanently
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -124,3 +124,78 @@ export async function userExists(uid: string): Promise<boolean> {
         return false;
     }
 }
+
+/**
+ * Delete user account — removes all Firestore data then deletes the Auth user.
+ * Requires the user to have recently authenticated (Firebase requirement).
+ */
+export async function deleteUserAccount(uid: string): Promise<void> {
+    try {
+        const {
+            collection, query, where, getDocs, deleteDoc, doc: firestoreDoc,
+        } = await import('firebase/firestore');
+        const { deleteUser } = await import('firebase/auth');
+
+        // Helper: delete all docs in a collection matching a field/value
+        const deleteWhere = async (col: string, field: string, value: string) => {
+            const q = query(collection(db, col), where(field, '==', value));
+            const snap = await getDocs(q);
+            await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+        };
+
+        // 1. Delete user's videos
+        await deleteWhere('videos', 'userId', uid);
+
+        // 2. Delete user's payments
+        await deleteWhere('payments', 'userId', uid);
+
+        // 3. Delete user's notifications
+        await deleteWhere('notifications', 'userId', uid);
+
+        // 4. Delete user's activity log entries
+        await deleteWhere('activity_log', 'userId', uid);
+
+        // 5. Delete connections (can be stored under userId OR employerId)
+        const [connSnap1, connSnap2] = await Promise.all([
+            getDocs(query(collection(db, 'connections'), where('userId', '==', uid))),
+            getDocs(query(collection(db, 'connections'), where('employerId', '==', uid))),
+        ]);
+        await Promise.all([
+            ...connSnap1.docs.map(d => deleteDoc(d.ref)),
+            ...connSnap2.docs.map(d => deleteDoc(d.ref)),
+        ]);
+
+        // 6. Delete job postings (if employer)
+        await deleteWhere('jobPostings', 'employerId', uid);
+
+        // 7. Delete placements
+        const [placeSnap1, placeSnap2] = await Promise.all([
+            getDocs(query(collection(db, 'placements'), where('candidateId', '==', uid))),
+            getDocs(query(collection(db, 'placements'), where('employerId', '==', uid))),
+        ]);
+        await Promise.all([
+            ...placeSnap1.docs.map(d => deleteDoc(d.ref)),
+            ...placeSnap2.docs.map(d => deleteDoc(d.ref)),
+        ]);
+
+        // 8. Delete points history
+        await deleteWhere('points_history', 'userId', uid);
+
+        // 9. Delete the user's Firestore document
+        await deleteDoc(firestoreDoc(db, 'users', uid));
+
+        // 10. Delete Firebase Auth account
+        const currentUser = auth.currentUser;
+        if (currentUser && currentUser.uid === uid) {
+            await deleteUser(currentUser);
+        }
+    } catch (error: any) {
+        console.error('deleteUserAccount error:', error);
+        if (error.code === 'auth/requires-recent-login') {
+            throw new Error(
+                'For your security, please log out and sign in again before deleting your account.'
+            );
+        }
+        throw error;
+    }
+}
