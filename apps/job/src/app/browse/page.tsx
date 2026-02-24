@@ -86,7 +86,7 @@ function BrowseContent() {
                     if (data.videoUrl) {
                         loadedVideos.push({
                             id: docSnap.id,
-                            seekerId: data.employerUid,
+                            seekerId: data.employerId,
                             role: 'employer',
                             industry: data.industry || 'General',
                             subcategory: data.title || 'Job Opening', // Use Job Title as the main display

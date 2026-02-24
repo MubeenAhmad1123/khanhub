@@ -40,18 +40,28 @@ service cloud.firestore {
         isAdmin()
       );
       allow create: if isAuthenticated(); 
-      allow update: if isAdmin();
+      allow update: if request.auth.uid == resource.data.seekerId || 
+                       request.auth.uid == resource.data.employerId || 
+                       isAdmin();
     }
 
     match /payments/{paymentId} {
-      allow read: if isAdmin() || isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
-      allow update: if isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
+      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.userId || request.auth.uid == paymentId);
+      allow update: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
       allow delete: if isAdmin();
     }
     
+    match /jobPostings/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.employerId || isAdmin());
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.employerId || isAdmin());
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.employerId);
+    }
+
     match /placements/{placementId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.candidateId) || isOwner(resource.data.employerId);
+      allow write: if isAdmin();
     }
     
     match /saved_jobs/{userId}/{jobId} {
@@ -66,14 +76,15 @@ service cloud.firestore {
     
     match /admin_logs/{logId} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated();
+      allow create: if isAdmin(); // Only admins should create admin logs
       allow update, delete: if isAdmin();
     }
+
     match /videos/{videoId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
       allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
     }
   }
 }

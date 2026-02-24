@@ -9,7 +9,7 @@ export interface JobStatistics {
 
 export interface JobPosting {
     id: string;
-    employerUid: string;
+    employerId: string;
 
     // Step 1: Job Details
     title: string;

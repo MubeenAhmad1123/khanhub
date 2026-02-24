@@ -177,7 +177,7 @@ export default function PostJobPage() {
 
             // 2. Prepare Data
             const jobData = {
-                employerUid: user.uid,
+                employerId: user.uid,
                 title: formData.title,
                 description: formData.description,
                 skills: formData.skills,
