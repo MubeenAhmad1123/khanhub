@@ -140,7 +140,7 @@ export default function OnboardingPage() {
 
         const timer = setTimeout(async () => {
             // Only save if at least industry is selected
-            if (!jobSeekerData.industry) return;
+            if (!jobSeekerData.industry && !jobSeekerData.primarySkill) return;
 
             setSaveStatus('saving');
             try {
@@ -167,6 +167,37 @@ export default function OnboardingPage() {
 
         return () => clearTimeout(timer);
     }, [jobSeekerData, isJobSeeker, user, updateProfile]);
+
+    // Real-time auto-save for Employer
+    useEffect(() => {
+        if (localRole !== 'employer' || !user || user.onboardingCompleted) return;
+
+        const timer = setTimeout(async () => {
+            // Only save if company name is set
+            if (!employerData.companyName) return;
+
+            setSaveStatus('saving');
+            try {
+                await updateProfile({
+                    companyName: employerData.companyName,
+                    industry: employerData.industry,
+                    subcategory: employerData.subcategory,
+                    description: employerData.description,
+                    tagline: employerData.tagline,
+                    location: employerData.location,
+                    displayName: employerData.contactPerson,
+                    phone: employerData.phone,
+                } as any);
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus('idle'), 3000);
+            } catch (err) {
+                console.error("Employer Auto-save failed:", err);
+                setSaveStatus('error');
+            }
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [employerData, localRole, user, updateProfile]);
 
 
 

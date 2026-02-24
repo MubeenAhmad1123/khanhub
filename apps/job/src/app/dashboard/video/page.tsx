@@ -747,19 +747,32 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
             setError(null);
 
             const { updateUserProfile } = await import('@/lib/firebase/auth');
+            const { updateProfile: firebaseUpdateProfile } = await import('firebase/auth');
+            const { auth } = await import('@/lib/firebase/firebase-config');
+
+            // 1. Update Firestore Profile
             await updateUserProfile(user.uid, {
                 profile: {
-                    ...user.profile,
+                    ...(user.profile || {}),
                     fullName: formData.fullName.trim(),
                     phone: formData.phone.trim(),
                     bio: formData.bio.trim(),
                     skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean)
-                }
+                },
+                displayName: formData.fullName.trim(), // Keep root displayName in sync
             } as any);
+
+            // 2. Update Firebase Auth displayName (for navbar and greeting consistency)
+            if (auth.currentUser) {
+                await firebaseUpdateProfile(auth.currentUser, {
+                    displayName: formData.fullName.trim()
+                });
+            }
 
             onComplete();
         } catch (err: any) {
-            setError(err.message || 'Failed to update profile');
+            console.error('ProfileGate submit error:', err);
+            setError(err.message || 'Failed to update profile. Please try again.');
         } finally {
             setSaving(false);
         }

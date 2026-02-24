@@ -105,8 +105,9 @@ export default function ImprovedNavbar() {
         if (pathname?.startsWith('/employer') || user.role === 'employer') {
             return [
                 { name: 'Dashboard', path: '/employer/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-                { name: 'My Videos', path: '/dashboard/video', icon: <PlusCircle className="w-4 h-4" /> },
+                { name: 'My Videos', path: '/dashboard/upload-video', icon: <PlusCircle className="w-4 h-4" /> },
                 { name: 'Find Candidates', path: '/browse', icon: <BookmarkCheck className="w-4 h-4" /> },
+                { name: 'Profile', path: '/dashboard/profile', icon: <User className="w-4 h-4" /> },
             ];
         }
 
@@ -114,7 +115,7 @@ export default function ImprovedNavbar() {
         return [
             { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
             { name: 'Browse Companies', path: '/browse', icon: <Search className="w-4 h-4" /> },
-            { name: 'My Video', path: '/dashboard/video', icon: <BookmarkCheck className="w-4 h-4" /> },
+            { name: 'My Video', path: '/dashboard/upload-video', icon: <BookmarkCheck className="w-4 h-4" /> },
             { name: 'Profile', path: '/dashboard/profile', icon: <User className="w-4 h-4" /> },
         ];
     };

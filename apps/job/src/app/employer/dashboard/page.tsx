@@ -191,7 +191,7 @@ export default function EmployerDashboard() {
                                             and attract higher quality candidates.
                                         </p>
                                         <Link
-                                            href="/dashboard/video"
+                                            href="/dashboard/upload-video"
                                             className="inline-flex items-center gap-2 px-8 py-4 bg-[#1B4FD8] text-white rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
                                         >
                                             <Plus className="w-5 h-5 mr-1" />
