@@ -52,8 +52,8 @@ export default function RegisterPage() {
     const { register, loginWithGoogle, user } = useAuth();
 
     const [step, setStep] = useState(1);
-    const [role, setRole] = useState<'jobseeker' | 'employer'>(
-        (searchParams.get('role') as any) || 'jobseeker'
+    const [role, setRole] = useState<'job_seeker' | 'employer'>(
+        (searchParams.get('role') as any) || 'job_seeker'
     );
 
     // Shared form state
@@ -74,6 +74,7 @@ export default function RegisterPage() {
         companyType: '',
         yearEstablished: '',
         companyWebsite: '',
+        companyLinkedIn: '',
         companyLogoUrl: '',
         fullAddress: '',
         whatsapp: '',
@@ -130,6 +131,10 @@ export default function RegisterPage() {
             }
         }
         setError('');
+        if (step === 2 && role === 'job_seeker') {
+            handleSubmit({ preventDefault: () => { } } as any);
+            return;
+        }
         setStep(prev => prev + 1);
     };
 
@@ -142,11 +147,8 @@ export default function RegisterPage() {
         e.preventDefault();
         setError('');
 
-        if (role === 'jobseeker') {
-            if (!formData.industry || !formData.subcategory || !formData.primarySkill) {
-                setError('Please select your industry, sub-sector, and role.');
-                return;
-            }
+        if (role === 'job_seeker') {
+            // Simplified: No professional info captured in register anymore
         } else {
             if (!formData.companySize || !formData.companyType) {
                 setError('Please fill in company size and type.');
@@ -156,43 +158,33 @@ export default function RegisterPage() {
 
         setLoading(true);
         try {
-            if (role === 'jobseeker') {
+            if (role === 'job_seeker') {
                 await register(formData.email, formData.password, {
                     displayName: formData.fullName,
-                    industry: formData.industry,
-                    subcategory: formData.subcategory,
-                    role_in_category: formData.primarySkill,
-                    onboardingCompleted: true,
+                    onboardingCompleted: false, // Force onboarding
                     profile: {
                         fullName: formData.fullName,
                         phone: formData.phone,
                         location: formData.city,
-                        preferredJobTitle: formData.primarySkill,
-                        industry: formData.industry,
-                        preferredSubcategory: formData.subcategory,
-                        experience: [],
-                        education: [],
-                        certifications: [],
-                        skills: [],
-                        profileStrength: 35,
+                        profileStrength: 15,
                     },
                 }, 'job_seeker' as any);
             } else {
                 await register(formData.email, formData.password, {
                     displayName: formData.fullName,
-                    onboardingCompleted: true,
-                    companyProfile: {
-                        companyName: formData.fullName,
-                        contactPhone: formData.phone,
+                    onboardingCompleted: false, // Force onboarding
+                    company: { // Use 'company' instead of 'companyProfile' to match onboarding
+                        name: formData.fullName,
+                        phone: formData.phone,
                         whatsapp: formData.whatsapp,
-                        companySize: formData.companySize,
-                        companyType: formData.companyType,
-                        yearEstablished: formData.yearEstablished,
+                        size: formData.companySize,
+                        type: formData.companyType,
+                        foundedYear: formData.yearEstablished ? parseInt(formData.yearEstablished) : undefined,
                         website: formData.companyWebsite,
-                        logoUrl: formData.companyLogoUrl,
+                        linkedin: formData.companyLinkedIn,
+                        logo: formData.companyLogoUrl,
+                        location: formData.city,
                         address: formData.fullAddress,
-                        city: formData.city,
-                        salaryRange: formData.salaryRange,
                     },
                 }, 'employer' as any);
             }
@@ -209,7 +201,9 @@ export default function RegisterPage() {
 
     const stepLabel = role === 'employer'
         ? ['Role', 'Account', 'Company Info']
-        : ['Role', 'Account', 'Your Profession'];
+        : ['Role', 'Account'];
+
+    const totalSteps = role === 'employer' ? 3 : 2;
 
     const handleGoogleRegister = async (googleRole: 'job_seeker' | 'employer') => {
         setError('');
@@ -256,7 +250,7 @@ export default function RegisterPage() {
                     <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
                         <div
                             className="h-full bg-[#1B4FD8] transition-all duration-500 ease-out"
-                            style={{ width: `${(step / 3) * 100}%` }}
+                            style={{ width: `${(step / totalSteps) * 100}%` }}
                         />
                     </div>
                 </div>
@@ -280,20 +274,20 @@ export default function RegisterPage() {
 
                             <div className="grid grid-cols-1 gap-4">
                                 <button
-                                    onClick={() => setRole('jobseeker')}
+                                    onClick={() => setRole('job_seeker')}
                                     className={cn(
                                         'relative p-6 rounded-2xl border-2 flex flex-col items-center text-center transition-all group',
-                                        role === 'jobseeker'
+                                        role === 'job_seeker'
                                             ? 'border-[#1B4FD8] bg-blue-50/50'
                                             : 'border-slate-100 bg-white hover:border-blue-200'
                                     )}
                                 >
-                                    <div className={cn('w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors', role === 'jobseeker' ? 'bg-[#1B4FD8] text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600')}>
+                                    <div className={cn('w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors', role === 'job_seeker' ? 'bg-[#1B4FD8] text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600')}>
                                         <User className="w-6 h-6" />
                                     </div>
                                     <span className="font-bold text-[#0F172A]">I'm a Job Seeker</span>
                                     <span className="text-xs text-[#64748B] mt-1">Get hired through video intros</span>
-                                    {role === 'jobseeker' && <div className="absolute top-4 right-4 text-[#1B4FD8]"><ShieldCheck className="w-6 h-6" /></div>}
+                                    {role === 'job_seeker' && <div className="absolute top-4 right-4 text-[#1B4FD8]"><ShieldCheck className="w-6 h-6" /></div>}
                                 </button>
 
                                 <button
@@ -353,110 +347,131 @@ export default function RegisterPage() {
 
                     {/* ---------- STEP 2: ACCOUNT DETAILS ---------- */}
                     {step === 2 && (
-                        <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
-                            <h2 className="text-xl font-bold text-[#0F172A] mb-2">
-                                {role === 'employer' ? 'Company Account Details' : 'Create Your Account'}
-                            </h2>
-
-                            {/* Full Name / Company Name */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-[#64748B] uppercase px-1">
-                                    {role === 'employer' ? 'Company / Organisation Name' : 'Full Name'}
-                                </label>
-                                <div className="relative">
-                                    {role === 'employer' ? <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /> : <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />}
-                                    <input
-                                        type="text"
-                                        name="fullName"
-                                        placeholder={role === 'employer' ? 'e.g. Khan & Sons Pvt Ltd' : 'John Doe'}
-                                        value={formData.fullName}
-                                        onChange={handleInputChange}
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
-                                    />
-                                </div>
+                        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div className="text-center mb-6">
+                                <h1 className="text-2xl font-black text-[#0F172A] mb-2">Create your account</h1>
+                                <p className="text-[#64748B] text-sm">Please fill in your basic details</p>
                             </div>
 
-                            {/* Email */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-[#64748B] uppercase px-1">Email Address</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        placeholder="info@company.com"
-                                        value={formData.email}
-                                        onChange={handleInputChange}
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Password row */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">Password</label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <input
-                                            type={showPassword ? 'text' : 'password'}
-                                            name="password"
-                                            placeholder="••••••••"
-                                            value={formData.password}
+                            <div className="space-y-4">
+                                {role === 'employer' && (
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-[#64748B] uppercase px-1">What is your primary goal?</label>
+                                        <select
+                                            name="companySize"
+                                            value={formData.companySize}
                                             onChange={handleInputChange}
-                                            className="w-full pl-12 pr-12 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
-                                        />
-                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1B4FD8] transition-colors">
-                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        </button>
+                                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] outline-none transition-all text-sm bg-white"
+                                        >
+                                            <option value="">Select an option</option>
+                                            <option value="hire_fast">Hire talent quickly</option>
+                                            <option value="build_brand">Build employer brand</option>
+                                            <option value="market_research">Market research</option>
+                                            <option value="other">Other</option>
+                                        </select>
                                     </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">Confirm</label>
-                                    <div className="relative">
-                                        <input
-                                            type={showConfirmPassword ? 'text' : 'password'}
-                                            name="confirmPassword"
-                                            placeholder="••••••••"
-                                            value={formData.confirmPassword}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 pr-12 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
-                                        />
-                                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1B4FD8] transition-colors">
-                                            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                                )}
 
-                            {/* Phone + City */}
-                            <div className="grid grid-cols-2 gap-3">
+                                {/* Full Name / Company Name */}
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">Phone</label>
+                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">
+                                        {role === 'employer' ? 'Company / Organisation Name' : 'Full Name'}
+                                    </label>
                                     <div className="relative">
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        {role === 'employer' ? <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /> : <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />}
                                         <input
                                             type="text"
-                                            name="phone"
-                                            placeholder="0300-1234567"
-                                            value={formData.phone}
+                                            name="fullName"
+                                            placeholder={role === 'employer' ? 'e.g. Khan Hub (Pvt.) Ltd.' : 'John Doe'}
+                                            value={formData.fullName}
                                             onChange={handleInputChange}
                                             className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
                                         />
                                     </div>
                                 </div>
+
+                                {/* Email */}
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">City</label>
+                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">Email Address</label>
                                     <div className="relative">
-                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                         <input
-                                            type="text"
-                                            name="city"
-                                            placeholder="e.g. Lahore"
-                                            value={formData.city}
+                                            type="email"
+                                            name="email"
+                                            placeholder="info@company.com"
+                                            value={formData.email}
                                             onChange={handleInputChange}
                                             className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
                                         />
+                                    </div>
+                                </div>
+
+                                {/* Password row */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-[#64748B] uppercase px-1">Password</label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                name="password"
+                                                placeholder="••••••••"
+                                                value={formData.password}
+                                                onChange={handleInputChange}
+                                                className="w-full pl-12 pr-12 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
+                                            />
+                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1B4FD8] transition-colors">
+                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-[#64748B] uppercase px-1">Confirm</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showConfirmPassword ? 'text' : 'password'}
+                                                name="confirmPassword"
+                                                placeholder="••••••••"
+                                                value={formData.confirmPassword}
+                                                onChange={handleInputChange}
+                                                className="w-full px-4 pr-12 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
+                                            />
+                                            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1B4FD8] transition-colors">
+                                                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Phone + City */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-[#64748B] uppercase px-1">Phone</label>
+                                        <div className="relative">
+                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                name="phone"
+                                                placeholder="0300-1234567"
+                                                value={formData.phone}
+                                                onChange={handleInputChange}
+                                                className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-[#64748B] uppercase px-1">City</label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                name="city"
+                                                placeholder="e.g. Lahore"
+                                                value={formData.city}
+                                                onChange={handleInputChange}
+                                                className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] focus:ring-1 focus:ring-blue-100 outline-none transition-all text-sm"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -472,8 +487,8 @@ export default function RegisterPage() {
                         </div>
                     )}
 
-                    {/* ---------- STEP 3a: JOB SEEKER - INDUSTRY & ROLE ---------- */}
-                    {step === 3 && role === 'jobseeker' && (
+                    {/* ---------- STEP 3a: JOB SEEKER - INDUSTRY & ROLE (DEPRECATED) ---------- */}
+                    {step === 3 && role === 'job_seeker' && (
                         <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
                             <h2 className="text-xl font-bold text-[#0F172A] mb-2">Your Profession</h2>
 
@@ -595,6 +610,10 @@ export default function RegisterPage() {
                                         />
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Website + LinkedIn */}
+                            <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-[#64748B] uppercase px-1">Website</label>
                                     <div className="relative">
@@ -609,21 +628,57 @@ export default function RegisterPage() {
                                         />
                                     </div>
                                 </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">LinkedIn</label>
+                                    <div className="relative">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 flex items-center justify-center font-bold text-[10px]">in</div>
+                                        <input
+                                            type="url"
+                                            name="companyLinkedIn"
+                                            placeholder="https://linkedin.com/company/..."
+                                            value={formData.companyLinkedIn}
+                                            onChange={handleInputChange}
+                                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] outline-none transition-all text-sm"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Company Logo URL */}
+                            {/* Company Logo Upload */}
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-[#64748B] uppercase px-1">Company Logo URL <span className="text-slate-400 normal-case font-medium">(optional)</span></label>
-                                <div className="relative">
-                                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                    <input
-                                        type="url"
-                                        name="companyLogoUrl"
-                                        placeholder="https://link-to-logo.png"
-                                        value={formData.companyLogoUrl}
-                                        onChange={handleInputChange}
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] outline-none transition-all text-sm"
-                                    />
+                                <label className="text-xs font-bold text-[#64748B] uppercase px-1">Company Logo</label>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
+                                        {formData.companyLogoUrl ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={formData.companyLogoUrl} alt="Logo" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <Building2 className="w-6 h-6 text-slate-300" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    try {
+                                                        setLoading(true);
+                                                        const { uploadCompanyLogo } = await import('@/lib/services/cloudinaryUpload');
+                                                        const result = await uploadCompanyLogo(file, 'new_user');
+                                                        setFormData(prev => ({ ...prev, companyLogoUrl: result.secureUrl }));
+                                                    } catch (err: any) {
+                                                        setError(err.message || 'Logo upload failed');
+                                                    } finally {
+                                                        setLoading(false);
+                                                    }
+                                                }
+                                            }}
+                                            className="text-xs"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">Recommended: Square logo, PNG or JPG max 2MB</p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -643,36 +698,19 @@ export default function RegisterPage() {
                                 </div>
                             </div>
 
-                            {/* WhatsApp + Salary Range */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">WhatsApp</label>
-                                    <div className="relative">
-                                        <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            name="whatsapp"
-                                            placeholder="0300-1234567"
-                                            value={formData.whatsapp}
-                                            onChange={handleInputChange}
-                                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] outline-none transition-all text-sm"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-[#64748B] uppercase px-1">Salary Range</label>
-                                    <div className="relative">
-                                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                                        <select
-                                            name="salaryRange"
-                                            value={formData.salaryRange}
-                                            onChange={handleInputChange}
-                                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] outline-none transition-all text-sm bg-white"
-                                        >
-                                            <option value="">Select range</option>
-                                            {SALARY_RANGES.map(r => <option key={r} value={r}>{r}</option>)}
-                                        </select>
-                                    </div>
+                            {/* WhatsApp */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-[#64748B] uppercase px-1">WhatsApp</label>
+                                <div className="relative">
+                                    <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        name="whatsapp"
+                                        placeholder="0300-1234567"
+                                        value={formData.whatsapp}
+                                        onChange={handleInputChange}
+                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-[#1B4FD8] outline-none transition-all text-sm"
+                                    />
                                 </div>
                             </div>
 

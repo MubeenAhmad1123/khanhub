@@ -55,26 +55,45 @@ function BrowseContent() {
         const fetchVideos = async () => {
             try {
                 setLoading(true);
-                // Fetch users that have active/submitted profiles, they are most likely to have videos.
-                // We'll filter client-side to be safe with deeply nested fields.
-                const usersSnap = await getDocs(collection(db, 'users'));
                 const loadedVideos: VideoData[] = [];
 
+                // 1. Fetch Candidate Videos (from users collection)
+                const usersSnap = await getDocs(collection(db, 'users'));
                 usersSnap.forEach((docSnap) => {
                     const data = docSnap.data();
-                    const videoUrl = data.profile?.videoResume || data.profile?.videoUrl || data.companyProfile?.videoResume || data.company?.videoResume || data.companyProfile?.videoUrl || data.company?.videoUrl;
+                    if (data.role === 'employer') return; // Skip employers here, they come from jobPostings
 
+                    const videoUrl = data.profile?.videoResume || data.profile?.videoUrl;
                     if (videoUrl && typeof videoUrl === 'string' && videoUrl.length > 10) {
                         loadedVideos.push({
-                            id: data.uid || docSnap.id,
-                            seekerId: data.uid || docSnap.id,
-                            role: data.role === 'employer' ? 'employer' : 'jobseeker',
-                            industry: data.industry || (data.profile as any)?.industry || data.companyProfile?.industry || data.company?.industry || 'General',
-                            subcategory: data.subcategory || data.profile?.preferredSubcategory || data.companyProfile?.subcategory || data.company?.subcategory || 'General',
+                            id: docSnap.id,
+                            seekerId: docSnap.id,
+                            role: 'jobseeker',
+                            industry: data.industry || (data.profile as any)?.industry || 'General',
+                            subcategory: data.subcategory || data.profile?.preferredSubcategory || 'General',
                             videoUrl: videoUrl,
-                            thumbnailUrl: data.profile?.photo || data.companyProfile?.logoUrl || data.company?.logo || data.photoURL || '',
-                            experience: data.profile?.yearsOfExperience || data.profile?.experience || '',
-                            salary: data.company?.salary || data.companyProfile?.salary || '',
+                            thumbnailUrl: data.profile?.photo || data.photoURL || '',
+                            experience: data.profile?.yearsOfExperience || '',
+                            salary: '',
+                        });
+                    }
+                });
+
+                // 2. Fetch Job Posting Videos (from jobPostings collection)
+                const jobsSnap = await getDocs(collection(db, 'jobPostings'));
+                jobsSnap.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.videoUrl) {
+                        loadedVideos.push({
+                            id: docSnap.id,
+                            seekerId: data.employerUid,
+                            role: 'employer',
+                            industry: data.industry || 'General',
+                            subcategory: data.title || 'Job Opening', // Use Job Title as the main display
+                            videoUrl: data.videoUrl,
+                            thumbnailUrl: data.companyLogo || '',
+                            experience: data.experienceRequired || '',
+                            salary: data.hideSalary ? 'Salary Hidden' : data.salaryRange || '',
                         });
                     }
                 });
@@ -101,7 +120,7 @@ function BrowseContent() {
 
             return roleMatch && industryMatch && searchMatch;
         });
-    }, [selectedRole, selectedIndustry, searchQuery]);
+    }, [selectedRole, selectedIndustry, searchQuery, videos]);
 
     return (
         <div className="min-h-screen bg-[#F8FAFF] flex flex-col lg:flex-row">

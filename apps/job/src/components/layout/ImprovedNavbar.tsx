@@ -167,6 +167,7 @@ export default function ImprovedNavbar() {
                                     >
                                         <div className="relative">
                                             {avatarUrl ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
                                                 <img
                                                     src={avatarUrl}
                                                     alt="Profile"
@@ -258,6 +259,7 @@ export default function ImprovedNavbar() {
                                 <div className="mb-6 px-3 py-4 bg-slate-50 rounded-2xl flex items-center gap-3 border border-slate-100">
                                     <div className="relative flex-shrink-0">
                                         {avatarUrl ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
                                             <img
                                                 src={avatarUrl}
                                                 alt="Profile"

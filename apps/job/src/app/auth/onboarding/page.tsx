@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { calculateProfileStrength } from '@/lib/services/pointsSystem';
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { cn } from '@/lib/utils';
 
 export default function OnboardingPage() {
     const router = useRouter();
@@ -22,11 +23,13 @@ export default function OnboardingPage() {
     const [jobSeekerData, setJobSeekerData] = useState({
         skills: '',
         experience: '',
-        location: '',
         industry: '',
         subcategory: '',
         primarySkill: '',
+        isEmployed: 'no', // 'yes' or 'no'
     });
+
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     const [employerData, setEmployerData] = useState({
         companyName: '',
@@ -69,7 +72,7 @@ export default function OnboardingPage() {
                 const primarySkill = user.profile?.preferredJobTitle || '';
                 const experience = String(user.profile?.yearsOfExperience || '');
                 const skills = user.profile?.skills?.join(', ') || '';
-                const location = user.profile?.location || '';
+                const isEmployed = user.profile?.isEmployed ? 'yes' : 'no';
 
                 setJobSeekerData(prev => ({
                     ...prev,
@@ -78,31 +81,29 @@ export default function OnboardingPage() {
                     primarySkill,
                     experience: experience === '0' && !user.profile?.yearsOfExperience ? '' : experience,
                     skills,
-                    location
+                    isEmployed
                 }));
 
                 if (industry && subcategory && primarySkill) {
                     let startStep = 3;
                     if (experience !== '' && experience !== 'undefined') {
                         startStep = 4;
-                        if (skills && location) {
-                            startStep = 5;
-                        }
                     }
                     setStep(startStep);
                 }
             } else if (user.role === 'employer') {
                 const u = user as any;
-                const companyName = u.companyProfile?.companyName || u.company?.name || '';
-                const companyWebsite = u.companyProfile?.website || u.company?.website || '';
-                const companySize = u.companyProfile?.companySize || u.company?.size || '';
-                const industry = u.industry || u.company?.industry || '';
-                const subcategory = u.subcategory || u.company?.subcategory || '';
-                const location = u.companyProfile?.city || u.company?.location || '';
-                const address = u.companyProfile?.address || u.company?.address || '';
-                const phone = u.companyProfile?.contactPhone || u.company?.phone || '';
-                const description = u.company?.description || '';
-                const contactPerson = u.displayName || u.company?.contactPerson || '';
+                const companyData = u.company || {};
+                const companyName = companyData.name || u.displayName || '';
+                const companyWebsite = companyData.website || '';
+                const companySize = companyData.size || '';
+                const industry = companyData.industry || u.industry || '';
+                const subcategory = companyData.subcategory || u.subcategory || '';
+                const location = companyData.location || '';
+                const address = companyData.address || '';
+                const phone = companyData.phone || '';
+                const description = companyData.description || '';
+                const contactPerson = u.displayName || companyData.contactPerson || '';
 
                 setEmployerData(prev => ({
                     ...prev,
@@ -118,13 +119,12 @@ export default function OnboardingPage() {
                     contactPerson
                 }));
 
+                if (companyData.logo) {
+                    setLogoPreview(companyData.logo);
+                }
+
                 if (companyName && companySize && industry && subcategory && location) {
-                    let startStep = 3;
-                    if (contactPerson && phone && description) {
-                        // Normally handled by the onboardingCompleted check, but just in case
-                        startStep = 3;
-                    }
-                    setStep(startStep);
+                    setStep(3);
                 }
             }
         }
@@ -134,10 +134,46 @@ export default function OnboardingPage() {
     const isEmployer = currentRole === 'employer';
     const isJobSeeker = currentRole === 'job_seeker';
 
+    // Real-time auto-save for Job Seeker
+    useEffect(() => {
+        if (!isJobSeeker || !user || user.onboardingCompleted) return;
+
+        const timer = setTimeout(async () => {
+            // Only save if at least industry is selected
+            if (!jobSeekerData.industry) return;
+
+            setSaveStatus('saving');
+            try {
+                await updateProfile({
+                    industry: jobSeekerData.industry,
+                    subcategory: jobSeekerData.subcategory,
+                    profile: {
+                        ...(user?.profile as any),
+                        skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
+                        yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
+                        preferredJobTitle: jobSeekerData.primarySkill,
+                        industry: jobSeekerData.industry,
+                        preferredSubcategory: jobSeekerData.subcategory,
+                        isEmployed: jobSeekerData.isEmployed === 'yes',
+                    }
+                } as any);
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus('idle'), 3000);
+            } catch (err) {
+                console.error("Auto-save failed:", err);
+                setSaveStatus('error');
+            }
+        }, 1500); // 1.5s debounce
+
+        return () => clearTimeout(timer);
+    }, [jobSeekerData, isJobSeeker, user, updateProfile]);
+
+
+
     // totalSteps:
     // - Employer: 3 steps
     // - Job Seeker: 5 steps
-    const totalSteps = isEmployer ? 3 : (isJobSeeker ? 5 : 1);
+    const totalSteps = isEmployer ? 3 : (isJobSeeker ? 4 : 1);
 
     const handleJobSeekerSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -160,26 +196,17 @@ export default function OnboardingPage() {
                     fullName: user?.displayName || '',
                     skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
                     yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
-                    location: jobSeekerData.location,
                     preferredJobTitle: jobSeekerData.primarySkill,
                     industry: jobSeekerData.industry,
                     preferredSubcategory: jobSeekerData.subcategory,
+                    isEmployed: jobSeekerData.isEmployed === 'yes',
                     profileStrength: calculateProfileStrength({
                         profile: {
                             skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
                             yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
-                            experience: [{ id: 'temp', title: jobSeekerData.primarySkill, company: 'Previous', startDate: '2020', isCurrent: true }], // Dummy to count as 1
+                            experience: jobSeekerData.isEmployed === 'yes' ? [{ id: 'current', title: jobSeekerData.primarySkill, company: 'Current', startDate: '2023', isCurrent: true }] : [],
                         } as any
                     }),
-                    completedSections: {
-                        basicInfo: true,
-                        skills: true,
-                        cv: false,
-                        video: false,
-                        experience: false,
-                        education: false,
-                        certifications: false,
-                    }
                 }
             } as any);
             router.push('/auth/verify-payment');
@@ -319,8 +346,21 @@ export default function OnboardingPage() {
                     <p className="text-gray-600 mt-2 font-medium">
                         {isEmployer ?
                             "Tell us about your business to attract the best talent" :
-                            "Just 5 quick questions to help us find you the best jobs"}
+                            "Tell us about your professional background"}
                     </p>
+                    {saveStatus !== 'idle' && (
+                        <div className={cn(
+                            "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mt-4",
+                            saveStatus === 'saving' ? "bg-blue-50 text-blue-600" :
+                                saveStatus === 'saved' ? "bg-green-50 text-green-600" :
+                                    "bg-red-50 text-red-600"
+                        )}>
+                            {saveStatus === 'saving' && <Loader2 className="w-3 h-3 animate-spin" />}
+                            {saveStatus === 'saved' && "✓ Saved"}
+                            {saveStatus === 'saving' && "Syncing..."}
+                            {saveStatus === 'error' && "Failed to save — Retry"}
+                        </div>
+                    )}
                 </div>
 
                 {error && (
@@ -469,58 +509,54 @@ function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmi
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex justify-center mb-2">
                         <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <MapPin className="h-10 w-10 text-teal-600" />
+                            <Target className="h-10 w-10 text-teal-600" />
                         </div>
                     </div>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-sm font-bold text-gray-700 mb-2 block ml-1">List your top 3 skills (comma separated)</label>
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-gray-700 ml-1">List your top 3 skills (comma separated)</label>
                             <input
                                 type="text"
                                 required
                                 value={formData.skills}
                                 onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
                                 className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="e.g. Surgery, Patient Care, Diagnostics"
+                                placeholder="e.g. Surgery, Diagnostics, Patient Care"
                                 autoFocus
                             />
                         </div>
-                        <div>
-                            <label className="text-sm font-bold text-gray-700 mb-2 block ml-1">Where are you located?</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.location}
-                                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="e.g. Karachi, Pakistan"
-                            />
+                        <div className="space-y-4">
+                            <label className="text-sm font-bold text-gray-700 ml-1">Are you currently employed?</label>
+                            <div className="flex gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, isEmployed: 'yes' })}
+                                    className={cn(
+                                        "flex-1 py-4 rounded-2xl font-bold border-2 transition-all flex items-center justify-center gap-2",
+                                        formData.isEmployed === 'yes' ? "bg-teal-50 border-teal-500 text-teal-700" : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
+                                    )}
+                                >
+                                    {formData.isEmployed === 'yes' && <CheckCircle className="w-5 h-5" />}
+                                    Yes, I am
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, isEmployed: 'no' })}
+                                    className={cn(
+                                        "flex-1 py-4 rounded-2xl font-bold border-2 transition-all flex items-center justify-center gap-2",
+                                        formData.isEmployed === 'no' ? "bg-slate-50 border-slate-500 text-slate-700" : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
+                                    )}
+                                >
+                                    {formData.isEmployed === 'no' && <CheckCircle className="w-5 h-5" />}
+                                    No, I'm not
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {step === 5 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
-                    <div className="flex justify-center mb-2">
-                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <Video className="h-10 w-10 text-teal-600" />
-                        </div>
-                    </div>
-                    <div className="space-y-4">
-                        <h3 className="text-2xl font-black text-gray-900">Free Video Upload!</h3>
-                        <p className="text-gray-600 text-lg">You can now upload your introduction video for free. This will help employers find you instantly.</p>
-                        <div className="bg-teal-50 p-6 rounded-3xl border-2 border-teal-100">
-                            <p className="text-teal-800 font-bold mb-2">Next Steps:</p>
-                            <ul className="text-left text-sm text-teal-700 space-y-2">
-                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Upload your video (FREE)</li>
-                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Browse employers</li>
-                                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Pay PKR 1,000 to activate & connect</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             <div className="flex gap-4 pt-4">
                 {step > 1 && (

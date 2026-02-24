@@ -99,6 +99,7 @@ export default function GoogleTranslateWidget() {
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity text-sm font-bold text-blue-600 active:scale-95"
             >
                 {/* Fallback globe if image not added yet by user */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src="/translation.webp"
                     alt="Translate"

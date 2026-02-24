@@ -48,6 +48,22 @@ export interface Certification {
     credentialUrl?: string;
 }
 
+export interface Project {
+    id: string;
+    title: string;
+    description: string;
+    url?: string;
+    startDate?: string;
+    endDate?: string;
+    current: boolean;
+}
+
+export interface Language {
+    id: string;
+    name: string;
+    proficiency: 'Beginner' | 'Intermediate' | 'Fluent' | 'Native';
+}
+
 export interface JobSeekerProfile {
     // Basic Info
     fullName?: string;
@@ -61,11 +77,14 @@ export interface JobSeekerProfile {
     preferredJobTitle?: string;
     yearsOfExperience?: number;
     skills?: string[];
+    isEmployed?: boolean;
 
     // Experience & Education
     experience?: any[];
     education?: any[];
     certifications?: any[];
+    projects?: Project[];
+    languages?: Language[];
 
     // Files
     cvUrl?: string;

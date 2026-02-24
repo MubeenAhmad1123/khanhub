@@ -75,9 +75,9 @@ export default function EmployerDashboard() {
 
     const sidebarLinks = [
         { href: '/employer/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+        { href: '/employer/post-job', label: 'Post Video Job', icon: <Plus className="w-5 h-5" /> },
         { href: '/employer/my-videos', label: 'Company Videos', icon: <Video className="w-5 h-5" /> },
         { href: '/employer/connections', label: 'Contact Reveals', icon: <Users className="w-5 h-5" /> },
-        { href: '/employer/notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" /> },
         { href: '/employer/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
     ];
 
@@ -88,7 +88,7 @@ export default function EmployerDashboard() {
                 <div className="p-6">
                     <Link href="/" className="flex items-center gap-2 mb-10">
                         <div className="w-8 h-8 bg-[#F97316] rounded-lg flex items-center justify-center transition-transform hover:scale-110">
-                            <Building2 className="w-5 h-5 text-white" />
+                            <Briefcase className="w-5 h-5 text-white" />
                         </div>
                         <span className="text-xl font-black text-[#0F172A] tracking-tight">
                             KhanHub<span className="text-[#F97316]">Hiring</span>
@@ -135,17 +135,26 @@ export default function EmployerDashboard() {
                             <div className="flex items-center gap-2 mt-2">
                                 <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider">Employer</span>
                                 <span className="text-slate-400 text-sm font-medium">
-                                    {(userData as any)?.companyName || (userData as any)?.displayName || 'Company'} • {(userData as any)?.industry || 'General'}
+                                    {(userData as any)?.company?.name || (userData as any)?.displayName || 'Company'} • {(userData as any)?.company?.industry || (userData as any)?.industry || 'General'}
                                 </span>
                             </div>
                         </div>
-                        <Link
-                            href="/browse"
-                            className="bg-white border border-slate-200 px-6 py-3 rounded-full text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
-                        >
-                            Find Candidates
-                            <ArrowRight className="w-4 h-4" />
-                        </Link>
+                        <div className="flex items-center gap-3">
+                            <Link
+                                href="/employer/post-job"
+                                className="bg-[#0F172A] text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/10"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Post Video Job
+                            </Link>
+                            <Link
+                                href="/browse"
+                                className="bg-white border border-slate-200 px-6 py-3 rounded-full text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                            >
+                                Find Candidates
+                                <ArrowRight className="w-4 h-4" />
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Status Card Logic */}

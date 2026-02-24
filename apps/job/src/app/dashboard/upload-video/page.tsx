@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadVideoToCloudinary } from '@/lib/services/cloudinary';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { Loader2, Upload, Video, StopCircle, Play, X, CheckCircle, AlertCircle, ArrowRight, LockKeyhole, CreditCard } from 'lucide-react';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, getDocs, query, where, limit } from 'firebase/firestore';
+import { Loader2, Upload, Video, StopCircle, Play, X, CheckCircle, AlertCircle, ArrowRight, LockKeyhole, CreditCard, DollarSign, Briefcase, GraduationCap, Clock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function UploadVideoPage() {
     const router = useRouter();
@@ -22,26 +23,43 @@ export default function UploadVideoPage() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [videoCount, setVideoCount] = useState<number | null>(null);
+    const [salaryRange, setSalaryRange] = useState('');
+    const [role, setRole] = useState('');
+    const [education, setEducation] = useState('');
+    const [experience, setExperience] = useState('');
 
-    // Profile Completion Check
-    const requiredFields = {
-        name: user?.displayName,
-        phone: (user as any)?.phone || user?.profile?.phone,
-        location: (user as any)?.location || user?.profile?.location,
-        industry: user?.industry || (user?.profile as any)?.industry,
-        subcategory: (user as any)?.subcategory || user?.profile?.preferredSubcategory,
-        role: (user as any)?.role_in_category || user?.profile?.preferredJobTitle
-    };
+    // Profile Completion Gate Logic
+    const profile = (user?.profile || {}) as Record<string, any>;
+    const completionCriteria = [
+        { id: 'name', label: 'Profile Name', met: !!profile.fullName, icon: '👤' },
+        { id: 'bio', label: 'Professional Summary', met: !!profile.bio, icon: '📝' },
+        { id: 'experience', label: 'Work History / Fresher', met: (profile.experience && profile.experience.length > 0) || profile.yearsOfExperience === 0, icon: '💼' },
+        { id: 'skills', label: 'At least 1 Skill', met: !!(profile.skills && profile.skills.length > 0), icon: '🎯' },
+        { id: 'education', label: 'Education Details', met: !!(profile.education && profile.education.length > 0), icon: '🎓' },
+    ];
 
-    const missingFields = Object.entries(requiredFields)
-        .filter(([_, value]) => !value)
-        .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1));
+    const missingCriteria = completionCriteria.filter(c => !c.met);
+    const isProfileIncomplete = missingCriteria.length > 0 && !profile.videoUploadUnlocked;
 
-    const isProfileIncomplete = missingFields.length > 0;
+    // Auto-unlock logic if criteria met
+    useEffect(() => {
+        const unlockProfile = async () => {
+            if (user && !isProfileIncomplete && !profile.videoUploadUnlocked) {
+                console.log('🔓 Unlocking video upload for user:', user.uid);
+                await updateDoc(doc(db, 'users', user.uid), {
+                    'profile.videoUploadUnlocked': true,
+                    updatedAt: serverTimestamp()
+                });
+            }
+        };
+        unlockProfile();
+    }, [user, isProfileIncomplete, profile.videoUploadUnlocked]);
 
     // Payment Gate Check
-    // A user is considered paid if paymentApproved === true OR paymentStatus === 'approved'
+    const isFirstVideo = videoCount === 0;
     const hasPaid = !!((user as any)?.paymentApproved || (user as any)?.paymentStatus === 'approved');
+    const canUpload = isFirstVideo || hasPaid;
 
     // Recording State
     const [isRecording, setIsRecording] = useState(false);
@@ -51,6 +69,18 @@ export default function UploadVideoPage() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Fetch video count
+    useEffect(() => {
+        const fetchVideoCount = async () => {
+            if (user) {
+                const q = query(collection(db, 'videos'), where('userId', '==', user.uid));
+                const snapshot = await getDocs(q);
+                setVideoCount(snapshot.size);
+            }
+        };
+        fetchVideoCount();
+    }, [user]);
 
     // Auth Check
     useEffect(() => {
@@ -175,6 +205,10 @@ export default function UploadVideoPage() {
                 duration: result.duration || 0,
                 format: result.format,
                 size: result.bytes,
+                salaryRange: salaryRange,
+                role: role,
+                education: education,
+                experience: experience,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             };
@@ -185,6 +219,10 @@ export default function UploadVideoPage() {
             await updateDoc(doc(db, 'users', user.uid), {
                 profile_status: 'video_submitted', // Or 'video_processing'
                 'profile.videoResume': result.secure_url, // Update profile field if exists
+                'profile.desiredSalary': salaryRange,
+                'profile.preferredJobTitle': role,
+                'profile.education': education,
+                'profile.yearsOfExperience': experience,
                 updatedAt: serverTimestamp(),
             });
 
@@ -292,15 +330,15 @@ export default function UploadVideoPage() {
 
                     <div className="p-8">
                         {/* ====== GATE 1: PAYMENT CHECK ====== */}
-                        {!hasPaid ? (
+                        {!canUpload ? (
                             <div className="text-center py-12 space-y-8 animate-in fade-in zoom-in duration-500">
                                 <div className="w-24 h-24 bg-red-50 rounded-[40px] flex items-center justify-center mx-auto border-4 border-red-100 shadow-xl shadow-red-200/20">
                                     <LockKeyhole className="w-12 h-12 text-red-500" />
                                 </div>
                                 <div className="space-y-3">
-                                    <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Registration Fee Required</h3>
+                                    <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Video Upload Fee Required</h3>
                                     <p className="text-slate-500 font-bold max-w-sm mx-auto">
-                                        Your account needs to be activated before you can upload or record a video profile.
+                                        Your first video upload was free. To upload another video, a small platform fee is required.
                                     </p>
                                 </div>
 
@@ -321,7 +359,7 @@ export default function UploadVideoPage() {
                                         className="inline-flex items-center gap-2 px-10 py-5 bg-[#F97316] hover:opacity-90 text-white font-black italic rounded-[30px] transition-all shadow-xl shadow-orange-500/20 active:scale-95 uppercase tracking-tighter"
                                     >
                                         <CreditCard className="w-5 h-5" />
-                                        Pay Registration Fee
+                                        Pay PKR 1,000 Fee
                                         <ArrowRight className="w-5 h-5" />
                                     </Link>
                                     <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
@@ -331,19 +369,37 @@ export default function UploadVideoPage() {
                             </div>
                         ) : isProfileIncomplete ? (
                             <div className="text-center py-12 space-y-8 animate-in fade-in zoom-in duration-500">
-                                <div className="w-24 h-24 bg-amber-50 rounded-[40px] flex items-center justify-center mx-auto border-4 border-amber-100 shadow-xl shadow-amber-200/20">
-                                    <AlertCircle className="w-12 h-12 text-amber-500" />
+                                <div className="w-24 h-24 bg-blue-50 rounded-[40px] flex items-center justify-center mx-auto border-4 border-blue-100 shadow-xl shadow-blue-200/20">
+                                    <LockKeyhole className="w-12 h-12 text-blue-500" />
                                 </div>
                                 <div className="space-y-3">
-                                    <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Profile Incomplete</h3>
-                                    <p className="text-slate-500 font-bold max-w-sm mx-auto">Please complete these required fields before uploading your video profile:</p>
+                                    <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Profile Gate Active</h3>
+                                    <p className="text-slate-500 font-bold max-w-sm mx-auto">
+                                        You're almost there! Complete your portfolio to unlock high-priority video resume features.
+                                    </p>
                                 </div>
 
-                                <div className="flex flex-wrap justify-center gap-3">
-                                    {missingFields.map(field => (
-                                        <div key={field} className="px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                                            <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{field}</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto text-left">
+                                    {completionCriteria.map(item => (
+                                        <div
+                                            key={item.id}
+                                            className={cn(
+                                                "p-4 rounded-2xl border transition-all flex items-center gap-4",
+                                                item.met
+                                                    ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+                                                    : "bg-slate-50 border-slate-100 text-slate-400 opacity-60"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "w-10 h-10 rounded-xl flex items-center justify-center text-lg",
+                                                item.met ? "bg-white" : "bg-slate-100"
+                                            )}>
+                                                {item.met ? "✅" : item.icon}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Step</p>
+                                                <p className="text-xs font-black uppercase tracking-tight">{item.label}</p>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -353,10 +409,10 @@ export default function UploadVideoPage() {
                                         href="/dashboard/profile"
                                         className="inline-flex items-center gap-2 px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white font-black italic rounded-[30px] transition-all shadow-xl shadow-blue-500/20 active:scale-95 uppercase tracking-tighter"
                                     >
-                                        Complete Profile Now
+                                        Return to Profile
                                         <ArrowRight className="w-5 h-5" />
                                     </Link>
-                                    <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest italic">All basic details are mandatory for verification</p>
+                                    <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Video resumes are only visible for complete profiles</p>
                                 </div>
                             </div>
                         ) : (
@@ -469,6 +525,80 @@ export default function UploadVideoPage() {
                                                     <div className="flex items-center justify-between text-sm text-slate-600">
                                                         <span className="font-medium truncate max-w-[200px]">{file.name}</span>
                                                         <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-bold text-slate-700 ml-1 flex items-center gap-2">
+                                                                <Briefcase className="w-4 h-4 text-slate-400" />
+                                                                Desired Role
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={role}
+                                                                onChange={(e) => setRole(e.target.value)}
+                                                                placeholder="e.g. Senior Nurse"
+                                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 outline-none transition-all text-sm bg-white"
+                                                                required
+                                                            />
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-bold text-slate-700 ml-1 flex items-center gap-2">
+                                                                <GraduationCap className="w-4 h-4 text-slate-400" />
+                                                                Highest Education
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={education}
+                                                                onChange={(e) => setEducation(e.target.value)}
+                                                                placeholder="e.g. MBBS, BS Nursing"
+                                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 outline-none transition-all text-sm bg-white"
+                                                                required
+                                                            />
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-bold text-slate-700 ml-1 flex items-center gap-2">
+                                                                <Clock className="w-4 h-4 text-slate-400" />
+                                                                Experience (Years)
+                                                            </label>
+                                                            <select
+                                                                value={experience}
+                                                                onChange={(e) => setExperience(e.target.value)}
+                                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 outline-none transition-all text-sm bg-white"
+                                                                required
+                                                            >
+                                                                <option value="">Select years</option>
+                                                                <option value="0">Fresher / Student</option>
+                                                                <option value="1">1 Year</option>
+                                                                <option value="2">2 Years</option>
+                                                                <option value="3">3 Years</option>
+                                                                <option value="4">4 Years</option>
+                                                                <option value="5+">5+ Years</option>
+                                                                <option value="10+">10+ Years</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-bold text-slate-700 ml-1 flex items-center gap-2">
+                                                                <DollarSign className="w-4 h-4 text-slate-400" />
+                                                                Desired Salary Range
+                                                            </label>
+                                                            <select
+                                                                value={salaryRange}
+                                                                onChange={(e) => setSalaryRange(e.target.value)}
+                                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 outline-none transition-all text-sm bg-white"
+                                                                required
+                                                            >
+                                                                <option value="">Select range</option>
+                                                                <option value="20k-40k">20k - 40k PKR</option>
+                                                                <option value="40k-60k">40k - 60k PKR</option>
+                                                                <option value="60k-80k">60k - 80k PKR</option>
+                                                                <option value="80k-100k">80k - 100k PKR</option>
+                                                                <option value="100k+">100k+ PKR</option>
+                                                            </select>
+                                                        </div>
                                                     </div>
 
                                                     <button

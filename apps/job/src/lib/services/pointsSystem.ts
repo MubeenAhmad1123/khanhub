@@ -45,12 +45,14 @@ export function calculateProfileStrength(user: User | { profile: JobSeekerProfil
         strength += POINTS.VIDEO_UPLOADED;
     }
 
-    // 4. Bio / Experience / Education
+    // 4. Bio / Experience / Education / Projects / Languages
     if (profile.bio) strength += 10;
     if (profile.experience && profile.experience.length > 0) strength += 10;
     if (profile.education && profile.education.length > 0) strength += 10;
+    if (profile.projects && profile.projects.length > 0) strength += 10;
+    if (profile.languages && profile.languages.length > 0) strength += 5;
 
-    if (strength >= 90) strength = 100;
+    if (strength >= 95) strength = 100;
     return Math.min(strength, 100);
 }
 
