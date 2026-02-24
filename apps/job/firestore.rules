@@ -23,9 +23,9 @@ service cloud.firestore {
     }
     
     match /notifications/{notificationId} {
-      allow read: if isOwner(resource.data.userId);
+      allow read: if isOwner(resource.data.user_id);
       allow create: if isAuthenticated();
-      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow update: if isOwner(resource.data.user_id) || isAdmin();
       allow delete: if isAdmin();
     }
 

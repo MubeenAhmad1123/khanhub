@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { wipeUserData } from '@/lib/firebase/auth';
 import { useToast } from '@/components/ui/toast';
 import { writeActivityLog } from '@/hooks/useActivityLog';
 import UserDetailDrawer from '@/components/admin/UserDetailDrawer';
@@ -79,21 +80,22 @@ export default function AdminUsersPage() {
     };
 
     const handleDeleteUser = async (user: any) => {
-        if (!confirm(`CRITICAL: Are you sure you want to delete ${user.name || user.email}? This action cannot be undone.`)) return;
+        if (!confirm(`CRITICAL: Are you sure you want to delete ${user.name || user.email}? This will wipe ALL their data (videos, payments, etc.). This action cannot be undone.`)) return;
 
         try {
-            await deleteDoc(doc(db, 'users', user.id));
+            await wipeUserData(user.id);
 
             await writeActivityLog({
                 admin_id: adminUser?.uid || 'system',
                 action_type: 'user_deleted',
                 target_id: user.id,
                 target_type: 'user',
-                note: `Deleted user: ${user.email}`
+                note: `Deep-deleted user and all associated data: ${user.email}`
             });
 
-            toast('User deleted forever', 'info');
+            toast('User and data deleted forever', 'info');
         } catch (err) {
+            console.error('Admin delete error:', err);
             toast('Failed to delete user', 'error');
         }
     };

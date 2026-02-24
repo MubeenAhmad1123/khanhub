@@ -212,8 +212,8 @@ export default function EducationSection({ profile, onSave }: EducationSectionPr
                     </form>
                 ) : (
                     <div className="space-y-6">
-                        {educationList.length > 0 ? (
-                            educationList.sort((a, b) => (b.startYear || '').localeCompare(a.startYear || '')).map((entry) => (
+                        {Array.isArray(educationList) && educationList.length > 0 ? (
+                            [...educationList].sort((a, b) => (b.startYear || '').localeCompare(a.startYear || '')).map((entry) => (
                                 <div key={entry.id} className="group relative flex gap-6 bg-slate-50/30 p-6 rounded-3xl border border-slate-100 hover:bg-slate-50 transition-all">
                                     <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-100">
                                         <GraduationCap className="w-5 h-5 text-slate-400" />

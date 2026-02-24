@@ -193,8 +193,8 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                     </form>
                 ) : (
                     <div className="space-y-6">
-                        {experiences.length > 0 ? (
-                            experiences.sort((a, b) => b.startDate.localeCompare(a.startDate)).map((entry) => (
+                        {Array.isArray(experiences) && experiences.length > 0 ? (
+                            [...experiences].sort((a, b) => (b.startDate || '').localeCompare(a.startDate || '')).map((entry) => (
                                 <div key={entry.id} className="group relative flex gap-6 bg-slate-50/30 p-6 rounded-3xl border border-slate-100 hover:bg-slate-50 transition-all">
                                     <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-100">
                                         <Briefcase className="w-5 h-5 text-slate-400" />
