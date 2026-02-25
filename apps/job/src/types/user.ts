@@ -246,6 +246,9 @@ export interface User {
     website?: string;
     whatsapp?: string;
     logoURL?: string;
+    hrName?: string;
+    hrFullName?: string;
+    hrPhone?: string;
 
     firstJobPost?: {
         jobTitle: string;

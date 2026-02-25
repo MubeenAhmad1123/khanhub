@@ -94,10 +94,10 @@ export default function VideoUploadPage() {
         if (!authLoading && user) {
             const missingFields = [];
             // Check flat schema first, then legacy profile
-            if (!user.name && !user.displayName && !user.profile?.fullName) missingFields.push('fullName');
-            if (!user.phone && !user.profile?.phone) missingFields.push('phone');
-            if (!user.industry && !user.desiredIndustry && !user.profile?.industry) missingFields.push('industry');
-            if (!user.desiredJobTitle && !user.profile?.jobTitle) missingFields.push('jobTitle');
+            if (!user.name && !user.displayName) missingFields.push('fullName');
+            if (!user.phone) missingFields.push('phone');
+            if (!user.industry && !user.desiredIndustry) missingFields.push('industry');
+            if (!user.desiredJobTitle) missingFields.push('jobTitle');
 
             const bio = user.professionalSummary || user.profile?.bio || '';
             if (bio.length < 50) missingFields.push('bio');
@@ -728,15 +728,15 @@ export default function VideoUploadPage() {
 // Profile Gate Sub-component (Prompt 5)
 function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }) {
     const [formData, setFormData] = useState({
-        fullName: user?.name || user?.displayName || user?.profile?.fullName || '',
-        phone: user?.phone || user?.profile?.phone || '',
-        bio: user?.professionalSummary || user?.profile?.bio || '',
-        skills: (user?.skills || user?.profile?.skills || []).join(', ') || '',
-        industry: user?.desiredIndustry || user?.industry || user?.profile?.industry || '',
-        subcategory: user?.desiredSubcategory || user?.subcategory || user?.profile?.subcategory || '',
-        jobTitle: user?.desiredJobTitle || user?.profile?.jobTitle || '',
-        totalExperience: user?.careerLevel || user?.totalExperience || user?.profile?.totalExperience || '',
-        desiredSalary: user?.desiredSalary || user?.profile?.desiredSalary || '',
+        fullName: user?.name || user?.displayName || '',
+        phone: user?.phone || '',
+        bio: user?.professionalSummary || '',
+        skills: (user?.skills || []).join(', ') || '',
+        industry: user?.desiredIndustry || user?.industry || '',
+        subcategory: user?.desiredSubcategory || user?.subcategory || '',
+        jobTitle: user?.desiredJobTitle || '',
+        totalExperience: user?.careerLevel || user?.totalExperience || '',
+        desiredSalary: user?.desiredSalary || '',
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -768,20 +768,19 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
 
             // 1. Update Firestore Profile
             await updateUserProfile(user.uid, {
-                profile: {
-                    ...(user.profile || {}),
-                    fullName: formData.fullName.trim(),
-                    phone: formData.phone.trim(),
-                    bio: formData.bio.trim(),
-                    skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
-                    industry: formData.industry,
-                    subcategory: formData.subcategory,
-                    jobTitle: formData.jobTitle,
-                    totalExperience: formData.totalExperience,
-                    desiredSalary: formData.desiredSalary,
-                },
-                industry: formData.industry, // Keep root industry in sync
-                displayName: formData.fullName.trim(), // Keep root displayName in sync
+                displayName: formData.fullName.trim(),
+                name: formData.fullName.trim(),
+                phone: formData.phone.trim(),
+                professionalSummary: formData.bio.trim(),
+                skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
+                industry: formData.industry,
+                desiredIndustry: formData.industry,
+                subcategory: formData.subcategory,
+                desiredSubcategory: formData.subcategory,
+                desiredJobTitle: formData.jobTitle,
+                totalExperience: formData.totalExperience,
+                desiredSalary: formData.desiredSalary,
+                updatedAt: new Date()
             } as any);
 
             // 2. Update Firebase Auth displayName (for navbar and greeting consistency)

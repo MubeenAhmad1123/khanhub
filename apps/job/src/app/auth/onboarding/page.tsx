@@ -59,6 +59,7 @@ export default function OnboardingPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [role, setRole] = useState<'job_seeker' | 'employer' | null>(null);
+    const [success, setSuccess] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -120,7 +121,7 @@ export default function OnboardingPage() {
             // Pre-fill from existing data if any (Flat Schema & Profile)
             setFormData(prev => ({
                 ...prev,
-                companyName: user.companyName || user.profile?.companyName || user.displayName || '',
+                companyName: user.companyName || user.company?.name || user.displayName || '',
                 phone: user.phone || user.profile?.phone || '',
                 city: user.city || user.profile?.city || user.profile?.location || '',
                 desiredIndustry: user.desiredIndustry || user.industry || user.profile?.industry || '',

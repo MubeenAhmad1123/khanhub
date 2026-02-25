@@ -97,10 +97,11 @@ export default function PostJobPage() {
         if (!authLoading && user) {
             const missingFields = [];
             // Check flat schema first, then legacy profile
-            if (!user.yearEstablished && !user.profile?.yearEstablished) missingFields.push('yearEstablished');
-            if (!user.website && !user.profile?.website) missingFields.push('website');
-            if (!user.hrName && !user.hrFullName && !user.profile?.hrFullName) missingFields.push('hrFullName');
-            if (!user.phone && !user.hrPhone && !user.profile?.hrPhone) missingFields.push('hrPhone');
+            // Check flat schema fields (root)
+            if (!user.yearEstablished) missingFields.push('yearEstablished');
+            if (!user.website) missingFields.push('website');
+            if (!user.hrName && !user.hrFullName) missingFields.push('hrFullName');
+            if (!user.phone && !user.hrPhone) missingFields.push('hrPhone');
 
             setIsProfileIncomplete(missingFields.length > 0);
         }
@@ -590,10 +591,10 @@ export default function PostJobPage() {
 // Company Profile Gate (Prompt 5)
 function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }) {
     const [formData, setFormData] = useState({
-        yearEstablished: user?.yearEstablished || user?.profile?.yearEstablished || '',
-        website: user?.website || user?.profile?.website || '',
-        hrFullName: user?.hrName || user?.hrFullName || user?.profile?.hrFullName || '',
-        hrPhone: user?.phone || user?.hrPhone || user?.profile?.hrPhone || '',
+        yearEstablished: user?.yearEstablished || '',
+        website: user?.website || '',
+        hrFullName: user?.hrName || user?.hrFullName || '',
+        hrPhone: user?.phone || user?.hrPhone || '',
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -621,13 +622,13 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
 
             // Update Firestore Profile
             await updateUserProfile(user.uid, {
-                profile: {
-                    ...(user.profile || {}),
-                    yearEstablished: formData.yearEstablished,
-                    website: formData.website.trim(),
-                    hrFullName: formData.hrFullName.trim(),
-                    hrPhone: formData.hrPhone.trim(),
-                }
+                yearEstablished: formData.yearEstablished,
+                website: formData.website.trim(),
+                hrName: formData.hrFullName.trim(),
+                hrFullName: formData.hrFullName.trim(),
+                hrPhone: formData.hrPhone.trim(),
+                phone: formData.hrPhone.trim(),
+                updatedAt: new Date()
             } as any);
 
             onComplete();
