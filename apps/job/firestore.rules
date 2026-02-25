@@ -19,14 +19,14 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
     }
     
     match /notifications/{notificationId} {
       allow read: if isOwner(resource.data.user_id);
       allow create: if isAuthenticated();
       allow update: if isOwner(resource.data.user_id) || isAdmin();
-      allow delete: if isAdmin();
+      allow delete: if isOwner(resource.data.user_id) || isAdmin();
     }
 
     match /activity_log/{logId} {
@@ -43,13 +43,16 @@ service cloud.firestore {
       allow update: if request.auth.uid == resource.data.seekerId || 
                        request.auth.uid == resource.data.employerId || 
                        isAdmin();
+      allow delete: if request.auth.uid == resource.data.seekerId || 
+                       request.auth.uid == resource.data.employerId || 
+                       isAdmin();
     }
 
     match /payments/{paymentId} {
       allow read: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
       allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.userId || request.auth.uid == paymentId);
       allow update: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
     }
     
     match /jobPostings/{jobId} {
@@ -61,7 +64,7 @@ service cloud.firestore {
 
     match /placements/{placementId} {
       allow read: if isAdmin() || isOwner(resource.data.candidateId) || isOwner(resource.data.employerId);
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isOwner(resource.data.candidateId) || isOwner(resource.data.employerId);
     }
     
     match /saved_jobs/{userId}/{jobId} {
@@ -71,7 +74,7 @@ service cloud.firestore {
     match /points_history/{pointId} {
       allow read: if isAdmin() || isOwner(resource.data.userId);
       allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow update, delete: if isAdmin() || isOwner(resource.data.userId);
     }
     
     match /admin_logs/{logId} {
