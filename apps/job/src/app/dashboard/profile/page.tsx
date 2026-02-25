@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { calculateProfileStrength } from '@/lib/services/pointsSystem';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase-config';
 import { deleteUserAccount } from '@/lib/firebase/auth';
 import { Loader2, Check, Sparkles, TrendingUp, ShieldCheck, Trash2 } from 'lucide-react';
 import Link from 'next/link';
@@ -21,11 +24,28 @@ import JobPreferencesSection from './components/JobPreferencesSection';
 export default function ProfilePage() {
     const router = useRouter();
     const { user, loading: authLoading, updateProfile, logout } = useAuth();
+    const { updateJobSeekerProfile } = useProfile();
+    const [liveUser, setLiveUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [animatedStrength, setAnimatedStrength] = useState(0);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    // Live user synchronization
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        const unsubscribe = onSnapshot(
+            doc(db, 'users', user.uid),
+            (snap) => {
+                if (snap.exists()) {
+                    setLiveUser({ uid: snap.id, ...snap.data() });
+                }
+            }
+        );
+        return () => unsubscribe();
+    }, [user?.uid]);
 
     // Fetch and Sync Strength
     useEffect(() => {
@@ -33,23 +53,17 @@ export default function ProfilePage() {
             router.push('/auth/login');
             return;
         }
-        if (user) {
+        if (liveUser || user) {
             setLoading(false);
-            const strength = calculateProfileStrength(user as any);
+            const strength = calculateProfileStrength((liveUser || user) as any);
             setTimeout(() => setAnimatedStrength(strength), 500);
         }
-    }, [user, authLoading, router]);
+    }, [user, liveUser, authLoading, router]);
 
     const handleSaveSection = async (data: any) => {
         if (!user) return;
         try {
-            await updateProfile({
-                ...data,
-                profile: {
-                    ...(user.profile || {}),
-                    ...data
-                }
-            } as any);
+            await updateJobSeekerProfile(data);
         } catch (error) {
             console.error('Save section error:', error);
             throw error;
@@ -87,7 +101,7 @@ export default function ProfilePage() {
         );
     }
 
-    const profile = (user || {}) as any;
+    const profile = ((liveUser ?? user) || {}) as any;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] py-12">

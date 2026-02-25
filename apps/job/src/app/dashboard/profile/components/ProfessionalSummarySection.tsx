@@ -12,11 +12,11 @@ interface ProfessionalSummarySectionProps {
 
 export default function ProfessionalSummarySection({ profile, onSave }: ProfessionalSummarySectionProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const [bio, setBio] = useState((profile as any).bio || (profile as any).profile?.bio || '');
+    const [bio, setBio] = useState((profile as any).professionalSummary || (profile as any).bio || (profile as any).profile?.professionalSummary || (profile as any).profile?.bio || '');
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setBio((profile as any).bio || (profile as any).profile?.bio || '');
+        setBio((profile as any).professionalSummary || (profile as any).bio || (profile as any).profile?.professionalSummary || (profile as any).profile?.bio || '');
     }, [profile]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -52,8 +52,8 @@ export default function ProfessionalSummarySection({ profile, onSave }: Professi
 
                 {!isEditing ? (
                     <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-50 italic text-slate-600 font-medium leading-relaxed">
-                        {(profile as any).bio || (profile as any).profile?.bio ? (
-                            `"${(profile as any).bio || (profile as any).profile?.bio}"`
+                        {((profile as any).professionalSummary || (profile as any).bio || (profile as any).profile?.professionalSummary || (profile as any).profile?.bio) ? (
+                            `"${(profile as any).professionalSummary || (profile as any).bio || (profile as any).profile?.professionalSummary || (profile as any).profile?.bio}"`
                         ) : (
                             <p className="text-slate-400 not-italic">
                                 Introduce yourself to potential employers. Highlight your key strengths, career goals, and what makes you unique.

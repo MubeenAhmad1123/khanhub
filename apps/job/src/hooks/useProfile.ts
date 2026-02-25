@@ -57,34 +57,15 @@ export function useProfile() {
                 console.warn('CV parsing failed, continuing with upload:', parseError);
             }
 
-            // Update user profile
-            const updates: Partial<JobSeekerProfile> = {
+            await setDoc(doc(db, 'users', user.uid), {
                 cvUrl: downloadURL,
                 cvFileName: fileName,
                 cvUploadedAt: new Date(),
-            };
-
-            // Add parsed data if available
-            if (parsedData) {
-                if (parsedData.skills.length > 0) {
-                    const existingSkills = user.profile?.skills || [];
-                    const newSkills = parsedData.skills;
-                    updates.skills = Array.from(new Set([...existingSkills, ...newSkills]));
-                }
-            }
-
-            const dotUpdates: Record<string, any> = {};
-            for (const [key, value] of Object.entries(updates)) {
-                dotUpdates[`profile.${key}`] = value;
-            }
-            await updateDoc(doc(db, 'users', user.uid), dotUpdates);
-
-            // Recalculate and update profile strength
-            const newProfile = { ...user.profile, ...updates };
-            const strength = calculateProfileStrength({ profile: newProfile });
-            await updateDoc(doc(db, 'users', user.uid), {
-                'profile.profileStrength': strength,
-            });
+                ...(parsedData && parsedData.skills.length > 0 ? {
+                    skills: Array.from(new Set([...(user.skills || user.profile?.skills || []), ...parsedData.skills]))
+                } : {}),
+                updatedAt: new Date(),
+            }, { merge: true });
 
             // Award points for CV upload
             await awardPoints(user.uid, 15, 'CV uploaded');
@@ -135,27 +116,12 @@ export function useProfile() {
             const downloadURL = await getDownloadURL(storageRef);
 
             // Update user profile
-            const updates = {
+            await setDoc(doc(db, 'users', user.uid), {
                 videoUrl: downloadURL,
                 videoFileName: fileName,
                 videoUploadedAt: new Date(),
-            };
-
-            await updateDoc(doc(db, 'users', user.uid), {
-                'profile.videoUrl': downloadURL,
-                'profile.videoFileName': fileName,
-                'profile.videoUploadedAt': new Date(),
-            });
-
-            // Recalculate and update profile strength
-            const updatedProfile = {
-                ...user.profile,
-                ...updates
-            };
-            const strength = calculateProfileStrength({ profile: updatedProfile });
-            await updateDoc(doc(db, 'users', user.uid), {
-                'profile.profileStrength': strength,
-            });
+                updatedAt: new Date(),
+            }, { merge: true });
 
             // Award points for video upload
             await awardPoints(user.uid, 20, 'Intro video uploaded');
@@ -172,33 +138,38 @@ export function useProfile() {
     /**
      * Update job seeker profile
      */
-    const updateJobSeekerProfile = async (updates: Partial<JobSeekerProfile>): Promise<void> => {
+    const updateJobSeekerProfile = async (
+        updates: Partial<JobSeekerProfile>
+    ): Promise<void> => {
         if (!user) throw new Error('Not authenticated');
-
         try {
             setError(null);
 
-            const dotUpdates: Record<string, any> = {};
+            // Write each field at the TOP LEVEL using dot notation.
+            // This ensures flat schema consistency and prevents 
+            // stale state from overwriting Firestore data.
+            const flatUpdates: Record<string, any> = {};
             for (const [key, value] of Object.entries(updates)) {
-                dotUpdates[`profile.${key}`] = value;
-            }
-            await updateDoc(doc(db, 'users', user.uid), {
-                ...dotUpdates,
-                updatedAt: new Date(),
-            });
-
-            // Recalculate profile strength
-            const strength = calculateProfileStrength({
-                ...user,
-                profile: {
-                    ...user.profile!,
-                    ...updates,
+                // Map legacy JobSeekerProfile field names to flat User fields
+                if (key === 'bio') {
+                    flatUpdates['professionalSummary'] = value;
+                } else if (key === 'fullName') {
+                    flatUpdates['name'] = value;
+                } else if (key === 'location') {
+                    flatUpdates['city'] = value;
+                } else if (key === 'preferredJobTitle') {
+                    flatUpdates['desiredJobTitle'] = value;
+                } else if (key === 'yearsOfExperience') {
+                    flatUpdates['totalExperience'] = value;
+                } else {
+                    flatUpdates[key] = value;
                 }
-            } as User);
+            }
 
-            await updateDoc(doc(db, 'users', user.uid), {
-                'profile.profileStrength': strength,
-            });
+            await setDoc(doc(db, 'users', user.uid), {
+                ...flatUpdates,
+                updatedAt: new Date(),
+            }, { merge: true });
 
             await refreshProfile();
         } catch (err: any) {

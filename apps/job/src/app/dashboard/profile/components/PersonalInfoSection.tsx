@@ -50,9 +50,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                     {/* Profile Picture */}
                     <div className="relative group shrink-0">
                         <div className="w-32 h-32 rounded-[2.5rem] bg-slate-50 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
-                            {profile.fullName ? (
+                            {((profile as any).name || (profile as any).displayName || profile.fullName) ? (
                                 <div className="text-4xl font-black text-blue-600 italic uppercase">
-                                    {profile.fullName.charAt(0)}
+                                    {((profile as any).name || (profile as any).displayName || profile.fullName || '').charAt(0)}
                                 </div>
                             ) : (
                                 <User className="w-12 h-12 text-slate-300" />
@@ -68,10 +68,10 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">
-                                    {profile.name || (profile as any).fullName || 'Complete Your Name'}
+                                    {(profile as any).name || (profile as any).displayName || (profile as any).fullName || 'Complete Your Name'}
                                 </h2>
                                 <p className="text-lg font-bold text-blue-600 italic uppercase tracking-tight">
-                                    {profile.desiredJobTitle || (profile as any).preferredJobTitle || 'Specify Your Target Role'}
+                                    {(profile as any).desiredJobTitle || (profile as any).profile?.desiredJobTitle || (profile as any).preferredJobTitle || 'Specify Your Target Role'}
                                 </p>
                             </div>
                             <button

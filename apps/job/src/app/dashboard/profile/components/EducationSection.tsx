@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { GraduationCap, Plus, Edit2, Trash2, Save, Loader2, Check, Calendar, MapPin, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JobSeekerProfile, Education } from '@/types/user';
@@ -13,12 +13,29 @@ interface EducationSectionProps {
 export default function EducationSection({ profile, onSave }: EducationSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<Education> | null>(null);
-    const [educationList, setEducationList] = useState<Education[]>((profile as any).education || (profile as any).profile?.education || []);
+    const getNormalizedEducation = useCallback(() => {
+        const rawEdu = (profile as any).education || (profile as any).profile?.education || [];
+        return rawEdu.map((e: any) => ({
+            id: e.id || Math.random().toString(36).substr(2, 9),
+            degree: e.degree || e.degreeTitle || '',
+            degreeLevel: e.degreeLevel || 'bachelors',
+            institution: e.institution || '',
+            location: e.location || e.city || '',
+            fieldOfStudy: e.fieldOfStudy || '',
+            startYear: e.startYear || '',
+            endYear: e.endYear || e.completionYear || '',
+            current: e.current ?? false,
+            grade: e.grade || e.cgpa || '',
+            description: e.description || '',
+        }));
+    }, [profile]);
+
+    const [educationList, setEducationList] = useState<Education[]>(getNormalizedEducation());
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setEducationList((profile as any).education || (profile as any).profile?.education || []);
-    }, [profile]);
+        setEducationList(getNormalizedEducation());
+    }, [getNormalizedEducation]);
 
     const handleAdd = () => {
         setEditingEntry({

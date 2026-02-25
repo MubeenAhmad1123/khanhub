@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Briefcase, Plus, Edit2, Trash2, Save, Loader2, Check, Calendar, MapPin, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JobSeekerProfile, WorkExperience } from '@/types/user';
@@ -13,12 +13,27 @@ interface WorkHistorySectionProps {
 export default function WorkHistorySection({ profile, onSave }: WorkHistorySectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<WorkExperience> | null>(null);
-    const [experiences, setExperiences] = useState<WorkExperience[]>((profile as any).experience || (profile as any).profile?.experience || []);
+    const getNormalizedExperiences = useCallback(() => {
+        const rawExp = (profile as any).experience || (profile as any).profile?.experience || [];
+        return rawExp.map((e: any) => ({
+            id: e.id || Math.random().toString(36).substr(2, 9),
+            title: e.title || e.jobTitle || '',
+            company: e.company || '',
+            location: e.location || e.city || '',
+            startDate: e.startDate || (e.startYear ? `${e.startYear}-${e.startMonth || '01'}` : ''),
+            endDate: e.endDate || (e.endYear ? `${e.endYear}-${e.endMonth || '01'}` : ''),
+            current: e.current ?? e.currentlyWorking ?? false,
+            description: e.description || '',
+            skills: e.skills || [],
+        }));
+    }, [profile]);
+
+    const [experiences, setExperiences] = useState<WorkExperience[]>(getNormalizedExperiences());
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setExperiences((profile as any).experience || (profile as any).profile?.experience || []);
-    }, [profile]);
+        setExperiences(getNormalizedExperiences());
+    }, [getNormalizedExperiences]);
 
     const handleAdd = () => {
         setEditingEntry({
