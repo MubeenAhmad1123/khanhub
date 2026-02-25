@@ -13,11 +13,11 @@ interface EducationSectionProps {
 export default function EducationSection({ profile, onSave }: EducationSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<Education> | null>(null);
-    const [educationList, setEducationList] = useState<Education[]>(profile.education || []);
+    const [educationList, setEducationList] = useState<Education[]>((profile as any).education || (profile as any).profile?.education || []);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setEducationList(profile.education || []);
+        setEducationList((profile as any).education || (profile as any).profile?.education || []);
     }, [profile]);
 
     const handleAdd = () => {

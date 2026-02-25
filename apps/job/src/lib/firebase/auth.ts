@@ -96,6 +96,7 @@ export async function updateUserProfile(uid: string, updates: Partial<User>): Pr
             finalUpdates = {
                 ...finalUpdates,
                 profile: {
+                    ...(currentData?.profile || {}),
                     ...(updates.profile || {}),
                     profileStrength: newStrength
                 }

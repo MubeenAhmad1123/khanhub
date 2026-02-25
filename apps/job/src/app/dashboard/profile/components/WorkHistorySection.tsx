@@ -13,11 +13,11 @@ interface WorkHistorySectionProps {
 export default function WorkHistorySection({ profile, onSave }: WorkHistorySectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<WorkExperience> | null>(null);
-    const [experiences, setExperiences] = useState<WorkExperience[]>(profile.experience || []);
+    const [experiences, setExperiences] = useState<WorkExperience[]>((profile as any).experience || (profile as any).profile?.experience || []);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setExperiences(profile.experience || []);
+        setExperiences((profile as any).experience || (profile as any).profile?.experience || []);
     }, [profile]);
 
     const handleAdd = () => {

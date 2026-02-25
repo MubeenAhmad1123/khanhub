@@ -13,24 +13,24 @@ interface JobPreferencesSectionProps {
 export default function JobPreferencesSection({ profile, onSave }: JobPreferencesSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
-        preferredJobTitle: profile.preferredJobTitle || '',
-        desiredSalaryMin: profile.desiredSalaryMin || 0,
-        desiredSalaryMax: profile.desiredSalaryMax || 0,
-        desiredLocations: profile.desiredLocations || [],
-        remoteOnly: profile.remoteOnly || false,
-        willingToRelocate: profile.willingToRelocate || false,
+        preferredJobTitle: (profile as any).preferredJobTitle || (profile as any).profile?.preferredJobTitle || '',
+        desiredSalaryMin: (profile as any).desiredSalaryMin || (profile as any).profile?.desiredSalaryMin || 0,
+        desiredSalaryMax: (profile as any).desiredSalaryMax || (profile as any).profile?.desiredSalaryMax || 0,
+        desiredLocations: (profile as any).desiredLocations || (profile as any).profile?.desiredLocations || [],
+        remoteOnly: (profile as any).remoteOnly || (profile as any).profile?.remoteOnly || false,
+        willingToRelocate: (profile as any).willingToRelocate || (profile as any).profile?.willingToRelocate || false,
     });
     const [newLocation, setNewLocation] = useState('');
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
         setFormData({
-            preferredJobTitle: profile.preferredJobTitle || '',
-            desiredSalaryMin: profile.desiredSalaryMin || 0,
-            desiredSalaryMax: profile.desiredSalaryMax || 0,
-            desiredLocations: profile.desiredLocations || [],
-            remoteOnly: profile.remoteOnly || false,
-            willingToRelocate: profile.willingToRelocate || false,
+            preferredJobTitle: (profile as any).preferredJobTitle || (profile as any).profile?.preferredJobTitle || '',
+            desiredSalaryMin: (profile as any).desiredSalaryMin || (profile as any).profile?.desiredSalaryMin || 0,
+            desiredSalaryMax: (profile as any).desiredSalaryMax || (profile as any).profile?.desiredSalaryMax || 0,
+            desiredLocations: (profile as any).desiredLocations || (profile as any).profile?.desiredLocations || [],
+            remoteOnly: (profile as any).remoteOnly || (profile as any).profile?.remoteOnly || false,
+            willingToRelocate: (profile as any).willingToRelocate || (profile as any).profile?.willingToRelocate || false,
         });
     }, [profile]);
 
@@ -215,7 +215,16 @@ export default function JobPreferencesSection({ profile, onSave }: JobPreference
                         <div className="flex justify-end gap-3 pt-4 border-t border-slate-200/50">
                             <button
                                 type="button"
-                                onClick={() => { setIsEditing(false); setFormData({ ...profile } as any); }}
+                                onClick={() => {
+                                    setIsEditing(false); setFormData({
+                                        preferredJobTitle: (profile as any).preferredJobTitle || (profile as any).profile?.preferredJobTitle || '',
+                                        desiredSalaryMin: (profile as any).desiredSalaryMin || (profile as any).profile?.desiredSalaryMin || 0,
+                                        desiredSalaryMax: (profile as any).desiredSalaryMax || (profile as any).profile?.desiredSalaryMax || 0,
+                                        desiredLocations: (profile as any).desiredLocations || (profile as any).profile?.desiredLocations || [],
+                                        remoteOnly: (profile as any).remoteOnly || (profile as any).profile?.remoteOnly || false,
+                                        willingToRelocate: (profile as any).willingToRelocate || (profile as any).profile?.willingToRelocate || false,
+                                    });
+                                }}
                                 className="px-6 py-2 text-slate-400 font-bold uppercase tracking-widest text-xs hover:text-slate-600 transition-all"
                             >
                                 Cancel

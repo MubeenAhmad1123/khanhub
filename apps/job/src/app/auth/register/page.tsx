@@ -253,7 +253,6 @@ export default function RegisterPage() {
             const finalData = {
                 ...formData,
                 onboardingCompleted: true, // Mark completed as we've asked all questions
-                onboardingComplete: true
             };
 
             await register(formData.email, formData.password, finalData, role);

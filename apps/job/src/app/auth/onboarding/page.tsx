@@ -109,7 +109,7 @@ export default function OnboardingPage() {
             return;
         }
 
-        if (user?.onboardingCompleted || user?.onboardingComplete) {
+        if (user?.onboardingCompleted) {
             router.push('/auth/verify-payment');
             return;
         }
@@ -177,7 +177,6 @@ export default function OnboardingPage() {
             // 2. Process data for different roles
             const updates: any = {
                 onboardingCompleted: true,
-                onboardingComplete: true, // Legacy flag
                 ...formData, // Save everything to root (Flat Schema)
             };
 

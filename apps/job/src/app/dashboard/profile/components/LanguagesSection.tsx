@@ -12,7 +12,7 @@ interface LanguagesSectionProps {
 
 export default function LanguagesSection({ profile, onSave }: LanguagesSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const [languages, setLanguages] = useState<Language[]>(profile.languages || []);
+    const [languages, setLanguages] = useState<Language[]>((profile as any).languages || (profile as any).profile?.languages || []);
     const [newLang, setNewLang] = useState<{ name: string, proficiency: Language['proficiency'] }>({
         name: '',
         proficiency: 'Intermediate'
@@ -20,7 +20,7 @@ export default function LanguagesSection({ profile, onSave }: LanguagesSectionPr
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setLanguages(profile.languages || []);
+        setLanguages((profile as any).languages || (profile as any).profile?.languages || []);
     }, [profile]);
 
     const handleAdd = (e: React.FormEvent) => {
@@ -149,7 +149,7 @@ export default function LanguagesSection({ profile, onSave }: LanguagesSectionPr
                         <div className="flex justify-end gap-3 pt-4">
                             <button
                                 type="button"
-                                onClick={() => { setIsEditing(false); setLanguages(profile.languages || []); }}
+                                onClick={() => { setIsEditing(false); setLanguages((profile as any).languages || (profile as any).profile?.languages || []); }}
                                 className="px-6 py-2 text-slate-400 font-bold uppercase tracking-widest text-xs hover:text-slate-600 transition-all"
                             >
                                 Cancel

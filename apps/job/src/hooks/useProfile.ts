@@ -73,12 +73,11 @@ export function useProfile() {
                 }
             }
 
-            await updateDoc(doc(db, 'users', user.uid), {
-                'profile': {
-                    ...user.profile,
-                    ...updates,
-                },
-            });
+            const dotUpdates: Record<string, any> = {};
+            for (const [key, value] of Object.entries(updates)) {
+                dotUpdates[`profile.${key}`] = value;
+            }
+            await updateDoc(doc(db, 'users', user.uid), dotUpdates);
 
             // Recalculate and update profile strength
             const newProfile = { ...user.profile, ...updates };
@@ -179,11 +178,12 @@ export function useProfile() {
         try {
             setError(null);
 
+            const dotUpdates: Record<string, any> = {};
+            for (const [key, value] of Object.entries(updates)) {
+                dotUpdates[`profile.${key}`] = value;
+            }
             await updateDoc(doc(db, 'users', user.uid), {
-                'profile': {
-                    ...user.profile,
-                    ...updates,
-                },
+                ...dotUpdates,
                 updatedAt: new Date(),
             });
 
@@ -216,11 +216,12 @@ export function useProfile() {
         try {
             setError(null);
 
+            const dotUpdates: Record<string, any> = {};
+            for (const [key, value] of Object.entries(updates)) {
+                dotUpdates[`company.${key}`] = value;
+            }
             await updateDoc(doc(db, 'users', user.uid), {
-                'company': {
-                    ...user.company,
-                    ...updates,
-                },
+                ...dotUpdates,
                 updatedAt: new Date(),
             });
 

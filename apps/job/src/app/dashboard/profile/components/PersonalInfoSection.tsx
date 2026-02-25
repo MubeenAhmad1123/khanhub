@@ -14,19 +14,19 @@ interface PersonalInfoSectionProps {
 export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
-        name: profile.name || (profile as any).fullName || '',
-        desiredJobTitle: profile.desiredJobTitle || (profile as any).preferredJobTitle || '',
-        city: profile.city || (profile as any).location || '',
-        phone: profile.phone || '',
+        name: (profile as any).name || (profile as any).profile?.name || (profile as any).fullName || '',
+        desiredJobTitle: (profile as any).desiredJobTitle || (profile as any).profile?.desiredJobTitle || (profile as any).preferredJobTitle || '',
+        city: (profile as any).city || (profile as any).profile?.city || (profile as any).location || '',
+        phone: (profile as any).phone || (profile as any).profile?.phone || '',
     });
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
         setFormData({
-            name: profile.name || (profile as any).fullName || '',
-            desiredJobTitle: profile.desiredJobTitle || (profile as any).preferredJobTitle || '',
-            city: profile.city || (profile as any).location || '',
-            phone: profile.phone || '',
+            name: (profile as any).name || (profile as any).profile?.name || (profile as any).fullName || '',
+            desiredJobTitle: (profile as any).desiredJobTitle || (profile as any).profile?.desiredJobTitle || (profile as any).preferredJobTitle || '',
+            city: (profile as any).city || (profile as any).profile?.city || (profile as any).location || '',
+            phone: (profile as any).phone || (profile as any).profile?.phone || '',
         });
     }, [profile]);
 

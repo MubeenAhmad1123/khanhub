@@ -13,11 +13,11 @@ interface ProjectsSectionProps {
 export default function ProjectsSection({ profile, onSave }: ProjectsSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<Project> | null>(null);
-    const [projects, setProjects] = useState<Project[]>(profile.projects || []);
+    const [projects, setProjects] = useState<Project[]>((profile as any).projects || (profile as any).profile?.projects || []);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setProjects(profile.projects || []);
+        setProjects((profile as any).projects || (profile as any).profile?.projects || []);
     }, [profile]);
 
     const handleAdd = () => {

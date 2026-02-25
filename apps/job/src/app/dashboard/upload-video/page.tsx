@@ -14,7 +14,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
 export default function VideoUploadPage() {
     const router = useRouter();
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, refreshProfile } = useAuth();
 
     // State
     const [activeTab, setActiveTab] = useState<'upload' | 'record'>('upload');
@@ -92,14 +92,14 @@ export default function VideoUploadPage() {
     // 2. Profile Completion Check for Video Gate (Prompt 5)
     useEffect(() => {
         if (!authLoading && user) {
-            const missingFields = [];
+            const missingFields: string[] = [];
             // Check flat schema first, then legacy profile
-            if (!user.name && !user.displayName) missingFields.push('Full Name');
-            if (!user.phone) missingFields.push('Phone Number');
-            if (!user.industry && !(user as any).desiredIndustry) missingFields.push('Industry');
-            if (!(user as any).jobTitle && !(user as any).desiredJobTitle) missingFields.push('Target Job Title');
+            if (!user.name && !user.displayName && !user.profile?.name && !(user.profile as any)?.fullName) missingFields.push('Full Name');
+            if (!user.phone && !user.profile?.phone) missingFields.push('Phone Number');
+            if (!user.industry && !(user as any).desiredIndustry && !user.profile?.industry) missingFields.push('Industry');
+            if (!(user as any).jobTitle && !(user as any).desiredJobTitle && !user.profile?.desiredJobTitle) missingFields.push('Target Job Title');
 
-            const bio = user.professionalSummary || user.profile?.bio || '';
+            const bio = user.professionalSummary || user.profile?.bio || (user as any).bio || '';
             if (bio.length < 50) missingFields.push('Professional Summary');
 
             const skills = user.skills || user.profile?.skills || [];
@@ -341,7 +341,7 @@ export default function VideoUploadPage() {
 
     // Profile Gate (Prompt 5)
     if (isProfileIncomplete) {
-        return <ProfileGate user={user} onComplete={() => setIsProfileIncomplete(false)} />;
+        return <ProfileGate user={user} onComplete={() => { refreshProfile(); setIsProfileIncomplete(false); }} />;
     }
 
     return (
@@ -762,12 +762,12 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
             setSaving(true);
             setError(null);
 
-            const { updateUserProfile } = await import('@/lib/firebase/auth');
+            const { doc, setDoc } = await import('firebase/firestore');
             const { updateProfile: firebaseUpdateProfile } = await import('firebase/auth');
-            const { auth } = await import('@/lib/firebase/firebase-config');
+            const { auth, db } = await import('@/lib/firebase/firebase-config');
 
-            // 1. Update Firestore Profile
-            await updateUserProfile(user.uid, {
+            // 1. Update Firestore Profile using setDoc with merge: true directly
+            await setDoc(doc(db, 'users', user.uid), {
                 displayName: formData.fullName.trim(),
                 name: formData.fullName.trim(),
                 phone: formData.phone.trim(),
@@ -781,7 +781,7 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
                 totalExperience: formData.totalExperience,
                 desiredSalary: formData.desiredSalary,
                 updatedAt: new Date()
-            } as any);
+            }, { merge: true });
 
             // 2. Update Firebase Auth displayName (for navbar and greeting consistency)
             if (auth.currentUser) {

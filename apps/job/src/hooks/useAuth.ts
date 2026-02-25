@@ -100,6 +100,22 @@ export function useAuth() {
                 displayName,
                 role,
                 ...additionalData, // Spread all flat fields here
+
+                // Explicitly mapping core fields to flat schema (Fix 4 Step D)
+                name: additionalData.name || additionalData.displayName,
+                phone: additionalData.phone,
+                city: additionalData.city,
+                skills: additionalData.skills || [],
+                education: additionalData.education || [],
+                experience: additionalData.experience || [],
+                industry: additionalData.industry || additionalData.desiredIndustry,
+                desiredJobTitle: additionalData.desiredJobTitle || additionalData.jobTitle,
+                totalExperience: additionalData.totalExperience,
+                professionalSummary: additionalData.professionalSummary || additionalData.bio,
+                careerLevel: additionalData.careerLevel,
+                gender: additionalData.gender,
+                dateOfBirth: additionalData.dateOfBirth,
+                languages: additionalData.languages || [],
                 emailVerified: false,
                 paymentStatus: 'pending',
                 isPremium: false,

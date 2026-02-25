@@ -187,7 +187,6 @@ export interface User {
     premiumExpiresAt?: Date | Timestamp;
 
     // Unified Registration/Onboarding Fields (Flat Schema)
-    onboardingComplete?: boolean;
     registrationMethod?: 'email' | 'google';
 
     // Account Information
