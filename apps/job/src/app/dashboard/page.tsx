@@ -18,6 +18,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
@@ -27,6 +28,7 @@ import { User } from '@/types/user';
 import ProfileEngagement from '@/components/dashboard/ProfileEngagement';
 
 export default function JobSeekerDashboard() {
+    const router = useRouter();
     const { user, loading } = useAuth();
     const [userData, setUserData] = useState<User | null>(null);
     const [stats, setStats] = useState({
@@ -37,6 +39,12 @@ export default function JobSeekerDashboard() {
     const [userVideoStatus, setUserVideoStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
     const [hasSubmittedPayment, setHasSubmittedPayment] = useState(false);
     const [checkingPayment, setCheckingPayment] = useState(true);
+
+    useEffect(() => {
+        if (!loading && user && user.paymentStatus !== 'approved' && user.role !== 'admin') {
+            router.push('/auth/verify-payment');
+        }
+    }, [user, loading, router]);
 
     useEffect(() => {
         if (!user?.uid) return;

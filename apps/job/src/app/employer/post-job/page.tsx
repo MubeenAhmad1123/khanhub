@@ -95,13 +95,12 @@ export default function PostJobPage() {
     // 2. Profile Completion Check for Profile Gate
     useEffect(() => {
         if (!authLoading && user) {
-            const profile = (user.profile || {}) as any;
             const missingFields = [];
-
-            if (!profile.yearEstablished) missingFields.push('yearEstablished');
-            if (!profile.website) missingFields.push('website');
-            if (!profile.hrFullName) missingFields.push('hrFullName');
-            if (!profile.hrPhone) missingFields.push('hrPhone');
+            // Check flat schema first, then legacy profile
+            if (!user.yearEstablished && !user.profile?.yearEstablished) missingFields.push('yearEstablished');
+            if (!user.website && !user.profile?.website) missingFields.push('website');
+            if (!user.hrName && !user.hrFullName && !user.profile?.hrFullName) missingFields.push('hrFullName');
+            if (!user.phone && !user.hrPhone && !user.profile?.hrPhone) missingFields.push('hrPhone');
 
             setIsProfileIncomplete(missingFields.length > 0);
         }
@@ -591,10 +590,10 @@ export default function PostJobPage() {
 // Company Profile Gate (Prompt 5)
 function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }) {
     const [formData, setFormData] = useState({
-        yearEstablished: user?.profile?.yearEstablished || '',
-        website: user?.profile?.website || '',
-        hrFullName: user?.profile?.hrFullName || '',
-        hrPhone: user?.profile?.hrPhone || '',
+        yearEstablished: user?.yearEstablished || user?.profile?.yearEstablished || '',
+        website: user?.website || user?.profile?.website || '',
+        hrFullName: user?.hrName || user?.hrFullName || user?.profile?.hrFullName || '',
+        hrPhone: user?.phone || user?.hrPhone || user?.profile?.hrPhone || '',
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);

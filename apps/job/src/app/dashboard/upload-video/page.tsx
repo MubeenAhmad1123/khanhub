@@ -93,12 +93,17 @@ export default function VideoUploadPage() {
     useEffect(() => {
         if (!authLoading && user) {
             const missingFields = [];
-            if (!user.profile?.fullName && !user.displayName) missingFields.push('fullName');
-            if (!user.profile?.phone) missingFields.push('phone');
-            if (!user.profile?.industry && !user.industry) missingFields.push('industry');
-            if (!user.profile?.jobTitle && !user.desiredJobTitle) missingFields.push('jobTitle');
-            if ((user.profile?.bio?.length || 0) < 50) missingFields.push('bio');
-            if ((user.profile?.skills?.length || 0) < 3) missingFields.push('skills');
+            // Check flat schema first, then legacy profile
+            if (!user.name && !user.displayName && !user.profile?.fullName) missingFields.push('fullName');
+            if (!user.phone && !user.profile?.phone) missingFields.push('phone');
+            if (!user.industry && !user.desiredIndustry && !user.profile?.industry) missingFields.push('industry');
+            if (!user.desiredJobTitle && !user.profile?.jobTitle) missingFields.push('jobTitle');
+
+            const bio = user.professionalSummary || user.profile?.bio || '';
+            if (bio.length < 50) missingFields.push('bio');
+
+            const skills = user.skills || user.profile?.skills || [];
+            if (skills.length < 3) missingFields.push('skills');
 
             setIsProfileIncomplete(missingFields.length > 0);
         }
@@ -723,15 +728,15 @@ export default function VideoUploadPage() {
 // Profile Gate Sub-component (Prompt 5)
 function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }) {
     const [formData, setFormData] = useState({
-        fullName: user?.profile?.fullName || user?.displayName || '',
-        phone: user?.profile?.phone || '',
-        bio: user?.profile?.bio || '',
-        skills: user?.profile?.skills?.join(', ') || '',
-        industry: user?.profile?.industry || user?.industry || '',
-        subcategory: user?.profile?.subcategory || user?.subcategory || '',
-        jobTitle: user?.profile?.jobTitle || user?.desiredJobTitle || '',
-        totalExperience: user?.profile?.totalExperience || user?.totalExperience || '',
-        desiredSalary: user?.profile?.desiredSalary || user?.desiredSalary || '',
+        fullName: user?.name || user?.displayName || user?.profile?.fullName || '',
+        phone: user?.phone || user?.profile?.phone || '',
+        bio: user?.professionalSummary || user?.profile?.bio || '',
+        skills: (user?.skills || user?.profile?.skills || []).join(', ') || '',
+        industry: user?.desiredIndustry || user?.industry || user?.profile?.industry || '',
+        subcategory: user?.desiredSubcategory || user?.subcategory || user?.profile?.subcategory || '',
+        jobTitle: user?.desiredJobTitle || user?.profile?.jobTitle || '',
+        totalExperience: user?.careerLevel || user?.totalExperience || user?.profile?.totalExperience || '',
+        desiredSalary: user?.desiredSalary || user?.profile?.desiredSalary || '',
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);

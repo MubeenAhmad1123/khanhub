@@ -112,20 +112,22 @@ export default function OnboardingPage() {
             router.push('/auth/verify-payment');
             return;
         }
+    }, [user, loading, router]);
 
-        if (user?.role && !role) {
+    useEffect(() => {
+        if (!loading && user?.role && !role) {
             setRole(user.role as any);
-            // Pre-fill from existing data if any
+            // Pre-fill from existing data if any (Flat Schema & Profile)
             setFormData(prev => ({
                 ...prev,
-                companyName: user.companyName || user.displayName || '',
-                phone: user.phone || '',
-                city: user.city || '',
-                desiredIndustry: user.desiredIndustry || '',
-                desiredJobTitle: user.desiredJobTitle || '',
+                companyName: user.companyName || user.profile?.companyName || user.displayName || '',
+                phone: user.phone || user.profile?.phone || '',
+                city: user.city || user.profile?.city || user.profile?.location || '',
+                desiredIndustry: user.desiredIndustry || user.industry || user.profile?.industry || '',
+                desiredJobTitle: user.desiredJobTitle || user.profile?.jobTitle || '',
             }));
         }
-    }, [user, loading, router, role]);
+    }, [user, loading, role]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -171,14 +173,40 @@ export default function OnboardingPage() {
                 (finalData as any).hrName = formData.hrFullName;
                 (finalData as any).phone = formData.hrPhone; // Use HR phone as main account phone if employer
             }
-
-            await updateProfile({
-                ...finalData,
+            // 2. Process data for different roles
+            const updates: any = {
                 onboardingCompleted: true,
-                onboardingComplete: true,
-                updatedAt: new Date(),
-            } as any);
+                onboardingComplete: true, // Legacy flag
+                ...formData, // Save everything to root (Flat Schema)
+            };
 
+            // Also provide nested profile for legacy compatibility
+            if (role === 'job_seeker') {
+                updates.profile = {
+                    fullName: user?.displayName || user?.name || '',
+                    phone: formData.phone,
+                    city: formData.city,
+                    industry: formData.desiredIndustry,
+                    jobTitle: formData.desiredJobTitle,
+                    updatedAt: new Date()
+                };
+                updates.industry = formData.desiredIndustry;
+            } else {
+                updates.profile = {
+                    companyName: formData.companyName,
+                    phone: formData.phone,
+                    city: formData.city,
+                    industry: formData.desiredIndustry,
+                    updatedAt: new Date()
+                };
+                updates.companyName = formData.companyName;
+                updates.industry = formData.desiredIndustry;
+            }
+
+            await updateProfile(updates);
+
+            // 3. Success & Redirect
+            setSuccess(true);
             router.push('/auth/verify-payment');
         } catch (err: any) {
             console.error('Onboarding update error:', err);
