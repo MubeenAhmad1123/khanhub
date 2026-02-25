@@ -77,6 +77,10 @@ export interface JobSeekerProfile {
     dateOfBirth?: string;
 
     // Professional Info
+    industry?: string;
+    subcategory?: string;
+    jobTitle?: string;
+    desiredSalary?: string;
     currentJobTitle?: string;
     preferredSubcategory?: string; // Legacy
     desiredSubcategory?: string;   // Flat

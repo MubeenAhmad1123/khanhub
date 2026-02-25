@@ -9,6 +9,8 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, query, where, getD
 import { Loader2, Upload, Video, StopCircle, Play, X, CheckCircle, AlertCircle, Info, ChevronRight, UserCircle, Clock, Check, ArrowRight, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
 export default function VideoUploadPage() {
     const router = useRouter();
@@ -93,6 +95,8 @@ export default function VideoUploadPage() {
             const missingFields = [];
             if (!user.profile?.fullName && !user.displayName) missingFields.push('fullName');
             if (!user.profile?.phone) missingFields.push('phone');
+            if (!user.profile?.industry && !user.industry) missingFields.push('industry');
+            if (!user.profile?.jobTitle && !user.desiredJobTitle) missingFields.push('jobTitle');
             if ((user.profile?.bio?.length || 0) < 50) missingFields.push('bio');
             if ((user.profile?.skills?.length || 0) < 3) missingFields.push('skills');
 
@@ -722,7 +726,12 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
         fullName: user?.profile?.fullName || user?.displayName || '',
         phone: user?.profile?.phone || '',
         bio: user?.profile?.bio || '',
-        skills: user?.profile?.skills?.join(', ') || ''
+        skills: user?.profile?.skills?.join(', ') || '',
+        industry: user?.profile?.industry || user?.industry || '',
+        subcategory: user?.profile?.subcategory || user?.subcategory || '',
+        jobTitle: user?.profile?.jobTitle || user?.desiredJobTitle || '',
+        totalExperience: user?.profile?.totalExperience || user?.totalExperience || '',
+        desiredSalary: user?.profile?.desiredSalary || user?.desiredSalary || '',
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -730,6 +739,8 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
     const checklist = [
         { id: 'fullName', label: 'Full Name', complete: !!formData.fullName.trim() },
         { id: 'phone', label: 'Phone Number', complete: !!formData.phone.trim() },
+        { id: 'industry', label: 'Industry', complete: !!formData.industry },
+        { id: 'jobTitle', label: 'Job Title', complete: !!formData.jobTitle },
         { id: 'bio', label: 'Biography (50+ chars)', complete: formData.bio.trim().length >= 50 },
         { id: 'skills', label: 'At least 3 Skills', complete: formData.skills.split(',').filter(s => s.trim()).length >= 3 }
     ];
@@ -757,8 +768,14 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
                     fullName: formData.fullName.trim(),
                     phone: formData.phone.trim(),
                     bio: formData.bio.trim(),
-                    skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean)
+                    skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
+                    industry: formData.industry,
+                    subcategory: formData.subcategory,
+                    jobTitle: formData.jobTitle,
+                    totalExperience: formData.totalExperience,
+                    desiredSalary: formData.desiredSalary,
                 },
+                industry: formData.industry, // Keep root industry in sync
                 displayName: formData.fullName.trim(), // Keep root displayName in sync
             } as any);
 
@@ -778,13 +795,17 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
         }
     };
 
+    const handleSelectChange = (name: string, value: string) => {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center animate-in fade-in duration-700">
-            <div className="max-w-xl w-full">
+            <div className="max-w-2xl w-full">
                 <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden">
                     <div className="p-8 md:p-10">
                         <div className="flex items-center justify-between mb-8">
-                            <h2 className="text-3xl font-black text-slate-900 italic tracking-tighter uppercase">Profile Check</h2>
+                            <h2 className="text-3xl font-black text-slate-900 italic tracking-tighter uppercase">Professional Setup</h2>
                             <div className="text-right">
                                 <span className="text-blue-600 font-black text-xl italic">{Math.round(progress)}%</span>
                                 <div className="w-24 h-2 bg-slate-100 rounded-full mt-1 overflow-hidden">
@@ -794,7 +815,7 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
                         </div>
 
                         <div className="bg-blue-50/50 rounded-2xl p-6 mb-8 border border-blue-100">
-                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">Required for Video Upload</h3>
+                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">Finalizing Profile</h3>
                             <ul className="grid grid-cols-2 gap-3">
                                 {checklist.map(item => (
                                     <li key={item.id} className="flex items-center gap-2">
@@ -814,26 +835,83 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Full Name</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
                                     <input
                                         type="text"
+                                        required
+                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                         value={formData.fullName}
                                         onChange={e => setFormData({ ...formData, fullName: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                                        placeholder="Enter your name"
                                     />
                                 </div>
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Phone Number</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
                                     <input
                                         type="tel"
+                                        required
+                                        placeholder="03XXXXXXXXX"
+                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                         value={formData.phone}
                                         onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                                        placeholder="+92 XXX XXXXXXX"
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry</label>
+                                    <SearchableSelect
+                                        options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
+                                        value={formData.industry}
+                                        onChange={(val) => {
+                                            handleSelectChange('industry', val);
+                                            handleSelectChange('subcategory', '');
+                                            handleSelectChange('jobTitle', '');
+                                        }}
+                                        placeholder="Select Industry..."
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Category</label>
+                                    <SearchableSelect
+                                        options={getSubcategories(formData.industry).map(s => ({ id: s.id, label: s.label }))}
+                                        value={formData.subcategory}
+                                        onChange={(val) => {
+                                            handleSelectChange('subcategory', val);
+                                            handleSelectChange('jobTitle', '');
+                                        }}
+                                        placeholder="Select category..."
+                                        disabled={!formData.industry}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Desired Job Title</label>
+                                    <SearchableSelect
+                                        options={getRoles(formData.industry, formData.subcategory).map(r => ({ id: r, label: r }))}
+                                        value={formData.jobTitle}
+                                        onChange={(val) => handleSelectChange('jobTitle', val)}
+                                        placeholder="Select job title..."
+                                        disabled={!formData.subcategory}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Experience</label>
+                                    <select
+                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900 text-xs"
+                                        value={formData.totalExperience}
+                                        onChange={e => setFormData({ ...formData, totalExperience: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">Select Range</option>
+                                        <option value="Fresher / 0-1 Year">Fresher / 0-1 Year</option>
+                                        <option value="1-3 Years">1-3 Years</option>
+                                        <option value="3-5 Years">3-5 Years</option>
+                                        <option value="5-10 Years">5-10 Years</option>
+                                        <option value="10+ Years">10+ Years</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -874,9 +952,9 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
                             <button
                                 type="submit"
                                 disabled={!isReady || saving}
-                                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-slate-900/10 disabled:opacity-30 disabled:grayscale hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                                className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 disabled:opacity-30 disabled:grayscale hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                             >
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save & Continue'}
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save & Continue to Video'}
                                 {!saving && <ArrowRight className="w-4 h-4" />}
                             </button>
                         </form>

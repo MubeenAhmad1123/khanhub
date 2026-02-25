@@ -25,7 +25,12 @@ import {
     Tag,
     ArrowRight,
     ArrowLeft,
-    MonitorPlay
+    MonitorPlay,
+    ShieldCheck,
+    Phone,
+    Globe,
+    Calendar,
+    Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -39,6 +44,7 @@ export default function PostJobPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -86,13 +92,20 @@ export default function PostJobPage() {
         }
     }, [mediaRecorder, isRecording, stopStream]);
 
-    // Reset recording timer
+    // 2. Profile Completion Check for Profile Gate
     useEffect(() => {
-        if (isRecording && recordingTime >= MAX_DURATION) {
-            stopRecording();
-            setError("Maximum duration of 1 minute reached.");
+        if (!authLoading && user) {
+            const profile = (user.profile || {}) as any;
+            const missingFields = [];
+
+            if (!profile.yearEstablished) missingFields.push('yearEstablished');
+            if (!profile.website) missingFields.push('website');
+            if (!profile.hrFullName) missingFields.push('hrFullName');
+            if (!profile.hrPhone) missingFields.push('hrPhone');
+
+            setIsProfileIncomplete(missingFields.length > 0);
         }
-    }, [isRecording, recordingTime, stopRecording]);
+    }, [user, authLoading]);
 
     const startCamera = async () => {
         try {
@@ -217,6 +230,10 @@ export default function PostJobPage() {
     if (!user || user.role !== 'employer') {
         router.push('/');
         return null;
+    }
+
+    if (isProfileIncomplete) {
+        return <ProfileGate user={user} onComplete={() => setIsProfileIncomplete(false)} />;
     }
 
     return (
@@ -566,6 +583,183 @@ export default function PostJobPage() {
                         </div>
                     </div>
                 )}
+            </div>
+        </div>
+    );
+}
+
+// Company Profile Gate (Prompt 5)
+function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }) {
+    const [formData, setFormData] = useState({
+        yearEstablished: user?.profile?.yearEstablished || '',
+        website: user?.profile?.website || '',
+        hrFullName: user?.profile?.hrFullName || '',
+        hrPhone: user?.profile?.hrPhone || '',
+    });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const checklist = [
+        { id: 'yearEstablished', label: 'Year Established', complete: !!formData.yearEstablished },
+        { id: 'website', label: 'Company Website', complete: !!formData.website.trim() },
+        { id: 'hrFullName', label: 'HR Full Name', complete: !!formData.hrFullName.trim() },
+        { id: 'hrPhone', label: 'HR Phone', complete: !!formData.hrPhone.trim() }
+    ];
+
+    const completedCount = checklist.filter(i => i.complete).length;
+    const progress = (completedCount / checklist.length) * 100;
+    const isReady = completedCount === checklist.length;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isReady) return;
+
+        try {
+            setSaving(true);
+            setError(null);
+
+            const { updateUserProfile } = await import('@/lib/firebase/auth');
+
+            // Update Firestore Profile
+            await updateUserProfile(user.uid, {
+                profile: {
+                    ...(user.profile || {}),
+                    yearEstablished: formData.yearEstablished,
+                    website: formData.website.trim(),
+                    hrFullName: formData.hrFullName.trim(),
+                    hrPhone: formData.hrPhone.trim(),
+                }
+            } as any);
+
+            onComplete();
+        } catch (err: any) {
+            console.error('Employer ProfileGate submit error:', err);
+            setError(err.message || 'Failed to update company profile. Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center animate-in fade-in duration-700">
+            <div className="max-w-2xl w-full">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden">
+                    <div className="p-8 md:p-10">
+                        <div className="flex items-center justify-between mb-8">
+                            <h2 className="text-3xl font-black text-slate-900 italic tracking-tighter uppercase">Company Setup</h2>
+                            <div className="text-right">
+                                <span className="text-blue-600 font-black text-xl italic">{Math.round(progress)}%</span>
+                                <div className="w-24 h-2 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                                    <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${progress}%` }} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-blue-50/50 rounded-2xl p-6 mb-8 border border-blue-100">
+                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">Verification Details</h3>
+                            <ul className="grid grid-cols-2 gap-3">
+                                {checklist.map(item => (
+                                    <li key={item.id} className="flex items-center gap-2">
+                                        <div className={cn(
+                                            "w-4 h-4 rounded-full flex items-center justify-center border transition-colors",
+                                            item.complete ? "bg-green-500 border-green-500 text-white" : "bg-white border-slate-200"
+                                        )}>
+                                            {item.complete && <Check className="w-2.5 h-2.5 stroke-[4]" />}
+                                        </div>
+                                        <span className={cn(
+                                            "text-[10px] font-bold uppercase tracking-tight",
+                                            item.complete ? "text-slate-900" : "text-slate-400"
+                                        )}>{item.label}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {error && <p className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold">{error}</p>}
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Year Established</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                        <input
+                                            type="number"
+                                            required
+                                            min="1900"
+                                            max={new Date().getFullYear()}
+                                            placeholder="e.g. 2015"
+                                            className="w-full pl-12 pr-6 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                            value={formData.yearEstablished}
+                                            onChange={e => setFormData({ ...formData, yearEstablished: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Website</label>
+                                    <div className="relative">
+                                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                        <input
+                                            type="url"
+                                            required
+                                            placeholder="https://example.com"
+                                            className="w-full pl-12 pr-6 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                            value={formData.website}
+                                            onChange={e => setFormData({ ...formData, website: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR/Contact Full Name</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                        value={formData.hrFullName}
+                                        onChange={e => setFormData({ ...formData, hrFullName: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR Mobile Number</label>
+                                    <div className="relative">
+                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                        <input
+                                            type="tel"
+                                            required
+                                            placeholder="03XXXXXXXXX"
+                                            className="w-full pl-12 pr-6 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                            value={formData.hrPhone}
+                                            onChange={e => setFormData({ ...formData, hrPhone: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={saving || !isReady}
+                                className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-900/20 disabled:opacity-50 flex items-center justify-center gap-3"
+                            >
+                                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Save & Start Posting <ArrowRight className="w-5 h-5" /></>}
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="bg-blue-50 p-8 border-t border-blue-100">
+                        <div className="flex gap-4">
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm flex-shrink-0">
+                                <ShieldCheck className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">Company Verification</h3>
+                                <p className="text-[11px] text-blue-800 font-bold leading-relaxed uppercase tracking-wide">
+                                    Providing accurate company details helps us build trust with candidates and ensures your jobs are seen by the right people.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

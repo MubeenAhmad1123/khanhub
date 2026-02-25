@@ -128,9 +128,9 @@ export default function VerifyPaymentPage() {
             setTimeout(async () => {
                 await refreshProfile();
                 if (user?.role === 'employer') {
-                    router.push('/employer/dashboard');
+                    router.push('/employer/post-job');
                 } else {
-                    router.push('/dashboard');
+                    router.push('/dashboard/upload-video');
                 }
             }, 3000);
 
