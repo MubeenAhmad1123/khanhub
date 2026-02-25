@@ -94,16 +94,16 @@ export default function VideoUploadPage() {
         if (!authLoading && user) {
             const missingFields = [];
             // Check flat schema first, then legacy profile
-            if (!user.name && !user.displayName) missingFields.push('fullName');
-            if (!user.phone) missingFields.push('phone');
-            if (!user.industry && !user.desiredIndustry) missingFields.push('industry');
-            if (!user.desiredJobTitle) missingFields.push('jobTitle');
+            if (!user.name && !user.displayName) missingFields.push('Full Name');
+            if (!user.phone) missingFields.push('Phone Number');
+            if (!user.industry && !(user as any).desiredIndustry) missingFields.push('Industry');
+            if (!(user as any).jobTitle && !(user as any).desiredJobTitle) missingFields.push('Target Job Title');
 
             const bio = user.professionalSummary || user.profile?.bio || '';
-            if (bio.length < 50) missingFields.push('bio');
+            if (bio.length < 50) missingFields.push('Professional Summary');
 
             const skills = user.skills || user.profile?.skills || [];
-            if (skills.length < 3) missingFields.push('skills');
+            if (skills.length < 1) missingFields.push('At least 1 Skill');
 
             setIsProfileIncomplete(missingFields.length > 0);
         }

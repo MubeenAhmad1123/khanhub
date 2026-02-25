@@ -97,11 +97,11 @@ export default function PostJobPage() {
         if (!authLoading && user) {
             const missingFields = [];
             // Check flat schema first, then legacy profile
-            // Check flat schema fields (root)
-            if (!user.yearEstablished) missingFields.push('yearEstablished');
-            if (!user.website) missingFields.push('website');
-            if (!user.hrName && !user.hrFullName) missingFields.push('hrFullName');
-            if (!user.phone && !user.hrPhone) missingFields.push('hrPhone');
+            // Check flat schema fields
+            if (!user.yearEstablished) missingFields.push('Year Established');
+            if (!user.website) missingFields.push('Company Website');
+            if (!user.hrFullName && !user.name && !user.displayName) missingFields.push('HR/Admin Full Name');
+            if (!user.hrPhone && !user.phone) missingFields.push('HR Mobile Number');
 
             setIsProfileIncomplete(missingFields.length > 0);
         }
@@ -619,6 +619,8 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
             setError(null);
 
             const { updateUserProfile } = await import('@/lib/firebase/auth');
+            const { updateProfile: firebaseUpdateProfile } = await import('firebase/auth');
+            const { auth } = await import('@/lib/firebase/firebase-config');
 
             // Update Firestore Profile
             await updateUserProfile(user.uid, {
@@ -630,6 +632,13 @@ function ProfileGate({ user, onComplete }: { user: any, onComplete: () => void }
                 phone: formData.hrPhone.trim(),
                 updatedAt: new Date()
             } as any);
+
+            // Update Firebase Auth displayName (for navbar and greeting consistency)
+            if (auth.currentUser) {
+                await firebaseUpdateProfile(auth.currentUser, {
+                    displayName: formData.hrFullName.trim()
+                });
+            }
 
             onComplete();
         } catch (err: any) {

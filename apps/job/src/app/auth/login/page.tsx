@@ -34,19 +34,19 @@ export default function LoginPage() {
                 return;
             }
 
-            // If onboarding not done → finish it first
+            // Priority 1: Onboarding MUST be completed (Google Sync fix)
             if (!user.onboardingCompleted) {
                 router.push('/auth/onboarding');
                 return;
             }
 
-            // Payment approved → send to correct dashboard
+            // Priority 2: Payment approved -> send to dashboard
             if (user.paymentStatus === 'approved') {
                 router.push(user.role === 'employer' ? '/employer/dashboard' : '/dashboard');
                 return;
             }
 
-            // Pending / rejected / missing → payment page
+            // Priority 3: Pending / rejected / missing -> payment page
             router.push('/auth/verify-payment');
         }
     }, [user, loading, router]);

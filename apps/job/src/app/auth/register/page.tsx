@@ -149,11 +149,16 @@ export default function RegisterPage() {
     // Redirect if already logged in (client-only)
     useEffect(() => {
         if (mounted && user && !loading && !googleLoading) {
-            if (user.paymentStatus !== 'approved') {
-                router.push('/auth/verify-payment');
-            } else if (!user.onboardingCompleted) {
+            // Priority 1: Onboarding MUST be completed
+            if (!user.onboardingCompleted) {
                 router.push('/auth/onboarding');
-            } else {
+            }
+            // Priority 2: Payment must be approved
+            else if (user.paymentStatus !== 'approved') {
+                router.push('/auth/verify-payment');
+            }
+            // Priority 3: Dashboard access
+            else {
                 router.push('/dashboard');
             }
         }
@@ -183,7 +188,7 @@ export default function RegisterPage() {
         if (currentStep === 1) return true; // Role selection always valid
 
         if (currentStep === 2) {
-            if (!formData.name || !formData.email || !formData.password || (role === 'job_seeker' && !formData.phone)) {
+            if (!formData.name || !formData.email || !formData.password || !formData.phone) {
                 setError('Please fill in all account details.');
                 return false;
             }
@@ -205,7 +210,7 @@ export default function RegisterPage() {
                     return false;
                 }
             } else {
-                if (!formData.companyName || !formData.companySize || !formData.companyLocation || !formData.hrFullName || !formData.desiredIndustry) {
+                if (!formData.companyName || !formData.companySize || !formData.companyLocation || !formData.hrFullName || !formData.desiredIndustry || !formData.yearEstablished || !formData.website) {
                     setError('Please complete company and industry details.');
                     return false;
                 }
@@ -507,22 +512,20 @@ export default function RegisterPage() {
                                         </div>
                                     </div>
 
-                                    {role === 'job_seeker' && (
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
-                                            <div className="relative group">
-                                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                                                <input
-                                                    type="tel"
-                                                    name="phone"
-                                                    value={formData.phone}
-                                                    onChange={handleInputChange}
-                                                    placeholder="03XXXXXXXXX"
-                                                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
-                                                />
-                                            </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{role === 'employer' ? 'HR / Admin Phone Number' : 'Phone Number'}</label>
+                                        <div className="relative group">
+                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                            <input
+                                                type="tel"
+                                                name="phone"
+                                                value={formData.phone}
+                                                onChange={handleInputChange}
+                                                placeholder="03XXXXXXXXX"
+                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                            />
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-4 pt-4">
@@ -597,6 +600,14 @@ export default function RegisterPage() {
                                             <div className="space-y-2 md:col-span-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label>
                                                 <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Year Established</label>
+                                                <input type="number" name="yearEstablished" value={formData.yearEstablished} onChange={handleInputChange} min="1900" max={new Date().getFullYear()} placeholder="e.g. 2015" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Website</label>
+                                                <input type="url" name="website" value={formData.website} onChange={handleInputChange} placeholder="https://example.com" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry</label>

@@ -318,6 +318,28 @@ export default function OnboardingPage() {
                                             {CAREER_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                                         </select>
                                     </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Professional Summary (Min 50 chars)</label>
+                                        <textarea name="professionalSummary" value={formData.professionalSummary} onChange={handleInputChange} required minLength={50} rows={3} placeholder="Briefly describe your experience and career goals..." className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900 resize-none" />
+                                        <div className="flex justify-between px-1">
+                                            <span className={cn("text-[10px] font-black uppercase tracking-widest", formData.professionalSummary.length < 50 ? "text-red-400" : "text-emerald-500")}>
+                                                {formData.professionalSummary.length} / 50 characters minimum
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry</label>
+                                        <SearchableSelect
+                                            options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
+                                            value={formData.desiredIndustry}
+                                            onChange={(val) => handleSelectChange('desiredIndustry', val)}
+                                            placeholder="Select Industry..."
+                                        />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Title / Role</label>
+                                        <input type="text" name="desiredJobTitle" value={formData.desiredJobTitle} onChange={handleInputChange} required placeholder="e.g. Software Engineer" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                    </div>
                                 </div>
 
                                 <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4">
@@ -369,6 +391,33 @@ export default function OnboardingPage() {
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location</label>
                                         <input type="text" name="companyLocation" value={formData.companyLocation} onChange={handleInputChange} required placeholder="e.g. Karachi" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Year Established</label>
+                                        <input type="number" name="yearEstablished" value={formData.yearEstablished} onChange={handleInputChange} required min="1900" max={new Date().getFullYear()} placeholder="e.g. 2015" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Website</label>
+                                        <input type="url" name="website" value={formData.website} onChange={handleInputChange} required placeholder="https://example.com" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR / Admin Full Name</label>
+                                        <input type="text" name="hrFullName" value={formData.hrFullName} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR Mobile Number</label>
+                                        <div className="relative">
+                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                            <input
+                                                type="tel"
+                                                name="hrPhone"
+                                                value={formData.hrPhone}
+                                                onChange={handleInputChange}
+                                                required
+                                                placeholder="03XXXXXXXXX"
+                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4">
