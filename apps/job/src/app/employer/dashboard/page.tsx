@@ -133,9 +133,9 @@ export default function EmployerDashboard() {
                         <div>
                             <h1 className="text-3xl font-black text-[#0F172A]">Corporate Dashboard</h1>
                             <div className="flex items-center gap-2 mt-2">
-                                <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider">Employer</span>
+                                <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider">Company</span>
                                 <span className="text-slate-400 text-sm font-medium">
-                                    {(userData as any)?.company?.name || (userData as any)?.displayName || 'Company'} • {(userData as any)?.company?.industry || (userData as any)?.industry || 'General'}
+                                    {userData?.companyName || (userData as any)?.company?.name || userData?.displayName || 'Company'} • {userData?.city || (userData as any)?.company?.location || 'Location'} • {userData?.companyType || userData?.industry || 'General'}
                                 </span>
                             </div>
                         </div>

@@ -161,14 +161,23 @@ export default function JobSeekerDashboard() {
                         <div>
                             <h1 className="text-3xl font-black text-[#0F172A]">Welcome back, {userData?.displayName || 'Job Seeker'}!</h1>
                             <div className="flex items-center gap-2 mt-2">
-                                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wider">Candidate</span>
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                    userData?.role === 'employer' ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
+                                )}>
+                                    {userData?.role === 'employer' ? 'Company' : userData?.role?.toUpperCase() || 'CANDIDATE'}
+                                </span>
                                 <span className="text-slate-400 text-sm font-medium">
-                                    {userData?.industry || 'General'} • {userData?.subcategory ? (
-                                        userData.subcategory
+                                    {userData?.role === 'employer' ? (
+                                        <>{userData?.companyName || (userData as any)?.company?.name || userData?.displayName || 'Company'} • {userData?.city || (userData as any)?.company?.location || 'Location'} • {userData?.companyType || userData?.industry || 'General'}</>
                                     ) : (
-                                        <Link href="/dashboard/profile/edit" className="text-blue-600 hover:underline">
-                                            Select subcategory →
-                                        </Link>
+                                        <>{userData?.city || 'Location'} • {userData?.industry || 'General'} • {userData?.subcategory ? (
+                                            userData.subcategory
+                                        ) : (
+                                            <Link href="/dashboard/profile/edit" className="text-blue-600 hover:underline">
+                                                Select subcategory →
+                                            </Link>
+                                        )}</>
                                     )}
                                 </span>
                             </div>

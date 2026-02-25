@@ -21,6 +21,7 @@ import {
     Calendar,
     BriefcaseIcon,
     Loader2,
+    Sparkles,
 } from 'lucide-react';
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
@@ -78,6 +79,20 @@ const INITIAL_FORM_DATA = {
     companyType: '',
     yearEstablished: '',
     website: '',
+
+    // Path A: Employer Job Post Details (New)
+    firstJobTitle: '',
+    firstJobSkills: [] as string[],
+    firstJobExperience: '',
+    firstJobRequirements: '',
+    firstJobCity: '',
+    firstJobWorkType: 'On-Site',
+    firstJobBudget: '',
+    firstJobHideSalary: false,
+
+    // Path A: Employer Contact (New)
+    hrFullName: '',
+    hrPhone: '',
 };
 
 export default function RegisterPage() {
@@ -88,16 +103,16 @@ export default function RegisterPage() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
+    const [mounted, setMounted] = useState(false);
     const [step, setStep] = useState(1);
-    const [role, setRole] = useState<'job_seeker' | 'employer'>(
-        (searchParams.get('role') as any) || 'job_seeker'
-    );
+    const [role, setRole] = useState<'job_seeker' | 'employer'>('job_seeker');
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
     const [showPassword, setShowPassword] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
 
-    // Load from localStorage on mount
+    // Initial load and hydration safety
     useEffect(() => {
+        setMounted(true);
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
@@ -112,6 +127,15 @@ export default function RegisterPage() {
         setIsInitialized(true);
     }, []);
 
+    // Also update role if searchParams change after mount
+    useEffect(() => {
+        if (!mounted) return;
+        const queryRole = searchParams.get('role') as any;
+        if (queryRole && (queryRole === 'job_seeker' || queryRole === 'employer')) {
+            setRole(queryRole);
+        }
+    }, [searchParams, mounted]);
+
     // Save to localStorage on change
     useEffect(() => {
         if (!isInitialized) return;
@@ -122,16 +146,16 @@ export default function RegisterPage() {
         }));
     }, [formData, step, role, isInitialized]);
 
-    // Redirect if already logged in
+    // Redirect if already logged in (client-only)
     useEffect(() => {
-        if (user && !loading && !googleLoading) {
+        if (mounted && user && !loading && !googleLoading) {
             if (!user.onboardingCompleted) {
                 router.push('/auth/onboarding');
             } else {
                 router.push('/dashboard');
             }
         }
-    }, [user, router, loading, googleLoading]);
+    }, [user, router, loading, googleLoading, mounted]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -195,6 +219,27 @@ export default function RegisterPage() {
                 }
                 return true;
             }
+            if (currentStep === 4) {
+                if (!formData.firstJobTitle || !formData.firstJobExperience) {
+                    setError('Please provide job title and experience required.');
+                    return false;
+                }
+                return true;
+            }
+            if (currentStep === 5) {
+                if (!formData.firstJobCity || !formData.firstJobBudget) {
+                    setError('Please provide city and budget for the position.');
+                    return false;
+                }
+                return true;
+            }
+            if (currentStep === 6) {
+                if (!formData.hrFullName || !formData.hrPhone) {
+                    setError('HR name and mobile number are compulsory.');
+                    return false;
+                }
+                return true;
+            }
         }
 
         return true;
@@ -221,36 +266,37 @@ export default function RegisterPage() {
         setError('');
 
         try {
-            // Path A: Email/Password Registration
-            // We pass ALL flat fields to the register function
-            await register(formData.email, formData.password, {
-                name: formData.name,
-                phone: formData.phone,
-                gender: formData.gender,
-                dateOfBirth: formData.dateOfBirth,
-                city: formData.city,
-                careerLevel: formData.careerLevel,
-                totalExperience: formData.totalExperience,
-                desiredSalary: formData.desiredSalary,
-                desiredJobTitle: formData.desiredJobTitle,
-                desiredIndustry: formData.desiredIndustry,
-                desiredSubcategory: formData.desiredSubcategory,
-                professionalSummary: formData.professionalSummary,
-                companyName: formData.companyName,
-                companyLocation: formData.companyLocation,
-                companySize: formData.companySize,
-                companyType: formData.companyType,
-                yearEstablished: formData.yearEstablished,
-                website: formData.website,
-                // Onboarding is completed because we collected everything
+            const finalData = {
+                ...formData,
                 onboardingCompleted: true,
-                onboardingComplete: true,
-            }, role);
+                onboardingComplete: true
+            };
 
-            // Clear storage on success
+            // For employers, structure the first job post
+            if (role === 'employer') {
+                (finalData as any).firstJobPost = {
+                    jobTitle: formData.firstJobTitle,
+                    skills: formData.firstJobSkills,
+                    experienceRequired: formData.firstJobExperience,
+                    city: formData.firstJobCity,
+                    workType: formData.firstJobWorkType,
+                    maxBudget: Number(formData.firstJobBudget) || 0,
+                    hideSalary: formData.firstJobHideSalary,
+                    otherRequirements: formData.firstJobRequirements,
+                };
+                (finalData as any).hrName = formData.hrFullName;
+                (finalData as any).phone = formData.hrPhone; // Use HR phone as main account phone if employer
+            }
+
+            await register(formData.email, formData.password, finalData, role);
+
+            if (role === 'employer') {
+                router.push('/auth/verify-payment');
+            } else {
+                router.push('/dashboard');
+            }
+
             localStorage.removeItem(STORAGE_KEY);
-
-            // Success! Redirection handled by useEffect
         } catch (err: any) {
             console.error('Registration error:', err);
             setError(err.message || 'Failed to create account. Please try again.');
@@ -273,8 +319,14 @@ export default function RegisterPage() {
         }
     };
 
-    const totalSteps = role === 'job_seeker' ? 5 : 3;
+    const totalSteps = role === 'job_seeker' ? 5 : 6;
     const progressPercent = (step / totalSteps) * 100;
+
+    if (!mounted) return (
+        <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-[#F0F4F8] flex flex-col items-center justify-center p-4 py-12 font-sans">
@@ -291,6 +343,20 @@ export default function RegisterPage() {
                         </h1>
                     </Link>
                     <p className="mt-2 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Premium Video Job Portal</p>
+                </div>
+
+                {/* Registration Header */}
+                <div className="mb-10 text-center relative z-10">
+                    <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter italic uppercase mb-3">
+                        Join the <span className="text-blue-600 underline decoration-blue-200 underline-offset-8">Future</span>
+                    </h1>
+                    <p className="text-slate-400 font-bold uppercase tracking-tight text-sm">Create your premium video resume account</p>
+
+                    {/* Draft Notice (New) */}
+                    <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100 animate-pulse">
+                        <Sparkles className="w-3 h-3" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Progress automatically saved as draft</span>
+                    </div>
                 </div>
 
                 {/* Progress Tracker */}
@@ -722,112 +788,241 @@ export default function RegisterPage() {
                             </div>
                         )}
 
-                        {/* STEP 3 (Employer): COMPANY INFO */}
-                        {step === 3 && role === 'employer' && (
+                        {/* STEP 4 (Employer): FIRST JOB POST */}
+                        {step === 4 && role === 'employer' && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                                 <div className="text-center mb-8">
-                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">Company Info</h2>
-                                    <p className="text-slate-500 font-medium text-sm">Build your employer presence</p>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">First Job Post</h2>
+                                    <p className="text-slate-500 font-medium text-sm">Define who you are looking for</p>
                                 </div>
 
                                 <div className="space-y-5">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Enter job title for your role</label>
                                         <div className="relative">
-                                            <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                                             <input
                                                 type="text"
-                                                name="companyName"
-                                                value={formData.companyName}
+                                                name="firstJobTitle"
+                                                value={formData.firstJobTitle}
                                                 onChange={handleInputChange}
-                                                placeholder="e.g. KhanHub (Pvt.) Ltd"
+                                                placeholder="Enter Job Title"
                                                 className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                             />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-5">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Size</label>
-                                            <select
-                                                name="companySize"
-                                                value={formData.companySize}
-                                                onChange={handleInputChange}
-                                                className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
-                                            >
-                                                <option value="">Size</option>
-                                                {COMPANY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Type</label>
-                                            <select
-                                                name="companyType"
-                                                value={formData.companyType}
-                                                onChange={handleInputChange}
-                                                className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
-                                            >
-                                                <option value="">Type</option>
-                                                {COMPANY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                            </select>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Location (City)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mention only top 3 skills needed</label>
+                                        <div className="relative">
+                                            <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. React, Node.js, Communication"
+                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        const val = (e.target as HTMLInputElement).value.trim();
+                                                        if (val && !formData.firstJobSkills.includes(val) && formData.firstJobSkills.length < 3) {
+                                                            setFormData(prev => ({ ...prev, firstJobSkills: [...prev.firstJobSkills, val] }));
+                                                            (e.target as HTMLInputElement).value = '';
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {formData.firstJobSkills.map(skill => (
+                                                <span key={skill} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold flex items-center gap-2">
+                                                    {skill}
+                                                    <X className="w-3 h-3 cursor-pointer" onClick={() => setFormData(prev => ({ ...prev, firstJobSkills: prev.firstJobSkills.filter(s => s !== skill) }))} />
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Minimum experience required</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                            <select
+                                                name="firstJobExperience"
+                                                value={formData.firstJobExperience}
+                                                onChange={handleInputChange}
+                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                            >
+                                                <option value="">Select Experience</option>
+                                                <option value="Fresher">Fresher</option>
+                                                <option value="1 Year">1 Year</option>
+                                                <option value="2 Years">2 Years</option>
+                                                <option value="3 Years">3 Years</option>
+                                                <option value="5 Years">5 Years</option>
+                                                <option value="10+ Years">10+ Years</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <button type="button" onClick={prevStep} className="w-20 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-slate-200 transition-all font-black text-sm">
+                                        <ArrowLeft className="w-6 h-6" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={nextStep}
+                                        className="flex-1 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/30 flex items-center justify-center gap-3"
+                                    >
+                                        Next Segment <ArrowRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* STEP 5 (Employer): BUDGET & LOCATION */}
+                        {step === 5 && role === 'employer' && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="text-center mb-8">
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">Budget & Terms</h2>
+                                    <p className="text-slate-500 font-medium text-sm">Financials and location</p>
+                                </div>
+
+                                <div className="space-y-5">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Which city is this position based in?</label>
                                         <div className="relative">
                                             <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                                             <input
                                                 type="text"
-                                                name="companyLocation"
-                                                value={formData.companyLocation}
+                                                name="firstJobCity"
+                                                value={formData.firstJobCity}
                                                 onChange={handleInputChange}
-                                                placeholder="e.g. Lahore"
+                                                placeholder="Enter City"
                                                 className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-5">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Year Established</label>
-                                            <div className="relative">
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                                                <input
-                                                    type="number"
-                                                    name="yearEstablished"
-                                                    value={formData.yearEstablished}
-                                                    onChange={handleInputChange}
-                                                    placeholder="2010"
-                                                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
-                                                />
-                                            </div>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {['On-Site', 'Hybrid', 'Remote'].map(type => (
+                                            <button
+                                                key={type}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, firstJobWorkType: type }))}
+                                                className={cn(
+                                                    "py-3 rounded-xl font-bold text-xs border-2 transition-all",
+                                                    formData.firstJobWorkType === type
+                                                        ? "bg-blue-50 border-blue-600 text-blue-600"
+                                                        : "bg-white border-slate-50 text-slate-400 hover:border-slate-200"
+                                                )}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">What's the maximum budget for this position?</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400">PKR</span>
+                                            <input
+                                                type="number"
+                                                name="firstJobBudget"
+                                                value={formData.firstJobBudget}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g. 50000"
+                                                className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-[10px] uppercase">/ Month</span>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Website</label>
-                                            <div className="relative">
-                                                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                                                <input
-                                                    type="url"
-                                                    name="website"
-                                                    value={formData.website}
-                                                    onChange={handleInputChange}
-                                                    placeholder="https://"
-                                                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
-                                                />
-                                            </div>
+                                        <label className="flex items-center gap-2 mt-2 ml-1 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.firstJobHideSalary}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, firstJobHideSalary: e.target.checked }))}
+                                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hide budget from candidates</span>
+                                        </label>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Are there any other requirements?</label>
+                                        <textarea
+                                            name="firstJobRequirements"
+                                            value={formData.firstJobRequirements}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g. Banking industry experience preferred, Masters degree required..."
+                                            rows={3}
+                                            className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium text-slate-700 text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <button type="button" onClick={prevStep} className="w-20 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-slate-200 transition-all font-black text-sm">
+                                        <ArrowLeft className="w-6 h-6" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={nextStep}
+                                        className="flex-1 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/30 flex items-center justify-center gap-3"
+                                    >
+                                        Finalize Contact <ArrowRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* STEP 6 (Employer): CONTACT PERSON */}
+                        {step === 6 && role === 'employer' && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="text-center mb-8">
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">Contact Person</h2>
+                                    <p className="text-slate-500 font-medium text-sm">HR or Company Owner details</p>
+                                </div>
+
+                                <div className="space-y-5">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">What is your full name?</label>
+                                        <div className="relative">
+                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                            <input
+                                                type="text"
+                                                name="hrFullName"
+                                                value={formData.hrFullName}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter Full Name"
+                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                            />
                                         </div>
                                     </div>
 
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">What is your mobile phone number?</label>
+                                        <div className="relative">
+                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                                            <input
+                                                type="tel"
+                                                name="hrPhone"
+                                                value={formData.hrPhone}
+                                                onChange={handleInputChange}
+                                                placeholder="03XXXXXXXXX"
+                                                className="w-full pl-12 pr-6 py-4 bg-emerald-50/50 border-2 border-emerald-100 rounded-2xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-bold text-slate-900"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1 italic">(it is super compulsory)</p>
+                                    </div>
+
                                     {/* Registration Fee Info */}
-                                    <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4">
+                                    <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4 mt-6">
                                         <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center flex-shrink-0 text-amber-600">
                                             <Info className="w-6 h-6" />
                                         </div>
                                         <div className="space-y-1">
                                             <h4 className="text-xs font-black text-amber-800 uppercase tracking-widest italic">Action Required</h4>
                                             <p className="text-[11px] text-amber-700 font-bold leading-relaxed">
-                                                To finalize your company profile and search candidates, a one-time registration fee of PKR 1,000 applies.
+                                                To finalize your company profile and search candidates, a one-time registration fee of PKR 1,000 applies. No monthly charges.
                                             </p>
                                         </div>
                                     </div>

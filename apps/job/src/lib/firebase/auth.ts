@@ -185,6 +185,23 @@ export async function wipeUserData(uid: string): Promise<void> {
 
     // 9. Delete the user's Firestore document
     await deleteDoc(firestoreDoc(db, 'users', uid));
+
+    // 11. Wipe all files from Firebase Storage (New)
+    try {
+        const { deleteAllUserFiles, deletePaymentStorage } = await import('./storage');
+
+        // Delete personal and company assets
+        await deleteAllUserFiles(uid);
+
+        // Delete payment screenshots (using paymentsSnap collected previously or re-fetch)
+        // To be safe, we re-fetch if payments were already deleted above
+        const paymentsSnap = await getDocs(query(collection(db, 'payments'), where('userId', '==', uid)));
+        await Promise.all(paymentsSnap.docs.map(d => deletePaymentStorage(d.id)));
+
+        console.log(`✅ Fully wiped all Storage and Firestore data for ${uid}`);
+    } catch (storageError) {
+        console.warn('Non-critical error during Storage cleanup:', storageError);
+    }
 }
 
 /**

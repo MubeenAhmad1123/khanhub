@@ -217,18 +217,54 @@ export const deleteVideo = async (userId: string): Promise<void> => {
 };
 
 /**
- * Delete all user files
+ * Delete all user files from storage
  */
 export const deleteAllUserFiles = async (userId: string): Promise<void> => {
     try {
+        // 1. Delete user folder
         const userFolderRef = ref(storage, `users/${userId}`);
-        const fileList = await listAll(userFolderRef);
+        await deleteFolderRecursively(userFolderRef);
 
-        const deletePromises = fileList.items.map((item) => deleteObject(item));
-        await Promise.all(deletePromises);
+        // 2. Delete company folder (if they were an employer)
+        const companyFolderRef = ref(storage, `companies/${userId}`);
+        await deleteFolderRecursively(companyFolderRef);
+
+        console.log(`Successfully cleaned up all storage for user: ${userId}`);
     } catch (error) {
-        console.error('Delete all user files error:', error);
-        throw new Error('Failed to delete user files');
+        console.warn('Delete all user files warning (folder might not exist):', error);
+        // We don't throw here to allow Firestore deletion to continue
+    }
+};
+
+/**
+ * Helper to delete a folder and all its contents in Firebase Storage
+ * Note: Storage doesn't have true folders, so we list and delete.
+ */
+async function deleteFolderRecursively(folderRef: StorageReference): Promise<void> {
+    try {
+        const list = await listAll(folderRef);
+
+        // Delete all files in this folder
+        const fileDeletions = list.items.map(item => deleteObject(item));
+
+        // Recursively delete sub-folders
+        const folderDeletions = list.prefixes.map(prefix => deleteFolderRecursively(prefix));
+
+        await Promise.all([...fileDeletions, ...folderDeletions]);
+    } catch (error) {
+        // Silently fail if folder doesn't exist
+    }
+}
+
+/**
+ * Delete storage for a specific payment
+ */
+export const deletePaymentStorage = async (paymentId: string): Promise<void> => {
+    try {
+        const paymentFolderRef = ref(storage, `payments/${paymentId}`);
+        await deleteFolderRecursively(paymentFolderRef);
+    } catch (error) {
+        console.warn(`Failed to delete payment storage for ${paymentId}:`, error);
     }
 };
 

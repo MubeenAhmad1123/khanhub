@@ -26,11 +26,11 @@ export default function ProfileEngagement({ user }: ProfileEngagementProps) {
 
     const requiredFields = [
         { key: 'name', label: 'Full Name', value: user.displayName, icon: <User className="w-4 h-4" />, href: '/dashboard/profile/edit' },
-        { key: 'phone', label: 'Phone Number', value: (user as any).phone || user.profile?.phone, icon: <Smartphone className="w-4 h-4" />, href: '/dashboard/profile/edit' },
-        { key: 'location', label: 'Location', value: (user as any).location || user.profile?.location, icon: <MapPin className="w-4 h-4" />, href: '/dashboard/profile/edit' },
-        { key: 'industry', label: 'Industry', value: user.industry || (user.profile as any)?.industry, icon: <Briefcase className="w-4 h-4" />, href: '/dashboard/profile/edit' },
-        { key: 'subcategory', label: 'Profession', value: user.subcategory || user.profile?.preferredJobTitle, icon: <Briefcase className="w-4 h-4" />, href: '/dashboard/profile/edit' },
-        { key: 'video', label: 'Video Introduction', value: user.profile?.videoResume || (user as any).videoResume, icon: <Video className="w-4 h-4" />, href: '/dashboard/upload-video' },
+        { key: 'phone', label: 'Phone Number', value: (user as any).phone || user.profile?.phone || (user as any).hrPhone, icon: <Smartphone className="w-4 h-4" />, href: '/dashboard/profile/edit' },
+        { key: 'city', label: 'City/Location', value: (user as any).city || (user as any).companyLocation || (user as any).location || user.profile?.location, icon: <MapPin className="w-4 h-4" />, href: '/dashboard/profile/edit' },
+        { key: 'industry', label: 'Industry', value: user.industry || (user as any).companyType || (user.profile as any)?.industry, icon: <Briefcase className="w-4 h-4" />, href: '/dashboard/profile/edit' },
+        { key: 'subcategory', label: 'Profession', value: user.subcategory || (user as any).firstJobTitle || user.profile?.preferredJobTitle, icon: <Briefcase className="w-4 h-4" />, href: '/dashboard/profile/edit' },
+        { key: 'video', label: 'Video introduction', value: user.profile?.videoResume || (user as any).videoResume || (user as any).pitchVideoUrl, icon: <Video className="w-4 h-4" />, href: '/dashboard/upload-video' },
     ];
 
     const completedCount = requiredFields.filter(f => !!f.value).length;
@@ -138,7 +138,7 @@ export default function ProfileEngagement({ user }: ProfileEngagementProps) {
                         <Trophy className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                        <h4 className="text-lg font-black uppercase tracking-tighter italic">Elite Candidate Profile</h4>
+                        <h4 className="text-lg font-black uppercase tracking-tighter italic">Elite {user.role === 'employer' ? 'Company' : 'Candidate'} Profile</h4>
                         <p className="text-white/80 text-xs font-bold">Your profile is now in the top 5% of all candidates. It is currently being featured to top employers.</p>
                     </div>
                 </div>

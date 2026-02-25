@@ -17,13 +17,14 @@ service cloud.firestore {
     
     match /users/{userId} {
       allow read: if isAuthenticated();
+      allow list: if isAdmin();
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isOwner(userId) || isAdmin();
     }
     
     match /notifications/{notificationId} {
-      allow read: if isOwner(resource.data.user_id);
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
       allow create: if isAuthenticated();
       allow update: if isOwner(resource.data.user_id) || isAdmin();
       allow delete: if isOwner(resource.data.user_id) || isAdmin();
@@ -39,6 +40,7 @@ service cloud.firestore {
         request.auth.uid == resource.data.employerId || 
         isAdmin()
       );
+      allow list: if isAdmin();
       allow create: if isAuthenticated(); 
       allow update: if request.auth.uid == resource.data.seekerId || 
                        request.auth.uid == resource.data.employerId || 
@@ -47,7 +49,7 @@ service cloud.firestore {
                        request.auth.uid == resource.data.employerId || 
                        isAdmin();
     }
-
+    
     match /payments/{paymentId} {
       allow read: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
       allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.userId || request.auth.uid == paymentId);
@@ -57,6 +59,7 @@ service cloud.firestore {
     
     match /jobPostings/{jobId} {
       allow read: if isAuthenticated();
+      allow list: if isAdmin();
       allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.employerId || isAdmin());
       allow update: if isAuthenticated() && (request.auth.uid == resource.data.employerId || isAdmin());
       allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.employerId);
@@ -64,6 +67,7 @@ service cloud.firestore {
 
     match /placements/{placementId} {
       allow read: if isAdmin() || isOwner(resource.data.candidateId) || isOwner(resource.data.employerId);
+      allow list: if isAdmin();
       allow write: if isAdmin() || isOwner(resource.data.candidateId) || isOwner(resource.data.employerId);
     }
     
@@ -73,6 +77,7 @@ service cloud.firestore {
     
     match /points_history/{pointId} {
       allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow list: if isAdmin();
       allow create: if isAuthenticated();
       allow update, delete: if isAdmin() || isOwner(resource.data.userId);
     }
