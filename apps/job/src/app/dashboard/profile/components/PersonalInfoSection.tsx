@@ -14,18 +14,18 @@ interface PersonalInfoSectionProps {
 export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
-        fullName: profile.fullName || '',
-        preferredJobTitle: profile.preferredJobTitle || '',
-        location: profile.location || '',
+        name: profile.name || (profile as any).fullName || '',
+        desiredJobTitle: profile.desiredJobTitle || (profile as any).preferredJobTitle || '',
+        city: profile.city || (profile as any).location || '',
         phone: profile.phone || '',
     });
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
         setFormData({
-            fullName: profile.fullName || '',
-            preferredJobTitle: profile.preferredJobTitle || '',
-            location: profile.location || '',
+            name: profile.name || (profile as any).fullName || '',
+            desiredJobTitle: profile.desiredJobTitle || (profile as any).preferredJobTitle || '',
+            city: profile.city || (profile as any).location || '',
             phone: profile.phone || '',
         });
     }, [profile]);
@@ -68,10 +68,10 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">
-                                    {profile.fullName || 'Complete Your Name'}
+                                    {profile.name || (profile as any).fullName || 'Complete Your Name'}
                                 </h2>
                                 <p className="text-lg font-bold text-blue-600 italic uppercase tracking-tight">
-                                    {profile.preferredJobTitle || 'Specify Your Target Role'}
+                                    {profile.desiredJobTitle || (profile as any).preferredJobTitle || 'Specify Your Target Role'}
                                 </p>
                             </div>
                             <button
@@ -86,7 +86,7 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                                 <div className="flex items-center gap-3 text-slate-500 font-bold text-sm bg-slate-50/50 p-3 rounded-2xl border border-slate-50">
                                     <MapPin className="w-4 h-4 text-blue-500" />
-                                    {profile.location || 'Location Not Set'}
+                                    {profile.city || (profile as any).location || 'Location Not Set'}
                                 </div>
                                 <div className="flex items-center gap-3 text-slate-500 font-bold text-sm bg-slate-50/50 p-3 rounded-2xl border border-slate-50">
                                     <Phone className="w-4 h-4 text-blue-500" />
@@ -105,8 +105,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                     <input
                                         type="text"
                                         required
-                                        value={formData.fullName}
-                                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
                                         placeholder="e.g. John Doe"
                                     />
@@ -116,8 +117,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                     <input
                                         type="text"
                                         required
-                                        value={formData.preferredJobTitle}
-                                        onChange={(e) => setFormData({ ...formData, preferredJobTitle: e.target.value })}
+                                        name="desiredJobTitle"
+                                        value={formData.desiredJobTitle}
+                                        onChange={(e) => setFormData({ ...formData, desiredJobTitle: e.target.value })}
                                         className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
                                         placeholder="e.g. Senior Frontend Developer"
                                     />
@@ -127,8 +129,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                     <input
                                         type="text"
                                         required
-                                        value={formData.location}
-                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                        name="city"
+                                        value={formData.city}
+                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                                         className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
                                         placeholder="e.g. Lahore, Pakistan"
                                     />
@@ -138,6 +141,7 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                     <input
                                         type="tel"
                                         required
+                                        name="phone"
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                         className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"

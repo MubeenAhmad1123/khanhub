@@ -66,20 +66,29 @@ export interface Language {
 
 export interface JobSeekerProfile {
     // Basic Info
-    fullName?: string;
+    fullName?: string; // Legacy
+    name?: string;     // Flat
     phone?: string;
-    location?: string;
-    bio?: string;
+    location?: string; // Legacy
+    city?: string;     // Flat
+    bio?: string;      // Legacy
+    professionalSummary?: string; // Flat
+    gender?: string;
+    dateOfBirth?: string;
 
     // Professional Info
     currentJobTitle?: string;
-    preferredSubcategory?: string;
-    preferredJobTitle?: string;
-    yearsOfExperience?: number;
+    preferredSubcategory?: string; // Legacy
+    desiredSubcategory?: string;   // Flat
+    preferredJobTitle?: string;    // Legacy
+    desiredJobTitle?: string;      // Flat
+    yearsOfExperience?: number;    // Legacy
+    totalExperience?: string;      // Flat
     skills?: string[];
     isEmployed?: boolean;
 
     // Experience & Education
+    // ... (rest of interface)
     experience?: any[];
     education?: any[];
     certifications?: any[];
@@ -173,6 +182,82 @@ export interface User {
     premiumEndDate?: Date | Timestamp;
     premiumExpiresAt?: Date | Timestamp;
 
+    // Unified Registration/Onboarding Fields (Flat Schema)
+    onboardingComplete?: boolean;
+    registrationMethod?: 'email' | 'google';
+
+    // Account Information
+    name?: string;
+    phone?: string;
+
+    // Personal Information
+    dateOfBirth?: string;         // "YYYY-MM-DD"
+    gender?: string;
+    city?: string;
+    careerLevel?: string;
+    totalExperience?: string;
+    desiredSalary?: string;
+
+    // Professional Information
+    desiredJobTitle?: string;
+    desiredIndustry?: string;
+    skills?: string[];
+    languages?: { language: string, proficiency: string }[];
+    professionalSummary?: string;
+
+    // Education
+    education?: {
+        degreeTitle: string;
+        fieldOfStudy: string;
+        institution: string;
+        city: string;
+        completionYear: string;
+        cgpa?: string;
+    }[];
+
+    // Experience
+    experience?: {
+        jobTitle: string;
+        company: string;
+        industry: string;
+        city: string;
+        startMonth: string;
+        startYear: string;
+        endMonth: string;
+        endYear: string;
+        currentlyWorking: boolean;
+        managedTeam: boolean;
+        salary?: string;
+        description?: string;
+    }[];
+
+    isFresher?: boolean;
+
+    // Employer Specific
+    companyName?: string;
+    companyLocation?: string;
+    companySize?: string;
+    companyType?: string;
+    yearEstablished?: string;
+    website?: string;
+    whatsapp?: string;
+    logoURL?: string;
+
+    firstJobPost?: {
+        jobTitle: string;
+        skills: string[];
+        experienceRequired: string;
+        city: string;
+        workType: string;
+        maxBudget: number;
+        hideSalary: boolean;
+        otherRequirements?: string;
+    };
+
+    // Profile Completion
+    profileCompletion?: number;   // 0-100
+    videoUploadUnlocked?: boolean;
+
     // Usage Limits
     applicationsUsed: number; // For free users (max 10)
     premiumJobsViewed: number; // For premium users (max 100)
@@ -181,9 +266,9 @@ export interface User {
     points: number;
     pointsHistory: PointsHistoryEntry[];
 
-    // Profile Data
-    profile?: JobSeekerProfile; // Only for job seekers
-    company?: CompanyProfile; // Only for employers
+    // Legacy/Nested profile data (keeping for compatibility during migration if needed)
+    profile?: JobSeekerProfile;
+    company?: CompanyProfile;
 
     // Metadata
     createdAt: Date | Timestamp;
@@ -192,7 +277,7 @@ export interface User {
 
     // Flags
     isActive: boolean;
-    isFeatured: boolean; // For premium job seekers
+    isFeatured: boolean;
     isBanned: boolean;
     banReason?: string;
     onboardingCompleted?: boolean;

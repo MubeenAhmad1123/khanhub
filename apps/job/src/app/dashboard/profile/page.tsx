@@ -44,6 +44,7 @@ export default function ProfilePage() {
         if (!user) return;
         try {
             await updateProfile({
+                ...data,
                 profile: {
                     ...(user.profile || {}),
                     ...data
@@ -86,7 +87,7 @@ export default function ProfilePage() {
         );
     }
 
-    const profile = (user?.profile || {}) as any;
+    const profile = (user || {}) as any;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] py-12">

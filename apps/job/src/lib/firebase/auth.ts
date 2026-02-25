@@ -53,7 +53,7 @@ export async function createUserProfile(userData: Partial<User>): Promise<void> 
             ...data,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
+        }, { merge: true });
     } catch (error) {
         console.error('Error creating user profile:', error);
         throw error;

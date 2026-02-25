@@ -3,52 +3,83 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, CheckCircle, Building2, Users, Phone, Video, MapPin, Briefcase, Upload, ArrowRight, Target, Globe } from 'lucide-react';
-import Image from 'next/image';
-import { calculateProfileStrength } from '@/lib/services/pointsSystem';
+import {
+    Loader2,
+    CheckCircle,
+    Building2,
+    Users,
+    User,
+    Phone,
+    Video,
+    MapPin,
+    Briefcase,
+    Upload,
+    ArrowRight,
+    Target,
+    Globe,
+    Info,
+    ShieldCheck,
+    Calendar,
+    BriefcaseIcon,
+    ArrowLeft
+} from 'lucide-react';
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { cn } from '@/lib/utils';
 
+const CAREER_LEVELS = ['Student', 'Entry Level', 'Mid Level', 'Senior Level', 'Manager', 'Executive'];
+
+const SALARY_RANGES = [
+    'PKR 20,000 – 30,000',
+    'PKR 30,000 – 50,000',
+    'PKR 50,000 – 80,000',
+    'PKR 80,000 – 120,000',
+    'PKR 120,000 – 200,000',
+    'PKR 200,000+',
+];
+
+const COMPANY_SIZES = [
+    '1–10 employees',
+    '11–50 employees',
+    '51–200 employees',
+    '201–500 employees',
+    '500+ employees',
+];
+
+const COMPANY_TYPES = ['Private', 'Government', 'NGO', 'Startup', 'Semi-Government', 'Multinational'];
+
 export default function OnboardingPage() {
     const router = useRouter();
-    const { user, updateProfile, loading, isEmployer: authIsEmployer, isJobSeeker: authIsJobSeeker } = useAuth();
+    const { user, updateProfile, loading } = useAuth();
 
     const [step, setStep] = useState(1);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
-    const [localRole, setLocalRole] = useState<string | null>(null);
+    const [role, setRole] = useState<'job_seeker' | 'employer' | null>(null);
 
-    // Form states
-    const [jobSeekerData, setJobSeekerData] = useState({
-        skills: '',
-        experience: '',
-        industry: '',
-        subcategory: '',
-        primarySkill: '',
-        isEmployed: 'no', // 'yes' or 'no'
-    });
-
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-
-    const [employerData, setEmployerData] = useState({
-        companyName: '',
-        companyWebsite: '',
-        companySize: '',
-        industry: '',
-        subcategory: '',
-        location: '',
-        address: '',
-        tagline: '',
-        description: '',
-        foundedYear: '',
-        contactPerson: '',
+    // Form state matching flat schema
+    const [formData, setFormData] = useState({
+        // Job Seeker
+        gender: '',
+        dateOfBirth: '',
+        city: '',
+        careerLevel: '',
+        totalExperience: '',
+        desiredSalary: '',
+        desiredJobTitle: '',
+        desiredIndustry: '',
+        desiredSubcategory: '',
+        professionalSummary: '',
         phone: '',
-    });
 
-    const [logo, setLogo] = useState<File | null>(null);
-    const [logoPreview, setLogoPreview] = useState('');
-    const [logoLoading, setLogoLoading] = useState(false);
+        // Employer
+        companyName: '',
+        companyLocation: '',
+        companySize: '',
+        companyType: '',
+        yearEstablished: '',
+        website: '',
+    });
 
     useEffect(() => {
         if (!loading && !user) {
@@ -56,839 +87,366 @@ export default function OnboardingPage() {
             return;
         }
 
-        if (user?.onboardingCompleted) {
+        if (user?.onboardingCompleted || user?.onboardingComplete) {
             router.push('/auth/verify-payment');
             return;
         }
 
-        // Only auto-set localRole if it hasn't been manually picked yet
-        if (user?.role && !localRole) {
-            console.log('Onboarding: Setting detected role from profile:', user.role);
-            setLocalRole(user.role);
-
-            if (user.role === 'job_seeker') {
-                const industry = user.industry || '';
-                const subcategory = user.subcategory || '';
-                const primarySkill = user.profile?.preferredJobTitle || '';
-                const experience = String(user.profile?.yearsOfExperience || '');
-                const skills = user.profile?.skills?.join(', ') || '';
-                const isEmployed = user.profile?.isEmployed ? 'yes' : 'no';
-
-                setJobSeekerData(prev => ({
-                    ...prev,
-                    industry,
-                    subcategory,
-                    primarySkill,
-                    experience: experience === '0' && !user.profile?.yearsOfExperience ? '' : experience,
-                    skills,
-                    isEmployed
-                }));
-
-                if (industry && subcategory && primarySkill) {
-                    let startStep = 3;
-                    if (experience !== '' && experience !== 'undefined') {
-                        startStep = 4;
-                    }
-                    setStep(startStep);
-                }
-            } else if (user.role === 'employer') {
-                const u = user as any;
-                const companyData = u.company || {};
-                const companyName = companyData.name || u.displayName || '';
-                const companyWebsite = companyData.website || '';
-                const companySize = companyData.size || '';
-                const industry = companyData.industry || u.industry || '';
-                const subcategory = companyData.subcategory || u.subcategory || '';
-                const location = companyData.location || '';
-                const address = companyData.address || '';
-                const phone = companyData.phone || '';
-                const description = companyData.description || '';
-                const contactPerson = u.displayName || companyData.contactPerson || '';
-
-                setEmployerData(prev => ({
-                    ...prev,
-                    companyName,
-                    companyWebsite,
-                    companySize,
-                    industry,
-                    subcategory,
-                    location,
-                    address,
-                    phone,
-                    description,
-                    contactPerson
-                }));
-
-                if (companyData.logo) {
-                    setLogoPreview(companyData.logo);
-                }
-
-                if (companyName && companySize && industry && subcategory && location) {
-                    setStep(3);
-                }
-            }
+        if (user?.role && !role) {
+            setRole(user.role as any);
+            // Pre-fill from existing data if any
+            setFormData(prev => ({
+                ...prev,
+                companyName: user.companyName || user.displayName || '',
+                phone: user.phone || '',
+                city: user.city || '',
+                desiredIndustry: user.desiredIndustry || '',
+                desiredJobTitle: user.desiredJobTitle || '',
+            }));
         }
-    }, [user, loading, router, localRole]);
+    }, [user, loading, router, role]);
 
-    const currentRole = localRole || user?.role;
-    const isEmployer = currentRole === 'employer';
-    const isJobSeeker = currentRole === 'job_seeker';
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-    // Real-time auto-save for Job Seeker
-    useEffect(() => {
-        if (!isJobSeeker || !user || user.onboardingCompleted) return;
+    const handleSelectChange = (name: string, value: string) => {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-        const timer = setTimeout(async () => {
-            // Only save if at least industry is selected
-            if (!jobSeekerData.industry && !jobSeekerData.primarySkill) return;
+    const nextStep = () => {
+        setError('');
+        setStep(prev => prev + 1);
+        window.scrollTo(0, 0);
+    };
 
-            setSaveStatus('saving');
-            try {
-                await updateProfile({
-                    industry: jobSeekerData.industry,
-                    subcategory: jobSeekerData.subcategory,
-                    profile: {
-                        ...(user?.profile as any),
-                        skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
-                        yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
-                        preferredJobTitle: jobSeekerData.primarySkill,
-                        industry: jobSeekerData.industry,
-                        preferredSubcategory: jobSeekerData.subcategory,
-                        isEmployed: jobSeekerData.isEmployed === 'yes',
-                    }
-                } as any);
-                setSaveStatus('saved');
-                setTimeout(() => setSaveStatus('idle'), 3000);
-            } catch (err) {
-                console.error("Auto-save failed:", err);
-                setSaveStatus('error');
-            }
-        }, 1500); // 1.5s debounce
+    const prevStep = () => {
+        setError('');
+        setStep(prev => prev - 1);
+        window.scrollTo(0, 0);
+    };
 
-        return () => clearTimeout(timer);
-    }, [jobSeekerData, isJobSeeker, user, updateProfile]);
-
-    // Real-time auto-save for Employer
-    useEffect(() => {
-        if (localRole !== 'employer' || !user || user.onboardingCompleted) return;
-
-        const timer = setTimeout(async () => {
-            // Only save if company name is set
-            if (!employerData.companyName) return;
-
-            setSaveStatus('saving');
-            try {
-                await updateProfile({
-                    companyName: employerData.companyName,
-                    industry: employerData.industry,
-                    subcategory: employerData.subcategory,
-                    description: employerData.description,
-                    tagline: employerData.tagline,
-                    location: employerData.location,
-                    displayName: employerData.contactPerson,
-                    phone: employerData.phone,
-                } as any);
-                setSaveStatus('saved');
-                setTimeout(() => setSaveStatus('idle'), 3000);
-            } catch (err) {
-                console.error("Employer Auto-save failed:", err);
-                setSaveStatus('error');
-            }
-        }, 2000);
-
-        return () => clearTimeout(timer);
-    }, [employerData, localRole, user, updateProfile]);
-
-
-
-    // totalSteps:
-    // - Employer: 3 steps
-    // - Job Seeker: 5 steps
-    const totalSteps = isEmployer ? 3 : (isJobSeeker ? 4 : 1);
-
-    const handleJobSeekerSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setSubmitting(true);
 
-        if (step < totalSteps) {
-            setStep(step + 1);
-            return;
-        }
-
-        setIsSubmitting(true);
         try {
             await updateProfile({
-                role: 'job_seeker',
+                ...formData,
                 onboardingCompleted: true,
-                industry: jobSeekerData.industry,
-                subcategory: jobSeekerData.subcategory,
-                profile: {
-                    ...(user?.profile as any),
-                    fullName: user?.displayName || '',
-                    skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
-                    yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
-                    preferredJobTitle: jobSeekerData.primarySkill,
-                    industry: jobSeekerData.industry,
-                    preferredSubcategory: jobSeekerData.subcategory,
-                    isEmployed: jobSeekerData.isEmployed === 'yes',
-                    profileStrength: calculateProfileStrength({
-                        profile: {
-                            skills: jobSeekerData.skills.split(',').map(s => s.trim()).filter(s => s),
-                            yearsOfExperience: parseInt(jobSeekerData.experience) || 0,
-                            experience: jobSeekerData.isEmployed === 'yes' ? [{ id: 'current', title: jobSeekerData.primarySkill, company: 'Current', startDate: '2023', isCurrent: true }] : [],
-                        } as any
-                    }),
-                }
+                onboardingComplete: true,
+                updatedAt: new Date(),
             } as any);
+
             router.push('/auth/verify-payment');
         } catch (err: any) {
-            setError(err.message || 'Failed to save onboarding details');
+            console.error('Onboarding update error:', err);
+            setError(err.message || 'Failed to complete profile.');
         } finally {
-            setIsSubmitting(false);
+            setSubmitting(false);
         }
     };
 
-    const handleEmployerSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-
-        if (step < totalSteps) {
-            setStep(step + 1);
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            let logoUrl = '';
-            if (logo) {
-                setLogoLoading(true);
-                const { uploadCompanyLogo } = await import('@/lib/services/cloudinaryUpload');
-                const result = await uploadCompanyLogo(logo, user!.uid);
-                logoUrl = result.secureUrl;
-            }
-
-            // Build company object without any undefined values (Firestore doesn't accept undefined)
-            const companyData: Record<string, any> = {
-                name: employerData.companyName || '',
-                website: employerData.companyWebsite || '',
-                size: employerData.companySize || '',
-                industry: employerData.industry || '',
-                subcategory: employerData.subcategory || '',
-                location: employerData.location || '',
-                address: employerData.address || '',
-                tagline: employerData.tagline || '',
-                description: employerData.description || '',
-                phone: employerData.phone || '',
-                contactPhone: employerData.phone || '',
-            };
-            if (employerData.foundedYear) {
-                companyData.foundedYear = parseInt(employerData.foundedYear);
-            }
-            if (logoUrl) {
-                companyData.logo = logoUrl;
-            }
-
-            await updateProfile({
-                role: 'employer',
-                onboardingCompleted: true,
-                industry: employerData.industry || '',
-                subcategory: employerData.subcategory || '',
-                company: companyData,
-                displayName: employerData.contactPerson || '',
-            } as any);
-
-            // Always go to payment page after onboarding
-            router.push('/auth/verify-payment');
-        } catch (err: any) {
-            setError(err.message || 'Failed to save company details');
-        } finally {
-            setIsSubmitting(false);
-            setLogoLoading(false);
-        }
-    };
-
-    if (loading) {
+    if (loading || !user) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-teal-600">
-                <Loader2 className="h-12 w-12 animate-spin text-white" />
+            <div className="min-h-screen flex items-center justify-center bg-[#F0F4F8]">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
             </div>
         );
     }
 
-    // Role selection fallback if role is missing
-    if (!currentRole && !loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center p-4">
-                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 text-center">
-                    <h1 className="text-3xl font-black text-gray-900 mb-4">Complete your account setup</h1>
-                    <p className="text-gray-600 mb-8 text-lg">We couldn't detect your account type. Please select one to continue.</p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <button
-                            onClick={() => setLocalRole('job_seeker')}
-                            className="p-8 border-4 border-gray-100 rounded-3xl hover:border-teal-500 hover:bg-teal-50 transition-all group text-left"
-                        >
-                            <span className="text-4xl mb-4 block">🎯</span>
-                            <h3 className="text-xl font-bold text-gray-800 group-hover:text-teal-700">I am a Job Seeker</h3>
-                            <p className="text-gray-500 text-sm mt-2">I want to find and apply for jobs</p>
-                        </button>
-
-                        <button
-                            onClick={() => setLocalRole('employer')}
-                            className="p-8 border-4 border-gray-100 rounded-3xl hover:border-teal-500 hover:bg-teal-50 transition-all group text-left"
-                        >
-                            <span className="text-4xl mb-4 block">🏢</span>
-                            <h3 className="text-xl font-bold text-gray-800 group-hover:text-teal-700">I am an Employer</h3>
-                            <p className="text-gray-500 text-sm mt-2">I want to post jobs and hire people</p>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    const totalSteps = role === 'job_seeker' ? 4 : 2;
+    const progressPercent = (step / totalSteps) * 100;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-8">
-                {/* Progress Bar */}
-                <div className="mb-8">
-                    <div className="flex justify-between mb-2">
-                        <span className="text-sm font-bold text-teal-600">Step {step} of {totalSteps}</span>
-                        <span className="text-sm font-bold text-gray-400">
-                            {Math.round((step / totalSteps) * 100)}% Complete
-                        </span>
+        <div className="min-h-screen bg-[#F0F4F8] flex flex-col items-center justify-center p-4 py-12 font-sans">
+            <div className="max-w-xl w-full">
+
+                {/* Logo Section */}
+                <div className="text-center mb-8 text-blue-600">
+                    <div className="inline-flex items-center gap-3">
+                        <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <ShieldCheck className="w-7 h-7 text-white" />
+                        </div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+                            KhanHub<span className="text-blue-600">Setup</span>
+                        </h1>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2 shadow-inner">
+                    <p className="mt-2 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Completing your profile...</p>
+                </div>
+
+                {/* Progress Tracker */}
+                <div className="mb-8 px-2">
+                    <div className="flex items-center justify-between mb-3 text-slate-500">
+                        <span className="text-[10px] font-black uppercase tracking-widest">Step {step} of {totalSteps}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{Math.round(progressPercent)}%</span>
+                    </div>
+                    <div className="h-3 w-full bg-white rounded-full p-1 shadow-inner border border-slate-100 overflow-hidden">
                         <div
-                            className="bg-teal-500 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${(step / totalSteps) * 100}%` }}
-                        ></div>
+                            className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-700 ease-out"
+                            style={{ width: `${progressPercent}%` }}
+                        />
                     </div>
                 </div>
 
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-black text-gray-900 leading-tight">
-                        {isEmployer ? (
-                            step === 1 ? "Start your Company Profile" :
-                                step === 2 ? "Company Details" :
-                                    "Final Setup"
-                        ) : "Let's build your profile"}
-                    </h1>
-                    <p className="text-gray-600 mt-2 font-medium">
-                        {isEmployer ?
-                            "Tell us about your business to attract the best talent" :
-                            "Tell us about your professional background"}
-                    </p>
-                    {saveStatus !== 'idle' && (
-                        <div className={cn(
-                            "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mt-4",
-                            saveStatus === 'saving' ? "bg-blue-50 text-blue-600" :
-                                saveStatus === 'saved' ? "bg-green-50 text-green-600" :
-                                    "bg-red-50 text-red-600"
-                        )}>
-                            {saveStatus === 'saving' && <Loader2 className="w-3 h-3 animate-spin" />}
-                            {saveStatus === 'saved' && "✓ Saved"}
-                            {saveStatus === 'saving' && "Syncing..."}
-                            {saveStatus === 'error' && "Failed to save — Retry"}
+                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-500/5 border border-slate-100 overflow-hidden">
+                    {error && (
+                        <div className="m-8 mb-0 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-xs font-bold flex gap-3">
+                            <Info className="w-4 h-4 flex-shrink-0" />
+                            {error}
                         </div>
                     )}
+
+                    <form onSubmit={handleSubmit} className="p-8 md:p-12">
+
+                        {/* ROLE FALLBACK */}
+                        {!role && (
+                            <div className="space-y-8 text-center animate-in fade-in zoom-in-95">
+                                <h2 className="text-2xl font-black text-slate-900 uppercase italic">Choose Account Type</h2>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button type="button" onClick={() => setRole('job_seeker')} className="p-6 border-2 border-slate-100 rounded-3xl hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                                        <User className="w-10 h-10 mx-auto mb-3 text-slate-300 group-hover:text-blue-600" />
+                                        <span className="block font-black text-slate-900 uppercase text-xs">Job Seeker</span>
+                                    </button>
+                                    <button type="button" onClick={() => setRole('employer')} className="p-6 border-2 border-slate-100 rounded-3xl hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                                        <Building2 className="w-10 h-10 mx-auto mb-3 text-slate-300 group-hover:text-blue-600" />
+                                        <span className="block font-black text-slate-900 uppercase text-xs">Employer</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* JOB SEEKER STEPS */}
+                        {role === 'job_seeker' && (
+                            <>
+                                {step === 1 && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-2xl font-black text-slate-900 uppercase italic">Personal Info</h2>
+                                            <p className="text-slate-500 text-sm font-medium">Let's start with the basics</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender</label>
+                                                <select name="gender" value={formData.gender} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900">
+                                                    <option value="">Select Gender</option>
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Birth</label>
+                                                <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                            </div>
+                                            <div className="space-y-2 md:col-span-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current City</label>
+                                                <input type="text" name="city" value={formData.city} onChange={handleInputChange} required placeholder="e.g. Lahore" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                            </div>
+                                            <div className="space-y-2 md:col-span-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                                                <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} required placeholder="03XXXXXXXXX" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                            </div>
+                                        </div>
+                                        <button type="button" onClick={nextStep} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2 mt-4">
+                                            Continue <ArrowRight className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {step === 2 && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-2xl font-black text-slate-900 uppercase italic">Professional</h2>
+                                            <p className="text-slate-500 text-sm font-medium">Your career standing</p>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Industry</label>
+                                                <SearchableSelect
+                                                    options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
+                                                    value={formData.desiredIndustry}
+                                                    onChange={(val) => handleSelectChange('desiredIndustry', val)}
+                                                    placeholder="Search Industry..."
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current/Desired Job Title</label>
+                                                <input type="text" name="desiredJobTitle" value={formData.desiredJobTitle} onChange={handleInputChange} required placeholder="e.g. Accountant" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Career Level</label>
+                                                    <select name="careerLevel" value={formData.careerLevel} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900">
+                                                        <option value="">Level</option>
+                                                        {CAREER_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Experience</label>
+                                                    <select name="totalExperience" value={formData.totalExperience} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900">
+                                                        <option value="">Experience</option>
+                                                        <option value="Fresher">Fresher</option>
+                                                        <option value="1 Year">1 Year</option>
+                                                        <option value="3 Years">3 Years</option>
+                                                        <option value="5 Years">5 Years</option>
+                                                        <option value="10+ Years">10+ Years</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4 mt-6">
+                                            <button type="button" onClick={prevStep} className="w-20 py-5 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-slate-200 transition-all">
+                                                <ArrowLeft className="w-6 h-6" />
+                                            </button>
+                                            <button type="button" onClick={nextStep} className="flex-1 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                                                Continue <ArrowRight className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {step === 3 && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-2xl font-black text-slate-900 uppercase italic">Summary</h2>
+                                            <p className="text-slate-500 text-sm font-medium">Briefly describe your expertise</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Professional Summary</label>
+                                            <textarea
+                                                name="professionalSummary"
+                                                value={formData.professionalSummary}
+                                                onChange={handleInputChange}
+                                                required
+                                                rows={5}
+                                                placeholder="Highly motivated professional with experience in..."
+                                                className="w-full px-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-3xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+                                            />
+                                        </div>
+                                        <div className="flex gap-4 mt-6">
+                                            <button type="button" onClick={prevStep} className="w-20 py-5 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-slate-200 transition-all">
+                                                <ArrowLeft className="w-6 h-6" />
+                                            </button>
+                                            <button type="button" onClick={nextStep} className="flex-1 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                                                Final Step <ArrowRight className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {step === 4 && (
+                                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="text-center">
+                                            <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-100">
+                                                <CheckCircle className="w-10 h-10" />
+                                            </div>
+                                            <h2 className="text-2xl font-black text-slate-900 uppercase italic">Almost Done!</h2>
+                                            <p className="text-slate-500 text-sm font-medium">Review your application path</p>
+                                        </div>
+
+                                        <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 flex gap-4">
+                                            <Info className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                                            <div className="space-y-1">
+                                                <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest">Notice</h4>
+                                                <p className="text-[11px] text-amber-700 font-bold leading-relaxed">
+                                                    A one-time PKR 1,000 fee is required to activate candidate search and premium features.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-4">
+                                            <button type="button" onClick={prevStep} className="w-20 py-5 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-slate-200 transition-all">
+                                                <ArrowLeft className="w-6 h-6" />
+                                            </button>
+                                            <button type="submit" disabled={submitting} className="flex-1 py-5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20 disabled:opacity-70">
+                                                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Finish Setup <ShieldCheck className="w-6 h-6" /></>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* EMPLOYER STEPS */}
+                        {role === 'employer' && (
+                            <>
+                                {step === 1 && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-2xl font-black text-slate-900 uppercase italic">Company Profile</h2>
+                                            <p className="text-slate-500 text-sm font-medium">Define your corporate identity</p>
+                                        </div>
+                                        <div className="space-y-5">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label>
+                                                <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Size</label>
+                                                    <select name="companySize" value={formData.companySize} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900 text-xs">
+                                                        <option value="">Select Size</option>
+                                                        {COMPANY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
+                                                    <select name="companyType" value={formData.companyType} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900 text-xs">
+                                                        <option value="">Select Type</option>
+                                                        {COMPANY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Headquarters City</label>
+                                                <input type="text" name="companyLocation" value={formData.companyLocation} onChange={handleInputChange} required placeholder="e.g. Karachi" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                            </div>
+                                        </div>
+                                        <button type="button" onClick={nextStep} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2 mt-4">
+                                            Continue <ArrowRight className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {step === 2 && (
+                                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="text-center">
+                                            <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-100">
+                                                <CheckCircle className="w-10 h-10" />
+                                            </div>
+                                            <h2 className="text-2xl font-black text-slate-900 uppercase italic">Great!</h2>
+                                            <p className="text-slate-500 text-sm font-medium">Finalizing your employer portal</p>
+                                        </div>
+
+                                        <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 flex gap-4">
+                                            <Info className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                                            <div className="space-y-1">
+                                                <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest">Notice</h4>
+                                                <p className="text-[11px] text-amber-700 font-bold leading-relaxed">
+                                                    Company account activation requires a PKR 1,000 one-time fee to post jobs and search talent.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-4">
+                                            <button type="button" onClick={prevStep} className="w-20 py-5 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-slate-200 transition-all">
+                                                <ArrowLeft className="w-6 h-6" />
+                                            </button>
+                                            <button type="submit" disabled={submitting} className="flex-1 py-5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20 disabled:opacity-70">
+                                                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Complete Onboarding <ShieldCheck className="w-6 h-6" /></>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                    </form>
                 </div>
-
-                {error && (
-                    <div className="bg-red-50 border-2 border-red-100 text-red-700 px-6 py-4 rounded-2xl mb-6 font-medium animate-in fade-in zoom-in-95">
-                        {error}
-                    </div>
-                )}
-
-                {isEmployer ? (
-                    <EmployerOnboardingForm
-                        step={step}
-                        setStep={setStep}
-                        formData={employerData}
-                        setFormData={setEmployerData}
-                        onSubmit={handleEmployerSubmit}
-                        onBack={() => setStep(step - 1)}
-                        isSubmitting={isSubmitting || logoLoading}
-                        totalSteps={totalSteps}
-                        logoPreview={logoPreview}
-                        setLogoPreview={setLogoPreview}
-                        setLogo={setLogo}
-                        setLocalRole={setLocalRole}
-                    />
-                ) : (
-                    <JobSeekerOnboardingForm
-                        step={step}
-                        setStep={setStep}
-                        formData={jobSeekerData}
-                        setFormData={setJobSeekerData}
-                        onSubmit={handleJobSeekerSubmit}
-                        onBack={() => setStep(step - 1)}
-                        isSubmitting={isSubmitting}
-                        totalSteps={totalSteps}
-                        setLocalRole={setLocalRole}
-                    />
-                )}
             </div>
         </div>
-    );
-}
-
-// Job Seeker Onboarding Form Component
-function JobSeekerOnboardingForm({ step, setStep, formData, setFormData, onSubmit, onBack, isSubmitting, totalSteps, setLocalRole }: any) {
-    const selectedIndustry = INDUSTRIES.find(i => i.id === formData.industry);
-    const subcategories = getSubcategories(formData.industry);
-    const roles = getRoles(formData.industry, formData.subcategory);
-
-    const industryOptions = INDUSTRIES.map(i => ({ id: i.id, label: i.label }));
-    const subcategoryOptions = subcategories.map(s => ({ id: s.id, label: s.label }));
-    const roleOptions = roles.map(r => ({ id: r, label: r }));
-
-    return (
-        <form onSubmit={onSubmit} className="space-y-6">
-            {step === 1 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
-                    <div className="flex justify-center mb-2">
-                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <Globe className="h-10 w-10 text-teal-600" />
-                        </div>
-                    </div>
-                    <div className="space-y-4 text-left">
-                        <label className="text-xl font-bold text-gray-800 block text-center">What industry do you work in?</label>
-                        <SearchableSelect
-                            options={industryOptions}
-                            value={formData.industry}
-                            onChange={(val) => setFormData({ ...formData, industry: val, subcategory: '', primarySkill: '' })}
-                            placeholder="Search Industry (e.g. Healthcare, Tech)"
-                        />
-                        <p className="text-gray-400 text-sm text-center">This helps us filter jobs in your field</p>
-                    </div>
-                </div>
-            )}
-
-            {step === 2 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
-                    <div className="flex justify-center mb-2">
-                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <Target className="h-10 w-10 text-teal-600" />
-                        </div>
-                    </div>
-                    <div className="space-y-4 text-left">
-                        <label className="text-xl font-bold text-gray-800 block text-center">Specify your sub-sector</label>
-                        <SearchableSelect
-                            options={subcategoryOptions}
-                            value={formData.subcategory}
-                            onChange={(val) => setFormData({ ...formData, subcategory: val, primarySkill: '' })}
-                            placeholder="Search Sub-sector (e.g. Hospital, Software)"
-                        />
-
-                        {formData.subcategory && (
-                            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-top-2">
-                                <label className="text-xl font-bold text-gray-800 block text-center">What is your specific role?</label>
-                                {roleOptions.length > 0 ? (
-                                    <SearchableSelect
-                                        options={roleOptions}
-                                        value={formData.primarySkill}
-                                        onChange={(val) => setFormData({ ...formData, primarySkill: val })}
-                                        placeholder="Select your role..."
-                                    />
-                                ) : (
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.primarySkill}
-                                        onChange={(e) => setFormData({ ...formData, primarySkill: e.target.value })}
-                                        className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium shadow-sm hover:border-gray-200"
-                                        placeholder="e.g. Doctor, Nurse, Surgeon"
-                                        autoFocus
-                                    />
-                                )}
-                                <p className="text-gray-400 text-sm text-center italic">Type your specific job title if not listed</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {step === 3 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 text-center">
-                    <div className="flex justify-center mb-2">
-                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <Briefcase className="h-10 w-10 text-teal-600" />
-                        </div>
-                    </div>
-                    <div className="space-y-4">
-                        <label className="text-xl font-bold text-gray-800 block">How many years of experience do you have?</label>
-                        <select
-                            required
-                            value={formData.experience}
-                            onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                            className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-xl font-medium appearance-none bg-white shadow-sm hover:border-gray-200"
-                        >
-                            <option value="">Select Experience</option>
-                            <option value="0">Student / Fresher</option>
-                            <option value="1">1 Year</option>
-                            <option value="2">2 Years</option>
-                            <option value="3">3 Years</option>
-                            <option value="5">5+ Years</option>
-                            <option value="10">10+ Years</option>
-                        </select>
-                    </div>
-                </div>
-            )}
-
-            {step === 4 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="flex justify-center mb-2">
-                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <Target className="h-10 w-10 text-teal-600" />
-                        </div>
-                    </div>
-                    <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">List your top 3 skills (comma separated)</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.skills}
-                                onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="e.g. Surgery, Diagnostics, Patient Care"
-                                autoFocus
-                            />
-                        </div>
-                        <div className="space-y-4">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Are you currently employed?</label>
-                            <div className="flex gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, isEmployed: 'yes' })}
-                                    className={cn(
-                                        "flex-1 py-4 rounded-2xl font-bold border-2 transition-all flex items-center justify-center gap-2",
-                                        formData.isEmployed === 'yes' ? "bg-teal-50 border-teal-500 text-teal-700" : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
-                                    )}
-                                >
-                                    {formData.isEmployed === 'yes' && <CheckCircle className="w-5 h-5" />}
-                                    Yes, I am
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, isEmployed: 'no' })}
-                                    className={cn(
-                                        "flex-1 py-4 rounded-2xl font-bold border-2 transition-all flex items-center justify-center gap-2",
-                                        formData.isEmployed === 'no' ? "bg-slate-50 border-slate-500 text-slate-700" : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
-                                    )}
-                                >
-                                    {formData.isEmployed === 'no' && <CheckCircle className="w-5 h-5" />}
-                                    No, I'm not
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-
-
-            <div className="flex gap-4 pt-4">
-                {step > 1 && (
-                    <button
-                        type="button"
-                        onClick={onBack}
-                        className="flex-1 px-6 py-4 border-2 border-gray-100 text-gray-400 rounded-2xl font-bold hover:bg-gray-50 transition-all font-bold"
-                    >
-                        Back
-                    </button>
-                )}
-                <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-2 bg-teal-600 text-white px-8 py-4 rounded-2xl font-black text-xl hover:bg-teal-700 transition-all shadow-lg flex items-center justify-center gap-2 group"
-                    style={{ flex: 2 }}
-                >
-                    {isSubmitting ? (
-                        <Loader2 className="h-6 w-6 animate-spin text-white" />
-                    ) : (
-                        <>
-                            {step === totalSteps ? 'Complete Setup' : 'Continue'}
-                            <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                        </>
-                    )}
-                </button>
-            </div>
-
-            {/* Role Correction Tool */}
-            <div className="pt-8 border-t border-gray-100 mt-8 text-center">
-                <p className="text-sm text-gray-400 mb-2">Seeing the wrong questions?</p>
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (confirm("Are you sure you want to change your account type to Employer?")) {
-                            setLocalRole('employer');
-                            setStep(1);
-                        }
-                    }}
-                    className="text-teal-600 text-sm font-bold hover:underline"
-                >
-                    I am an Employer, not a Job Seeker
-                </button>
-            </div>
-        </form>
-    );
-}
-
-// Employer Onboarding Form Component
-function EmployerOnboardingForm({
-    step, setStep, formData, setFormData, onSubmit, onBack, isSubmitting, totalSteps,
-    logoPreview, setLogoPreview, setLogo, setLocalRole
-}: any) {
-    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
-                return;
-            }
-            if (file.size > 2 * 1024 * 1024) {
-                alert('Logo must be less than 2MB');
-                return;
-            }
-            setLogo(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setLogoPreview(reader.result as string);
-            reader.readAsDataURL(file);
-        }
-    };
-
-    return (
-        <form onSubmit={onSubmit} className="space-y-6">
-            {step === 1 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="text-center">
-                        <div className="relative inline-block group">
-                            <div className="w-28 h-28 bg-gray-50 border-4 border-dashed border-gray-200 rounded-3xl flex items-center justify-center overflow-hidden transition-all group-hover:border-teal-400">
-                                {logoPreview ? (
-                                    <Image
-                                        src={logoPreview}
-                                        alt="Logo Preview"
-                                        width={112}
-                                        height={112}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <Building2 className="h-10 w-10 text-gray-300 group-hover:text-teal-400" />
-                                )}
-                            </div>
-                            <label className="absolute -bottom-2 -right-2 bg-teal-600 text-white p-2 rounded-xl cursor-pointer shadow-lg hover:bg-teal-700 transition-all border-4 border-white">
-                                <Upload className="h-4 w-4" />
-                                <input type="file" className="hidden" accept="image/*" onChange={handleLogoChange} />
-                            </label>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-3 font-medium">Company Logo (Recommended)</p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Company Name *</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.companyName}
-                                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="e.g. Acme Corp"
-                                autoFocus
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Company Tagline / Slogan</label>
-                            <input
-                                type="text"
-                                value={formData.tagline}
-                                onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="e.g. Hiring the best for the best"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Official Website</label>
-                            <input
-                                type="url"
-                                value={formData.companyWebsite}
-                                onChange={(e) => setFormData({ ...formData, companyWebsite: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="https://www.acme.com"
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {step === 2 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="flex justify-center mb-2">
-                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <Users className="h-10 w-10 text-teal-600" />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Company Size</label>
-                            <select
-                                required
-                                value={formData.companySize}
-                                onChange={(e) => setFormData({ ...formData, companySize: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium appearance-none bg-white shadow-sm hover:border-gray-200"
-                            >
-                                <option value="">Select Size</option>
-                                <option value="1-10">1-10 emp</option>
-                                <option value="11-50">11-50 emp</option>
-                                <option value="51-200">51-200 emp</option>
-                                <option value="201-500">201-500 emp</option>
-                                <option value="501+">501+ emp</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Industry</label>
-                            <SearchableSelect
-                                options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
-                                value={formData.industry}
-                                onChange={(val) => setFormData({ ...formData, industry: val, subcategory: '' })}
-                                placeholder="Search Industry"
-                            />
-                        </div>
-                        {formData.industry && (
-                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                <label className="text-sm font-bold text-gray-700 ml-1">Sub-sector / Market</label>
-                                <SearchableSelect
-                                    options={getSubcategories(formData.industry).map(s => ({ id: s.id, label: s.label }))}
-                                    value={formData.subcategory}
-                                    onChange={(val) => setFormData({ ...formData, subcategory: val })}
-                                    placeholder="Search Sub-sector"
-                                />
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">City *</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.location}
-                                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="e.g. Lahore"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Complete Address</label>
-                            <input
-                                type="text"
-                                value={formData.address}
-                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="Building, Street, Area"
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {step === 3 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="flex justify-center mb-2">
-                        <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center border-2 border-teal-100">
-                            <Phone className="h-10 w-10 text-teal-600" />
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Hiring Manager Name</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.contactPerson}
-                                onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="Full Name"
-                                autoFocus
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">Contact Phone</label>
-                            <input
-                                type="tel"
-                                required
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium shadow-sm hover:border-gray-200"
-                                placeholder="03XXXXXXXXX"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 ml-1">About the Company</label>
-                            <textarea
-                                required
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full px-6 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:outline-none transition-all text-lg font-medium h-32 resize-none shadow-sm hover:border-gray-200"
-                                placeholder="What makes your company special?"
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className="flex gap-4 pt-4">
-                {step > 1 && (
-                    <button
-                        type="button"
-                        onClick={onBack}
-                        className="flex-1 px-6 py-4 border-2 border-gray-100 text-gray-400 rounded-2xl font-bold hover:bg-gray-50 transition-all"
-                    >
-                        Back
-                    </button>
-                )}
-                <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-2 bg-teal-600 text-white px-8 py-4 rounded-2xl font-black text-xl hover:bg-teal-700 transition-all shadow-lg flex items-center justify-center gap-2 group"
-                    style={{ flex: 2 }}
-                >
-                    {isSubmitting ? (
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                        <>
-                            {step === totalSteps ? 'Complete Setup' : 'Continue'}
-                            <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                        </>
-                    )}
-                </button>
-            </div>
-
-            {/* Role Correction Tool */}
-            <div className="pt-8 border-t border-gray-100 mt-8 text-center">
-                <p className="text-sm text-gray-400 mb-2">Seeing the wrong questions?</p>
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (confirm("Are you sure you want to change your account type to Job Seeker?")) {
-                            setLocalRole('job_seeker');
-                            setStep(1);
-                        }
-                    }}
-                    className="text-teal-600 text-sm font-bold hover:underline"
-                >
-                    I am a Job Seeker, not an Employer
-                </button>
-            </div>
-        </form>
     );
 }

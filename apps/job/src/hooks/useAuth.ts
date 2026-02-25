@@ -75,33 +75,31 @@ export function useAuth() {
     const register = async (
         email: string,
         password: string,
-        additionalData: any, // Accepts object with displayName and others
+        additionalData: any,
         role: UserRole = 'job_seeker'
     ): Promise<void> => {
         const trimmedEmail = email.trim();
-        const { displayName, ...otherData } = typeof additionalData === 'string'
-            ? { displayName: additionalData }
-            : additionalData;
 
         try {
             setAuthState(prev => ({ ...prev, loading: true, error: null }));
 
-            // Create Firebase Auth user
+            // 1. Create Firebase Auth user
             const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
 
-            // Update display name
+            // 2. Update display name in Firebase Auth if provided
+            const displayName = additionalData.name || additionalData.displayName || 'User';
             await firebaseUpdateProfile(userCredential.user, { displayName });
 
-            // Send verification email
+            // 3. Send verification email
             await sendEmailVerification(userCredential.user);
 
-            // Create user profile in Firestore
+            // 4. Create user profile in Firestore
             await createUserProfile({
                 uid: userCredential.user.uid,
                 email: trimmedEmail,
                 displayName,
                 role,
-                ...otherData,
+                ...additionalData, // Spread all flat fields here
                 emailVerified: false,
                 paymentStatus: 'pending',
                 isPremium: false,
@@ -111,10 +109,13 @@ export function useAuth() {
                 isActive: true,
                 isFeatured: false,
                 isBanned: false,
-                onboardingCompleted: false,
+                onboardingCompleted: true, // Email path collects everything, so it's completed immediately
+                registrationMethod: 'email',
+                createdAt: new Date(),
+                updatedAt: new Date(),
             });
 
-            // Fetch the created profile
+            // 5. Fetch the created profile
             const userProfile = await getUserProfile(userCredential.user.uid);
 
             setAuthState({
