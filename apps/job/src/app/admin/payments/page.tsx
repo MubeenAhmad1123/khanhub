@@ -87,12 +87,12 @@ export default function AdminPaymentsPage() {
 
                 // Also notify the seeker that someone connected
                 await addDoc(collection(db, 'notifications'), {
-                    userId: (payment as any).seekerId,
+                    user_id: (payment as any).seekerId,
                     type: 'new_connection',
                     title: 'New Connection Revealed!',
                     message: `${payment.userEmail || 'An employer'} has revealed your contact info. Expect a call soon!`,
-                    read: false,
-                    createdAt: serverTimestamp()
+                    is_read: false,
+                    created_at: serverTimestamp()
                 });
             }
 
@@ -108,12 +108,12 @@ export default function AdminPaymentsPage() {
             }
 
             await addDoc(collection(db, 'notifications'), {
-                userId: payment.userId,
+                user_id: payment.userId,
                 type: 'payment_approved',
                 title: notificationTitle,
                 message: notificationMessage,
-                read: false,
-                createdAt: serverTimestamp()
+                is_read: false,
+                created_at: serverTimestamp()
             });
 
             // 4. Write activity log
@@ -154,12 +154,12 @@ export default function AdminPaymentsPage() {
 
             // 3. Write notification
             await addDoc(collection(db, 'notifications'), {
-                userId: payment.userId,
+                user_id: payment.userId,
                 type: 'payment_rejected',
                 title: 'Payment Rejected',
                 message: `Your payment was rejected: ${reason}. Please try again.`,
-                read: false,
-                createdAt: serverTimestamp()
+                is_read: false,
+                created_at: serverTimestamp()
             });
 
             // 4. Write activity log

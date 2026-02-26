@@ -74,12 +74,12 @@ export default function AdminVideosPage() {
 
             // 3. Write notification
             await addDoc(collection(db, 'notifications'), {
-                userId: video.userId,
+                user_id: video.userId,
                 type: 'video_approved',
                 title: 'Video Approved',
                 message: 'Your introduction video has been approved! Your profile is now live.',
-                read: false,
-                createdAt: serverTimestamp()
+                is_read: false,
+                created_at: serverTimestamp()
             });
 
             // 4. Write activity log
@@ -120,12 +120,12 @@ export default function AdminVideosPage() {
 
             // 3. Write notification
             await addDoc(collection(db, 'notifications'), {
-                userId: video.userId,
+                user_id: video.userId,
                 type: 'video_rejected',
                 title: 'Video Rejected',
                 message: `Your video was rejected: ${reason}. Please upload a new one.`,
-                read: false,
-                createdAt: serverTimestamp()
+                is_read: false,
+                created_at: serverTimestamp()
             });
 
             // 4. Write activity log

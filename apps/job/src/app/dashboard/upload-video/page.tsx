@@ -29,6 +29,7 @@ export default function VideoUploadPage() {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [liveVideosCount, setLiveVideosCount] = useState(0);
     const [showSecondUpload, setShowSecondUpload] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     // Profile Completion Check State
     const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
@@ -109,6 +110,10 @@ export default function VideoUploadPage() {
 
         return () => unsubscribe();
     }, [user?.uid, user]);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const isSecondSlotUnlocked = (user as any)?.secondVideoSlotUnlocked === true;
     const canUploadSecondVideo = isSecondSlotUnlocked && liveVideosCount < 2;
@@ -534,6 +539,12 @@ export default function VideoUploadPage() {
         router.push('/auth/login');
         return null;
     }
+
+    if (!mounted) return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-24">
+            <Loader2 className="animate-spin text-blue-600 h-12 w-12" />
+        </div>
+    );
 
     // Profile Gate (Prompt 5)
     if (isProfileIncomplete) {

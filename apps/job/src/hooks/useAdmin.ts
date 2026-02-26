@@ -79,12 +79,12 @@ export function useAdmin() {
             }
 
             await addDoc(collection(db, 'notifications'), {
-                userId: payment.userId,
+                user_id: payment.userId,
                 type: 'payment_approved',
                 title: 'Payment Approved',
                 message: `Your payment of Rs. ${payment.amount} has been approved.`,
-                read: false,
-                createdAt: serverTimestamp()
+                is_read: false,
+                created_at: serverTimestamp()
             });
 
         } catch (err: any) {
@@ -117,12 +117,12 @@ export function useAdmin() {
             });
 
             await addDoc(collection(db, 'notifications'), {
-                userId: payment.userId,
+                user_id: payment.userId,
                 type: 'payment_rejected',
                 title: 'Payment Rejected',
                 message: `Your payment was rejected: ${rejectionReason}`,
-                read: false,
-                createdAt: serverTimestamp()
+                is_read: false,
+                created_at: serverTimestamp()
             });
 
         } catch (err: any) {

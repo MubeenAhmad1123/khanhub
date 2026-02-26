@@ -31,6 +31,7 @@ export default function ProfilePage() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [mounted, setMounted] = useState(false);
 
     // Live user synchronization
     useEffect(() => {
@@ -47,7 +48,10 @@ export default function ProfilePage() {
         return () => unsubscribe();
     }, [user?.uid]);
 
-    // Fetch and Sync Strength
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     useEffect(() => {
         if (!authLoading && !user) {
             router.push('/auth/login');
@@ -90,7 +94,7 @@ export default function ProfilePage() {
         }
     };
 
-    if (authLoading || loading) {
+    if (authLoading || loading || !mounted) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">

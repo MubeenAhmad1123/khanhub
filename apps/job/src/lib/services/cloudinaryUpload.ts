@@ -76,9 +76,9 @@ export async function uploadToCloudinary(
         if (!validTypes.includes(file.type)) {
             throw new Error('Invalid video type. Please upload MP4, WebM, or MOV');
         }
-        // Validate file size (50MB max for videos)
-        if (file.size > 50 * 1024 * 1024) {
-            throw new Error('Video size must be less than 50MB');
+        // Validate file size (100MB max for videos)
+        if (file.size > 100 * 1024 * 1024) {
+            throw new Error('Video size must be less than 100MB');
         }
     }
 
@@ -90,10 +90,11 @@ export async function uploadToCloudinary(
         formData.append('upload_preset', uploadPreset);
         formData.append('folder', folder);
 
-        // Add timestamp to filename to make it unique
+        // Add timestamp to filename to make it unique and sanitize
         const timestamp = Date.now();
-        const fileName = `${timestamp}_${file.name}`;
-        formData.append('public_id', fileName.replace(/\.[^/.]+$/, '')); // Remove extension
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+        const fileName = `${timestamp}_${sanitizedName}`;
+        formData.append('public_id', fileName);
 
         // Upload to Cloudinary
         const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${actualType}/upload`;
@@ -133,7 +134,9 @@ export async function uploadToCloudinary(
                         createdAt: result.created_at,
                     });
                 } else {
-                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                    const errorResponse = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+                    console.error('[Cloudinary Debug] Error Response:', errorResponse);
+                    reject(new Error(errorResponse.error?.message || `Upload failed with status ${xhr.status}`));
                 }
             });
 
@@ -305,9 +308,9 @@ export const CLOUDINARY_FOLDERS = {
 } as const;
 
 export const MAX_FILE_SIZES = {
-    IMAGE: 10, // MB
-    CV: 5,     // MB
-    VIDEO: 50, // MB
+    IMAGE: 10,  // MB
+    CV: 5,      // MB
+    VIDEO: 100, // MB
 } as const;
 
 export const ALLOWED_IMAGE_TYPES = [

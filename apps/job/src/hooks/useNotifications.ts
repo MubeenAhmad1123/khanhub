@@ -28,6 +28,7 @@ export function useNotifications() {
             return;
         }
 
+        console.log('[useNotifications] Setting up listener for user:', user.uid);
         const q = query(
             collection(db, 'notifications'),
             where('user_id', '==', user.uid),
@@ -35,16 +36,27 @@ export function useNotifications() {
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const notifs = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as Notification[];
+            const notifs = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    // Handle potential legacy/alternate field names
+                    user_id: data.user_id || data.userId,
+                    created_at: data.created_at || data.createdAt,
+                    is_read: data.is_read !== undefined ? data.is_read : data.read
+                };
+            }) as Notification[];
 
+            console.log(`[useNotifications] Fetched ${notifs.length} notifications`);
             setNotifications(notifs);
             setUnreadCount(notifs.filter(n => !n.is_read).length);
             setLoading(false);
         }, (error) => {
             console.error('Error fetching notifications:', error);
+            if (error.code === 'failed-precondition') {
+                console.warn('[useNotifications] This usually means an index is being built or is missing. Check the URL in the previous error message.');
+            }
             setLoading(false);
         });
 
