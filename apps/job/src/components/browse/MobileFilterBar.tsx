@@ -9,13 +9,17 @@ interface MobileFilterBarProps {
     setSelectedRole: (role: 'all' | 'jobseeker' | 'employer') => void;
     selectedIndustry: string | null;
     setSelectedIndustry: (industry: string | null) => void;
+    selectedSubcategory: string | null;
+    setSelectedSubcategory: (subcategory: string | null) => void;
 }
 
 export default function MobileFilterBar({
     selectedRole,
     setSelectedRole,
     selectedIndustry,
-    setSelectedIndustry
+    setSelectedIndustry,
+    selectedSubcategory,
+    setSelectedSubcategory
 }: MobileFilterBarProps) {
     const roles = [
         { id: 'all', label: 'All Profiles', icon: <LayoutGrid className="w-4 h-4" /> },
@@ -60,7 +64,10 @@ export default function MobileFilterBar({
                 {INDUSTRIES.map(cat => (
                     <button
                         key={cat.id}
-                        onClick={() => setSelectedIndustry(cat.id)}
+                        onClick={() => {
+                            setSelectedIndustry(cat.id);
+                            setSelectedSubcategory(null);
+                        }}
                         className={cn(
                             "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border",
                             selectedIndustry === cat.id
@@ -73,6 +80,37 @@ export default function MobileFilterBar({
                     </button>
                 ))}
             </div>
+
+            {/* Subcategories Scroll */}
+            {selectedIndustry && (
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-3 px-4 bg-slate-50/50">
+                    <button
+                        onClick={() => setSelectedSubcategory(null)}
+                        className={cn(
+                            "px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-2",
+                            !selectedSubcategory
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "bg-white border-slate-200 text-slate-400"
+                        )}
+                    >
+                        All
+                    </button>
+                    {INDUSTRIES.find(i => i.id === selectedIndustry)?.subcategories.map(sub => (
+                        <button
+                            key={sub.id}
+                            onClick={() => setSelectedSubcategory(sub.label)}
+                            className={cn(
+                                "px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-2",
+                                selectedSubcategory === sub.label
+                                    ? "bg-blue-600 border-blue-600 text-white"
+                                    : "bg-white border-slate-200 text-slate-400"
+                            )}
+                        >
+                            {sub.label}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

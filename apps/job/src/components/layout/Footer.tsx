@@ -1,9 +1,12 @@
+import React from 'react';
 import Link from 'next/link';
-import { Video } from 'lucide-react';
+import { Video, Facebook, Linkedin, Youtube, ArrowUp } from 'lucide-react';
 
 export default function Footer() {
     return (
-        <footer className="bg-[#0A0F1E] text-white py-20 border-t border-white/5">
+        <footer className="bg-[#0A0F1E] text-white py-20 relative overflow-hidden">
+            {/* Gradient Separator */}
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20 text-center md:text-left">
                     {/* Brand Column */}
@@ -13,23 +16,22 @@ export default function Footer() {
                                 <Video className="w-6 h-6 text-white" />
                             </div>
                             <h2 className="text-2xl font-black text-white italic tracking-tighter">
-                                KhanHub<span className="text-blue-500">Jobs</span>
+                                KhanHub<span className="text-blue-500">Jobs</span> 🇵🇰
                             </h2>
                         </div>
                         <p className="text-slate-400 font-medium leading-relaxed mb-10 max-w-sm">
                             Hiring through video. Simple. Human. Real. Pakistan's first truly visual professional network.
                         </p>
                         <div className="flex justify-center md:justify-start gap-4">
-                            {/* Social Placeholders */}
-                            <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-blue-600 hover:border-blue-600 transition-all cursor-pointer">
-                                <span className="text-xs">FB</span>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-blue-600 hover:border-blue-600 transition-all cursor-pointer">
-                                <span className="text-xs">IN</span>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-blue-600 hover:border-blue-600 transition-all cursor-pointer">
-                                <span className="text-xs">YT</span>
-                            </div>
+                            <a href="#" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#1877F2] hover:border-[#1877F2] transition-all group">
+                                <Facebook className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
+                            </a>
+                            <a href="#" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#0A66C2] hover:border-[#0A66C2] transition-all group">
+                                <Linkedin className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
+                            </a>
+                            <a href="#" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#FF0000] hover:border-[#FF0000] transition-all group">
+                                <Youtube className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
+                            </a>
                         </div>
                     </div>
 
@@ -70,10 +72,19 @@ export default function Footer() {
                     </div>
                 </div>
 
-                <div className="pt-10 border-t border-white/5 text-center">
+                <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
                     <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.4em]">
                         &copy; {new Date().getFullYear()} KhanHub Jobs. Pakistan's Dedicated Video-First Job Portal.
                     </p>
+                    <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="flex items-center gap-2 text-slate-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors group"
+                    >
+                        Back to top
+                        <div className="p-2 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors">
+                            <ArrowUp className="w-3 h-3" />
+                        </div>
+                    </button>
                 </div>
             </div>
         </footer>

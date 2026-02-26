@@ -43,6 +43,7 @@ function BrowseContent() {
     const searchParams = useSearchParams();
     const [selectedRole, setSelectedRole] = useState<'all' | 'jobseeker' | 'employer'>('all');
     const [selectedIndustry, setSelectedIndustry] = useState<string | null>(searchParams.get('industry'));
+    const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [videos, setVideos] = useState<VideoData[]>([]);
@@ -57,59 +58,45 @@ function BrowseContent() {
                 setLoading(true);
                 const loadedVideos: VideoData[] = [];
 
-                // 1. Fetch Candidate Videos (from videos collection)
+                // 1. Fetch Videos (from videos collection)
+                // REQUIRED FIRESTORE INDEX: videos collection
+                // Fields: is_live (ASC), admin_status (ASC)
+                // Create at: Firebase Console → Firestore → Indexes
                 const videosQuery = query(
                     collection(db, 'videos'),
                     where('is_live', '==', true),
-                    where('admin_status', '==', 'approved'),
-                    where('role', '==', 'candidate')
+                    where('admin_status', '==', 'approved')
                 );
                 const videosSnap = await getDocs(videosQuery);
 
-                // Group videos by userId to get other user details if needed, 
-                // but actually the prompt says: "For users with 2 videos, show TWO VideoCards side by side"
-                // So we can just add them flat to the list.
-
-                // To get industry/subcategory from the user doc if missing in video doc, 
-                // we'll need to fetch users too or trust the video doc which SHOULD have them now.
                 const usersSnap = await getDocs(collection(db, 'users'));
                 const usersMap: Record<string, any> = {};
                 usersSnap.forEach(d => usersMap[d.id] = d.data());
 
                 videosSnap.forEach((docSnap) => {
                     const data = docSnap.data();
-                    const user = usersMap[data.userId] || {};
+                    const userData = usersMap[data.userId] || {};
+
+                    const videoRole = (data.role === 'employer' || data.role === 'company')
+                        ? 'employer'
+                        : 'jobseeker';
 
                     loadedVideos.push({
                         id: docSnap.id,
                         seekerId: data.userId,
-                        role: 'jobseeker',
-                        industry: data.industry || user.industry || 'General',
-                        subcategory: data.subcategory || user.subcategory || 'General',
-                        videoUrl: data.videoUrl || data.cloudinaryUrl,
-                        thumbnailUrl: data.thumbnailUrl || user.photoURL || '',
-                        experience: user.profile?.yearsOfExperience || user.totalExperience || '',
+                        role: videoRole,
+                        industry: data.industry || userData.industry || 'General',
+                        subcategory: data.subcategory
+                            || userData.subcategory
+                            || userData.desiredJobTitle
+                            || 'General',
+                        videoUrl: data.videoUrl || data.cloudinaryUrl || '',
+                        thumbnailUrl: data.thumbnailUrl || userData.photoURL || '',
+                        experience: userData.totalExperience
+                            || userData.profile?.yearsOfExperience
+                            || '',
                         salary: '',
                     });
-                });
-
-                // 2. Fetch Job Posting Videos (from jobPostings collection)
-                const jobsSnap = await getDocs(collection(db, 'jobPostings'));
-                jobsSnap.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    if (data.videoUrl) {
-                        loadedVideos.push({
-                            id: docSnap.id,
-                            seekerId: data.employerId,
-                            role: 'employer',
-                            industry: data.industry || 'General',
-                            subcategory: data.title || 'Job Opening', // Use Job Title as the main display
-                            videoUrl: data.videoUrl,
-                            thumbnailUrl: data.companyLogo || '',
-                            experience: data.experienceRequired || '',
-                            salary: data.hideSalary ? 'Salary Hidden' : data.salaryRange || '',
-                        });
-                    }
                 });
 
                 setVideos(loadedVideos);
@@ -123,18 +110,28 @@ function BrowseContent() {
         fetchVideos();
     }, [searchParams]);
 
+    // Industry Counts
+    const industryCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        videos.forEach(v => {
+            counts[v.industry] = (counts[v.industry] || 0) + 1;
+        });
+        return counts;
+    }, [videos]);
+
     // Filtered Videos
     const filteredVideos = useMemo(() => {
         return videos.filter(video => {
             const roleMatch = selectedRole === 'all' || video.role === selectedRole;
             const industryMatch = !selectedIndustry || video.industry === selectedIndustry;
+            const subcategoryMatch = !selectedSubcategory || video.subcategory === selectedSubcategory;
             const searchMatch = !searchQuery ||
                 video.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 video.subcategory.toLowerCase().includes(searchQuery.toLowerCase());
 
-            return roleMatch && industryMatch && searchMatch;
+            return roleMatch && industryMatch && subcategoryMatch && searchMatch;
         });
-    }, [selectedRole, selectedIndustry, searchQuery, videos]);
+    }, [selectedRole, selectedIndustry, selectedSubcategory, searchQuery, videos]);
 
     return (
         <div className="min-h-screen bg-[#F8FAFF] flex flex-col lg:flex-row">
@@ -192,7 +189,10 @@ function BrowseContent() {
                             {INDUSTRIES.map(cat => (
                                 <button
                                     key={cat.id}
-                                    onClick={() => setSelectedIndustry(cat.id)}
+                                    onClick={() => {
+                                        setSelectedIndustry(cat.id);
+                                        setSelectedSubcategory(null);
+                                    }}
                                     className={cn(
                                         "flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-bold transition-all",
                                         selectedIndustry === cat.id
@@ -203,6 +203,11 @@ function BrowseContent() {
                                     <div className="flex items-center gap-3">
                                         <span>{cat.icon}</span>
                                         <span>{cat.label}</span>
+                                        {industryCounts[cat.id] > 0 && (
+                                            <span className="text-[9px] font-black bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                                                {industryCounts[cat.id]}
+                                            </span>
+                                        )}
                                     </div>
                                     <ChevronRight className={cn("w-4 h-4 opacity-0 transition-opacity", selectedIndustry === cat.id && "opacity-100")} />
                                 </button>
@@ -214,18 +219,53 @@ function BrowseContent() {
 
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col min-w-0">
-                {/* Search Bar (Sticky) */}
-                <div className="sticky top-0 lg:top-[80px] z-40 bg-white border-b border-slate-100 p-3 lg:p-6 shadow-sm">
-                    <div className="relative max-w-2xl mx-auto lg:mx-0">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Find talent or companies..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-transparent focus:bg-white focus:border-blue-200 rounded-2xl outline-none transition-all text-sm font-medium"
-                        />
+                {/* Search Bar & Subcategory Pills (Sticky) */}
+                <div className="sticky top-0 lg:top-[80px] z-40 bg-white border-b border-slate-100 shadow-sm">
+                    <div className="p-3 lg:p-6 pb-2 lg:pb-3">
+                        <div className="relative max-w-2xl mx-auto lg:mx-0">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Find talent or companies..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-transparent focus:bg-white focus:border-blue-200 rounded-2xl outline-none transition-all text-sm font-medium"
+                            />
+                        </div>
                     </div>
+
+                    {/* Subcategory Pills */}
+                    {selectedIndustry && (
+                        <div className="px-3 lg:px-6 pb-4">
+                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                                <button
+                                    onClick={() => setSelectedSubcategory(null)}
+                                    className={cn(
+                                        "px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border-2",
+                                        !selectedSubcategory
+                                            ? "bg-slate-900 border-slate-900 text-white shadow-lg"
+                                            : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
+                                    )}
+                                >
+                                    All {INDUSTRIES.find(i => i.id === selectedIndustry)?.label || 'Results'}
+                                </button>
+                                {INDUSTRIES.find(i => i.id === selectedIndustry)?.subcategories.map(sub => (
+                                    <button
+                                        key={sub.id}
+                                        onClick={() => setSelectedSubcategory(sub.label)}
+                                        className={cn(
+                                            "px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border-2",
+                                            selectedSubcategory === sub.label
+                                                ? "bg-blue-600 border-blue-600 text-white shadow-lg"
+                                                : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
+                                        )}
+                                    >
+                                        {sub.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Mobile Filter Bar (Hidden on Desktop) */}
@@ -234,7 +274,19 @@ function BrowseContent() {
                     setSelectedRole={setSelectedRole}
                     selectedIndustry={selectedIndustry}
                     setSelectedIndustry={setSelectedIndustry}
+                    selectedSubcategory={selectedSubcategory}
+                    setSelectedSubcategory={setSelectedSubcategory}
                 />
+
+                {/* Results Count */}
+                {!loading && (
+                    <div className="px-4 lg:px-8 pt-6 pb-2 flex items-center justify-between">
+                        <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
+                            {filteredVideos.length}
+                            {filteredVideos.length === 1 ? ' Profile' : ' Profiles'} Found
+                        </p>
+                    </div>
+                )}
 
                 {/* Video Grid */}
                 <div className="p-4 lg:p-8">
@@ -261,20 +313,44 @@ function BrowseContent() {
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center text-center py-20 px-4">
-                            <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                                <Video className="w-12 h-12 text-slate-200" />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 mb-2">No videos here yet</h3>
-                            <p className="text-slate-500 font-bold mb-8 max-w-xs">
-                                Be the first to upload and get discovered in this category.
-                            </p>
-                            <button
-                                onClick={() => window.location.href = '/dashboard/video'}
-                                className="px-8 py-4 bg-orange-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-2"
-                            >
-                                <ArrowRight className="w-5 h-5" />
-                                Upload Your Video
-                            </button>
+                            {selectedRole !== 'all' || selectedIndustry ? (
+                                <>
+                                    <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                                        <Filter className="w-12 h-12 text-slate-200" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 mb-2">No results in this filter</h3>
+                                    <p className="text-slate-500 font-bold mb-8 max-w-xs">
+                                        Try selecting a different industry or switch to All Content
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            setSelectedRole('all');
+                                            setSelectedIndustry(null);
+                                            setSelectedSubcategory(null);
+                                        }}
+                                        className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-2"
+                                    >
+                                        Clear Filters
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                                        <Video className="w-12 h-12 text-slate-200" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 mb-2">No videos here yet</h3>
+                                    <p className="text-slate-500 font-bold mb-8 max-w-xs">
+                                        Be the first to upload and get discovered in this category.
+                                    </p>
+                                    <button
+                                        onClick={() => window.location.href = '/dashboard/video'}
+                                        className="px-8 py-4 bg-orange-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-2"
+                                    >
+                                        <ArrowRight className="w-5 h-5" />
+                                        Upload Your Video
+                                    </button>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

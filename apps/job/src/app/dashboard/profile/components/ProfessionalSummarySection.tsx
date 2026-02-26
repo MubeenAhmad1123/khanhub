@@ -8,9 +8,10 @@ import { JobSeekerProfile } from '@/types/user';
 interface ProfessionalSummarySectionProps {
     profile: JobSeekerProfile;
     onSave: (data: Partial<JobSeekerProfile>) => Promise<void>;
+    isEmployer?: boolean;
 }
 
-export default function ProfessionalSummarySection({ profile, onSave }: ProfessionalSummarySectionProps) {
+export default function ProfessionalSummarySection({ profile, onSave, isEmployer }: ProfessionalSummarySectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [bio, setBio] = useState((profile as any).professionalSummary || (profile as any).bio || (profile as any).profile?.professionalSummary || (profile as any).profile?.bio || '');
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -40,7 +41,7 @@ export default function ProfessionalSummarySection({ profile, onSave }: Professi
                         <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
                             <Sparkles className="w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tighter italic uppercase">Professional Summary</h2>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tighter italic uppercase">{isEmployer ? 'Company Description' : 'Professional Summary'}</h2>
                     </div>
                     <button
                         onClick={() => setIsEditing(!isEditing)}
@@ -56,7 +57,9 @@ export default function ProfessionalSummarySection({ profile, onSave }: Professi
                             `"${(profile as any).professionalSummary || (profile as any).bio || (profile as any).profile?.professionalSummary || (profile as any).profile?.bio}"`
                         ) : (
                             <p className="text-slate-400 not-italic">
-                                Introduce yourself to potential employers. Highlight your key strengths, career goals, and what makes you unique.
+                                {isEmployer
+                                    ? "Describe your company culture, mission, and what makes it a great place to work."
+                                    : "Introduce yourself to potential employers. Highlight your key strengths, career goals, and what makes you unique."}
                             </p>
                         )}
                     </div>
@@ -66,7 +69,7 @@ export default function ProfessionalSummarySection({ profile, onSave }: Professi
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
                             className="w-full h-40 px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-medium text-slate-700 resize-none"
-                            placeholder="Write a compelling summary of your professional journey..."
+                            placeholder={isEmployer ? "Write a compelling description of your company..." : "Write a compelling summary of your professional journey..."}
                         />
                         <div className="flex justify-end gap-3">
                             <button

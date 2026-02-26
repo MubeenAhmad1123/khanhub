@@ -20,6 +20,7 @@ import EducationSection from './components/EducationSection';
 import ProjectsSection from './components/ProjectsSection';
 import LanguagesSection from './components/LanguagesSection';
 import JobPreferencesSection from './components/JobPreferencesSection';
+import EmployerCompanyInfoSection from './components/EmployerCompanyInfoSection';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -159,45 +160,63 @@ export default function ProfilePage() {
 
                     {/* Main Content (8 Sections) */}
                     <div className="lg:col-span-8 space-y-8">
-                        <PersonalInfoSection
-                            profile={profile as any}
-                            onSave={handleSaveSection}
-                        />
+                        {profile.role === 'employer' ? (
+                            <>
+                                <EmployerCompanyInfoSection userData={profile} />
+                                <ProfessionalSummarySection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                    isEmployer={true}
+                                />
+                                <ProjectsSection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                    isEmployer={true}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <PersonalInfoSection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                />
 
-                        <ProfessionalSummarySection
-                            profile={profile as any}
-                            onSave={handleSaveSection}
-                        />
+                                <ProfessionalSummarySection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                />
 
-                        <WorkHistorySection
-                            profile={profile as any}
-                            onSave={handleSaveSection}
-                        />
+                                <WorkHistorySection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                />
 
-                        <SkillsSection
-                            profile={profile as any}
-                            onSave={handleSaveSection}
-                        />
+                                <SkillsSection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                />
 
-                        <EducationSection
-                            profile={profile as any}
-                            onSave={handleSaveSection}
-                        />
+                                <EducationSection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                />
 
-                        <ProjectsSection
-                            profile={profile as any}
-                            onSave={handleSaveSection}
-                        />
+                                <ProjectsSection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                />
 
-                        <LanguagesSection
-                            profile={profile as any}
-                            onSave={handleSaveSection}
-                        />
+                                <LanguagesSection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                />
 
-                        <JobPreferencesSection
-                            profile={profile as any}
-                            onSave={handleSaveSection}
-                        />
+                                <JobPreferencesSection
+                                    profile={profile as any}
+                                    onSave={handleSaveSection}
+                                />
+                            </>
+                        )}
                     </div>
 
                     {/* Sidebar: Completion Tracker & Info */}
@@ -207,7 +226,7 @@ export default function ProfilePage() {
                         <div className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-500/5 border border-slate-100 p-8 md:p-10">
                             <div className="flex items-center gap-2 mb-6">
                                 <TrendingUp className="w-5 h-5 text-blue-600" />
-                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Profile Strength</h3>
+                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Profile Score</h3>
                             </div>
 
                             <div className="mb-8">
@@ -225,12 +244,12 @@ export default function ProfilePage() {
 
                             <ul className="space-y-4">
                                 {[
-                                    { label: 'Identity & contact', complete: !!(profile.fullName && profile.phone), points: 25 },
-                                    { label: 'Intro Video (Mandatory)', complete: !!(profile.videoUrl || profile.videoResume), points: 30 },
-                                    { label: 'Work Experience', complete: !!(profile.experience && profile.experience.length > 0), points: 15 },
-                                    { label: 'Education Details', complete: !!(profile.education && profile.education.length > 0), points: 10 },
-                                    { label: 'Skills & Bio', complete: !!(profile.skills?.length && profile.bio), points: 10 },
-                                    { label: 'Projects / Languages', complete: !!(profile.projects?.length || profile.languages?.length), points: 10 },
+                                    { label: 'Identity & contact', complete: !!(profile.fullName && (profile.phone || profile.whatsapp)), points: 25 },
+                                    { label: 'Intro Video (Mandatory)', complete: !!(profile.profile_status === 'active' || profile.profile_status === 'video_pending'), points: 30 },
+                                    { label: profile.role === 'employer' ? 'Company Details' : 'Work Experience', complete: !!(profile.experience?.length || profile.companyName), points: 15 },
+                                    { label: profile.role === 'employer' ? 'Portfolio / Case Studies' : 'Education Details', complete: !!(profile.education?.length || profile.projects?.length), points: 10 },
+                                    { label: profile.role === 'employer' ? 'Company Description' : 'Skills & Bio', complete: !!((profile.skills?.length && profile.bio) || profile.companyDescription || profile.bio), points: 10 },
+                                    { label: 'Location & Extras', complete: !!(profile.location || profile.languages?.length), points: 10 },
                                 ].map((item, idx) => (
                                     <li key={idx} className="flex items-center justify-between group">
                                         <div className="flex items-center gap-3">

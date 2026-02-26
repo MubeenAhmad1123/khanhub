@@ -8,9 +8,10 @@ import { JobSeekerProfile, Project } from '@/types/user';
 interface ProjectsSectionProps {
     profile: JobSeekerProfile;
     onSave: (data: Partial<JobSeekerProfile>) => Promise<void>;
+    isEmployer?: boolean;
 }
 
-export default function ProjectsSection({ profile, onSave }: ProjectsSectionProps) {
+export default function ProjectsSection({ profile, onSave, isEmployer }: ProjectsSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<Project> | null>(null);
     const getNormalizedProjects = useCallback(() => {
@@ -92,7 +93,7 @@ export default function ProjectsSection({ profile, onSave }: ProjectsSectionProp
                         <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
                             <Rocket className="w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tighter italic uppercase">Projects & Portfolio</h2>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tighter italic uppercase">{isEmployer ? 'Portfolio & Case Studies' : 'Projects & Portfolio'}</h2>
                     </div>
                     {!isEditing && (
                         <button

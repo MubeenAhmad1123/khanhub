@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Camera, Mail, Phone, MapPin, Briefcase, Check, Loader2, Save, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,60 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
         phone: (profile as any).phone || (profile as any).profile?.phone || '',
     });
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [photoLoading, setPhotoLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Basic validation
+        if (!file.type.startsWith('image/')) {
+            alert('Please upload an image file.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image must be less than 5MB.');
+            return;
+        }
+
+        setPhotoLoading(true);
+        try {
+            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+            const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+            if (!cloudName || !uploadPreset) {
+                throw new Error('Cloudinary not configured');
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', uploadPreset);
+            formData.append('folder', `khanhub/profiles/${(profile as any).uid || (profile as any).id || (profile as any).userId}`);
+
+            const res = await fetch(
+                `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+                { method: 'POST', body: formData }
+            );
+
+            if (!res.ok) throw new Error('Upload failed');
+            const data = await res.json();
+
+            // Save to Firestore - ONLY photoURL and updatedAt, use merge: true
+            await onSave({
+                photoURL: data.secure_url,
+                updatedAt: new Date()
+            } as any);
+
+            setSaveStatus('saved');
+            setTimeout(() => setSaveStatus('idle'), 2000);
+        } catch (error) {
+            console.error('Photo upload error:', error);
+            alert('Failed to upload photo. Please try again.');
+        } finally {
+            setPhotoLoading(false);
+        }
+    };
 
     useEffect(() => {
         setFormData({
@@ -49,16 +103,40 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                 <div className="flex flex-col md:flex-row gap-8 items-start">
                     {/* Profile Picture */}
                     <div className="relative group shrink-0">
-                        <div className="w-32 h-32 rounded-[2.5rem] bg-slate-50 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
-                            {((profile as any).name || (profile as any).displayName || profile.fullName) ? (
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                            accept="image/*"
+                        />
+                        <div className="w-32 h-32 rounded-[2.5rem] bg-slate-50 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center relative">
+                            {(profile as any).photoURL || (profile as any).profile?.photoURL ? (
+                                <Image
+                                    src={(profile as any).photoURL || (profile as any).profile?.photoURL}
+                                    alt="Profile"
+                                    fill
+                                    className="object-cover"
+                                />
+                            ) : ((profile as any).name || (profile as any).displayName || profile.fullName) ? (
                                 <div className="text-4xl font-black text-blue-600 italic uppercase">
                                     {((profile as any).name || (profile as any).displayName || profile.fullName || '').charAt(0)}
                                 </div>
                             ) : (
                                 <User className="w-12 h-12 text-slate-300" />
                             )}
+
+                            {photoLoading && (
+                                <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                                </div>
+                            )}
                         </div>
-                        <button className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg border-4 border-white hover:scale-110 active:scale-95 transition-all">
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={photoLoading}
+                            className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg border-4 border-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                        >
                             <Camera className="w-5 h-5" />
                         </button>
                     </div>

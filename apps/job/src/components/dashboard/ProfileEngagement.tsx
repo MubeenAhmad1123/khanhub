@@ -30,7 +30,13 @@ export default function ProfileEngagement({ user }: ProfileEngagementProps) {
         { key: 'city', label: 'City/Location', value: (user as any).city || (user as any).companyLocation || (user as any).location || user.profile?.location, icon: <MapPin className="w-4 h-4" />, href: '/dashboard/profile/edit' },
         { key: 'industry', label: 'Industry', value: user.industry || (user as any).companyType || (user.profile as any)?.industry, icon: <Briefcase className="w-4 h-4" />, href: '/dashboard/profile/edit' },
         { key: 'subcategory', label: 'Profession', value: user.subcategory || (user as any).firstJobTitle || user.profile?.preferredJobTitle, icon: <Briefcase className="w-4 h-4" />, href: '/dashboard/profile/edit' },
-        { key: 'video', label: 'Video introduction', value: user.profile?.videoResume || (user as any).videoResume || (user as any).pitchVideoUrl, icon: <Video className="w-4 h-4" />, href: '/dashboard/upload-video' },
+        {
+            key: 'video',
+            label: 'Video introduction',
+            value: user.profile_status === 'active' || user.profile_status === 'video_pending' || user.profile?.videoResume || (user as any).videoResume,
+            icon: <Video className="w-4 h-4" />,
+            href: '/dashboard/upload-video'
+        },
     ];
 
     const completedCount = requiredFields.filter(f => !!f.value).length;
@@ -66,7 +72,7 @@ export default function ProfileEngagement({ user }: ProfileEngagementProps) {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <Sparkles className="w-4 h-4 text-blue-600" />
-                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Profile Strength</span>
+                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Profile Score</span>
                             </div>
                             <h3 className="text-2xl font-black text-slate-900 italic uppercase italic tracking-tighter">
                                 {progressPercentage === 100 ? 'Master Profile' : 'Power Up Your Profile'}

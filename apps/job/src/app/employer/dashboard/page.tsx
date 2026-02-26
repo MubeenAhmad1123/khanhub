@@ -135,7 +135,7 @@ export default function EmployerDashboard() {
                             <div className="flex items-center gap-2 mt-2">
                                 <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider">Company</span>
                                 <span className="text-slate-400 text-sm font-medium">
-                                    {userData?.companyName || (userData as any)?.company?.name || userData?.displayName || 'Company'} • {userData?.city || (userData as any)?.company?.location || 'Location'} • {userData?.companyType || userData?.industry || 'General'}
+                                    {(userData as any)?.companyName || (userData as any)?.company?.name || userData?.displayName || 'Company'} • {(userData as any)?.city || (userData as any)?.company?.location || (userData as any)?.location || 'Location'} • {(userData as any)?.companyType || (userData as any)?.industry || 'General'}
                                 </span>
                             </div>
                         </div>
@@ -162,7 +162,7 @@ export default function EmployerDashboard() {
 
 
                         {/* 1. Pitch Video Under Review */}
-                        {userData?.profile_status === 'video_pending' && (
+                        {userData?.profile_status === 'video_pending' ? (
                             <div className="bg-yellow-50 border border-yellow-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
                                 <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
                                     <Loader2 className="w-10 h-10 text-yellow-600 animate-spin" />
@@ -175,31 +175,27 @@ export default function EmployerDashboard() {
                                     </p>
                                 </div>
                             </div>
-                        )}
-
-                        {/* 1b. Pitch Video Pending */}
-                        {userData?.profile_status !== 'video_pending' &&
-                            !userData?.profile?.videoResume && (
-                                <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <Plus className="w-10 h-10 text-blue-600" />
-                                    </div>
-                                    <div className="flex-1 text-center md:text-left">
-                                        <h2 className="text-xl font-bold text-blue-900 mb-2">Pitch Your Company</h2>
-                                        <p className="text-blue-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
-                                            Upload a "Life at {(userData as any)?.companyName || 'Company'}" video to showcase your culture
-                                            and attract higher quality candidates.
-                                        </p>
-                                        <Link
-                                            href="/dashboard/upload-video"
-                                            className="inline-flex items-center gap-2 px-8 py-4 bg-[#1B4FD8] text-white rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
-                                        >
-                                            <Plus className="w-5 h-5 mr-1" />
-                                            Post Company Pitch
-                                        </Link>
-                                    </div>
+                        ) : !((userData as any)?.profile?.videoResume || (userData as any)?.videoResume) ? (
+                            <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Plus className="w-10 h-10 text-blue-600" />
                                 </div>
-                            )}
+                                <div className="flex-1 text-center md:text-left">
+                                    <h2 className="text-xl font-bold text-blue-900 mb-2">Pitch Your Company</h2>
+                                    <p className="text-blue-700 text-sm opacity-90 leading-relaxed mb-6 max-w-lg">
+                                        Upload a "Life at {(userData as any)?.companyName || 'Company'}" video to showcase your culture
+                                        and attract higher quality candidates.
+                                    </p>
+                                    <Link
+                                        href="/dashboard/upload-video"
+                                        className="inline-flex items-center gap-2 px-8 py-4 bg-[#1B4FD8] text-white rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
+                                    >
+                                        <Plus className="w-5 h-5 mr-1" />
+                                        Post Company Pitch
+                                    </Link>
+                                </div>
+                            </div>
+                        ) : null}
 
                         {/* 1c. Account Fully Active */}
                         {userData?.profile?.videoResume && userData?.profile_status === 'active' && (
@@ -221,11 +217,15 @@ export default function EmployerDashboard() {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                         {[
-                            { label: 'Candidates Viewed', value: '0', icon: <Search className="w-5 h-5 text-blue-600" /> },
+                            { label: 'Candidates Viewed', value: '0', icon: <Search className="w-5 h-5 text-blue-600" />, tooltip: "Coming Soon: Detailed analytics on who viewed your company profile" },
                             { label: 'Reveals Requested', value: revealCount.toString(), icon: <Users className="w-5 h-5 text-orange-600" /> },
-                            { label: 'Video Pitches', value: '0', icon: <Briefcase className="w-5 h-5 text-purple-600" /> }
+                            { label: 'Video Pitches', value: '0', icon: <Briefcase className="w-5 h-5 text-purple-600" />, tooltip: "Coming Soon: Reach out to candidates with custom video pitches" }
                         ].map((stat, idx) => (
-                            <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                            <div
+                                key={idx}
+                                className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative group/stat"
+                                title={stat.tooltip}
+                            >
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center">
                                         {stat.icon}
@@ -233,6 +233,12 @@ export default function EmployerDashboard() {
                                     <span className="text-2xl font-black text-[#0F172A]">{stat.value}</span>
                                 </div>
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                                {stat.tooltip && (
+                                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover/stat:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
+                                        {stat.tooltip}
+                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-900" />
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
