@@ -36,6 +36,13 @@ interface VideoData {
     thumbnailUrl: string;
     experience?: string | number;
     salary?: string;
+    hiringFor?: string;
+    expectedExperience?: string;
+    salaryMin?: number;
+    salaryMax?: number;
+    hideSalary?: boolean;
+    jobType?: string;
+    targetJobTitle?: string;
 }
 
 function BrowseContent() {
@@ -96,6 +103,13 @@ function BrowseContent() {
                             || userData.profile?.yearsOfExperience
                             || '',
                         salary: '',
+                        hiringFor: data.hiringFor || null,
+                        expectedExperience: data.expectedExperience || null,
+                        salaryMin: data.salaryMin || null,
+                        salaryMax: data.salaryMax || null,
+                        hideSalary: data.hideSalary || false,
+                        jobType: data.jobType || null,
+                        targetJobTitle: data.targetJobTitle || null,
                     });
                 });
 

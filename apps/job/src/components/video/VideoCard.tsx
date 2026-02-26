@@ -19,6 +19,13 @@ interface VideoCardProps {
     experience?: string | number;
     salary?: string;
     className?: string;
+    hiringFor?: string;
+    expectedExperience?: string;
+    salaryMin?: number;
+    salaryMax?: number;
+    hideSalary?: boolean;
+    jobType?: string;
+    targetJobTitle?: string;
 }
 
 export default function VideoCard({
@@ -30,7 +37,14 @@ export default function VideoCard({
     thumbnailUrl,
     experience,
     salary,
-    className
+    className,
+    hiringFor,
+    expectedExperience,
+    salaryMin,
+    salaryMax,
+    hideSalary,
+    jobType,
+    targetJobTitle
 }: VideoCardProps) {
     const [muted, setMuted] = useState(true);
     const [playing, setPlaying] = useState(false);
@@ -180,9 +194,31 @@ export default function VideoCard({
                                 {industry}
                             </span>
                         </div>
-                        <h4 className="text-white text-xl font-black uppercase tracking-tight line-clamp-2 leading-tight drop-shadow-lg">
-                            {subcategory}
-                        </h4>
+                        {role === 'employer' ? (
+                            <div className="flex flex-col gap-1">
+                                <h4 className="text-white text-xl font-black uppercase tracking-tight line-clamp-2 leading-tight drop-shadow-lg">
+                                    Hiring: {hiringFor || subcategory}
+                                </h4>
+                                <div className="flex gap-2 items-center">
+                                    {jobType && (
+                                        <span className="px-2 py-0.5 bg-orange-500 text-white text-[8px] font-black rounded-lg uppercase tracking-widest">
+                                            {jobType}
+                                        </span>
+                                    )}
+                                    <p className="text-white text-[10px] font-bold drop-shadow-md">
+                                        {hideSalary
+                                            ? 'Competitive Salary'
+                                            : (salaryMin && salaryMax
+                                                ? `PKR ${salaryMin.toLocaleString()} - ${salaryMax.toLocaleString()}`
+                                                : 'Salary Negotiable')}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <h4 className="text-white text-xl font-black uppercase tracking-tight line-clamp-2 leading-tight drop-shadow-lg">
+                                {targetJobTitle || subcategory}
+                            </h4>
+                        )}
                     </div>
                 </div>
 
@@ -191,22 +227,18 @@ export default function VideoCard({
                     <div className="flex items-center justify-between">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
-                                {role === 'jobseeker' ? 'Experience' : 'Offering'}
+                                {role === 'jobseeker' ? 'Experience' : 'Requirement'}
                             </span>
                             <div className="text-sm font-black text-slate-800 flex items-center gap-2">
-                                {role === 'jobseeker' && experience !== undefined && experience !== '' ? (
+                                {role === 'jobseeker' ? (
                                     <div className="flex items-center gap-1.5">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                        <span>{experience} {Number(experience) === 1 ? 'Year' : 'Years'}</span>
-                                    </div>
-                                ) : role === 'employer' && salary ? (
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                                        <span>{salary}</span>
+                                        <span>{experience || 'Fresher'}</span>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center gap-1.5 text-slate-400">
-                                        <span className="italic">Standard Profile</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                                        <span>{expectedExperience || 'Any Experience'}</span>
                                     </div>
                                 )}
                             </div>
