@@ -135,14 +135,14 @@ export default function ImprovedNavbar() {
                         </Link>
 
                         {/* Desktop: Nav Links */}
-                        <div className="hidden lg:flex items-center gap-1 ml-8">
+                        <div className="hidden lg:flex items-center gap-0.5 ml-8">
                             {navItems.map((item) => {
                                 const active = isActive(item.path);
                                 return (
                                     <Link
                                         key={item.path}
                                         href={item.path}
-                                        className={`px-5 py-2.5 rounded-xl text-base font-black transition-all flex items-center gap-2 tracking-tight ${active ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                                        className={`px-3 py-2 rounded-xl text-sm font-black transition-all flex items-center gap-2 tracking-tight ${active ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                                             }`}
                                     >
                                         {item.icon && <span className="opacity-70 group-hover:opacity-100">{item.icon}</span>}

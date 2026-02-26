@@ -28,7 +28,7 @@ export default function AdminPaymentsPage() {
     const { toast } = useToast();
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'second_video'>('pending');
 
     useEffect(() => {
         const q = query(collection(db, 'payments'));
@@ -75,6 +75,8 @@ export default function AdminPaymentsPage() {
             } else if (payment.type === 'video_upload') {
                 userUpdate.video_upload_enabled = true;
                 userUpdate.profile_status = 'video_pending';
+            } else if (payment.type === 'second_video_slot') {
+                userUpdate.secondVideoSlotUnlocked = true;
             } else if (payment.type === 'connection' && (payment as any).connectionId) {
                 // Connection Reveal Logic
                 await updateDoc(doc(db, 'connections', (payment as any).connectionId), {
@@ -97,11 +99,19 @@ export default function AdminPaymentsPage() {
             await updateDoc(doc(db, 'users', payment.userId), userUpdate);
 
             // 3. Write notification
+            let notificationTitle = 'Payment Approved';
+            let notificationMessage = `Your payment of Rs. ${payment.amount} has been approved.`;
+
+            if (payment.type === 'second_video_slot') {
+                notificationTitle = 'Second Video Slot Unlocked!';
+                notificationMessage = 'Your payment was approved. You can now upload a second video to your profile!';
+            }
+
             await addDoc(collection(db, 'notifications'), {
                 userId: payment.userId,
                 type: 'payment_approved',
-                title: 'Payment Approved',
-                message: `Your payment of Rs. ${payment.amount} has been approved.`,
+                title: notificationTitle,
+                message: notificationMessage,
                 read: false,
                 createdAt: serverTimestamp()
             });
@@ -183,7 +193,11 @@ export default function AdminPaymentsPage() {
         pendingCount: payments.filter(p => p.status === 'pending').length,
     };
 
-    const filteredPayments = payments.filter(p => filter === 'all' || p.status === filter);
+    const filteredPayments = payments.filter(p => {
+        if (filter === 'all') return true;
+        if (filter === 'second_video') return p.type === 'second_video_slot';
+        return p.status === filter;
+    });
 
     if (loading) {
         return (
@@ -234,6 +248,7 @@ export default function AdminPaymentsPage() {
                     { id: 'pending', label: 'Pending Queue', count: stats.pendingCount },
                     { id: 'approved', label: 'Approved', count: payments.filter(p => p.status === 'approved').length },
                     { id: 'rejected', label: 'Rejected', count: payments.filter(p => p.status === 'rejected').length },
+                    { id: 'second_video', label: 'Second Video', count: payments.filter(p => p.type === 'second_video_slot').length },
                 ].map(tab => (
                     <button
                         key={tab.id}

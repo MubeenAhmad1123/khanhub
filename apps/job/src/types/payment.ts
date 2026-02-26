@@ -5,7 +5,7 @@ import { Timestamp } from 'firebase/firestore';
 // ==================== PAYMENT ENUMS ====================
 
 
-export type PaymentType = 'registration' | 'premium' | 'video_upload' | 'connection';
+export type PaymentType = 'registration' | 'premium' | 'video_upload' | 'connection' | 'second_video_slot';
 export type PaymentStatus = 'pending' | 'approved' | 'rejected';
 export type PaymentMethod = 'jazzcash' | 'easypaisa' | 'bank_transfer' | 'card';
 
@@ -73,6 +73,7 @@ export const PAYMENT_AMOUNTS = {
     registration: 1000,
     premium: 10000,
     video_upload: 1000,
+    second_video_slot: 1000,
 } as const;
 
 export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
@@ -80,6 +81,7 @@ export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
     premium: 'Premium Membership',
     video_upload: 'Video Upload Activation',
     connection: 'Contact Reveal Fee',
+    second_video_slot: 'Second Video Slot',
 };
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
