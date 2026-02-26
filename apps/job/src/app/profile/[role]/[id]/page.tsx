@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { notFound, useParams } from 'next/navigation';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import Image from 'next/image';
 import { MapPin, Phone, Building2, User, Play, Briefcase, GraduationCap, Award, Lightbulb, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
@@ -13,6 +13,7 @@ export default function PublicProfilePage() {
     const id = params.id as string;
 
     const [userData, setUserData] = useState<any>(null);
+    const [userVideos, setUserVideos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [notFoundError, setNotFoundError] = useState(false);
 
@@ -30,6 +31,22 @@ export default function PublicProfilePage() {
                     setNotFoundError(true);
                 } else {
                     setUserData({ id: userDoc.id, ...userDoc.data() });
+
+                    // Fetch all approved videos for this user
+                    const videosQuery = query(
+                        collection(db, 'videos'),
+                        where('userId', '==', id),
+                        where('is_live', '==', true),
+                        where('admin_status', '==', 'approved')
+                    );
+                    const videosSnap = await getDocs(videosQuery);
+                    const videosList = videosSnap.docs
+                        .map(d => ({ id: d.id, ...d.data() }))
+                        .sort((a: any, b: any) => {
+                            // Sort by videoIndex so Video 1 always shows first
+                            return (a.videoIndex || 1) - (b.videoIndex || 1);
+                        });
+                    setUserVideos(videosList);
                 }
             } catch (error) {
                 console.error("Error fetching user profile:", error);
@@ -77,7 +94,7 @@ export default function PublicProfilePage() {
     const displayBio = profileData.description || profileData.bio || 'This profile represents a verified member of our community, committed to professional excellence and collaboration within their industry.';
     const displayPhoto = isEmployer ? (profileData.logoUrl || profileData.logo || userData.photoURL) : (profileData.photo || userData.photoURL);
 
-    const videoUrl = profileData.videoResume || profileData.videoUrl;
+
 
     return (
         <div className="min-h-screen bg-[#F8FAFF] selection:bg-blue-100 selection:text-blue-900 pb-20">
@@ -192,29 +209,44 @@ export default function PublicProfilePage() {
                     {/* Profile Main Content */}
                     <div className="lg:col-span-8 space-y-10 animate-in slide-in-from-right-8 duration-700 delay-200">
                         {/* Video Showcase - The Central Piece */}
-                        {videoUrl && (
-                            <div className="bg-slate-950 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden border border-slate-800 group relative">
-                                <div className="absolute inset-0 bg-blue-500/5 animate-pulse pointer-events-none" />
-                                <div className="px-8 py-6 bg-slate-900 border-b border-slate-800 flex justify-between items-center relative z-10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
-                                        <h3 className="text-white font-black uppercase tracking-widest text-xs italic">
-                                            {isEmployer ? 'Company Pitch' : 'Video Resume Showcase'}
-                                        </h3>
-                                    </div>
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest animate-pulse">Recording Live</span>
-                                </div>
-                                <div className="aspect-video relative bg-black group-hover:scale-[1.01] transition-transform duration-700">
-                                    <video
-                                        src={videoUrl}
-                                        controls
-                                        playsInline
-                                        className="w-full h-full object-cover sm:object-contain"
-                                        poster={displayPhoto}
+                        {userVideos.length > 0 && (
+                            <div className="space-y-6">
+                                {userVideos.map((video: any, index: number) => (
+                                    <div
+                                        key={video.id}
+                                        className="bg-slate-950 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden border border-slate-800 group relative"
                                     >
-                                        Your browser does not support the video tag.
-                                    </video>
-                                </div>
+                                        <div className="absolute inset-0 bg-blue-500/5 animate-pulse pointer-events-none" />
+                                        <div className="px-8 py-6 bg-slate-900 border-b border-slate-800 flex justify-between items-center relative z-10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+                                                <h3 className="text-white font-black uppercase tracking-widest text-xs italic">
+                                                    {isEmployer
+                                                        ? 'Company Pitch'
+                                                        : index === 0
+                                                            ? 'Video Resume'
+                                                            : 'Second Introduction'}
+                                                </h3>
+                                            </div>
+                                            {userVideos.length > 1 && (
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                    Video {index + 1} of {userVideos.length}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="aspect-video relative bg-black group-hover:scale-[1.01] transition-transform duration-700">
+                                            <video
+                                                src={video.videoUrl || video.cloudinaryUrl}
+                                                controls
+                                                playsInline
+                                                poster={video.thumbnailUrl || displayPhoto}
+                                                className="w-full h-full object-cover sm:object-contain"
+                                            >
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
 

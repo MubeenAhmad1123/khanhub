@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { db } from '@/lib/firebase/firebase-config';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, deleteField, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/toast';
 import { writeActivityLog } from '@/hooks/useActivityLog';
@@ -22,7 +22,7 @@ import {
     Flag
 } from 'lucide-react';
 import Link from 'next/link';
-import { collection, addDoc } from 'firebase/firestore';
+
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
@@ -188,6 +188,54 @@ export default function AdminEditUserPage() {
         } catch (err) {
             console.error(err);
             toast('Failed to flag field', 'error');
+        }
+    };
+
+    const fixVideoData = async () => {
+        if (!id) return;
+        const confirmFix = window.confirm("This will remove legacy video fields (videoResume, thumbnailUrl, videoUrl) from the USER document and allow you to verify/correct video documents. Proceed?");
+        if (!confirmFix) return;
+
+        try {
+            setSaving(true);
+            const userRef = doc(db, 'users', id as string);
+
+            // 1. Query videos for this user
+            const q = query(collection(db, 'videos'), where('userId', '==', id));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                toast('No video documents found for this user', 'info');
+            } else {
+                for (const videoDoc of snap.docs) {
+                    const data = videoDoc.data();
+                    const newThumb = window.prompt(`Video ID: ${videoDoc.id}\nCurrent Thumbnail: ${data.thumbnailUrl}\nEnter new URL to change, or leave empty to keep current:`, data.thumbnailUrl);
+                    if (newThumb !== null && newThumb !== data.thumbnailUrl) {
+                        await updateDoc(videoDoc.ref, { thumbnailUrl: newThumb });
+                    }
+                }
+            }
+
+            // 2. Clean up user document
+            await updateDoc(userRef, {
+                thumbnailUrl: deleteField(),
+                videoUrl: deleteField(),
+                videoFileName: deleteField(),
+                'profile.videoResume': deleteField(),
+                'profile.videoUrl': deleteField(),
+                updatedAt: serverTimestamp(),
+            });
+
+            toast('Video data cleaned up and corrected', 'success');
+            // Refresh local data
+            const docSnap = await getDoc(userRef);
+            if (docSnap.exists()) setUserData(docSnap.data());
+
+        } catch (err: any) {
+            console.error(err);
+            toast(err.message || 'Failed to fix video data', 'error');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -414,6 +462,16 @@ export default function AdminEditUserPage() {
                                 <Save className="w-5 h-5" />
                             )}
                             {saving ? 'Saving...' : 'Commit Changes'}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={fixVideoData}
+                            disabled={saving}
+                            className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-red-500/10 border-2 border-red-500/20 text-red-600 font-black italic rounded-[25px] hover:bg-red-500 hover:text-white transition-all uppercase tracking-tighter disabled:opacity-50"
+                        >
+                            <Video className="w-5 h-5" />
+                            Fix & Sync Video Data
                         </button>
                     </div>
 

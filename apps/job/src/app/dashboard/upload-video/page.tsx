@@ -50,6 +50,7 @@ export default function VideoUploadPage() {
     const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null);
     const [canUpload, setCanUpload] = useState(true);
     const [videoData, setVideoData] = useState<any>(null);
+    const [allUserVideos, setAllUserVideos] = useState<any[]>([]);
 
     // Max duration constant (60 seconds)
     const MAX_DURATION = 60;
@@ -72,17 +73,25 @@ export default function VideoUploadPage() {
             setShowSecondUpload(slotUnlocked && snap.docs.length < 2);
 
             if (!snap.empty) {
-                const sortedDocs = snap.docs.sort((a, b) => {
-                    const timeA = a.data().createdAt?.toMillis() || 0;
-                    const timeB = b.data().createdAt?.toMillis() || 0;
+                const allVideos = snap.docs
+                    .map(d => ({ id: d.id, ...d.data() } as any))
+                    .sort((a: any, b: any) =>
+                        (a.videoIndex || 1) - (b.videoIndex || 1)
+                    );
+
+                setAllUserVideos(allVideos);
+
+                const latestVideo = [...allVideos].sort((a: any, b: any) => {
+                    const timeA = a.createdAt?.toMillis() || 0;
+                    const timeB = b.createdAt?.toMillis() || 0;
                     return timeB - timeA;
-                });
-                const data = sortedDocs[0].data();
-                setVideoData(data);
+                })[0];
+
+                setVideoData(latestVideo);
 
                 // 2. Check Monthly Limit (30 days) - Only if NOT rejected
-                if (data.admin_status !== 'rejected') {
-                    const lastUpload = data.createdAt;
+                if (latestVideo.admin_status !== 'rejected') {
+                    const lastUpload = latestVideo.createdAt;
                     if (lastUpload) {
                         const lastUploadDate = lastUpload.toDate ? lastUpload.toDate() : new Date(lastUpload);
                         const now = new Date();
@@ -103,6 +112,7 @@ export default function VideoUploadPage() {
                 }
             } else {
                 setVideoData(null);
+                setAllUserVideos([]);
                 setCanUpload(true);
                 setCooldownRemaining(null);
             }
@@ -387,11 +397,10 @@ export default function VideoUploadPage() {
                 throw new Error('Cloudinary upload succeeded but returned no URL.');
             }
 
-            // 3. Update User Profile
+            // 3. Update User Profile - DO NOT write videoResume/thumbnailUrl here
             await updateDoc(doc(db, 'users', user.uid), {
                 profile_status: 'video_submitted',
                 video_upload_enabled: true,
-                'profile.videoResume': result.secureUrl, // Strict replacement of the profile URL
                 lastVideoUpload: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
@@ -399,7 +408,7 @@ export default function VideoUploadPage() {
             // 4. Force status sync for immediate UI update
             if (user) {
                 (user as any).profile_status = 'video_submitted';
-                (user as any).profile = { ...(user as any).profile, videoResume: result.secureUrl };
+                // (user as any).profile = { ...(user as any).profile, videoResume: result.secureUrl }; // MOVED TO COLLECTIVE
             }
 
 
@@ -606,85 +615,115 @@ export default function VideoUploadPage() {
                 )}
 
                 {/* Current Video Display (If exists) */}
-                {user.profile?.videoResume && !success && (
-                    <div className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm overflow-hidden relative">
-                            <div className="flex flex-col md:flex-row items-center gap-8">
-                                <div className="w-full md:w-72 aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border-2 border-slate-50 relative group cursor-pointer" onClick={() => setShowWatchModal(true)}>
-                                    <video
-                                        src={user.profile.videoResume}
-                                        className="w-full h-full object-cover"
-                                        poster={videoData?.thumbnailUrl || ''}
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Play className="w-10 h-10 text-white fill-white" />
-                                    </div>
-                                </div>
-                                <div className="flex-1 text-center md:text-left">
-                                    <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-                                        {videoData?.admin_status === 'approved' && (
-                                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">
-                                                ✅ Approved
-                                            </span>
-                                        )}
-                                        {videoData?.admin_status === 'pending' && (
-                                            <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-black uppercase tracking-widest">
-                                                🕒 Pending Review
-                                            </span>
-                                        )}
-                                        {videoData?.admin_status === 'rejected' && (
-                                            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest">
-                                                ❌ Rejected
-                                            </span>
-                                        )}
-                                        <span className="text-slate-300 text-xs">|</span>
-                                        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Introduction Video</span>
-                                    </div>
-                                    <h3 className="text-2xl font-black text-slate-900 mb-2 italic tracking-tight">Your Current Video</h3>
+                {allUserVideos.length > 0 && !success && (
+                    <div className="space-y-6 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        {allUserVideos.map((video: any, index: number) => {
+                            const uploadDate = video.createdAt?.toDate
+                                ? video.createdAt.toDate()
+                                : video.createdAt ? new Date(video.createdAt) : new Date();
+                            const daysSince = Math.floor(
+                                (Date.now() - uploadDate.getTime()) / (1000 * 60 * 60 * 24)
+                            );
+                            const videoCooldown = Math.max(0, 30 - daysSince);
+                            const canReplaceThisVideo = daysSince >= 30 || video.admin_status === 'rejected';
 
-                                    <div className="mb-6">
-                                        {videoData?.admin_status === 'approved' && (
-                                            <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                                                Recruiters can see this video when they view your profile. It's your digital handshake!
-                                            </p>
-                                        )}
-                                        {videoData?.admin_status === 'pending' && (
-                                            <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                                                Your video is currently under review by our team. This usually takes under 30 minutes. Once approved, it will be visible to employers.
-                                            </p>
-                                        )}
-                                        {videoData?.admin_status === 'rejected' && (
-                                            <div className="space-y-2">
-                                                <p className="text-red-600 text-sm font-bold leading-relaxed">
-                                                    Your video was not approved for the following reason:
-                                                </p>
-                                                <p className="bg-red-50 p-3 rounded-xl text-red-700 text-xs italic border border-red-100">
-                                                    "{videoData?.rejection_reason || 'Video does not meet our quality guidelines.'}"
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                                        <button
-                                            onClick={() => setShowWatchModal(true)}
-                                            className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-slate-900/10 flex items-center gap-2"
+                            return (
+                                <div key={video.id} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm overflow-hidden relative">
+                                    <div className="flex flex-col md:flex-row items-center gap-8">
+                                        <div
+                                            className="w-full md:w-72 aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border-2 border-slate-50 relative group cursor-pointer"
+                                            onClick={() => {
+                                                // We can't easily change the watch modal to handle multiple videos without changing more state,
+                                                // but we can at least show the clicked video in the existing modal structure if we update user.profile temporarily
+                                                // or better, just use a local state for the watch video.
+                                                // For now, let's keep it simple as requested and use the video.videoUrl directly if possible.
+                                                setPreviewUrl(video.videoUrl || video.cloudinaryUrl);
+                                                setShowWatchModal(true);
+                                            }}
                                         >
-                                            <Play className="w-3.5 h-3.5 fill-white" /> Watch Full
-                                        </button>
-                                        {!canUpload && cooldownRemaining !== null && (
-                                            <div className="group relative">
-                                                <span className="text-orange-600 bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 cursor-help">
-                                                    <Clock className="w-3.5 h-3.5" /> COOLDOWN: {cooldownRemaining} DAYS LEFT
-                                                </span>
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center font-medium z-50">
-                                                    You can replace this video after the cooldown expires. Or add a second video for PKR 1,000.
-                                                </div>
+                                            <video
+                                                src={video.videoUrl || video.cloudinaryUrl}
+                                                className="w-full h-full object-cover"
+                                                poster={video.thumbnailUrl || ''}
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Play className="w-10 h-10 text-white fill-white" />
                                             </div>
-                                        )}
+                                        </div>
+                                        <div className="flex-1 text-center md:text-left">
+                                            <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+                                                {video.admin_status === 'approved' && (
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">
+                                                        ✅ Approved
+                                                    </span>
+                                                )}
+                                                {video.admin_status === 'pending' && (
+                                                    <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-black uppercase tracking-widest">
+                                                        🕒 Pending Review
+                                                    </span>
+                                                )}
+                                                {video.admin_status === 'rejected' && (
+                                                    <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest">
+                                                        ❌ Rejected
+                                                    </span>
+                                                )}
+                                                <span className="text-slate-300 text-xs">|</span>
+                                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                                                    {index === 0 ? 'Primary Introduction' : 'Second Introduction'}
+                                                </span>
+                                            </div>
+                                            <h3 className="text-2xl font-black text-slate-900 mb-2 italic tracking-tight">
+                                                {index === 0 ? 'Your Primary Video' : 'Your Second Video'}
+                                            </h3>
+
+                                            <div className="mb-6">
+                                                {video.admin_status === 'approved' && (
+                                                    <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                                                        Recruiters can see this video when they view your profile. It's your digital handshake!
+                                                    </p>
+                                                )}
+                                                {video.admin_status === 'pending' && (
+                                                    <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                                                        Your video is currently under review. This usually takes under 30 minutes.
+                                                    </p>
+                                                )}
+                                                {video.admin_status === 'rejected' && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-red-600 text-sm font-bold leading-relaxed">
+                                                            Rejected:
+                                                        </p>
+                                                        <p className="bg-red-50 p-3 rounded-xl text-red-700 text-xs italic border border-red-100">
+                                                            "{video.rejection_reason || 'Video does not meet our quality guidelines.'}"
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                                                <button
+                                                    onClick={() => {
+                                                        setPreviewUrl(video.videoUrl || video.cloudinaryUrl);
+                                                        setShowWatchModal(true);
+                                                    }}
+                                                    className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-slate-900/10 flex items-center gap-2"
+                                                >
+                                                    <Play className="w-3.5 h-3.5 fill-white" /> Watch Full
+                                                </button>
+                                                {!canReplaceThisVideo && videoCooldown > 0 && (
+                                                    <div className="group relative">
+                                                        <span className="text-orange-600 bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 cursor-help">
+                                                            <Clock className="w-3.5 h-3.5" /> COOLDOWN: {videoCooldown} DAYS LEFT
+                                                        </span>
+                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center font-medium z-50">
+                                                            You can replace this video after the cooldown expires.
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
+                            );
+                        })}
                     </div>
                 )}
 

@@ -57,26 +57,40 @@ function BrowseContent() {
                 setLoading(true);
                 const loadedVideos: VideoData[] = [];
 
-                // 1. Fetch Candidate Videos (from users collection)
-                const usersSnap = await getDocs(collection(db, 'users'));
-                usersSnap.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    if (data.role === 'employer') return; // Skip employers here, they come from jobPostings
+                // 1. Fetch Candidate Videos (from videos collection)
+                const videosQuery = query(
+                    collection(db, 'videos'),
+                    where('is_live', '==', true),
+                    where('admin_status', '==', 'approved'),
+                    where('role', '==', 'candidate')
+                );
+                const videosSnap = await getDocs(videosQuery);
 
-                    const videoUrl = data.profile?.videoResume || data.profile?.videoUrl;
-                    if (videoUrl && typeof videoUrl === 'string' && videoUrl.length > 10) {
-                        loadedVideos.push({
-                            id: docSnap.id,
-                            seekerId: docSnap.id,
-                            role: 'jobseeker',
-                            industry: data.industry || (data.profile as any)?.industry || 'General',
-                            subcategory: data.subcategory || data.profile?.preferredSubcategory || 'General',
-                            videoUrl: videoUrl,
-                            thumbnailUrl: data.profile?.photo || data.photoURL || '',
-                            experience: data.profile?.yearsOfExperience || '',
-                            salary: '',
-                        });
-                    }
+                // Group videos by userId to get other user details if needed, 
+                // but actually the prompt says: "For users with 2 videos, show TWO VideoCards side by side"
+                // So we can just add them flat to the list.
+
+                // To get industry/subcategory from the user doc if missing in video doc, 
+                // we'll need to fetch users too or trust the video doc which SHOULD have them now.
+                const usersSnap = await getDocs(collection(db, 'users'));
+                const usersMap: Record<string, any> = {};
+                usersSnap.forEach(d => usersMap[d.id] = d.data());
+
+                videosSnap.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const user = usersMap[data.userId] || {};
+
+                    loadedVideos.push({
+                        id: docSnap.id,
+                        seekerId: data.userId,
+                        role: 'jobseeker',
+                        industry: data.industry || user.industry || 'General',
+                        subcategory: data.subcategory || user.subcategory || 'General',
+                        videoUrl: data.videoUrl || data.cloudinaryUrl,
+                        thumbnailUrl: data.thumbnailUrl || user.photoURL || '',
+                        experience: user.profile?.yearsOfExperience || user.totalExperience || '',
+                        salary: '',
+                    });
                 });
 
                 // 2. Fetch Job Posting Videos (from jobPostings collection)
