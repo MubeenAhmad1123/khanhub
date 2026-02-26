@@ -17,9 +17,12 @@ import {
     Briefcase,
     Loader2,
     Shield,
-    Video
+    Video,
+    AlertTriangle,
+    Flag
 } from 'lucide-react';
 import Link from 'next/link';
+import { collection, addDoc } from 'firebase/firestore';
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
@@ -150,6 +153,44 @@ export default function AdminEditUserPage() {
         }
     };
 
+    const flagField = async (fieldName: string, fieldLabel: string) => {
+        const reason = window.prompt(`Reason for flagging ${fieldLabel}:`);
+        if (!reason || !id) return;
+
+        try {
+            const userRef = doc(db, 'users', id as string);
+            const newFlag = {
+                field: fieldName,
+                label: fieldLabel,
+                reason,
+                resolved: false,
+                flaggedAt: new Date().toISOString(),
+            };
+
+            const updatedFlags = [...(userData.flags || []), newFlag];
+            await updateDoc(userRef, { flags: updatedFlags });
+
+            // Update local state
+            setUserData(prev => ({ ...prev, flags: updatedFlags }));
+
+            // Send notification to user
+            await addDoc(collection(db, 'notifications'), {
+                user_id: id as string,
+                type: 'flag',
+                message: `Admin has flagged your '${fieldLabel}': ${reason}. Please update it to resolve the flag.`,
+                is_read: false,
+                created_at: serverTimestamp(),
+                reference_id: fieldName,
+                action_url: '/dashboard/profile'
+            });
+
+            toast(`Flagged ${fieldLabel}`, 'success');
+        } catch (err) {
+            console.error(err);
+            toast('Failed to flag field', 'error');
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -191,7 +232,16 @@ export default function AdminEditUserPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="md:col-span-2">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2">Full Name</label>
+                                <div className="flex items-center justify-between mb-1.5 ml-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => flagField('name', 'Full Name')}
+                                        className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1 uppercase tracking-tighter"
+                                    >
+                                        <Flag className="w-3 h-3" /> Flag
+                                    </button>
+                                </div>
                                 <input
                                     required
                                     name="name"
@@ -201,7 +251,16 @@ export default function AdminEditUserPage() {
                                 />
                             </div>
                             <div className="md:col-span-2">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2">Email</label>
+                                <div className="flex items-center justify-between mb-1.5 ml-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => flagField('email', 'Email')}
+                                        className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1 uppercase tracking-tighter"
+                                    >
+                                        <Flag className="w-3 h-3" /> Flag
+                                    </button>
+                                </div>
                                 <input
                                     required
                                     type="email"
@@ -212,7 +271,16 @@ export default function AdminEditUserPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2">Phone</label>
+                                <div className="flex items-center justify-between mb-1.5 ml-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => flagField('phone', 'Phone')}
+                                        className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1 uppercase tracking-tighter"
+                                    >
+                                        <Flag className="w-3 h-3" /> Flag
+                                    </button>
+                                </div>
                                 <input
                                     required
                                     name="phone"
@@ -222,7 +290,16 @@ export default function AdminEditUserPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2">Location</label>
+                                <div className="flex items-center justify-between mb-1.5 ml-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => flagField('location', 'Location')}
+                                        className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1 uppercase tracking-tighter"
+                                    >
+                                        <Flag className="w-3 h-3" /> Flag
+                                    </button>
+                                </div>
                                 <input
                                     required
                                     name="location"

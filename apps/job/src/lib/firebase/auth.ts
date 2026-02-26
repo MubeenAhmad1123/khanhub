@@ -54,6 +54,18 @@ export async function createUserProfile(userData: Partial<User>): Promise<void> 
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         }, { merge: true });
+
+        // Add admin notification
+        const { addDoc, collection } = await import('firebase/firestore');
+        await addDoc(collection(db, 'adminNotifications'), {
+            type: 'new_user',
+            title: 'New User Registered',
+            message: `${data.displayName || data.name || 'A new user'} just joined as ${data.role || 'user'}.`,
+            read: false,
+            targetId: uid,
+            targetType: 'user',
+            createdAt: serverTimestamp()
+        });
     } catch (error) {
         console.error('Error creating user profile:', error);
         throw error;

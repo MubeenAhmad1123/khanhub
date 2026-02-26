@@ -28,6 +28,7 @@ export default function VideoUploadPage() {
     const [showWatchModal, setShowWatchModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [liveVideosCount, setLiveVideosCount] = useState(0);
+    const [showSecondUpload, setShowSecondUpload] = useState(false);
 
     // Profile Completion Check State
     const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
@@ -64,6 +65,11 @@ export default function VideoUploadPage() {
 
         const unsubscribe = onSnapshot(q, (snap) => {
             setLiveVideosCount(snap.docs.length);
+
+            // Check second video slot
+            const slotUnlocked = (user as any)?.secondVideoSlotUnlocked === true;
+            setShowSecondUpload(slotUnlocked && snap.docs.length < 2);
+
             if (!snap.empty) {
                 const sortedDocs = snap.docs.sort((a, b) => {
                     const timeA = a.data().createdAt?.toMillis() || 0;
@@ -102,11 +108,11 @@ export default function VideoUploadPage() {
         });
 
         return () => unsubscribe();
-    }, [user?.uid]);
+    }, [user?.uid, user]);
 
     const isSecondSlotUnlocked = (user as any)?.secondVideoSlotUnlocked === true;
     const canUploadSecondVideo = isSecondSlotUnlocked && liveVideosCount < 2;
-    const shouldShowUploadForm = canUpload || canUploadSecondVideo;
+    const shouldShowUploadForm = canUpload || canUploadSecondVideo || showSecondUpload;
 
     // 2. Profile Completion Check for Video Gate (Prompt 5)
     useEffect(() => {
@@ -356,6 +362,17 @@ export default function VideoUploadPage() {
 
             const videoRef = await addDoc(collection(db, 'videos'), videoData);
 
+            // Add Admin Notification
+            await addDoc(collection(db, 'adminNotifications'), {
+                type: 'new_video',
+                title: 'New Video Needs Review',
+                message: `${(user as any)?.displayName || (user as any)?.name || 'A user'} uploaded a new intro video - pending admin approval.`,
+                read: false,
+                targetId: videoRef.id,
+                targetType: 'video',
+                createdAt: serverTimestamp()
+            });
+
             // 2b. Cleanup/Supersede old videos (Strictness: Only one active/pending video)
             // Note: We don't delete them for audit/admin history, but we can mark them.
             // In a real production app, we might call a cloud function to delete from Cloudinary.
@@ -390,6 +407,105 @@ export default function VideoUploadPage() {
         } catch (err: any) {
             console.error('Upload failed:', err);
             setError(err.message || 'Upload failed. Please try again.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleSecondVideoUpload = async () => {
+        if (!file || !user) return;
+
+        try {
+            setUploading(true);
+            setUploadStatus('Preparing upload...');
+            setError(null);
+
+            setUploadStatus('Uploading video...');
+            const result = await uploadToCloudinary(
+                file,
+                'khanhub/videos',
+                (progress) => {
+                    setUploadProgress(progress.percentage);
+                }
+            );
+
+            setUploadStatus('Processing thumbnail...');
+            const getThumbnailUrl = async (): Promise<string> => {
+                try {
+                    if (uploadedThumbnail) {
+                        return (await uploadToCloudinary(uploadedThumbnail, 'khanhub/images')).secureUrl;
+                    }
+                    if (selectedThumbnail || autoThumbnail) {
+                        const base64 = selectedThumbnail || autoThumbnail;
+                        if (base64) {
+                            const blob = await fetch(base64).then(r => r.blob());
+                            const thumbFile = new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' });
+                            return (await uploadToCloudinary(thumbFile, 'khanhub/images')).secureUrl;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Thumbnail upload failed", e);
+                }
+                return '';
+            };
+            const thumbnailUrl = await getThumbnailUrl();
+            setUploadStatus('Almost done...');
+
+            if (!result.secureUrl) {
+                console.error('[Video Page] Missing URL in result:', result);
+                throw new Error('Cloudinary upload succeeded but returned no URL.');
+            }
+
+            // 1. Create NEW document (not update existing)
+            const secondVideoRef = await addDoc(collection(db, 'videos'), {
+                userId: user.uid,
+                userEmail: user.email,
+                cloudinaryId: result.publicId,
+                cloudinaryUrl: result.secureUrl,
+                status: 'pending',
+                admin_status: 'pending',
+                title: user.role === 'employer' ? 'Company Introduction 2' : 'Personal Introduction 2',
+                description: user.role === 'employer' ? 'Second Employer introduction video' : 'Second Candidate introduction video',
+                duration: result.duration || 0,
+                format: result.format,
+                size: result.bytes,
+                type: 'introduction',
+                role: user.role || 'candidate',
+                industry: (user as any).industry || 'General',
+                subcategory: (user as any).subcategory || 'General',
+                thumbnailUrl: thumbnailUrl,
+                videoIndex: 2,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+
+            // Add Admin Notification
+            await addDoc(collection(db, 'adminNotifications'), {
+                type: 'new_video',
+                title: 'New Video Needs Review',
+                message: `${(user as any)?.displayName || (user as any)?.name || 'A user'} uploaded a second intro video - pending admin approval.`,
+                read: false,
+                targetId: secondVideoRef.id,
+                targetType: 'video',
+                createdAt: serverTimestamp()
+            });
+
+            // 2. Consume the slot
+            await updateDoc(doc(db, 'users', user.uid), {
+                secondVideoSlotUnlocked: false,
+                updatedAt: serverTimestamp(),
+            });
+
+            // 3. Update local state
+            setShowSecondUpload(false);
+            setSuccess(true);
+            setTimeout(() => {
+                router.push('/dashboard/profile');
+            }, 2500);
+
+        } catch (err: any) {
+            console.error('Second upload failed:', err);
+            setError(err.message || 'Secondary upload failed. Please try again.');
         } finally {
             setUploading(false);
         }
@@ -597,7 +713,23 @@ export default function VideoUploadPage() {
                                     </div>
                                 )}
 
-                                {!shouldShowUploadForm && cooldownRemaining !== null && (
+                                {showSecondUpload && (
+                                    <div className="mb-6 bg-emerald-50 border-2 border-emerald-200 rounded-3xl p-6 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                                        <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white text-2xl flex-shrink-0">
+                                            🎉
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-emerald-800 uppercase tracking-tight text-lg">
+                                                Second Video Slot Active!
+                                            </h3>
+                                            <p className="text-emerald-700 font-bold text-sm">
+                                                Upload your second video below. Both videos will appear on your public profile for employers to see.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!canUpload && !showSecondUpload && cooldownRemaining !== null && (
                                     <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                                         {/* Option A */}
                                         <div className="bg-orange-50 text-orange-800 rounded-3xl p-6 border border-orange-100 flex flex-col justify-between">
@@ -629,7 +761,7 @@ export default function VideoUploadPage() {
                                                     Show employers TWO sides of you. Both videos will appear on your profile.
                                                 </p>
                                                 <div className="inline-block px-3 py-1.5 bg-blue-500/50 rounded-lg text-[10px] font-black uppercase tracking-widest text-white mb-6 border border-blue-400/50">
-                                                    PKR 1,000 one-time fee
+                                                    PKR 1,000 Fee For Video Upload
                                                 </div>
                                             </div>
                                             <button onClick={() => setShowPaymentModal(true)} className="w-full py-3 bg-white text-blue-600 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg focus:outline-none">
@@ -749,7 +881,7 @@ export default function VideoUploadPage() {
                                                 </div>
 
                                                 <button
-                                                    onClick={handleUpload}
+                                                    onClick={showSecondUpload ? handleSecondVideoUpload : handleUpload}
                                                     disabled={uploading}
                                                     className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.5rem] font-black text-lg uppercase tracking-widest transition-all shadow-xl shadow-blue-500/30 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-[0.98]"
                                                 >

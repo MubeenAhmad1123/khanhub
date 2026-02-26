@@ -28,6 +28,7 @@ import {
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { cn } from '@/lib/utils';
+import { checkFieldUniqueness } from '@/lib/firebase/firestore';
 
 const CAREER_LEVELS = ['Student', 'Entry Level', 'Mid Level', 'Senior Level', 'Manager', 'Executive'];
 
@@ -60,6 +61,30 @@ export default function OnboardingPage() {
     const [error, setError] = useState('');
     const [role, setRole] = useState<'job_seeker' | 'employer' | null>(null);
     const [success, setSuccess] = useState(false);
+    const [phoneError, setPhoneError] = useState('');
+    const [hrPhoneError, setHrPhoneError] = useState('');
+    const [companyError, setCompanyError] = useState('');
+
+    const handlePhoneBlur = async () => {
+        if (!formData.phone) return;
+        const isUnique = await checkFieldUniqueness('phone', formData.phone, user?.uid);
+        if (!isUnique) setPhoneError('This phone number is already registered.');
+        else setPhoneError('');
+    };
+
+    const handleHrPhoneBlur = async () => {
+        if (!formData.hrPhone) return;
+        const isUnique = await checkFieldUniqueness('phone', formData.hrPhone, user?.uid);
+        if (!isUnique) setHrPhoneError('This phone number is already registered.');
+        else setHrPhoneError('');
+    };
+
+    const handleCompanyNameBlur = async () => {
+        if (!formData.companyName || role !== 'employer') return;
+        const isUnique = await checkFieldUniqueness('companyName', formData.companyName, user?.uid);
+        if (!isUnique) setCompanyError('This company name is already registered.');
+        else setCompanyError('');
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -154,6 +179,12 @@ export default function OnboardingPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (phoneError || hrPhoneError || companyError) {
+            setError('Please fix the highlighted errors before continuing.');
+            return;
+        }
+
         setSubmitting(true);
 
         try {
@@ -304,11 +335,13 @@ export default function OnboardingPage() {
                                                 name="phone"
                                                 value={formData.phone}
                                                 onChange={handleInputChange}
+                                                onBlur={handlePhoneBlur}
                                                 required
                                                 placeholder="03XXXXXXXXX"
-                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                                className={cn("w-full pl-12 pr-6 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900", phoneError ? "border-red-400 focus:border-red-500" : "border-slate-50 focus:border-blue-500")}
                                             />
                                         </div>
+                                        {phoneError && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{phoneError}</p>}
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Career Level</label>
@@ -367,7 +400,16 @@ export default function OnboardingPage() {
                                 <div className="space-y-5">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label>
-                                        <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
+                                        <input
+                                            type="text"
+                                            name="companyName"
+                                            value={formData.companyName}
+                                            onChange={handleInputChange}
+                                            onBlur={handleCompanyNameBlur}
+                                            required
+                                            className={cn("w-full px-5 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900", companyError ? "border-red-400 focus:border-red-500" : "border-slate-50 focus:border-blue-500")}
+                                        />
+                                        {companyError && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{companyError}</p>}
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
@@ -412,11 +454,13 @@ export default function OnboardingPage() {
                                                 name="hrPhone"
                                                 value={formData.hrPhone}
                                                 onChange={handleInputChange}
+                                                onBlur={handleHrPhoneBlur}
                                                 required
                                                 placeholder="03XXXXXXXXX"
-                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                                className={cn("w-full pl-12 pr-6 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900", hrPhoneError ? "border-red-400 focus:border-red-500" : "border-slate-50 focus:border-blue-500")}
                                             />
                                         </div>
+                                        {hrPhoneError && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{hrPhoneError}</p>}
                                     </div>
 
                                     <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4">

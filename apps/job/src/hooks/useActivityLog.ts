@@ -15,6 +15,8 @@ export type ActivityActionType =
     | 'user_deleted'
     | 'user_created'
     | 'user_updated'
+    | 'user_status_updated'
+    | 'bulk_import'
     | 'placement_confirmed';
 
 export interface ActivityLogEntry {
@@ -75,6 +77,8 @@ export function getActionIcon(actionType: ActivityActionType): string {
         user_deleted: '🗑️',
         user_created: '👤',
         user_updated: '📝',
+        user_status_updated: '🔄',
+        bulk_import: '📥',
         placement_confirmed: '🤝',
     };
     return icons[actionType] || '📝';

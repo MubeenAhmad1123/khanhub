@@ -287,7 +287,7 @@ export interface User {
     isBanned: boolean;
     banReason?: string;
     onboardingCompleted?: boolean;
-
+    flags?: any[];
     // Video Upload Feature (Phase 2)
     video_upload_enabled: boolean;
     video_upload_payment_id?: string;

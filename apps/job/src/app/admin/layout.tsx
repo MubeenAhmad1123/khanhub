@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import AdminSidebar from '@/components/admin/AdminSidebar';
-import { Loader2, LogOut, User, Bell, Menu } from 'lucide-react';
+import { Loader2, LogOut, User, Bell, Menu, CreditCard, Video as VideoIcon, UserPlus, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 
 const ADMIN_WHITELIST = [
     'khanhubnetwork@gmail.com',
@@ -24,6 +25,8 @@ export default function AdminLayout({
     const pathname = usePathname();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { toast } = useToast();
+    const { notifications, unreadCount, markAsRead, markAllAsRead } = useAdminNotifications();
+    const [showNotifs, setShowNotifs] = useState(false);
 
     useEffect(() => {
         // Only redirect if: 
@@ -99,11 +102,54 @@ export default function AdminLayout({
                     </div>
 
                     <div className="flex items-center gap-4 sm:gap-6">
-                        {/* Notifications (Placeholder) */}
-                        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative">
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
+                        {/* Notifications */}
+                        <div className="relative">
+                            <button onClick={() => setShowNotifs(!showNotifs)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative">
+                                <Bell className="w-5 h-5" />
+                                {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}
+                            </button>
+
+                            {showNotifs && (
+                                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                        <h3 className="font-bold text-slate-900">Notifications</h3>
+                                        {unreadCount > 0 && (
+                                            <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:text-blue-700 font-bold">Mark all read</button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-96 overflow-y-auto">
+                                        {notifications.length === 0 ? (
+                                            <div className="p-8 text-center text-slate-500 text-sm">No notifications</div>
+                                        ) : (
+                                            notifications.map(n => (
+                                                <div
+                                                    key={n.id}
+                                                    className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${!n.read ? 'bg-blue-50/50' : ''}`}
+                                                    onClick={() => {
+                                                        markAsRead(n.id);
+                                                        setShowNotifs(false);
+                                                        if (n.targetType === 'payment') router.push('/admin/payments');
+                                                        else if (n.targetType === 'video') router.push('/admin/videos');
+                                                        else if (n.targetType === 'user') router.push('/admin/users');
+                                                    }}
+                                                >
+                                                    <div className="mt-1">
+                                                        {n.type === 'new_payment' && <CreditCard className="w-5 h-5 text-emerald-500" />}
+                                                        {n.type === 'new_video' && <VideoIcon className="w-5 h-5 text-blue-500" />}
+                                                        {n.type === 'new_user' && <UserPlus className="w-5 h-5 text-indigo-500" />}
+                                                        {n.type === 'flag' && <AlertTriangle className="w-5 h-5 text-orange-500" />}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className={`text-sm ${!n.read ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>{n.title}</h4>
+                                                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Admin Profile */}
                         <div className="flex items-center gap-3 pl-4 border-l border-slate-200">

@@ -115,6 +115,30 @@ export default function AdminUsersPage() {
         }
     };
 
+    const handleStatusToggle = async (user: any) => {
+        const isCurrentlyActive = user.profile_status === 'active';
+        const newStatus = isCurrentlyActive ? 'video_pending' : 'active';
+
+        try {
+            await updateDoc(doc(db, 'users', user.id), {
+                profile_status: newStatus,
+                updatedAt: serverTimestamp()
+            });
+
+            await writeActivityLog({
+                admin_id: adminUser?.uid || 'system',
+                action_type: 'user_status_updated',
+                target_id: user.id,
+                target_type: 'user',
+                note: `Changed status to ${newStatus} for user: ${user.email}`
+            });
+
+            toast(`User ${newStatus === 'active' ? 'published' : 'unpublished'} successfully`, 'success');
+        } catch (err) {
+            toast('Failed to update status', 'error');
+        }
+    };
+
     const filteredUsers = users.filter(u => {
         const matchesSearch = (u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             u.email?.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -234,18 +258,28 @@ export default function AdminUsersPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tight inline-flex items-center gap-1.5 ${u.profile_status === 'active' ? 'bg-green-50 text-green-700' :
-                                            u.profile_status === 'video_pending' ? 'bg-blue-50 text-blue-700' :
-                                                u.profile_status === 'payment_pending' ? 'bg-yellow-50 text-yellow-700' :
-                                                    'bg-slate-100 text-slate-500'
-                                            }`}>
-                                            <span className={`w-1 h-1 rounded-full ${u.profile_status === 'active' ? 'bg-green-600' :
-                                                u.profile_status === 'video_pending' ? 'bg-blue-600' :
-                                                    u.profile_status === 'payment_pending' ? 'bg-yellow-600' :
-                                                        'bg-slate-600'
-                                                }`} />
-                                            {u.profile_status || 'Incomplete'}
-                                        </span>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => handleStatusToggle(u)}
+                                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${u.profile_status === 'active' ? 'bg-blue-600' : 'bg-slate-200'}`}
+                                            >
+                                                <span
+                                                    className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform ${u.profile_status === 'active' ? 'translate-x-4' : 'translate-x-1'}`}
+                                                />
+                                            </button>
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tight inline-flex items-center gap-1.5 ${u.profile_status === 'active' ? 'bg-green-50 text-green-700' :
+                                                u.profile_status === 'video_pending' ? 'bg-blue-50 text-blue-700' :
+                                                    u.profile_status === 'payment_pending' ? 'bg-yellow-50 text-yellow-700' :
+                                                        'bg-slate-100 text-slate-500'
+                                                }`}>
+                                                <span className={`w-1 h-1 rounded-full ${u.profile_status === 'active' ? 'bg-green-600' :
+                                                    u.profile_status === 'video_pending' ? 'bg-blue-600' :
+                                                        u.profile_status === 'payment_pending' ? 'bg-yellow-600' :
+                                                            'bg-slate-600'
+                                                    }`} />
+                                                {u.profile_status || 'Incomplete'}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <p className="text-xs font-medium text-slate-500">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Camera, Mail, Phone, MapPin, Briefcase, Check, Loader2, Save } from 'lucide-react';
+import { User, Camera, Mail, Phone, MapPin, Briefcase, Check, Loader2, Save, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { JobSeekerProfile } from '@/types/user';
@@ -108,9 +108,14 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                         name="name"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                        className={cn("w-full px-5 py-3 bg-slate-50 border-2 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold", (profile as any).flags?.some((f: any) => f.field === 'name' && !f.resolved) ? "border-red-400" : "border-slate-100")}
                                         placeholder="e.g. John Doe"
                                     />
+                                    {(profile as any).flags?.find((f: any) => f.field === 'name' && !f.resolved) && (
+                                        <p className="text-[10px] text-red-500 font-bold ml-1 flex items-center gap-1">
+                                            <AlertTriangle className="w-3 h-3" /> {(profile as any).flags.find((f: any) => f.field === 'name' && !f.resolved).reason}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Professional Title</label>
@@ -132,9 +137,14 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                         name="city"
                                         value={formData.city}
                                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                        className={cn("w-full px-5 py-3 bg-slate-50 border-2 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold", (profile as any).flags?.some((f: any) => f.field === 'location' && !f.resolved) ? "border-red-400" : "border-slate-100")}
                                         placeholder="e.g. Lahore, Pakistan"
                                     />
+                                    {(profile as any).flags?.find((f: any) => f.field === 'location' && !f.resolved) && (
+                                        <p className="text-[10px] text-red-500 font-bold ml-1 flex items-center gap-1">
+                                            <AlertTriangle className="w-3 h-3" /> {(profile as any).flags.find((f: any) => f.field === 'location' && !f.resolved).reason}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
@@ -144,9 +154,14 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                         name="phone"
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                        className={cn("w-full px-5 py-3 bg-slate-50 border-2 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold", (profile as any).flags?.some((f: any) => f.field === 'phone' && !f.resolved) ? "border-red-400" : "border-slate-100")}
                                         placeholder="03XXXXXXXXX"
                                     />
+                                    {(profile as any).flags?.find((f: any) => f.field === 'phone' && !f.resolved) && (
+                                        <p className="text-[10px] text-red-500 font-bold ml-1 flex items-center gap-1">
+                                            <AlertTriangle className="w-3 h-3" /> {(profile as any).flags.find((f: any) => f.field === 'phone' && !f.resolved).reason}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="md:col-span-2 pt-2">
                                     <button

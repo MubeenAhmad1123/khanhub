@@ -8,7 +8,7 @@ import { calculateProfileStrength } from '@/lib/services/pointsSystem';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { deleteUserAccount } from '@/lib/firebase/auth';
-import { Loader2, Check, Sparkles, TrendingUp, ShieldCheck, Trash2 } from 'lucide-react';
+import { Loader2, Check, Sparkles, TrendingUp, ShieldCheck, Trash2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 // Import Modular Sections
@@ -106,6 +106,28 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-[#F8FAFC] py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+                {/* Flags Warning Banner */}
+                {profile.flags?.some((f: any) => !f.resolved) && (
+                    <div className="mb-8 p-6 bg-amber-50 border-2 border-amber-200 rounded-[2rem] flex items-start gap-4 animate-in fade-in slide-in-from-top-4">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                            <AlertTriangle className="w-6 h-6 text-amber-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-black text-amber-900 uppercase italic tracking-tighter">Action Required: Flagged Information</h3>
+                            <p className="text-sm font-bold text-amber-700 leading-relaxed mt-1">
+                                An administrator has flagged some information in your profile for review. Please update the highlighted fields below to resolve these issues.
+                            </p>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                                {profile.flags.filter((f: any) => !f.resolved).map((flag: any, idx: number) => (
+                                    <span key={idx} className="px-3 py-1 bg-white border border-amber-200 rounded-lg text-[10px] font-black text-amber-800 uppercase tracking-widest">
+                                        {flag.label}: {flag.reason}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Header Section */}
                 <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">

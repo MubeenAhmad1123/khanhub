@@ -109,6 +109,17 @@ export function usePayment() {
 
             console.log('✅ Screenshot URL saved:', uploadResult.secureUrl);
 
+            // Add Admin Notification
+            await addDoc(collection(db, 'adminNotifications'), {
+                type: 'new_payment',
+                title: 'New Payment Submitted',
+                message: `${user.displayName || senderName || 'A user'} submitted Rs. ${amount} for ${type} - awaiting approval.`,
+                read: false,
+                targetId: docRef.id,
+                targetType: 'payment',
+                createdAt: serverTimestamp()
+            });
+
             setUploadProgress(100);
 
             // Optional: Send confirmation email

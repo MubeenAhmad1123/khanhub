@@ -149,20 +149,31 @@ export function useProfile() {
             // This ensures flat schema consistency and prevents 
             // stale state from overwriting Firestore data.
             const flatUpdates: Record<string, any> = {};
+            const updatedFieldMap: Record<string, string> = {
+                'bio': 'professionalSummary',
+                'fullName': 'name',
+                'location': 'city',
+                'preferredJobTitle': 'desiredJobTitle',
+                'yearsOfExperience': 'totalExperience'
+            };
+
             for (const [key, value] of Object.entries(updates)) {
-                // Map legacy JobSeekerProfile field names to flat User fields
-                if (key === 'bio') {
-                    flatUpdates['professionalSummary'] = value;
-                } else if (key === 'fullName') {
-                    flatUpdates['name'] = value;
-                } else if (key === 'location') {
-                    flatUpdates['city'] = value;
-                } else if (key === 'preferredJobTitle') {
-                    flatUpdates['desiredJobTitle'] = value;
-                } else if (key === 'yearsOfExperience') {
-                    flatUpdates['totalExperience'] = value;
-                } else {
-                    flatUpdates[key] = value;
+                const flatKey = updatedFieldMap[key] || key;
+                flatUpdates[flatKey] = value;
+            }
+
+            // Flag resolution logic
+            if (user?.flags && user.flags.length > 0) {
+                const updatedFields = Object.keys(flatUpdates);
+                const hasUnresolvedFlags = user.flags.some(f => !f.resolved);
+
+                if (hasUnresolvedFlags) {
+                    flatUpdates.flags = user.flags.map(flag => {
+                        if (!flag.resolved && updatedFields.includes(flag.field)) {
+                            return { ...flag, resolved: true, resolvedAt: new Date().toISOString() };
+                        }
+                        return flag;
+                    });
                 }
             }
 

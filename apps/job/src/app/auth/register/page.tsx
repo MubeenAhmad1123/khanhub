@@ -27,6 +27,7 @@ import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categori
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { checkFieldUniqueness } from '@/lib/firebase/firestore';
 
 const STORAGE_KEY = 'khanhub_registration_form';
 
@@ -109,6 +110,22 @@ export default function RegisterPage() {
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
     const [showPassword, setShowPassword] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [emailError, setEmailError] = useState('');
+    const [phoneError, setPhoneError] = useState('');
+
+    const handleEmailBlur = async () => {
+        if (!formData.email) return;
+        const isUnique = await checkFieldUniqueness('email', formData.email);
+        if (!isUnique) setEmailError('This email is already registered.');
+        else setEmailError('');
+    };
+
+    const handlePhoneBlur = async () => {
+        if (!formData.phone) return;
+        const isUnique = await checkFieldUniqueness('phone', formData.phone);
+        if (!isUnique) setPhoneError('This phone number is already registered.');
+        else setPhoneError('');
+    };
 
     // Initial load and hydration safety
     useEffect(() => {
@@ -198,6 +215,10 @@ export default function RegisterPage() {
             }
             if (formData.password !== formData.confirmPassword) {
                 setError('Passwords do not match.');
+                return false;
+            }
+            if (emailError || phoneError) {
+                setError('Please fix the highlighted errors before continuing.');
                 return false;
             }
             return true;
@@ -469,10 +490,12 @@ export default function RegisterPage() {
                                                 name="email"
                                                 value={formData.email}
                                                 onChange={handleInputChange}
+                                                onBlur={handleEmailBlur}
                                                 placeholder="ali@example.com"
-                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                                className={cn("w-full pl-12 pr-6 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900", emailError ? "border-red-400 focus:border-red-500" : "border-slate-50 focus:border-blue-500")}
                                             />
                                         </div>
+                                        {emailError && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{emailError}</p>}
                                     </div>
 
                                     <div className="space-y-2">
@@ -520,10 +543,12 @@ export default function RegisterPage() {
                                                 name="phone"
                                                 value={formData.phone}
                                                 onChange={handleInputChange}
+                                                onBlur={handlePhoneBlur}
                                                 placeholder="03XXXXXXXXX"
-                                                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                                className={cn("w-full pl-12 pr-6 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-bold text-slate-900", phoneError ? "border-red-400 focus:border-red-500" : "border-slate-50 focus:border-blue-500")}
                                             />
                                         </div>
+                                        {phoneError && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{phoneError}</p>}
                                     </div>
                                 </div>
 

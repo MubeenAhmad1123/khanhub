@@ -33,6 +33,23 @@ import { COLLECTIONS } from '@/types/DATABASE_SCHEMA';
 import { Placement } from '@/types/admin';
 
 
+export async function checkFieldUniqueness(
+    field: string,
+    value: string,
+    excludeUid?: string
+): Promise<boolean> {
+    const q = query(
+        collection(db, 'users'),
+        where(field, '==', value)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return true; // unique
+    if (excludeUid) {
+        return snap.docs.every(d => d.id === excludeUid);
+    }
+    return false;
+}
+
 // ==================== GENERIC CRUD OPERATIONS ====================
 
 /**
