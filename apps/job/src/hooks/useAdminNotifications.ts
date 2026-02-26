@@ -8,10 +8,10 @@ export interface AdminNotification {
     type: 'new_payment' | 'new_video' | 'new_user' | 'flag';
     title: string;
     message: string;
-    read: boolean;
+    is_read: boolean;
     targetId: string;
     targetType: string;
-    createdAt: any;
+    created_at: any;
 }
 
 export function useAdminNotifications() {
@@ -28,18 +28,26 @@ export function useAdminNotifications() {
 
         const q = query(
             collection(db, 'adminNotifications'),
-            orderBy('createdAt', 'desc'),
+            orderBy('created_at', 'desc'),
             limit(50)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const notifs = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as AdminNotification[];
+            const notifs = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    // Robust mapping for transition
+                    is_read: data.is_read !== undefined ? data.is_read : data.read,
+                    created_at: data.created_at || data.createdAt
+                };
+            }) as AdminNotification[];
 
             setNotifications(notifs);
-            setUnreadCount(notifs.filter(n => !n.read).length);
+            setUnreadCount(notifs.filter(n => !n.is_read).length);
+        }, (error) => {
+            console.error("Error fetching admin notifications:", error);
         });
 
         return () => unsubscribe();
@@ -48,7 +56,7 @@ export function useAdminNotifications() {
     const markAsRead = async (id: string) => {
         if (!id) return;
         try {
-            await updateDoc(doc(db, 'adminNotifications', id), { read: true });
+            await updateDoc(doc(db, 'adminNotifications', id), { is_read: true });
         } catch (error) {
             console.error("Error marking notification as read:", error);
         }
@@ -58,11 +66,11 @@ export function useAdminNotifications() {
         if (user?.role !== 'admin') return;
         try {
             const batch = writeBatch(db);
-            const unreadQ = query(collection(db, 'adminNotifications'), where('read', '==', false), limit(100));
+            const unreadQ = query(collection(db, 'adminNotifications'), where('is_read', '==', false), limit(100));
             const snapshot = await getDocs(unreadQ);
 
             snapshot.docs.forEach((document) => {
-                batch.update(document.ref, { read: true });
+                batch.update(document.ref, { is_read: true });
             });
 
             await batch.commit();

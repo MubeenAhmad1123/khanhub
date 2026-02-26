@@ -372,10 +372,10 @@ export default function VideoUploadPage() {
                 type: 'new_video',
                 title: 'New Video Needs Review',
                 message: `${(user as any)?.displayName || (user as any)?.name || 'A user'} uploaded a new intro video - pending admin approval.`,
-                read: false,
+                is_read: false,
                 targetId: videoRef.id,
                 targetType: 'video',
-                createdAt: serverTimestamp()
+                created_at: serverTimestamp()
             });
 
             // 2b. Cleanup/Supersede old videos (Strictness: Only one active/pending video)
@@ -489,10 +489,10 @@ export default function VideoUploadPage() {
                 type: 'new_video',
                 title: 'New Video Needs Review',
                 message: `${(user as any)?.displayName || (user as any)?.name || 'A user'} uploaded a second intro video - pending admin approval.`,
-                read: false,
+                is_read: false,
                 targetId: secondVideoRef.id,
                 targetType: 'video',
-                createdAt: serverTimestamp()
+                created_at: serverTimestamp()
             });
 
             // 2. Consume the slot
