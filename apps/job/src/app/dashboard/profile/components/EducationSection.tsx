@@ -14,8 +14,9 @@ export default function EducationSection({ profile, onSave }: EducationSectionPr
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<Education> | null>(null);
     const getNormalizedEducation = useCallback(() => {
-        const rawEdu = (profile as any).education || (profile as any).profile?.education || [];
-        return rawEdu.map((e: any) => ({
+        const rawEdu = (profile as any).education || (profile as any).profile?.education;
+        const eduArray = Array.isArray(rawEdu) ? rawEdu : (typeof rawEdu === 'object' && rawEdu !== null ? Object.values(rawEdu) : []);
+        return eduArray.map((e: any) => ({
             id: e.id || Math.random().toString(36).substr(2, 9),
             degree: e.degree || e.degreeTitle || '',
             degreeLevel: e.degreeLevel || 'bachelors',

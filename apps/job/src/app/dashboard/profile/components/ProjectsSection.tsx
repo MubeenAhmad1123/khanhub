@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Rocket, Plus, Edit2, Trash2, Save, Loader2, Check, ExternalLink, Calendar, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JobSeekerProfile, Project } from '@/types/user';
@@ -13,12 +13,17 @@ interface ProjectsSectionProps {
 export default function ProjectsSection({ profile, onSave }: ProjectsSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<Project> | null>(null);
-    const [projects, setProjects] = useState<Project[]>((profile as any).projects || (profile as any).profile?.projects || []);
+    const getNormalizedProjects = useCallback(() => {
+        const rawProjects = (profile as any).projects || (profile as any).profile?.projects;
+        return Array.isArray(rawProjects) ? rawProjects : (typeof rawProjects === 'object' && rawProjects !== null ? Object.values(rawProjects) as Project[] : []);
+    }, [profile]);
+
+    const [projects, setProjects] = useState<Project[]>(getNormalizedProjects());
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setProjects((profile as any).projects || (profile as any).profile?.projects || []);
-    }, [profile]);
+        setProjects(getNormalizedProjects());
+    }, [getNormalizedProjects]);
 
     const handleAdd = () => {
         setEditingEntry({

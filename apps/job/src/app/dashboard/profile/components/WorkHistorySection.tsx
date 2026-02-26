@@ -14,8 +14,9 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
     const [isEditing, setIsEditing] = useState(false);
     const [editingEntry, setEditingEntry] = useState<Partial<WorkExperience> | null>(null);
     const getNormalizedExperiences = useCallback(() => {
-        const rawExp = (profile as any).experience || (profile as any).profile?.experience || [];
-        return rawExp.map((e: any) => ({
+        const rawExp = (profile as any).experience || (profile as any).profile?.experience;
+        const expArray = Array.isArray(rawExp) ? rawExp : (typeof rawExp === 'object' && rawExp !== null ? Object.values(rawExp) : []);
+        return expArray.map((e: any) => ({
             id: e.id || Math.random().toString(36).substr(2, 9),
             title: e.title || e.jobTitle || '',
             company: e.company || '',

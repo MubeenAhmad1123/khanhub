@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Languages, Plus, Trash2, Save, Loader2, Check, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JobSeekerProfile, Language } from '@/types/user';
@@ -12,7 +12,12 @@ interface LanguagesSectionProps {
 
 export default function LanguagesSection({ profile, onSave }: LanguagesSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const [languages, setLanguages] = useState<Language[]>((profile as any).languages || (profile as any).profile?.languages || []);
+    const getNormalizedLanguages = useCallback(() => {
+        const rawLangs = (profile as any).languages || (profile as any).profile?.languages;
+        return Array.isArray(rawLangs) ? rawLangs : (typeof rawLangs === 'object' && rawLangs !== null ? Object.values(rawLangs) as Language[] : []);
+    }, [profile]);
+
+    const [languages, setLanguages] = useState<Language[]>(getNormalizedLanguages());
     const [newLang, setNewLang] = useState<{ name: string, proficiency: Language['proficiency'] }>({
         name: '',
         proficiency: 'Intermediate'
@@ -20,8 +25,8 @@ export default function LanguagesSection({ profile, onSave }: LanguagesSectionPr
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     useEffect(() => {
-        setLanguages((profile as any).languages || (profile as any).profile?.languages || []);
-    }, [profile]);
+        setLanguages(getNormalizedLanguages());
+    }, [getNormalizedLanguages]);
 
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
@@ -149,7 +154,7 @@ export default function LanguagesSection({ profile, onSave }: LanguagesSectionPr
                         <div className="flex justify-end gap-3 pt-4">
                             <button
                                 type="button"
-                                onClick={() => { setIsEditing(false); setLanguages((profile as any).languages || (profile as any).profile?.languages || []); }}
+                                onClick={() => { setIsEditing(false); setLanguages(getNormalizedLanguages()); }}
                                 className="px-6 py-2 text-slate-400 font-bold uppercase tracking-widest text-xs hover:text-slate-600 transition-all"
                             >
                                 Cancel
