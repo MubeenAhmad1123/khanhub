@@ -124,7 +124,7 @@ export default function AdminLayout({
                                             notifications.map(n => (
                                                 <div
                                                     key={n.id}
-                                                    className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${!n.read ? 'bg-blue-50/50' : ''}`}
+                                                    className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${!n.is_read ? 'bg-blue-50/50' : ''}`}
                                                     onClick={() => {
                                                         markAsRead(n.id);
                                                         setShowNotifs(false);
@@ -140,7 +140,7 @@ export default function AdminLayout({
                                                         {n.type === 'flag' && <AlertTriangle className="w-5 h-5 text-orange-500" />}
                                                     </div>
                                                     <div>
-                                                        <h4 className={`text-sm ${!n.read ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>{n.title}</h4>
+                                                        <h4 className={`text-sm ${!n.is_read ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>{n.title}</h4>
                                                         <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
                                                     </div>
                                                 </div>

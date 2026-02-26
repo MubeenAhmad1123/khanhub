@@ -522,10 +522,10 @@ export interface AdminNotification {
     link?: string;
     data?: Record<string, any>;
 
-    read: boolean;
+    is_read: boolean;
     readAt?: Date | Timestamp;
 
-    createdAt: Date | Timestamp;
+    created_at: Date | Timestamp;
 }
 
 // ==================== AUDIT LOG ====================
