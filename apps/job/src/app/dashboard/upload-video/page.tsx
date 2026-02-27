@@ -33,6 +33,7 @@ export default function VideoUploadPage() {
 
     // Profile Completion Check State
     const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
+    const gateCompletedRef = useRef(false);
 
     // Thumbnail State
     const [autoThumbnail, setAutoThumbnail] = useState<string | null>(null);
@@ -132,6 +133,8 @@ export default function VideoUploadPage() {
 
     // 2. Update isProfileIncomplete check to be role-aware
     useEffect(() => {
+        if (gateCompletedRef.current) return;
+
         if (!authLoading && user) {
             const isEmployer = user.role === 'employer';
             const missingFields: string[] = [];
@@ -615,9 +618,10 @@ export default function VideoUploadPage() {
             <ProfileGate
                 user={user}
                 onComplete={(ctx) => {
-                    refreshProfile();
-                    setIsProfileIncomplete(false);
+                    gateCompletedRef.current = true;
                     setVideoContext(ctx);
+                    setIsProfileIncomplete(false);
+                    refreshProfile();
                 }}
             />
         );

@@ -19,7 +19,8 @@ import {
     Shield,
     Video,
     AlertTriangle,
-    Flag
+    Flag,
+    Building2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,13 +40,28 @@ export default function AdminEditUserPage() {
         name: '',
         email: '',
         phone: '',
-        location: '',
+        city: '',
         industry: '',
         subcategory: '',
-        role_in_category: '',
+        desiredJobTitle: '',
+        professionalSummary: '',
+        skills: '',           // comma-separated string for editing
         isPremium: false,
+        isActive: true,
+        isBanned: false,
+        isFeatured: false,
         profile_status: '',
+        // Employer only:
+        companyName: '',
+        website: '',
+        whatsapp: '',
     });
+
+    const [flagModal, setFlagModal] = useState<{
+        field: string;
+        label: string;
+        reason: string;
+    } | null>(null);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -60,12 +76,33 @@ export default function AdminEditUserPage() {
                         name: data.name || data.displayName || '',
                         email: data.email || '',
                         phone: data.phone || data.profile?.phone || '',
-                        location: data.location || data.profile?.location || '',
+                        city: data.city || data.location || data.profile?.location || '',
                         industry: data.industry || data.profile?.industry || '',
-                        subcategory: data.subcategory || data.profile?.preferredSubcategory || '',
-                        role_in_category: data.role_in_category || data.profile?.preferredJobTitle || '',
+                        subcategory: data.subcategory
+                            || data.desiredSubcategory
+                            || data.profile?.preferredSubcategory || '',
+                        desiredJobTitle: data.desiredJobTitle
+                            || data.role_in_category
+                            || data.profile?.preferredJobTitle || '',
+                        professionalSummary: data.professionalSummary
+                            || data.profile?.bio || '',
+                        skills: (data.skills
+                            || data.profile?.skills
+                            || []).join(', '),
                         isPremium: !!data.isPremium,
+                        isActive: data.isActive !== false,
+                        isBanned: !!data.isBanned,
+                        isFeatured: !!data.isFeatured,
                         profile_status: data.profile_status || 'incomplete',
+                        companyName: data.companyName
+                            || data.company?.name
+                            || data.companyProfile?.companyName || '',
+                        website: data.website
+                            || data.company?.website
+                            || data.companyProfile?.website || '',
+                        whatsapp: data.whatsapp
+                            || data.company?.phone
+                            || data.companyProfile?.whatsapp || '',
                     });
                 } else {
                     toast('User not found', 'error');
@@ -98,53 +135,50 @@ export default function AdminEditUserPage() {
             setSaving(true);
             const userRef = doc(db, 'users', id as string);
 
-            const updates: any = {
-                name: formData.name,
-                displayName: formData.name,
-                email: formData.email.toLowerCase(),
-                phone: formData.phone,
-                location: formData.location,
+            // FLAT writes only — no nested profile:{} or company:{}
+            // This is safe with setDoc merge:true
+            const { setDoc } = await import('firebase/firestore');
+
+            await setDoc(userRef, {
+                name: formData.name.trim(),
+                displayName: formData.name.trim(),
+                phone: formData.phone.trim(),
+                city: formData.city.trim(),
+                location: formData.city.trim(),  // keep both for compatibility
                 industry: formData.industry,
+                desiredIndustry: formData.industry,
                 subcategory: formData.subcategory,
-                role_in_category: formData.role_in_category,
+                desiredSubcategory: formData.subcategory,
+                desiredJobTitle: formData.desiredJobTitle.trim(),
+                role_in_category: formData.desiredJobTitle.trim(),
+                professionalSummary: formData.professionalSummary.trim(),
+                skills: formData.skills
+                    .split(',')
+                    .map((s: string) => s.trim())
+                    .filter(Boolean),
                 isPremium: formData.isPremium,
+                isActive: formData.isActive,
+                isBanned: formData.isBanned,
+                isFeatured: formData.isFeatured,
                 profile_status: formData.profile_status,
+                // Employer-specific flat fields
+                ...(userData.role === 'employer' ? {
+                    companyName: formData.companyName.trim(),
+                    website: formData.website.trim(),
+                    whatsapp: formData.whatsapp.trim(),
+                } : {}),
                 updatedAt: serverTimestamp(),
-            };
-
-            // Also update the role-specific profile fields for consistency
-            if (userData.role === 'job_seeker') {
-                updates.profile = {
-                    ...(userData.profile || {}),
-                    fullName: formData.name,
-                    phone: formData.phone,
-                    location: formData.location,
-                    industry: formData.industry,
-                    preferredSubcategory: formData.subcategory,
-                    preferredJobTitle: formData.role_in_category,
-                };
-            } else if (userData.role === 'employer') {
-                updates.company = {
-                    ...(userData.company || {}),
-                    name: formData.name,
-                    industry: formData.industry,
-                    subcategory: formData.subcategory,
-                    location: formData.location,
-                };
-            }
-
-            await updateDoc(userRef, updates);
+            }, { merge: true });
 
             await writeActivityLog({
                 admin_id: adminUser.uid,
                 action_type: 'user_updated',
                 target_id: id as string,
                 target_type: 'user',
-                note: `Admin updated user details for: ${formData.email}`
+                note: `Admin updated user: ${formData.name} (${userData?.email})`
             });
 
-            toast('User details updated successfully', 'success');
-            router.push('/admin/users');
+            toast('User updated successfully', 'success');
         } catch (err: any) {
             console.error(err);
             toast(err.message || 'Failed to update user', 'error');
@@ -153,38 +187,37 @@ export default function AdminEditUserPage() {
         }
     };
 
-    const flagField = async (fieldName: string, fieldLabel: string) => {
-        const reason = window.prompt(`Reason for flagging ${fieldLabel}:`);
-        if (!reason || !id) return;
+    const flagField = (fieldName: string, fieldLabel: string) => {
+        setFlagModal({ field: fieldName, label: fieldLabel, reason: '' });
+    };
 
+    const submitFlag = async () => {
+        if (!flagModal || !flagModal.reason.trim() || !id) return;
         try {
             const userRef = doc(db, 'users', id as string);
             const newFlag = {
-                field: fieldName,
-                label: fieldLabel,
-                reason,
+                field: flagModal.field,
+                label: flagModal.label,
+                reason: flagModal.reason.trim(),
                 resolved: false,
                 flaggedAt: new Date().toISOString(),
             };
-
             const updatedFlags = [...(userData.flags || []), newFlag];
             await updateDoc(userRef, { flags: updatedFlags });
+            setUserData((prev: any) => ({ ...prev, flags: updatedFlags }));
 
-            // Update local state
-            setUserData(prev => ({ ...prev, flags: updatedFlags }));
-
-            // Send notification to user
             await addDoc(collection(db, 'notifications'), {
-                user_id: id as string,
-                type: 'flag',
-                message: `Admin has flagged your '${fieldLabel}': ${reason}. Please update it to resolve the flag.`,
-                is_read: false,
-                created_at: serverTimestamp(),
-                reference_id: fieldName,
+                userId: id as string,
+                type: 'profile_flagged',
+                title: 'Profile Update Required',
+                message: `Admin flagged your ${flagModal.label}: ${flagModal.reason}. Please update it.`,
+                read: false,
+                createdAt: serverTimestamp(),
                 action_url: '/dashboard/profile'
             });
 
-            toast(`Flagged ${fieldLabel}`, 'success');
+            toast(`Flagged: ${flagModal.label}`, 'success');
+            setFlagModal(null);
         } catch (err) {
             console.error(err);
             toast('Failed to flag field', 'error');
@@ -339,20 +372,22 @@ export default function AdminEditUserPage() {
                             </div>
                             <div>
                                 <div className="flex items-center justify-between mb-1.5 ml-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        City / Location
+                                    </label>
                                     <button
                                         type="button"
-                                        onClick={() => flagField('location', 'Location')}
+                                        onClick={() => flagField('city', 'City')}
                                         className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1 uppercase tracking-tighter"
                                     >
                                         <Flag className="w-3 h-3" /> Flag
                                     </button>
                                 </div>
                                 <input
-                                    required
-                                    name="location"
-                                    value={formData.location}
+                                    name="city"
+                                    value={formData.city}
                                     onChange={handleInputChange}
+                                    placeholder="e.g. Lahore, Karachi"
                                     className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none font-bold text-slate-700 transition-all"
                                 />
                             </div>
@@ -394,19 +429,83 @@ export default function AdminEditUserPage() {
                                     {getRoles(formData.industry, formData.subcategory).length > 0 ? (
                                         <SearchableSelect
                                             options={getRoles(formData.industry, formData.subcategory).map(r => ({ id: r, label: r }))}
-                                            value={formData.role_in_category}
-                                            onChange={(val) => setFormData(prev => ({ ...prev, role_in_category: val }))}
+                                            value={formData.desiredJobTitle}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, desiredJobTitle: val }))}
                                             placeholder="Select Role"
                                         />
                                     ) : (
                                         <input
-                                            name="role_in_category"
-                                            value={formData.role_in_category}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, role_in_category: e.target.value }))}
+                                            name="desiredJobTitle"
+                                            value={formData.desiredJobTitle}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, desiredJobTitle: e.target.value }))}
                                             className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none font-bold text-slate-700 transition-all"
                                             placeholder="e.g. Senior Doctor"
                                         />
                                     )}
+                                </div>
+
+                                {/* Professional Summary */}
+                                <div className="md:col-span-2">
+                                    <div className="flex items-center justify-between mb-1.5 ml-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Professional Summary
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => flagField('professionalSummary', 'Professional Summary')}
+                                            className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1 uppercase tracking-tighter"
+                                        >
+                                            <Flag className="w-3 h-3" /> Flag
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        name="professionalSummary"
+                                        value={formData.professionalSummary}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev, professionalSummary: e.target.value
+                                        }))}
+                                        rows={4}
+                                        placeholder="Edit user's professional summary..."
+                                        className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none font-bold text-slate-700 transition-all resize-none"
+                                    />
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-2">
+                                        {formData.professionalSummary.length} characters
+                                    </p>
+                                </div>
+
+                                {/* Skills */}
+                                <div className="md:col-span-2">
+                                    <div className="flex items-center justify-between mb-1.5 ml-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Skills (comma separated)
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => flagField('skills', 'Skills')}
+                                            className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1 uppercase tracking-tighter"
+                                        >
+                                            <Flag className="w-3 h-3" /> Flag
+                                        </button>
+                                    </div>
+                                    <input
+                                        name="skills"
+                                        value={formData.skills}
+                                        onChange={handleInputChange}
+                                        placeholder="React, Leadership, Sales..."
+                                        className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none font-bold text-slate-700 transition-all"
+                                    />
+                                    {/* Show parsed tags preview */}
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {formData.skills.split(',').filter(s => s.trim()).map(
+                                            (skill, i) => (
+                                                <span key={i}
+                                                    className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-lg border border-blue-100 uppercase tracking-tight"
+                                                >
+                                                    {skill.trim()}
+                                                </span>
+                                            )
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -449,6 +548,48 @@ export default function AdminEditUserPage() {
                                 />
                                 <span className="font-bold text-sm group-hover:text-blue-400 transition-colors">Premium Account 💎</span>
                             </label>
+
+                            {/* isActive toggle */}
+                            <label className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-white/10 transition-all group">
+                                <input
+                                    type="checkbox"
+                                    name="isActive"
+                                    checked={formData.isActive}
+                                    onChange={handleInputChange}
+                                    className="w-5 h-5 rounded-lg border-white/20 bg-transparent text-green-500 focus:ring-offset-0 focus:ring-0"
+                                />
+                                <span className="font-bold text-sm group-hover:text-green-400 transition-colors">
+                                    Active / Visible ✅
+                                </span>
+                            </label>
+
+                            {/* isBanned toggle */}
+                            <label className="flex items-center gap-3 p-4 bg-white/5 border border-red-500/20 rounded-2xl cursor-pointer hover:bg-red-500/10 transition-all group">
+                                <input
+                                    type="checkbox"
+                                    name="isBanned"
+                                    checked={formData.isBanned}
+                                    onChange={handleInputChange}
+                                    className="w-5 h-5 rounded-lg text-red-500 focus:ring-offset-0 focus:ring-0"
+                                />
+                                <span className="font-bold text-sm group-hover:text-red-400 transition-colors">
+                                    Banned Account 🚫
+                                </span>
+                            </label>
+
+                            {/* isFeatured toggle */}
+                            <label className="flex items-center gap-3 p-4 bg-white/5 border border-yellow-500/20 rounded-2xl cursor-pointer hover:bg-yellow-500/10 transition-all group">
+                                <input
+                                    type="checkbox"
+                                    name="isFeatured"
+                                    checked={formData.isFeatured}
+                                    onChange={handleInputChange}
+                                    className="w-5 h-5 rounded-lg text-yellow-500 focus:ring-offset-0 focus:ring-0"
+                                />
+                                <span className="font-bold text-sm group-hover:text-yellow-400 transition-colors">
+                                    Featured Profile ⭐
+                                </span>
+                            </label>
                         </div>
 
                         <button
@@ -481,6 +622,46 @@ export default function AdminEditUserPage() {
                     </div>
                 </div>
             </form>
+
+            {flagModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl space-y-6">
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 italic uppercase tracking-tighter">
+                                Flag: {flagModal.label}
+                            </h3>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                User will be notified to fix this
+                            </p>
+                        </div>
+                        <textarea
+                            autoFocus
+                            rows={3}
+                            placeholder="Describe the issue clearly..."
+                            value={flagModal.reason}
+                            onChange={e => setFlagModal(prev =>
+                                prev ? { ...prev, reason: e.target.value } : null
+                            )}
+                            className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-red-400 focus:ring-4 focus:ring-red-500/10 outline-none font-bold text-slate-700 resize-none transition-all"
+                        />
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setFlagModal(null)}
+                                className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={submitFlag}
+                                disabled={!flagModal.reason.trim()}
+                                className="flex-1 py-3 bg-red-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 disabled:opacity-40"
+                            >
+                                Send Flag
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
