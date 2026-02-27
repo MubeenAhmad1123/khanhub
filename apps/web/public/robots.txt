@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://khanhub.com.pk
+
+# Sitemaps
+Sitemap: https://khanhub.com.pk/sitemap.xml

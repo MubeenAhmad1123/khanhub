@@ -134,31 +134,29 @@ export default function VideoUploadPage() {
     // 2. Update isProfileIncomplete check to be role-aware
     useEffect(() => {
         if (gateCompletedRef.current) return;
-
         if (!authLoading && user) {
-            const isEmployer = user.role === 'employer';
             const missingFields: string[] = [];
-
-            if (isEmployer) {
-                // Employer gate check
-                const name = user.companyName || user.displayName || user.name;
-                if (!name) missingFields.push('Company Name');
-                if (!user.phone) missingFields.push('Phone');
-                if (!user.industry) missingFields.push('Industry');
-                // hiringFor is always asked fresh each video upload
-                // because it's per-video context, not profile data
-                // So employer gate always shows (to capture hiringFor)
-                missingFields.push('hiringFor'); // always require gate
-            } else {
-                // Job seeker gate check
-                const name = user.name || user.displayName;
-                if (!name) missingFields.push('Full Name');
-                if (!user.phone) missingFields.push('Phone');
-                if (!user.industry) missingFields.push('Industry');
-                if (!user.desiredJobTitle) missingFields.push('Job Title');
+            const name = user.name || user.displayName || user.companyName;
+            if (!name) missingFields.push('Name');
+            if (!user.phone) missingFields.push('Phone');
+            if (!user.industry) missingFields.push('Industry');
+            // Job seekers also need desiredJobTitle
+            if (user.role !== 'employer' && !user.desiredJobTitle) {
+                missingFields.push('Job Title');
             }
-
             setIsProfileIncomplete(missingFields.length > 0);
+
+            // Initialize videoContext based on user profile
+            setVideoContext((prev: any) => {
+                if (Object.keys(prev).length > 0) return prev; // Don't override if already typing
+                const u = user as any;
+                return {
+                    industry: u.industry || u.desiredIndustry || '',
+                    subcategory: u.subcategory || u.desiredSubcategory || '',
+                    targetJobTitle: u.desiredJobTitle || '',
+                    seekerExperience: u.experienceLevel || '',
+                };
+            });
         }
     }, [user, authLoading]);
 
@@ -612,14 +610,12 @@ export default function VideoUploadPage() {
         </div>
     );
 
-    // Profile Gate (Prompt 5)
     if (isProfileIncomplete) {
         return (
             <ProfileGate
                 user={user}
-                onComplete={(ctx) => {
+                onComplete={() => {
                     gateCompletedRef.current = true;
-                    setVideoContext(ctx);
                     setIsProfileIncomplete(false);
                     refreshProfile();
                 }}
@@ -997,6 +993,21 @@ export default function VideoUploadPage() {
                                                     </button>
                                                 </div>
 
+                                                <ThumbnailSelector
+                                                    previewUrl={previewUrl}
+                                                    autoThumbnail={autoThumbnail}
+                                                    selectedThumbnail={selectedThumbnail}
+                                                    setSelectedThumbnail={setSelectedThumbnail}
+                                                    uploadedThumbnail={uploadedThumbnail}
+                                                    setUploadedThumbnail={setUploadedThumbnail}
+                                                />
+
+                                                <VideoContextForm
+                                                    user={user}
+                                                    videoContext={videoContext}
+                                                    setVideoContext={setVideoContext}
+                                                />
+
                                                 <button
                                                     onClick={showSecondUpload ? handleSecondVideoUpload : handleUpload}
                                                     disabled={uploading}
@@ -1115,58 +1126,37 @@ export default function VideoUploadPage() {
     );
 }
 
-function ProfileGate({
-    user,
-    onComplete
-}: {
+function ProfileGate({ user, onComplete }: {
     user: any;
-    onComplete: (videoContext: any) => void;
+    onComplete: () => void;
 }) {
     const isEmployer = user?.role === 'employer';
-
-    return isEmployer
-        ? <EmployerGate user={user} onComplete={onComplete} />
-        : <SeekerGate user={user} onComplete={onComplete} />;
-}
-
-function SeekerGate({ user, onComplete }: {
-    user: any;
-    onComplete: (ctx: any) => void;
-}) {
     const [formData, setFormData] = useState({
-        fullName: user?.name || user?.displayName || '',
+        name: user?.name || user?.displayName || user?.companyName || '',
         phone: user?.phone || '',
-        industry: user?.desiredIndustry || user?.industry || '',
-        subcategory: user?.desiredSubcategory
-            || user?.subcategory || '',
-        targetJobTitle: user?.desiredJobTitle || '',
+        industry: user?.industry || user?.desiredIndustry || '',
+        subcategory: user?.subcategory || user?.desiredSubcategory || '',
+        desiredJobTitle: user?.desiredJobTitle || '',
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const checklist = [
         {
-            id: 'fullName', label: 'Full Name',
-            complete: !!formData.fullName.trim()
+            label: isEmployer ? 'Company Name' : 'Full Name',
+            complete: !!formData.name.trim()
         },
-        {
-            id: 'phone', label: 'Phone Number',
-            complete: !!formData.phone.trim()
-        },
-        {
-            id: 'industry', label: 'Industry',
-            complete: !!formData.industry
-        },
-        {
-            id: 'targetJobTitle', label: 'Job Title',
-            complete: !!formData.targetJobTitle
-        },
+        { label: 'Phone Number', complete: !!formData.phone.trim() },
+        { label: 'Industry', complete: !!formData.industry },
+        ...(!isEmployer ? [{
+            label: 'Job Title',
+            complete: !!formData.desiredJobTitle
+        }] : []),
     ];
 
-    // Pre-fill fields already completed — skip form if all done
+    const isReady = checklist.every(i => i.complete);
     const completedCount = checklist.filter(i => i.complete).length;
     const progress = (completedCount / checklist.length) * 100;
-    const isReady = completedCount === checklist.length;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -1175,38 +1165,33 @@ function SeekerGate({ user, onComplete }: {
         setError(null);
         try {
             const { doc, setDoc } = await import('firebase/firestore');
-            const { auth, db } = await import(
-                '@/lib/firebase/firebase-config'
-            );
-            const { updateProfile: fbUpdate } = await import(
-                'firebase/auth'
-            );
+            const { db, auth } = await import('@/lib/firebase/firebase-config');
+            const { updateProfile: fbUpdate } = await import('firebase/auth');
 
-            // Save profile fields (flat, merge: true)
-            await setDoc(doc(db, 'users', user.uid), {
-                displayName: formData.fullName.trim(),
-                name: formData.fullName.trim(),
+            const fields: any = {
+                name: formData.name.trim(),
+                displayName: formData.name.trim(),
                 phone: formData.phone.trim(),
                 industry: formData.industry,
                 desiredIndustry: formData.industry,
                 subcategory: formData.subcategory,
                 desiredSubcategory: formData.subcategory,
-                desiredJobTitle: formData.targetJobTitle,
                 updatedAt: new Date(),
-            }, { merge: true });
+            };
+            if (isEmployer) {
+                fields.companyName = formData.name.trim();
+            } else {
+                fields.desiredJobTitle = formData.desiredJobTitle;
+            }
+
+            await setDoc(doc(db, 'users', user.uid), fields, { merge: true });
 
             if (auth.currentUser) {
                 await fbUpdate(auth.currentUser, {
-                    displayName: formData.fullName.trim(),
+                    displayName: formData.name.trim()
                 });
             }
-
-            // Pass video context to parent
-            onComplete({
-                industry: formData.industry,
-                subcategory: formData.subcategory,
-                targetJobTitle: formData.targetJobTitle,
-            });
+            onComplete();
         } catch (err: any) {
             setError(err.message || 'Failed to save. Try again.');
         } finally {
@@ -1214,74 +1199,44 @@ function SeekerGate({ user, onComplete }: {
         }
     };
 
-    const handleSelectChange = (name: string, value: string) => {
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    // RENDER — keep the same design as the existing ProfileGate
-    // (white card, rounded-[2.5rem], progress bar, checklist, form)
-    // ONLY change: title is "Video Setup", subtitle explains context
     return (
-        <div className="min-h-screen bg-slate-50 py-12 px-4 
-                    flex items-center justify-center 
-                    animate-in fade-in duration-700">
+        <div className="min-h-screen bg-slate-50 py-12 px-4 flex items-center justify-center animate-in fade-in duration-700">
             <div className="max-w-2xl w-full">
-                <div className="bg-white rounded-[2.5rem] shadow-2xl 
-                        border border-slate-100 overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden">
                     <div className="p-8 md:p-10">
-
-                        {/* Header with progress */}
                         <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h2 className="text-3xl font-black text-slate-900 
-                               italic tracking-tighter uppercase">
-                                    Video Setup
+                                <h2 className="text-3xl font-black text-slate-900 italic tracking-tighter uppercase">
+                                    Complete Profile
                                 </h2>
-                                <p className="text-xs font-bold text-slate-400 
-                              uppercase tracking-widest mt-1">
-                                    Tell us about the role you're targeting
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                    Required before uploading your video
                                 </p>
                             </div>
                             <div className="text-right">
-                                <span className="text-blue-600 font-black 
-                                 text-xl italic">
+                                <span className="text-blue-600 font-black text-xl italic">
                                     {Math.round(progress)}%
                                 </span>
-                                <div className="w-24 h-2 bg-slate-100 
-                                rounded-full mt-1 overflow-hidden">
+                                <div className="w-24 h-2 bg-slate-100 rounded-full mt-1 overflow-hidden">
                                     <div
-                                        className="h-full bg-blue-600 transition-all 
-                               duration-500"
+                                        className="h-full bg-blue-600 transition-all duration-500"
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Checklist */}
-                        <div className="bg-blue-50/50 rounded-2xl p-6 mb-8 
-                            border border-blue-100">
-                            <h3 className="text-xs font-black text-blue-600 
-                             uppercase tracking-widest mb-4">
+                        <div className="bg-blue-50/50 rounded-2xl p-6 mb-8 border border-blue-100">
+                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">
                                 Required to Proceed
                             </h3>
                             <ul className="grid grid-cols-2 gap-3">
-                                {checklist.map(item => (
-                                    <li key={item.id} className="flex items-center gap-2">
-                                        <div className={cn(
-                                            "w-4 h-4 rounded-full flex items-center justify-center border transition-colors",
-                                            item.complete
-                                                ? "bg-green-500 border-green-500 text-white"
-                                                : "bg-white border-slate-200"
-                                        )}>
-                                            {item.complete && (
-                                                <Check className="w-2.5 h-2.5 stroke-[4]" />
-                                            )}
+                                {checklist.map((item, idx) => (
+                                    <li key={idx} className="flex items-center gap-2">
+                                        <div className={"w-4 h-4 rounded-full flex items-center justify-center border transition-colors " + (item.complete ? "bg-green-500 border-green-500 text-white" : "bg-white border-slate-200")}>
+                                            {item.complete && <Check className="w-2.5 h-2.5 stroke-[4]" />}
                                         </div>
-                                        <span className={cn(
-                                            "text-[10px] font-bold uppercase tracking-tight",
-                                            item.complete ? "text-slate-900" : "text-slate-400"
-                                        )}>
+                                        <span className={"text-[10px] font-bold uppercase tracking-tight " + (item.complete ? "text-slate-900" : "text-slate-400")}>
                                             {item.label}
                                         </span>
                                     </li>
@@ -1289,126 +1244,78 @@ function SeekerGate({ user, onComplete }: {
                             </ul>
                         </div>
 
-                        {/* Form */}
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                                {/* Full Name — pre-filled, still editable */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Full Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-5 py-3 bg-slate-50 
-                               border-2 border-slate-50 rounded-xl 
-                               focus:bg-white focus:border-blue-500 
-                               outline-none transition-all font-bold 
-                               text-slate-900"
-                                        value={formData.fullName}
-                                        onChange={e => setFormData({
-                                            ...formData, fullName: e.target.value
-                                        })}
-                                    />
-                                </div>
-
-                                {/* Phone */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Phone Number
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        placeholder="03XXXXXXXXX"
-                                        className="w-full px-5 py-3 bg-slate-50 
-                               border-2 border-slate-50 rounded-xl 
-                               focus:bg-white focus:border-blue-500 
-                               outline-none transition-all font-bold 
-                               text-slate-900"
-                                        value={formData.phone}
-                                        onChange={e => setFormData({
-                                            ...formData, phone: e.target.value
-                                        })}
-                                    />
-                                </div>
-
-                                {/* Industry */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Industry
-                                    </label>
-                                    <SearchableSelect
-                                        options={INDUSTRIES.map(i => ({
-                                            id: i.id, label: i.label
-                                        }))}
-                                        value={formData.industry}
-                                        onChange={(val) => {
-                                            handleSelectChange('industry', val);
-                                            handleSelectChange('subcategory', '');
-                                            handleSelectChange('targetJobTitle', '');
-                                        }}
-                                        placeholder="Select Industry..."
-                                    />
-                                </div>
-
-                                {/* Subcategory */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Job Category
-                                    </label>
-                                    <SearchableSelect
-                                        options={getSubcategories(formData.industry)
-                                            .map(s => ({ id: s.id, label: s.label }))}
-                                        value={formData.subcategory}
-                                        onChange={(val) => {
-                                            handleSelectChange('subcategory', val);
-                                            handleSelectChange('targetJobTitle', '');
-                                        }}
-                                        placeholder="Select category..."
-                                        disabled={!formData.industry}
-                                    />
-                                </div>
-
-                                {/* Target Job Title — full width */}
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Role You're Targeting
-                                    </label>
-                                    <SearchableSelect
-                                        options={getRoles(
-                                            formData.industry,
-                                            formData.subcategory
-                                        ).map(r => ({ id: r, label: r }))}
-                                        value={formData.targetJobTitle}
-                                        onChange={(val) =>
-                                            handleSelectChange('targetJobTitle', val)
-                                        }
-                                        placeholder="e.g. Sales Executive, Web Developer..."
-                                        disabled={!formData.subcategory}
-                                    />
-                                    <p className="text-[9px] text-slate-400 
-                                font-bold uppercase tracking-widest 
-                                ml-1">
-                                        This appears on your video card on the browse page
-                                    </p>
-                                </div>
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    {isEmployer ? 'Company Name' : 'Full Name'}
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                />
                             </div>
 
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    Phone Number
+                                </label>
+                                <input
+                                    type="tel"
+                                    required
+                                    placeholder="03XXXXXXXXX"
+                                    value={formData.phone}
+                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                    className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    Industry
+                                </label>
+                                <SearchableSelect
+                                    options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
+                                    value={formData.industry}
+                                    onChange={(val) => setFormData({ ...formData, industry: val, subcategory: '', desiredJobTitle: '' })}
+                                    placeholder="Select Industry..."
+                                />
+                            </div>
+
+                            {!isEmployer && (
+                                <>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                            Job Category
+                                        </label>
+                                        <SearchableSelect
+                                            options={getSubcategories(formData.industry).map(s => ({ id: s.id, label: s.label }))}
+                                            value={formData.subcategory}
+                                            onChange={(val) => setFormData({ ...formData, subcategory: val, desiredJobTitle: '' })}
+                                            placeholder="Select category..."
+                                            disabled={!formData.industry}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                            Job Title You're Targeting
+                                        </label>
+                                        <SearchableSelect
+                                            options={getRoles(formData.industry, formData.subcategory).map(r => ({ id: r, label: r }))}
+                                            value={formData.desiredJobTitle}
+                                            onChange={(val) => setFormData({ ...formData, desiredJobTitle: val })}
+                                            placeholder="Select role..."
+                                            disabled={!formData.subcategory}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
                             {error && (
-                                <p className="text-red-500 text-[10px] font-black 
-                              uppercase text-center">
+                                <p className="text-red-500 text-[10px] font-black uppercase text-center">
                                     {error}
                                 </p>
                             )}
@@ -1416,42 +1323,20 @@ function SeekerGate({ user, onComplete }: {
                             <button
                                 type="submit"
                                 disabled={!isReady || saving}
-                                className="w-full py-5 bg-blue-600 text-white 
-                           rounded-2xl font-black text-sm uppercase 
-                           tracking-widest transition-all shadow-xl 
-                           shadow-blue-500/20 disabled:opacity-30 
-                           disabled:grayscale hover:scale-[1.02] 
-                           active:scale-[0.98] flex items-center 
-                           justify-center gap-2"
+                                className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 disabled:opacity-30 disabled:grayscale hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                             >
-                                {saving
-                                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                                    : 'Continue to Video Upload'
-                                }
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save & Continue'}
                                 {!saving && <ArrowRight className="w-4 h-4" />}
                             </button>
                         </form>
                     </div>
 
-                    {/* Privacy footer — keep exact same as before */}
-                    <div className="bg-orange-50 p-8 border-t border-orange-100">
-                        <div className="flex gap-4">
-                            <div className="w-12 h-12 bg-white rounded-2xl 
-                              flex items-center justify-center 
-                              text-orange-500 shadow-sm flex-shrink-0">
-                                <ShieldCheck className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-black text-orange-600 
-                               uppercase tracking-widest mb-1">
-                                    Your Privacy Matters
-                                </h3>
-                                <p className="text-[11px] text-orange-800 font-bold 
-                              leading-relaxed uppercase tracking-wide">
-                                    Only your industry and role are public. Contact
-                                    details are only visible after you mutually connect.
-                                </p>
-                            </div>
+                    <div className="bg-orange-50 p-6 border-t border-orange-100">
+                        <div className="flex gap-3">
+                            <ShieldCheck className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-orange-800 font-bold leading-relaxed uppercase tracking-wide">
+                                Only your industry and role are public. Contact details are hidden until you connect.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1460,439 +1345,132 @@ function SeekerGate({ user, onComplete }: {
     );
 }
 
-function EmployerGate({ user, onComplete }: {
+function VideoContextForm({
+    user,
+    videoContext,
+    setVideoContext
+}: {
     user: any;
-    onComplete: (ctx: any) => void;
+    videoContext: any;
+    setVideoContext: (ctx: any) => void;
 }) {
-    const [formData, setFormData] = useState({
-        companyName: user?.companyName
-            || user?.displayName
-            || '',
-        phone: user?.phone || '',
-        industry: user?.industry || '',
-        hiringFor: '',          // role they are hiring for
-        expectedExperience: '', // what experience they want
-        salaryMin: '',
-        salaryMax: '',
-        hideSalary: false,
-        jobType: '',            // Remote / Onsite / Hybrid
-    });
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const isEmployer = user?.role === 'employer';
 
-    const checklist = [
-        {
-            id: 'companyName', label: 'Company Name',
-            complete: !!formData.companyName.trim()
-        },
-        {
-            id: 'phone', label: 'Phone Number',
-            complete: !!formData.phone.trim()
-        },
-        {
-            id: 'industry', label: 'Industry',
-            complete: !!formData.industry
-        },
-        {
-            id: 'hiringFor', label: 'Hiring Role',
-            complete: !!formData.hiringFor.trim()
-        },
-        {
-            id: 'expectedExperience', label: 'Expected Experience',
-            complete: !!formData.expectedExperience
-        },
-        {
-            id: 'jobType', label: 'Job Type',
-            complete: !!formData.jobType
-        },
-    ];
+    if (isEmployer) {
+        return (
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500 space-y-4">
+                <h3 className="text-lg font-black text-slate-900 italic uppercase tracking-tighter">Hiring Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 focus-within:z-10">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role You're Hiring For</label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="e.g. Sales Manager"
+                            value={videoContext.hiringFor || ''}
+                            onChange={e => setVideoContext({ ...videoContext, hiringFor: e.target.value })}
+                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-sm"
+                        />
+                    </div>
+                    <div className="space-y-1.5 focus-within:z-10">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Experience</label>
+                        <select
+                            required
+                            value={videoContext.expectedExperience || ''}
+                            onChange={e => setVideoContext({ ...videoContext, expectedExperience: e.target.value })}
+                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-sm"
+                        >
+                            <option value="">Select Range</option>
+                            <option value="Fresher / 0-1 Year">Fresher / 0-1 Year</option>
+                            <option value="1-3 Years">1-3 Years</option>
+                            <option value="3-5 Years">3-5 Years</option>
+                            <option value="5-10 Years">5-10 Years</option>
+                            <option value="10+ Years">10+ Years</option>
+                        </select>
+                    </div>
+                    <div className="space-y-1.5 focus-within:z-10 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Type</label>
+                        <div className="flex gap-2">
+                            {['Onsite', 'Remote', 'Hybrid'].map(type => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => setVideoContext({ ...videoContext, jobType: type })}
+                                    className={"flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all " + (videoContext.jobType === type ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300")}
+                                >
+                                    {type}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="space-y-1.5 focus-within:z-10 md:col-span-2">
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Salary Range (PKR / Month)</label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hide Salary</span>
+                                <input
+                                    type="checkbox"
+                                    checked={videoContext.hideSalary || false}
+                                    onChange={e => setVideoContext({ ...videoContext, hideSalary: e.target.checked })}
+                                    className="accent-blue-600 w-4 h-4 cursor-pointer"
+                                />
+                            </label>
+                        </div>
+                        {!videoContext.hideSalary && (
+                            <div className="flex gap-4">
+                                <input
+                                    type="number"
+                                    placeholder="Min"
+                                    value={videoContext.salaryMin || ''}
+                                    onChange={e => setVideoContext({ ...videoContext, salaryMin: e.target.value })}
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-sm"
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="Max"
+                                    value={videoContext.salaryMax || ''}
+                                    onChange={e => setVideoContext({ ...videoContext, salaryMax: e.target.value })}
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-sm"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
-    const completedCount = checklist.filter(i => i.complete).length;
-    const progress = (completedCount / checklist.length) * 100;
-    const isReady = completedCount === checklist.length;
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!isReady) return;
-        setSaving(true);
-        setError(null);
-        try {
-            const { doc, setDoc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase/firebase-config');
-
-            // Save company profile fields flat, merge: true
-            await setDoc(doc(db, 'users', user.uid), {
-                companyName: formData.companyName.trim(),
-                displayName: formData.companyName.trim(),
-                phone: formData.phone.trim(),
-                industry: formData.industry,
-                updatedAt: new Date(),
-            }, { merge: true });
-
-            // Pass video context (not saved to user doc — 
-            // saved on the video document only)
-            onComplete({
-                industry: formData.industry,
-                hiringFor: formData.hiringFor,
-                expectedExperience: formData.expectedExperience,
-                salaryMin: formData.hideSalary ? null : formData.salaryMin,
-                salaryMax: formData.hideSalary ? null : formData.salaryMax,
-                hideSalary: formData.hideSalary,
-                jobType: formData.jobType,
-                subcategory: formData.hiringFor, // used as subcategory on VideoCard
-            });
-        } catch (err: any) {
-            setError(err.message || 'Failed to save. Try again.');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // RENDER — same card design as SeekerGate
-    // Title: "Hiring Setup"
-    // Subtitle: "Tell candidates what role you're hiring for"
+    // Job Seeker Form
     return (
-        <div className="min-h-screen bg-slate-50 py-12 px-4 
-                    flex items-center justify-center 
-                    animate-in fade-in duration-700">
-            <div className="max-w-2xl w-full">
-                <div className="bg-white rounded-[2.5rem] shadow-2xl 
-                        border border-slate-100 overflow-hidden">
-                    <div className="p-8 md:p-10">
-
-                        <div className="flex items-center justify-between mb-8">
-                            <div>
-                                <h2 className="text-3xl font-black text-slate-900 
-                               italic tracking-tighter uppercase">
-                                    Hiring Setup
-                                </h2>
-                                <p className="text-xs font-bold text-slate-400 
-                              uppercase tracking-widest mt-1">
-                                    Tell candidates what role you're hiring for
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-orange-500 font-black 
-                                 text-xl italic">
-                                    {Math.round(progress)}%
-                                </span>
-                                <div className="w-24 h-2 bg-slate-100 
-                                rounded-full mt-1 overflow-hidden">
-                                    <div
-                                        className="h-full bg-orange-500 transition-all 
-                               duration-500"
-                                        style={{ width: `${progress}%` }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Checklist */}
-                        <div className="bg-orange-50/50 rounded-2xl p-6 mb-8 
-                            border border-orange-100">
-                            <h3 className="text-xs font-black text-orange-600 
-                             uppercase tracking-widest mb-4">
-                                Required to Proceed
-                            </h3>
-                            <ul className="grid grid-cols-2 gap-3">
-                                {checklist.map(item => (
-                                    <li key={item.id}
-                                        className="flex items-center gap-2">
-                                        <div className={cn(
-                                            "w-4 h-4 rounded-full flex items-center justify-center border transition-colors",
-                                            item.complete
-                                                ? "bg-green-500 border-green-500 text-white"
-                                                : "bg-white border-slate-200"
-                                        )}>
-                                            {item.complete && (
-                                                <Check className="w-2.5 h-2.5 stroke-[4]" />
-                                            )}
-                                        </div>
-                                        <span className={cn(
-                                            "text-[10px] font-bold uppercase tracking-tight",
-                                            item.complete ? "text-slate-900" : "text-slate-400"
-                                        )}>
-                                            {item.label}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                                {/* Company Name */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Company Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-5 py-3 bg-slate-50 
-                               border-2 border-slate-50 rounded-xl 
-                               focus:bg-white focus:border-orange-500 
-                               outline-none transition-all font-bold 
-                               text-slate-900"
-                                        value={formData.companyName}
-                                        onChange={e => setFormData({
-                                            ...formData, companyName: e.target.value
-                                        })}
-                                    />
-                                </div>
-
-                                {/* Phone */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Phone Number
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        placeholder="03XXXXXXXXX"
-                                        className="w-full px-5 py-3 bg-slate-50 
-                               border-2 border-slate-50 rounded-xl 
-                               focus:bg-white focus:border-orange-500 
-                               outline-none transition-all font-bold 
-                               text-slate-900"
-                                        value={formData.phone}
-                                        onChange={e => setFormData({
-                                            ...formData, phone: e.target.value
-                                        })}
-                                    />
-                                </div>
-
-                                {/* Industry */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Industry
-                                    </label>
-                                    <SearchableSelect
-                                        options={INDUSTRIES.map(i => ({
-                                            id: i.id, label: i.label
-                                        }))}
-                                        value={formData.industry}
-                                        onChange={(val) => setFormData({
-                                            ...formData, industry: val, hiringFor: ''
-                                        })}
-                                        placeholder="Select Industry..."
-                                    />
-                                </div>
-
-                                {/* Hiring For — free text, not dropdown */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Role You're Hiring For
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Sales Manager, React Developer"
-                                        className="w-full px-5 py-3 bg-slate-50 
-                               border-2 border-slate-50 rounded-xl 
-                               focus:bg-white focus:border-orange-500 
-                               outline-none transition-all font-bold 
-                               text-slate-900"
-                                        value={formData.hiringFor}
-                                        onChange={e => setFormData({
-                                            ...formData, hiringFor: e.target.value
-                                        })}
-                                    />
-                                    <p className="text-[9px] text-slate-400 font-bold 
-                                uppercase tracking-widest ml-1">
-                                        Shown on your video card to candidates
-                                    </p>
-                                </div>
-
-                                {/* Expected Experience */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Expected Experience
-                                    </label>
-                                    <select
-                                        required
-                                        className="w-full px-5 py-3 bg-slate-50 
-                               border-2 border-slate-50 rounded-xl 
-                               focus:bg-white focus:border-orange-500 
-                               outline-none transition-all font-bold 
-                               text-slate-900 text-xs"
-                                        value={formData.expectedExperience}
-                                        onChange={e => setFormData({
-                                            ...formData,
-                                            expectedExperience: e.target.value
-                                        })}
-                                    >
-                                        <option value="">Select Range</option>
-                                        <option value="Fresher / 0-1 Year">
-                                            Fresher / 0-1 Year
-                                        </option>
-                                        <option value="1-3 Years">1-3 Years</option>
-                                        <option value="3-5 Years">3-5 Years</option>
-                                        <option value="5-10 Years">5-10 Years</option>
-                                        <option value="10+ Years">10+ Years</option>
-                                    </select>
-                                </div>
-
-                                {/* Job Type */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black 
-                                   text-slate-400 uppercase 
-                                   tracking-widest ml-1">
-                                        Job Type
-                                    </label>
-                                    <div className="flex gap-3">
-                                        {['Onsite', 'Remote', 'Hybrid'].map(type => (
-                                            <button
-                                                key={type}
-                                                type="button"
-                                                onClick={() => setFormData({
-                                                    ...formData, jobType: type
-                                                })}
-                                                className={cn(
-                                                    "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                                    formData.jobType === type
-                                                        ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-200"
-                                                        : "bg-slate-50 border-slate-100 text-slate-500 hover:border-slate-300"
-                                                )}
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Salary Range — full width */}
-                                <div className="space-y-3 md:col-span-2">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[10px] font-black 
-                                     text-slate-400 uppercase 
-                                     tracking-widest ml-1">
-                                            Salary Range (PKR / Month)
-                                        </label>
-                                        <label className="flex items-center gap-2 
-                                     cursor-pointer">
-                                            <span className="text-[10px] font-black 
-                                      text-slate-400 uppercase 
-                                      tracking-widest">
-                                                Hide Salary
-                                            </span>
-                                            <div
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    hideSalary: !formData.hideSalary
-                                                })}
-                                                className={cn(
-                                                    "w-10 h-6 rounded-full relative cursor-pointer transition-colors",
-                                                    formData.hideSalary
-                                                        ? "bg-orange-500"
-                                                        : "bg-slate-200"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all",
-                                                    formData.hideSalary ? "left-5" : "left-1"
-                                                )} />
-                                            </div>
-                                        </label>
-                                    </div>
-                                    {!formData.hideSalary && (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <input
-                                                type="number"
-                                                placeholder="Min (e.g. 30000)"
-                                                className="w-full px-5 py-3 bg-slate-50 
-                                   border-2 border-slate-50 rounded-xl 
-                                   focus:bg-white focus:border-orange-500 
-                                   outline-none transition-all font-bold 
-                                   text-slate-900 text-sm"
-                                                value={formData.salaryMin}
-                                                onChange={e => setFormData({
-                                                    ...formData, salaryMin: e.target.value
-                                                })}
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="Max (e.g. 60000)"
-                                                className="w-full px-5 py-3 bg-slate-50 
-                                   border-2 border-slate-50 rounded-xl 
-                                   focus:bg-white focus:border-orange-500 
-                                   outline-none transition-all font-bold 
-                                   text-slate-900 text-sm"
-                                                value={formData.salaryMax}
-                                                onChange={e => setFormData({
-                                                    ...formData, salaryMax: e.target.value
-                                                })}
-                                            />
-                                        </div>
-                                    )}
-                                    {formData.hideSalary && (
-                                        <p className="text-[10px] font-bold text-slate-400 
-                                  uppercase tracking-widest ml-1">
-                                            Salary will show as "Competitive" on your card
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {error && (
-                                <p className="text-red-500 text-[10px] font-black 
-                              uppercase text-center">
-                                    {error}
-                                </p>
-                            )}
-
-                            <button
-                                type="submit"
-                                disabled={!isReady || saving}
-                                className="w-full py-5 bg-orange-500 text-white 
-                           rounded-2xl font-black text-sm uppercase 
-                           tracking-widest transition-all shadow-xl 
-                           shadow-orange-500/20 disabled:opacity-30 
-                           disabled:grayscale hover:scale-[1.02] 
-                           active:scale-[0.98] flex items-center 
-                           justify-center gap-2"
-                            >
-                                {saving
-                                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                                    : 'Continue to Video Upload'
-                                }
-                                {!saving && <ArrowRight className="w-4 h-4" />}
-                            </button>
-                        </form>
-                    </div>
-
-                    <div className="bg-orange-50 p-8 border-t border-orange-100">
-                        <div className="flex gap-4">
-                            <div className="w-12 h-12 bg-white rounded-2xl 
-                              flex items-center justify-center 
-                              text-orange-500 shadow-sm flex-shrink-0">
-                                <ShieldCheck className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-black text-orange-600 
-                               uppercase tracking-widest mb-1">
-                                    Your Privacy Matters
-                                </h3>
-                                <p className="text-[11px] text-orange-800 font-bold 
-                              leading-relaxed uppercase tracking-wide">
-                                    Only your industry and hiring role are public.
-                                    Contact details are only shared with matched
-                                    candidates.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm animate-in fade-in zoom-in-95 duration-500 space-y-4">
+            <h3 className="text-lg font-black text-slate-900 italic uppercase tracking-tighter">Candidate Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5 focus-within:z-10">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role You're Targeting</label>
+                    <input
+                        type="text"
+                        required
+                        placeholder="e.g. Sales Executive"
+                        value={videoContext.targetJobTitle || ''}
+                        onChange={e => setVideoContext({ ...videoContext, targetJobTitle: e.target.value })}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-sm"
+                    />
+                </div>
+                <div className="space-y-1.5 focus-within:z-10">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Your Experience</label>
+                    <select
+                        required
+                        value={videoContext.seekerExperience || ''}
+                        onChange={e => setVideoContext({ ...videoContext, seekerExperience: e.target.value })}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-sm"
+                    >
+                        <option value="">Select Range</option>
+                        <option value="Fresher / 0-1 Year">Fresher / 0-1 Year</option>
+                        <option value="1-3 Years">1-3 Years</option>
+                        <option value="3-5 Years">3-5 Years</option>
+                        <option value="5-10 Years">5-10 Years</option>
+                        <option value="10+ Years">10+ Years</option>
+                    </select>
                 </div>
             </div>
         </div>

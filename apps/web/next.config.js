@@ -1,3 +1,15 @@
+const withPWA = require('@ducanh2912/next-pwa').default({
+  dest: 'public',
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  swcMinify: true,
+  disable: process.env.NODE_ENV === 'development', // Disable in dev to avoid confusion
+  workboxOptions: {
+    disableDevLogs: true,
+  },
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -30,12 +42,28 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
+  async headers() {
+    return [
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/manifest+json',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       { source: '/contact.php', destination: '/contact', permanent: true },
       { source: '/about.php', destination: '/about', permanent: true },
       { source: '/media.php', destination: '/media', permanent: true },
-      // Mapping department IDs 
       {
         source: '/departments_details.php',
         has: [{ type: 'query', key: 'id', value: '3' }],
@@ -72,10 +100,9 @@ const nextConfig = {
         destination: '/departments',
         permanent: true,
       },
-      // Fallback for departments_details.php without matching ID
       { source: '/departments_details.php', destination: '/departments', permanent: true },
     ];
   },
 };
 
-module.exports = nextConfig;
+module.exports = withPWA(nextConfig);

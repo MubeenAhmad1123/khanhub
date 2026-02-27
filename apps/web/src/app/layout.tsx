@@ -1,32 +1,40 @@
-// layout.tsx - Viewport Configuration for Mobile Optimization
-// Add this to your root layout file to fix mobile zoom issues
-
 import type { Metadata, Viewport } from 'next'
+import { Sora, DM_Sans } from 'next/font/google'
+import Navbar from '@/components/layout/Navbar'
+import Footer from '@/components/layout/Footer'
+import { Toaster } from 'react-hot-toast'
+import '@/styles/globals.css'
+import SocialMediaSidebar from '@/components/SocialMediaSidebar'
+import FloatingDonateButton from '@/components/FloatingDonateButton'
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
-// Viewport configuration - CRITICAL for mobile responsiveness
+// ─── Viewport ────────────────────────────────────────────────────────────────
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Fixes auto-zoom on load/focus
-  userScalable: false, // Prevents unintended zoom shifts 
+  maximumScale: 1,
+  userScalable: false,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#005EB8' },
-    { media: '(prefers-color-scheme: dark)', color: '#005EB8' }
-  ]
+    { media: '(prefers-color-scheme: dark)', color: '#005EB8' },
+  ],
 }
 
-// SEO Metadata - Comprehensive configuration
+// ─── Metadata ─────────────────────────────────────────────────────────────────
 export const metadata: Metadata = {
   metadataBase: new URL('https://khanhub.com.pk'),
 
   title: {
-    default: 'Khan Hub - Empowering Lives Through Care | Pakistan\'s Leading Welfare Organization',
-    template: '%s | Khan Hub'
+    default: "KhanHub - Empowering Lives Through Care | Pakistan's Leading Welfare Organization",
+    template: '%s | KhanHub',
   },
 
-  description: 'Leading Pakistan\'s social welfare transformation with 16+ specialized departments dedicated to healthcare, education, and community development. Serving 50,000+ lives across Pakistan.',
+  description:
+    "Leading Pakistan's social welfare transformation with 16+ specialized departments dedicated to healthcare, education, and community development. Serving 50,000+ lives across Pakistan.",
 
   keywords: [
+    'KhanHub',
     'Khan Hub',
     'Pakistan welfare',
     'healthcare Pakistan',
@@ -36,13 +44,12 @@ export const metadata: Metadata = {
     'charity Pakistan',
     'community development',
     'emergency services Pakistan',
-    'medical assistance Pakistan'
+    'medical assistance Pakistan',
   ],
 
-  authors: [{ name: 'Khan Hub', url: 'https://khanhub.com.pk' }],
-
-  creator: 'Khan Hub',
-  publisher: 'Khan Hub',
+  authors: [{ name: 'KhanHub', url: 'https://khanhub.com.pk' }],
+  creator: 'KhanHub',
+  publisher: 'KhanHub',
 
   formatDetection: {
     email: false,
@@ -50,32 +57,46 @@ export const metadata: Metadata = {
     telephone: false,
   },
 
+  // ✅ PWA Manifest — this is what makes the APK work
+  manifest: '/manifest.json',
+
+  // ✅ App Icons — PNG files you generate from your logo-circle.webp
+  icons: {
+    icon: [
+      { url: '/icons/icon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-152x152.png', sizes: '152x152', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    shortcut: '/icons/icon-96x96.png',
+  },
+
   openGraph: {
     type: 'website',
     locale: 'en_PK',
     url: 'https://khanhub.com.pk',
-    siteName: 'Khan Hub',
-    title: 'Khan Hub - Empowering Lives Through Care',
-    description: 'Leading Pakistan\'s social welfare transformation with 16+ specialized departments',
+    siteName: 'KhanHub',
+    title: 'KhanHub - Empowering Lives Through Care',
+    description: "Leading Pakistan's social welfare transformation with 16+ specialized departments",
     images: [
       {
-        url: '/og-image.jpg', // Create this image: 1200x630px
+        url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Khan Hub - Pakistan\'s Leading Welfare Organization',
-      }
+        alt: "KhanHub - Pakistan's Leading Welfare Organization",
+      },
     ],
-  },
-  icons: {
-    icon: '/logo.webp',
-    apple: '/logo.webp',
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'Khan Hub - Empowering Lives Through Care',
-    description: 'Leading Pakistan\'s social welfare transformation',
-    images: ['/twitter-image.jpg'], // Create this: 1200x600px
+    title: 'KhanHub - Empowering Lives Through Care',
+    description: "Leading Pakistan's social welfare transformation",
+    images: ['/twitter-image.jpg'],
     creator: '@khanhub',
   },
 
@@ -95,37 +116,32 @@ export const metadata: Metadata = {
     canonical: 'https://khanhub.com.pk',
     languages: {
       'en-PK': 'https://khanhub.com.pk',
-      'ur-PK': 'https://khanhub.com.pk/ur',
     },
   },
 
   verification: {
-    google: 'your-google-verification-code', // Add your verification code
+    google: 'your-google-verification-code',
     yandex: 'your-yandex-verification-code',
     other: {
-      'facebook-domain-verification': 'your-fb-verification-code'
-    }
+      'facebook-domain-verification': 'your-fb-verification-code',
+    },
   },
 
   category: 'nonprofit',
 
+  // ✅ PWA / installable app meta tags
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-title': 'KhanHub',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
-  }
+    'application-name': 'KhanHub',
+    'msapplication-TileColor': '#005EB8',
+    'msapplication-TileImage': '/icons/icon-144x144.png',
+  },
 }
 
-import { Sora, DM_Sans } from 'next/font/google'
-import Navbar from '@/components/layout/Navbar'
-import Footer from '@/components/layout/Footer'
-import { Toaster } from 'react-hot-toast'
-import '@/styles/globals.css'
-import SocialMediaSidebar from '@/components/SocialMediaSidebar'
-import FloatingDonateButton from '@/components/FloatingDonateButton'
-import { Analytics } from "@vercel/analytics/react"
-import { SpeedInsights } from "@vercel/speed-insights/next"
-
+// ─── Fonts ────────────────────────────────────────────────────────────────────
 const sora = Sora({
   subsets: ['latin'],
   variable: '--font-display',
@@ -138,6 +154,7 @@ const dmSans = DM_Sans({
   display: 'swap',
 })
 
+// ─── Root Layout ──────────────────────────────────────────────────────────────
 export default function RootLayout({
   children,
 }: {
@@ -160,86 +177,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-// Additional Performance Optimizations
-
-// 1. Font Optimization
-const fontConfig = {
-  inter: {
-    preload: true,
-    display: 'swap',
-    fallback: ['system-ui', 'arial']
-  },
-  plusJakarta: {
-    preload: true,
-    display: 'swap',
-    fallback: ['system-ui', 'arial']
-  }
-}
-
-// 2. Image Optimization Settings
-const imageConfig = {
-  domains: ['khanhub.com.pk'],
-  formats: ['image/webp', 'image/avif'],
-  deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-  imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-  minimumCacheTTL: 60,
-}
-
-// 3. PWA Configuration (optional)
-const pwaConfig = {
-  name: 'Khan Hub',
-  short_name: 'KhanHub',
-  description: 'Pakistan\'s Leading Welfare Organization',
-  start_url: '/',
-  display: 'standalone',
-  background_color: '#ffffff',
-  theme_color: '#005EB8',
-  orientation: 'portrait-primary',
-  icons: [
-    {
-      src: '/icons/icon-192x192.png',
-      sizes: '192x192',
-      type: 'image/png',
-      purpose: 'any maskable'
-    },
-    {
-      src: '/icons/icon-512x512.png',
-      sizes: '512x512',
-      type: 'image/png',
-      purpose: 'any maskable'
-    }
-  ]
-}
-
-// 4. Security Headers (add to next.config.js)
-const securityHeaders = [
-  {
-    key: 'X-DNS-Prefetch-Control',
-    value: 'on'
-  },
-  {
-    key: 'Strict-Transport-Security',
-    value: 'max-age=63072000; includeSubDomains; preload'
-  },
-  {
-    key: 'X-Frame-Options',
-    value: 'SAMEORIGIN'
-  },
-  {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff'
-  },
-  {
-    key: 'X-XSS-Protection',
-    value: '1; mode=block'
-  },
-  {
-    key: 'Referrer-Policy',
-    value: 'origin-when-cross-origin'
-  },
-  {
-    key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()'
-  }
-]
