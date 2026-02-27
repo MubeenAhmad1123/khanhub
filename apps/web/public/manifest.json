@@ -5,12 +5,45 @@
   "start_url": "/",
   "id": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "tabbed", "standalone"],
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#005EB8",
   "scope": "/",
   "lang": "en",
   "dir": "ltr",
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/plain": [".txt"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+khanhub",
+      "url": "/?q=%s"
+    }
+  ],
+  "note_taking": {
+    "new_note_url": "/notes/new"
+  },
   "categories": ["health", "education", "nonprofit"],
   "icons": [
     {
