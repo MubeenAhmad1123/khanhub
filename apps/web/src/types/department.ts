@@ -35,7 +35,7 @@ export interface Department {
     shortName: string;
     icon: string;
     image?: string;
-    category: string;
+    category: string | string[];
     tagline: string;
     description: string;
     services: string[] | DepartmentService[]; // Can be array of strings or service objects

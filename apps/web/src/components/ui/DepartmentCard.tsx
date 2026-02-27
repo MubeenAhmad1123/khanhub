@@ -13,7 +13,7 @@ import { memo, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Department } from '@/types/department';
-import { getDepartmentTheme } from '@/data/departments';
+import { getDepartmentTheme, DEPARTMENT_CATEGORIES } from '@/data/departments';
 
 interface DepartmentCardProps {
     department: Department;
@@ -37,6 +37,14 @@ const DepartmentCard = memo(function DepartmentCard({
         lightBg: { backgroundColor: theme.light },
         accentBg: { backgroundColor: theme.accent }
     }), [theme]);
+
+    const categoryLabels = useMemo(() => {
+        const categories = Array.isArray(department.category) ? department.category : [department.category];
+        return categories.map(catKey => {
+            const found = DEPARTMENT_CATEGORIES.find(c => c.key === catKey);
+            return found ? found.label : catKey;
+        }).join(' & ');
+    }, [department.category]);
 
     return (
         <article
@@ -96,10 +104,10 @@ const DepartmentCard = memo(function DepartmentCard({
                         {/* Category Badge with Theme */}
                         <div className="absolute top-3 right-3">
                             <span
-                                className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-sm border shadow-sm capitalize"
+                                className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-sm border shadow-sm"
                                 style={styles.primaryBorder}
                             >
-                                <span style={styles.primaryText}>{department.category}</span>
+                                <span style={styles.primaryText}>{categoryLabels}</span>
                             </span>
                         </div>
                     </div>

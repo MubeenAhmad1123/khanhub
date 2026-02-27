@@ -97,7 +97,7 @@ export default function DepartmentsSection() {
 
   // Memoized filtered departments
   const filtered = useMemo(
-    () => (activeCategory === 'all' ? DEPARTMENTS : DEPARTMENTS.filter((d) => d.category === activeCategory)),
+    () => (activeCategory === 'all' ? DEPARTMENTS : DEPARTMENTS.filter((d) => Array.isArray(d.category) ? d.category.includes(activeCategory) : d.category === activeCategory)),
     [activeCategory]
   );
 
@@ -108,7 +108,7 @@ export default function DepartmentsSection() {
       ...DEPARTMENT_CATEGORIES.reduce(
         (acc, cat) => ({
           ...acc,
-          [cat.key]: DEPARTMENTS.filter((d) => d.category === cat.key).length
+          [cat.key]: DEPARTMENTS.filter((d) => Array.isArray(d.category) ? d.category.includes(cat.key) : d.category === cat.key).length
         }),
         {} as Record<string, number>
       )

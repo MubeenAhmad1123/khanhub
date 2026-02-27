@@ -30,6 +30,24 @@ export const DEPARTMENT_CATEGORIES: DepartmentCategory[] = [
     label: 'Welfare',
     icon: '🤝',
     description: 'Community support and social services'
+  },
+  {
+    key: 'career-services',
+    label: 'Career & Corporate',
+    icon: '💼',
+    description: 'Employment, enterprise, and professional growth'
+  },
+  {
+    key: 'public-services',
+    label: 'Public Services',
+    icon: '🏛️',
+    description: 'Utility, transport, and residential facilities'
+  },
+  {
+    key: 'tourism',
+    label: 'Tourism & Culture',
+    icon: '✈️',
+    description: 'Heritage, travel, and cultural promotion'
   }
 ];
 
@@ -234,7 +252,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Rehabilitation',
     icon: '♿',
     image: '/images/rehab.webp',
-    category: 'medical-services',
+    category: ['medical-services', 'mental-health'],
     tagline: 'Recovery and rehabilitation support',
     description: 'Comprehensive rehabilitation services for physical, mental, and social recovery programs.',
     services: ['Physical Therapy', 'Mental Health', 'Addiction Treatment', 'Counseling'],
@@ -398,7 +416,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Job Center',
     icon: '💼',
     image: '/images/job.webp',
-    category: 'welfare',
+    category: 'career-services',
     tagline: 'Connecting talent with opportunity',
     description: 'Facilitating employment opportunities and career development for job seekers across all sectors.',
     services: ['Job Listings', 'Career Counseling', 'Skill Training', 'Placement Support'],
@@ -506,7 +524,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Transport',
     icon: '🚐',
     image: '/images/transport.webp',
-    category: 'welfare',
+    category: 'public-services',
     tagline: 'Safe and efficient transportation',
     description: 'Regulating transportation, issuing licenses, and managing public transport systems.',
     services: ['Driving Licenses', 'Vehicle Registration', 'Public Transport', 'Traffic Management'],
@@ -603,7 +621,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Residential',
     icon: '🏡',
     image: '/images/residential.webp',
-    category: 'welfare',
+    category: 'public-services',
     tagline: 'Quality housing solutions',
     description: 'Developing housing schemes and providing affordable residential solutions for citizens.',
     services: ['Housing Schemes', 'Building Approvals', 'Urban Planning', 'Low-Cost Housing'],
@@ -624,7 +642,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Tourism',
     icon: '✈️',
     image: '/images/travel-and-tour.webp',
-    category: 'welfare',
+    category: 'tourism',
     tagline: 'Explore the beauty of Pakistan',
     description: 'Promoting tourism, heritage sites, and cultural attractions across Pakistan.',
     services: ['Tourist Info', 'Heritage Sites', 'Travel Permits', 'Hospitality Training'],
@@ -645,7 +663,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Marketing',
     icon: '📱',
     image: '/images/marketing.webp',
-    category: 'welfare',
+    category: 'career-services',
     tagline: 'Promoting growth and opportunities',
     description: 'Strategic marketing and promotional services to support business growth and economic development.',
     services: ['Business Promotion', 'Trade Support', 'Export Facilitation', 'Market Research'],
@@ -666,7 +684,7 @@ export const DEPARTMENTS: Department[] = [
     shortName: 'Enterprises',
     icon: '🏢',
     image: '/images/enterprises.webp',
-    category: 'welfare',
+    category: 'career-services',
     tagline: 'Building sustainable businesses',
     description: 'Fostering entrepreneurship and supporting small to medium enterprises with resources and guidance.',
     services: ['Business Incubation', 'Funding Access', 'Mentorship', 'Workspace'],
@@ -1051,7 +1069,12 @@ export function getDepartmentTheme(slug: string) {
 
 export function getDepartmentsByCategory(category: string): Department[] {
   if (category === 'all') return DEPARTMENTS;
-  return DEPARTMENTS.filter(dept => dept.category === category);
+  return DEPARTMENTS.filter(dept => {
+    if (Array.isArray(dept.category)) {
+      return dept.category.includes(category);
+    }
+    return dept.category === category;
+  });
 }
 
 // For dynamic Tailwind class generation
