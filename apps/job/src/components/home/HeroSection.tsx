@@ -21,7 +21,7 @@ export default function HeroSection() {
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
                     {/* Left Side: Text & CTA */}
-                    <div className="text-center lg:text-left animate-in slide-in-from-left duration-1000">
+                    <div className="text-center lg:text-left animate-in slide-in-from-left duration-1000 order-2 lg:order-1">
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6 lg:mb-8">
                             <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
@@ -86,7 +86,7 @@ export default function HeroSection() {
                     </div>
 
                     {/* Right Side: Video Mosaic (Hidden on very small screens) */}
-                    <div className="hidden xs:block lg:block relative">
+                    <div className="hidden xs:block lg:block relative order-1 lg:order-2">
                         <VideoMosaic />
                     </div>
                 </div>

@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import TagInput from '@/components/ui/TagInput';
+import Image from 'next/image';
 
 export default function VideoUploadPage() {
     const router = useRouter();
@@ -1777,8 +1778,7 @@ function ThumbnailSelector({
                     {uploadedThumbnail && (
                         <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
                             <div className="flex items-center gap-3">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={URL.createObjectURL(uploadedThumbnail)} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-slate-100 shadow-sm" />
+                                <Image src={URL.createObjectURL(uploadedThumbnail)} alt="Preview" width={48} height={48} className="w-12 h-12 rounded-lg object-cover border border-slate-100 shadow-sm" unoptimized />
                                 <div className="text-xs font-bold text-slate-700 truncate max-w-[200px]">{uploadedThumbnail.name}</div>
                             </div>
                             <button onClick={() => setUploadedThumbnail(null)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">

@@ -8,6 +8,27 @@ import Image from 'next/image';
 import { MapPin, Phone, Building2, User, Play, Briefcase, GraduationCap, Award, Lightbulb, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import ConnectModal from '@/components/video/ConnectModal';
+import StructuredData from '@/components/seo/StructuredData';
+
+// Generate dynamic data for SEO
+const getProfileStructuredData = (userData: any, isEmployer: boolean) => {
+    if (isEmployer) {
+        return {
+            title: userData.company?.name || userData.displayName || 'Job Opportunity',
+            description: userData.company?.description || userData.bio || 'Join our team.',
+            company: userData.company?.name || userData.displayName,
+            location: userData.company?.location || userData.location || 'Pakistan',
+            datePosted: userData.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+            employmentType: 'FULL_TIME',
+            baseSalary: userData.company?.salaryRange || 'Competitive',
+        };
+    }
+    return {
+        name: userData.profile?.fullName || userData.displayName,
+        jobTitle: userData.profile?.preferredJobTitle || 'Candidate',
+        description: userData.profile?.bio || 'Professional profile.',
+    };
+};
 
 export default function PublicProfilePage() {
     const params = useParams();
@@ -108,6 +129,12 @@ export default function PublicProfilePage() {
 
     return (
         <div className="min-h-screen bg-[#F8FAFF] selection:bg-blue-100 selection:text-blue-900 pb-20">
+            {/* SEO Structured Data */}
+            <StructuredData
+                type={isEmployer ? 'JobPosting' : 'BreadcrumbList'}
+                data={getProfileStructuredData(userData, isEmployer)}
+            />
+
             {/* Dynamic Hero Section */}
             <div className="relative h-[40vh] sm:h-[50vh] w-full overflow-hidden bg-slate-900">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 opacity-90" />

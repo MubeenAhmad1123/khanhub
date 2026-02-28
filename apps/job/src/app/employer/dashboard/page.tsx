@@ -215,28 +215,28 @@ export default function EmployerDashboard() {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
                         {[
-                            { label: 'Candidates Viewed', value: '0', icon: <Search className="w-5 h-5 text-blue-600" />, tooltip: "Coming Soon: Detailed analytics on who viewed your company profile" },
-                            { label: 'Reveals Requested', value: revealCount.toString(), icon: <Users className="w-5 h-5 text-orange-600" /> },
-                            { label: 'Video Pitches', value: '0', icon: <Briefcase className="w-5 h-5 text-purple-600" />, tooltip: "Coming Soon: Reach out to candidates with custom video pitches" }
+                            { label: 'Candidates Viewed', value: '0', icon: <Search className="w-5 h-5" />, color: "from-blue-600 to-indigo-600", tooltip: "Coming Soon: Detailed analytics on who viewed your company profile" },
+                            { label: 'Reveals Requested', value: revealCount.toString(), icon: <Users className="w-5 h-5 text-orange-600" />, color: "from-orange-600 to-red-600" },
+                            { label: 'Video Pitches', value: '0', icon: <Briefcase className="w-5 h-5 text-purple-600" />, color: "from-purple-600 to-pink-600", tooltip: "Coming Soon: Reach out to candidates with custom video pitches" }
                         ].map((stat, idx) => (
                             <div
                                 key={idx}
-                                className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative group/stat"
+                                className="bg-white/70 backdrop-blur-xl p-8 rounded-[2rem] border border-white/20 shadow-xl shadow-slate-200/50 relative group/stat transition-all hover:-translate-y-1"
                                 title={stat.tooltip}
                             >
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center text-white shadow-lg shadow-current/20`}>
                                         {stat.icon}
                                     </div>
-                                    <span className="text-2xl font-black text-[#0F172A]">{stat.value}</span>
+                                    <span className="text-3xl font-black text-[#0F172A] tracking-tighter">{stat.value}</span>
                                 </div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{stat.label}</p>
                                 {stat.tooltip && (
-                                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover/stat:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
+                                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-[#0F172A] text-white text-[10px] font-bold rounded-xl opacity-0 group-hover/stat:opacity-100 transition-all scale-95 group-hover/stat:scale-100 whitespace-nowrap pointer-events-none z-20">
                                         {stat.tooltip}
-                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-900" />
+                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-[#0F172A]" />
                                     </div>
                                 )}
                             </div>
@@ -244,21 +244,23 @@ export default function EmployerDashboard() {
                     </div>
 
                     {/* Bottom CTA Card */}
-                    <div className="bg-[#0F172A] p-8 rounded-[2rem] shadow-xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-10">
-                            <Users className="w-32 h-32 text-orange-500" />
-                        </div>
-                        <div className="relative z-10 text-center md:text-left">
-                            <h3 className="text-2xl font-bold text-white mb-2">Discover New Talent</h3>
-                            <p className="text-slate-400 mb-8 max-w-sm mx-auto md:mx-0">
-                                Watch video introductions from over 10,000 verified candidates across Pakistan.
-                            </p>
+                    <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-10 md:p-12 rounded-[3rem] shadow-2xl relative overflow-hidden group border border-white/5">
+                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-orange-500/10 rounded-full blur-[100px] group-hover:scale-150 transition-transform duration-1000" />
+                        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] group-hover:scale-150 transition-transform duration-1000" />
+
+                        <div className="relative z-10 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div className="max-w-md">
+                                <h3 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight italic uppercase">Discover New Talent</h3>
+                                <p className="text-slate-400 text-lg font-medium leading-relaxed mb-0">
+                                    Watch video introductions from over 10,000 verified candidates across Pakistan. Hire 10x faster.
+                                </p>
+                            </div>
                             <Link
                                 href="/browse"
-                                className="inline-flex items-center gap-2 px-8 py-4 bg-[#F97316] text-white rounded-full font-bold hover:scale-105 transition-all shadow-lg shadow-orange-500/20"
+                                className="inline-flex items-center gap-4 px-10 py-6 bg-gradient-to-r from-[#F97316] to-[#EA580C] text-white rounded-[2rem] font-black text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-2xl shadow-orange-500/30 active:scale-95 group-hover:shadow-orange-500/50"
                             >
                                 Start Discovery
-                                <ArrowRight className="w-5 h-5" />
+                                <ArrowRight className="w-6 h-6" />
                             </Link>
                         </div>
                     </div>

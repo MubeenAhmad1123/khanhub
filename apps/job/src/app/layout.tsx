@@ -12,43 +12,9 @@ const inter = Inter({
     preload: true,
 });
 
-export const metadata: Metadata = {
-    title: {
-        default: 'KhanHub Jobs | Pakistan\'s #1 Job Portal',
-        template: '%s | KhanHub Jobs'
-    },
-    description: 'Find your dream job in Pakistan. AI-powered job matching, verified employers, and instant applications.',
-    keywords: ['jobs', 'pakistan', 'careers', 'hiring', 'employment', 'khanhub'],
-    authors: [{ name: 'KhanHub Team' }],
-    creator: 'KhanHub',
-    publisher: 'KhanHub',
-    formatDetection: {
-        email: false,
-        address: false,
-        telephone: false,
-    },
-    metadataBase: new URL('https://jobs.khanhub.com'),
-    alternates: {
-        canonical: '/',
-    },
-    openGraph: {
-        title: 'KhanHub Jobs',
-        description: 'Find your dream career or hire top talent in Pakistan.',
-        url: 'https://jobs.khanhub.com',
-        siteName: 'KhanHub Jobs',
-        locale: 'en_US',
-        type: 'website',
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'KhanHub Jobs',
-        description: 'Find your dream career or hire top talent in Pakistan.',
-    },
-    icons: {
-        icon: '/logo.webp',
-        apple: '/logo.webp',
-    },
-};
+import { constructMetadata } from '@/lib/seo/metadata';
+
+export const metadata = constructMetadata();
 
 export default function RootLayout({
     children,

@@ -35,6 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import TagInput from '@/components/ui/TagInput';
+import Image from 'next/image';
 
 export default function PostJobPage() {
     const router = useRouter();
@@ -406,8 +407,13 @@ export default function PostJobPage() {
                                         <div className="flex items-center gap-6">
                                             <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center border border-slate-200 overflow-hidden shadow-sm">
                                                 {(user as any).company?.logo || user.photoURL ? (
-                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                    <img src={(user as any).company?.logo || user.photoURL} alt="Company logo" className="w-full h-full object-cover" />
+                                                    <Image
+                                                        src={(user as any).company?.logo || user.photoURL}
+                                                        alt="Company logo"
+                                                        width={80}
+                                                        height={80}
+                                                        className="w-full h-full object-cover"
+                                                    />
                                                 ) : (
                                                     <Building2 className="w-8 h-8 text-slate-300" />
                                                 )}

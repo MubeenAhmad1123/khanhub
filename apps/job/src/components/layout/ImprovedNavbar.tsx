@@ -105,18 +105,20 @@ export default function ImprovedNavbar() {
         if (pathname?.startsWith('/employer') || user.role === 'employer') {
             return [
                 { name: 'Dashboard', path: '/employer/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-                { name: 'My Videos', path: '/dashboard/upload-video', icon: <PlusCircle className="w-4 h-4" /> },
-                { name: 'Find Candidates', path: '/browse', icon: <BookmarkCheck className="w-4 h-4" /> },
-                { name: 'Profile', path: '/dashboard/profile', icon: <User className="w-4 h-4" /> },
+                { name: 'Post Job', path: '/employer/post-job', icon: <PlusCircle className="w-4 h-4" /> },
+                { name: 'Candidates', path: '/browse', icon: <Users className="w-4 h-4" /> },
+                { name: 'Reveals', path: '/employer/connections', icon: <BookmarkCheck className="w-4 h-4" /> },
+                { name: 'Settings', path: '/employer/settings', icon: <Settings className="w-4 h-4" /> },
             ];
         }
 
         // Seeker Dashboard
         return [
             { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-            { name: 'Browse Companies', path: '/browse', icon: <Search className="w-4 h-4" /> },
-            { name: 'My Video', path: '/dashboard/upload-video', icon: <BookmarkCheck className="w-4 h-4" /> },
+            { name: 'Candidates', path: '/browse', icon: <Users className="w-4 h-4" /> },
+            { name: 'My Video', path: '/dashboard/upload-video', icon: <PlusCircle className="w-4 h-4" /> },
             { name: 'Profile', path: '/dashboard/profile', icon: <User className="w-4 h-4" /> },
+            { name: 'Settings', path: '/dashboard/settings', icon: <Settings className="w-4 h-4" /> },
         ];
     };
 
@@ -168,14 +170,16 @@ export default function ImprovedNavbar() {
                                     >
                                         <div className="relative">
                                             {avatarUrl ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img
+                                                <Image
                                                     src={avatarUrl}
                                                     alt="Profile"
+                                                    width={36}
+                                                    height={36}
                                                     className="w-8 h-8 lg:w-9 lg:h-9 rounded-full object-cover border border-gray-100 shadow-sm bg-white"
                                                     onError={(e) => {
-                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.style.display = 'none';
+                                                        target.nextElementSibling?.classList.remove('hidden');
                                                     }}
                                                 />
                                             ) : null}
@@ -260,14 +264,16 @@ export default function ImprovedNavbar() {
                                 <div className="mb-6 px-3 py-4 bg-slate-50 rounded-2xl flex items-center gap-3 border border-slate-100">
                                     <div className="relative flex-shrink-0">
                                         {avatarUrl ? (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img
+                                            <Image
                                                 src={avatarUrl}
                                                 alt="Profile"
+                                                width={48}
+                                                height={48}
                                                 className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm bg-white"
                                                 onError={(e) => {
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                    target.nextElementSibling?.classList.remove('hidden');
                                                 }}
                                             />
                                         ) : null}

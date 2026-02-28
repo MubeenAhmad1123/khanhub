@@ -1304,8 +1304,7 @@ function AdminThumbnailSelector({
                     {uploadedThumbnail && (
                         <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl">
                             <div className="flex items-center gap-3">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={URL.createObjectURL(uploadedThumbnail)} alt="thumb" className="w-12 h-12 rounded-lg object-cover border" />
+                                <Image src={URL.createObjectURL(uploadedThumbnail)} alt="thumb" width={48} height={48} className="w-12 h-12 rounded-lg object-cover border" unoptimized />
                                 <span className="text-xs font-bold text-slate-700 truncate max-w-[160px]">{uploadedThumbnail.name}</span>
                             </div>
                             <button type="button" onClick={() => setUploadedThumbnail(null)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg">
