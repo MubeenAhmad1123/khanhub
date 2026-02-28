@@ -8,7 +8,7 @@ interface VideoModalProps {
     isOpen: boolean;
     onClose: () => void;
     videoUrl: string;
-    role: 'jobseeker' | 'employer';
+    role: 'job_seeker' | 'employer';
     industry: string;
     subcategory: string;
     onViewProfile: () => void;
@@ -58,10 +58,10 @@ export default function VideoModal({
                     <div className="flex items-center gap-2 mb-3">
                         <span className={cn(
                             "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1",
-                            role === 'jobseeker' ? "bg-blue-600 text-white" : "bg-orange-600 text-white"
+                            role === 'job_seeker' ? "bg-blue-600 text-white" : "bg-orange-600 text-white"
                         )}>
-                            {role === 'jobseeker' ? <User className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
-                            {role === 'jobseeker' ? 'Candidate' : 'Employer'}
+                            {role === 'job_seeker' ? <User className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                            {role === 'job_seeker' ? 'Candidate' : 'Employer'}
                         </span>
                         <span className="text-white/60 text-xs font-bold uppercase tracking-widest">{industry}</span>
                     </div>

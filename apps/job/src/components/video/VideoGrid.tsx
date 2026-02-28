@@ -5,7 +5,7 @@ interface VideoGridProps {
     items: Array<{
         id: string;
         seekerId: string;
-        role: 'jobseeker' | 'employer';
+        role: 'job_seeker' | 'employer';
         industry: string;
         subcategory: string;
         videoUrl?: string;
