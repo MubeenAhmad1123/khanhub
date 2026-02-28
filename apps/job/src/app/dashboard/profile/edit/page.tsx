@@ -184,7 +184,7 @@ export default function EditProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Full Name / Company Name */}
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">{isEmployer ? 'Company Name' : 'Full Name'}</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">{isEmployer ? 'Company Name' : 'Full Name'} <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">پورا نام</span></label>
                                 <input
                                     type="text"
                                     required
@@ -197,7 +197,7 @@ export default function EditProfilePage() {
 
                             {/* Phone */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Phone Number</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Phone Number <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">فون نمبر</span></label>
                                 <input
                                     type="tel"
                                     required
@@ -210,7 +210,7 @@ export default function EditProfilePage() {
 
                             {/* Location */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Location</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Location <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">مقام</span></label>
                                 <input
                                     type="text"
                                     required
@@ -223,7 +223,7 @@ export default function EditProfilePage() {
 
                             {/* Industry */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Industry</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Industry <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">صنعت</span></label>
                                 <SearchableSelect
                                     options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
                                     value={formData.industry}
@@ -234,7 +234,7 @@ export default function EditProfilePage() {
 
                             {/* Subcategory / Profession */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Sub-sector</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Sub-sector <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">ذیلی شعبہ</span></label>
                                 <SearchableSelect
                                     options={getSubcategories(formData.industry).map(s => ({ id: s.id, label: s.label }))}
                                     value={formData.subcategory}
@@ -248,7 +248,7 @@ export default function EditProfilePage() {
                                 <>
                                     {/* Experience */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Years of Experience</label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Years of Experience <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">تجربہ کے سال</span></label>
                                         <input
                                             type="number"
                                             required
@@ -261,7 +261,7 @@ export default function EditProfilePage() {
 
                                     {/* Education */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Highest Education</label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Highest Education <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">اعلیٰ تعلیم</span></label>
                                         <input
                                             type="text"
                                             required
@@ -279,7 +279,7 @@ export default function EditProfilePage() {
                                 <>
                                     {/* Company Size */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Company Size</label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Company Size <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">کمپنی کا سائز</span></label>
                                         <input
                                             type="text"
                                             required
@@ -292,7 +292,7 @@ export default function EditProfilePage() {
 
                                     {/* Company Website */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Company Website</label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Company Website <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">کمپنی کی ویب سائٹ</span></label>
                                         <input
                                             type="url"
                                             value={formData.companyWebsite}
@@ -307,7 +307,7 @@ export default function EditProfilePage() {
                             {/* Role / Job Title (Job Seeker Only) */}
                             {!isEmployer && (
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Exact Job Title / Role</label>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Exact Job Title / Role <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">مطلوبہ عہدہ</span></label>
                                     {getRoles(formData.industry, formData.subcategory).length > 0 ? (
                                         <SearchableSelect
                                             options={getRoles(formData.industry, formData.subcategory).map(r => ({ id: r, label: r }))}
@@ -332,7 +332,7 @@ export default function EditProfilePage() {
                         {/* Skills (Job Seeker Only) */}
                         {!isEmployer && (
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Skills (comma separated)</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Skills (comma separated) <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">مہارتیں</span></label>
                                 <input
                                     type="text"
                                     required
@@ -346,7 +346,7 @@ export default function EditProfilePage() {
 
                         {/* Bio / Description */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">{isEmployer ? 'Company Description' : 'Professional Summary'}</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">{isEmployer ? 'Company Description' : 'Professional Summary'} <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">پیشہ ورانہ خلاصہ</span></label>
                             <textarea
                                 required
                                 value={formData.bio}

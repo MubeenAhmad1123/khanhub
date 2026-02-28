@@ -11,7 +11,7 @@ import Image from 'next/image';
 
 interface VideoCardProps {
     seekerId: string;
-    role: 'jobseeker' | 'employer';
+    role: 'job_seeker' | 'employer';
     industry: string;
     subcategory: string;
     videoUrl?: string;
@@ -57,7 +57,7 @@ export default function VideoCard({
     const connection = getConnectionWith(seekerId);
 
     const isOwnVideo = user?.uid === seekerId;
-    const coverImage = thumbnailUrl || (role === 'jobseeker'
+    const coverImage = thumbnailUrl || (role === 'job_seeker'
         ? 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=800'
         : 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800');
 
@@ -185,10 +185,10 @@ export default function VideoCard({
                         <div className="flex flex-wrap gap-2">
                             <span className={cn(
                                 "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 backdrop-blur-2xl border border-white/30 shadow-2xl",
-                                role === 'jobseeker' ? "bg-blue-600/90 text-white" : "bg-orange-500/90 text-white"
+                                role === 'job_seeker' ? "bg-blue-600/90 text-white" : "bg-orange-500/90 text-white"
                             )}>
-                                {role === 'jobseeker' ? <User className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
-                                {role === 'jobseeker' ? 'Candidate (امیدوار)' : 'Company (کمپنی)'}
+                                {role === 'job_seeker' ? <User className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                                {role === 'job_seeker' ? 'Candidate (امیدوار)' : 'Company (کمپنی)'}
                             </span>
                             <span className="px-3 py-1 rounded-full bg-black/50 backdrop-blur-2xl text-white text-[10px] font-black border border-white/10 uppercase tracking-widest">
                                 {industry}
@@ -225,35 +225,52 @@ export default function VideoCard({
                 {/* Profile Action Area */}
                 <div className="p-6 bg-white flex flex-col gap-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
-                                {role === 'jobseeker' ? 'Experience' : 'Requirement'}
-                            </span>
-                            <div className="text-sm font-black text-slate-800 flex items-center gap-2">
-                                {role === 'jobseeker' ? (
-                                    <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col gap-1 flex-1">
+                            {role === 'job_seeker' ? (
+                                <>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                        Looking For
+                                    </span>
+                                    <span className="text-sm font-black text-slate-800 leading-tight">
+                                        {targetJobTitle || subcategory || 'Open to Opportunities'}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                        <span>{experience || 'Fresher'}</span>
+                                        <span className="text-[11px] font-bold text-slate-500">
+                                            {experience || 'Fresher'} • تجربہ
+                                        </span>
                                     </div>
-                                ) : (
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                                        <span>{expectedExperience || 'Any Experience'}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                        Hiring For · ملازمت
+                                    </span>
+                                    <span className="text-sm font-black text-slate-800 leading-tight">
+                                        {hiringFor || subcategory || 'Open Position'}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        {jobType && (
+                                            <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[9px] font-black rounded-md uppercase tracking-wider">
+                                                {jobType}
+                                            </span>
+                                        )}
+                                        <span className="text-[11px] font-bold text-slate-500">
+                                            {expectedExperience || 'Any Exp'} required
+                                        </span>
                                     </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Status Indicator */}
-                        <div className="flex items-center gap-2">
-                            <div className="flex -space-x-2">
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center">
-                                        <User className="w-3 h-3 text-slate-400" />
-                                    </div>
-                                ))}
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-400">+1.2k</span>
+                                    {!hideSalary && salaryMin && salaryMax && (
+                                        <span className="text-[11px] font-bold text-emerald-600 mt-0.5">
+                                            PKR {salaryMin.toLocaleString()} – {salaryMax.toLocaleString()}
+                                        </span>
+                                    )}
+                                    {hideSalary && (
+                                        <span className="text-[11px] font-bold text-slate-400 mt-0.5">
+                                            Competitive Salary · تنخواہ
+                                        </span>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
 

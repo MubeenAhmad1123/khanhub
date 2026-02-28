@@ -467,7 +467,7 @@ export default function RegisterPage() {
 
                                 <div className="grid grid-cols-1 gap-5">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{role === 'employer' ? 'Admin Name' : 'Full Name'}</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{role === 'employer' ? 'Admin Name' : 'Full Name'} <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پورا نام</span></label>
                                         <div className="relative group">
                                             <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                                             <input
@@ -482,7 +482,7 @@ export default function RegisterPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">ای میل پتہ</span></label>
                                         <div className="relative group">
                                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                                             <input
@@ -499,7 +499,7 @@ export default function RegisterPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پاس ورڈ</span></label>
                                         <div className="relative group">
                                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                                             <input
@@ -521,7 +521,7 @@ export default function RegisterPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirm Password</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirm Password <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پاس ورڈ دوبارہ</span></label>
                                         <div className="relative group">
                                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                                             <input
@@ -535,7 +535,7 @@ export default function RegisterPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{role === 'employer' ? 'HR / Admin Phone Number' : 'Phone Number'}</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{role === 'employer' ? 'HR / Admin Phone Number' : 'Phone Number'} <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">فون نمبر</span></label>
                                         <div className="relative group">
                                             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                                             <input
@@ -585,14 +585,14 @@ export default function RegisterPage() {
                                     {role === 'job_seeker' ? (
                                         <>
                                             <div className="space-y-2 md:col-span-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current City</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current City <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">شہر</span></label>
                                                 <div className="relative">
                                                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                                                     <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="e.g. Lahore" className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">صنعت</span></label>
                                                 <SearchableSelect
                                                     options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
                                                     value={formData.desiredIndustry}
@@ -601,18 +601,18 @@ export default function RegisterPage() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Title / Role</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Title / Role <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مطلوبہ عہدہ</span></label>
                                                 <input type="text" name="desiredJobTitle" value={formData.desiredJobTitle} onChange={handleInputChange} placeholder="e.g. Software Engineer" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Career Level</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Career Level <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">کیریئر کی سطح</span></label>
                                                 <select name="careerLevel" value={formData.careerLevel} onChange={handleInputChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900">
                                                     <option value="">Select Level</option>
                                                     {CAREER_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                                                 </select>
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Desired Salary</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Desired Salary <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">تنخواہ کی حد</span></label>
                                                 <select name="desiredSalary" value={formData.desiredSalary} onChange={handleInputChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900">
                                                     <option value="">Select Salary Range</option>
                                                     {SALARY_RANGES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -622,19 +622,19 @@ export default function RegisterPage() {
                                     ) : (
                                         <>
                                             <div className="space-y-2 md:col-span-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">کمپنی کا نام</span></label>
                                                 <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Year Established</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Year Established <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">قیام کا سال</span></label>
                                                 <input type="number" name="yearEstablished" value={formData.yearEstablished} onChange={handleInputChange} min="1900" max={new Date().getFullYear()} placeholder="e.g. 2015" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Website</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Website <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">ویب سائٹ</span></label>
                                                 <input type="url" name="website" value={formData.website} onChange={handleInputChange} placeholder="https://example.com" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">صنعت</span></label>
                                                 <SearchableSelect
                                                     options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
                                                     value={formData.desiredIndustry}
@@ -643,18 +643,18 @@ export default function RegisterPage() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Size</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Size <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">کمپنی کا حجم</span></label>
                                                 <select name="companySize" value={formData.companySize} onChange={handleInputChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900">
                                                     <option value="">Select Size</option>
                                                     {COMPANY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
                                                 </select>
                                             </div>
                                             <div className="space-y-2 md:col-span-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مقام</span></label>
                                                 <input type="text" name="companyLocation" value={formData.companyLocation} onChange={handleInputChange} placeholder="e.g. Karachi" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                             </div>
                                             <div className="space-y-2 md:col-span-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR / Admin Full Name</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR / Admin Full Name <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پورا نام</span></label>
                                                 <input type="text" name="hrFullName" value={formData.hrFullName} onChange={handleInputChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                             </div>
                                         </>
@@ -691,7 +691,7 @@ export default function RegisterPage() {
                                 <div className="space-y-5">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                            {role === 'employer' ? 'Company Bio' : 'Professional Summary'} (min 50 chars)
+                                            {role === 'employer' ? 'Company Bio' : 'Professional Summary'} (min 50 chars) <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پیشہ ورانہ تعارف</span>
                                         </label>
                                         <textarea
                                             name="professionalSummary"
@@ -709,7 +709,7 @@ export default function RegisterPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Skills / Specializations</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Skills / Specializations <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مہارتیں</span></label>
                                         <input
                                             type="text"
                                             placeholder="e.g. React, Project Management, Sales (Press Enter to add)"

@@ -33,16 +33,16 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
 
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists()) {
-                    const profile = userDoc.data()?.profile;
-                    if (profile) {
+                    const data = userDoc.data();
+                    if (data) {
                         setFormData({
-                            fullName: profile.fullName || '',
-                            phone: profile.phone || '',
-                            location: profile.location || '',
-                            experience: profile.experience || '',
-                            education: profile.education || '',
-                            skills: profile.skills?.join(', ') || '',
-                            bio: profile.bio || '',
+                            fullName: data.name || data.displayName || '',
+                            phone: data.phone || '',
+                            location: data.city || '',
+                            experience: data.totalExperience || '',
+                            education: data.education || '',
+                            skills: Array.isArray(data.skills) ? data.skills.join(', ') : (data.skills || ''),
+                            bio: data.professionalSummary || data.bio || '',
                         });
                     }
                 }
@@ -64,7 +64,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
         try {
             setLoading(true);
 
-            const { doc, updateDoc } = await import('firebase/firestore');
+            const { doc, setDoc } = await import('firebase/firestore');
             const { db } = await import('@/lib/firebase/firebase-config');
 
             // Convert skills string to array
@@ -73,15 +73,16 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                 .map((s) => s.trim())
                 .filter((s) => s.length > 0);
 
-            await updateDoc(doc(db, 'users', user.uid), {
-                'profile.fullName': formData.fullName,
-                'profile.phone': formData.phone,
-                'profile.location': formData.location,
-                'profile.experience': parseInt(formData.experience) || 0,
-                'profile.education': formData.education,
-                'profile.skills': skillsArray,
-                'profile.bio': formData.bio,
-            });
+            await setDoc(doc(db, 'users', user.uid), {
+                name: formData.fullName,
+                phone: formData.phone,
+                city: formData.location,
+                totalExperience: formData.experience,
+                education: formData.education,
+                skills: skillsArray,
+                professionalSummary: formData.bio,
+                updatedAt: new Date(),
+            }, { merge: true });
 
             alert('Profile updated successfully!');
 
@@ -116,7 +117,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
             {/* Full Name */}
             <div>
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name *
+                    Full Name * <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پورا نام</span>
                 </label>
                 <input
                     type="text"
@@ -126,14 +127,14 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                     onChange={handleChange}
                     required
                     className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="John Doe"
+                    placeholder="John Doe · پورا نام"
                 />
             </div>
 
             {/* Phone */}
             <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number *
+                    Phone Number * <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">فون نمبر</span>
                 </label>
                 <input
                     type="tel"
@@ -143,14 +144,14 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                     onChange={handleChange}
                     required
                     className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="+92 300 1234567"
+                    placeholder="+92 300 1234567 · فون نمبر"
                 />
             </div>
 
             {/* Location */}
             <div>
                 <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                    Location *
+                    Location * <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مقام</span>
                 </label>
                 <input
                     type="text"
@@ -160,14 +161,14 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                     onChange={handleChange}
                     required
                     className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="Karachi, Pakistan"
+                    placeholder="Karachi, Pakistan · مقام"
                 />
             </div>
 
             {/* Experience */}
             <div>
                 <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-2">
-                    Years of Experience *
+                    Years of Experience * <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">تجربے کے سال</span>
                 </label>
                 <select
                     id="experience"
@@ -189,7 +190,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
             {/* Education */}
             <div>
                 <label htmlFor="education" className="block text-sm font-medium text-gray-700 mb-2">
-                    Education *
+                    Education * <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">تعلیم</span>
                 </label>
                 <select
                     id="education"
@@ -211,7 +212,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
             {/* Skills */}
             <div>
                 <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-2">
-                    Skills * (comma-separated)
+                    Skills * (comma-separated) <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مہارتیں</span>
                 </label>
                 <input
                     type="text"
@@ -221,17 +222,17 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                     onChange={handleChange}
                     required
                     className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="JavaScript, React, Node.js, Python"
+                    placeholder="JavaScript, React, Node.js, Python · مہارتیں"
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                    Separate skills with commas
+                    Separate skills with commas · کاما سے الگ کریں
                 </p>
             </div>
 
             {/* Bio */}
             <div>
                 <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                    Professional Bio
+                    Professional Bio <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پیشہ ورانہ تعارف</span>
                 </label>
                 <textarea
                     id="bio"
@@ -240,7 +241,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                     onChange={handleChange}
                     rows={4}
                     className="w-full border border-gray-300 rounded-lg p-3 resize-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="Tell employers about yourself..."
+                    placeholder="Tell employers about yourself... · پیشہ ورانہ تعارف"
                 />
             </div>
 
@@ -250,7 +251,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                 disabled={loading}
                 className="w-full bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
-                {loading ? 'Saving...' : 'Save Profile'}
+                {loading ? 'Saving... · محفوظ ہو رہا ہے...' : 'Save Profile · پروفائل محفوظ کریں'}
             </button>
         </form>
     );

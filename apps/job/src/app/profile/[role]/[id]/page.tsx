@@ -6,11 +6,16 @@ import { getDoc, doc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '@/lib/firebase/firebase-config';
 import Image from 'next/image';
 import { MapPin, Phone, Building2, User, Play, Briefcase, GraduationCap, Award, Lightbulb, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import ConnectModal from '@/components/video/ConnectModal';
 
 export default function PublicProfilePage() {
     const params = useParams();
     const role = params.role as string;
     const id = params.id as string;
+
+    const { user } = useAuth();
+    const [showConnectModal, setShowConnectModal] = useState(false);
 
     const [userData, setUserData] = useState<any>(null);
     const [userVideos, setUserVideos] = useState<any[]>([]);
@@ -72,6 +77,11 @@ export default function PublicProfilePage() {
     }
 
     const isEmployer = userData.role === 'employer';
+
+    // Determine who is viewing and who is being viewed
+    const viewerRole = user?.role || null;                  // logged-in user's role
+    const profileRole = userData?.role || role;       // the profile owner's role
+    const isOwnProfile = user?.uid === id;
 
     // Extract data based on role
     const profileData = isEmployer ? (userData.company || userData.companyProfile) : userData.profile;
@@ -149,25 +159,39 @@ export default function PublicProfilePage() {
                             </div>
 
                             <div className="space-y-6">
-                                <div className="flex items-center gap-4 group/item">
-                                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover/item:text-blue-600 group-hover/item:bg-blue-50 transition-all">
-                                        <MapPin className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Location</p>
-                                        <p className="text-sm font-black text-slate-800">{displayLocation}</p>
-                                    </div>
-                                </div>
+                                {(isOwnProfile || (viewerRole === 'employer' && profileRole === 'job_seeker')) ? (
+                                    <>
+                                        <div className="flex items-center gap-4 group/item">
+                                            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover/item:text-blue-600 group-hover/item:bg-blue-50 transition-all">
+                                                <MapPin className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Location</p>
+                                                <p className="text-sm font-black text-slate-800">{displayLocation}</p>
+                                            </div>
+                                        </div>
 
-                                <div className="flex items-center gap-4 group/item">
-                                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover/item:text-green-600 group-hover/item:bg-green-50 transition-all">
-                                        <Phone className="w-5 h-5" />
+                                        <div className="flex items-center gap-4 group/item">
+                                            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover/item:text-green-600 group-hover/item:bg-green-50 transition-all">
+                                                <Phone className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Phone</p>
+                                                <p className="text-sm font-black text-slate-800">{displayPhone}</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                                            <span>🔒</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Hidden</p>
+                                            <p className="text-xs font-bold text-slate-400">رابطہ چھپا ہوا ہے</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Phone</p>
-                                        <p className="text-sm font-black text-slate-800">{displayPhone}</p>
-                                    </div>
-                                </div>
+                                )}
 
                                 {!isEmployer && (
                                     <div className="flex items-center gap-4 group/item">
@@ -184,10 +208,73 @@ export default function PublicProfilePage() {
                                 )}
                             </div>
 
-                            <button className="w-full mt-10 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-3xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 italic">
-                                {isEmployer ? 'Post a Job' : 'Hire Candidate'}
-                                <ArrowRight className="w-5 h-5" />
-                            </button>
+                            {/* ===== SMART CTA SECTION ===== */}
+                            {!isOwnProfile && (
+                                <div className="flex flex-col gap-3 mt-6">
+
+                                    {/* Case 1: Employer viewing a Job Seeker */}
+                                    {viewerRole === 'employer' && profileRole === 'job_seeker' && (
+                                        <button
+                                            onClick={() => setShowConnectModal(true)}
+                                            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-3"
+                                        >
+                                            <span>💼</span>
+                                            Hire This Candidate · امیدوار کو بھرتی کریں
+                                        </button>
+                                    )}
+
+                                    {/* Case 2: Job Seeker viewing an Employer */}
+                                    {viewerRole === 'job_seeker' && profileRole === 'employer' && (
+                                        <>
+                                            <button
+                                                onClick={() => setShowConnectModal(true)}
+                                                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-3"
+                                            >
+                                                <span>📨</span>
+                                                Apply / Contact Company · رابطہ کریں
+                                            </button>
+                                            {/* Show their video cards with "Apply for this job" on each video */}
+                                            <p className="text-xs text-slate-400 font-bold text-center uppercase tracking-widest">
+                                                Watch their job videos below and apply to a specific role
+                                            </p>
+                                        </>
+                                    )}
+
+                                    {/* Case 3: Job Seeker viewing another Job Seeker — NO CTA, info only */}
+                                    {viewerRole === 'job_seeker' && profileRole === 'job_seeker' && (
+                                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                                                Candidate Profile · امیدوار پروفائل
+                                            </p>
+                                            <p className="text-xs text-slate-500 font-medium mt-1">
+                                                Contact details are visible to employers only.
+                                                رابطہ تفصیلات صرف آجروں کے لیے ہیں۔
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Case 4: Employer viewing another Employer — read only */}
+                                    {viewerRole === 'employer' && profileRole === 'employer' && (
+                                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                                                Company Profile · کمپنی پروفائل
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Case 5: Not logged in */}
+                                    {!user && (
+                                        <a
+                                            href="/auth/login"
+                                            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl flex items-center justify-center gap-3 hover:bg-slate-800 active:scale-95 transition-all"
+                                        >
+                                            <span>🔐</span>
+                                            Login to Connect · رابطہ کریں
+                                        </a>
+                                    )}
+                                </div>
+                            )}
+                            {/* ===== END SMART CTA SECTION ===== */}
                         </div>
 
                         {/* Skills / Perks */}
@@ -303,6 +390,11 @@ export default function PublicProfilePage() {
                     </div>
                 </div>
             </div>
+            <ConnectModal
+                isOpen={showConnectModal}
+                onClose={() => setShowConnectModal(false)}
+                seekerId={id}
+            />
         </div>
     );
 }

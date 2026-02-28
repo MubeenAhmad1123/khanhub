@@ -310,7 +310,7 @@ export default function OnboardingPage() {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">جنس</span></label>
                                         <select name="gender" value={formData.gender} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900">
                                             <option value="">Select Gender</option>
                                             <option value="Male">Male</option>
@@ -319,15 +319,15 @@ export default function OnboardingPage() {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Birth</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Birth <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">تاریخ پیدائش</span></label>
                                         <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current City</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current City <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">شہر</span></label>
                                         <input type="text" name="city" value={formData.city} onChange={handleInputChange} required placeholder="e.g. Lahore" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mobile Number</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mobile Number <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">فون نمبر</span></label>
                                         <div className="relative">
                                             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                                             <input
@@ -344,14 +344,14 @@ export default function OnboardingPage() {
                                         {phoneError && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{phoneError}</p>}
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Career Level</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Career Level <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">کیریئر کی سطح</span></label>
                                         <select name="careerLevel" value={formData.careerLevel} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900">
                                             <option value="">Select Level</option>
                                             {CAREER_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                                         </select>
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Professional Summary (Min 50 chars)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Professional Summary (Min 50 chars) <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پیشہ ورانہ تعارف</span></label>
                                         <textarea name="professionalSummary" value={formData.professionalSummary} onChange={handleInputChange} required minLength={50} rows={3} placeholder="Briefly describe your experience and career goals..." className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900 resize-none" />
                                         <div className="flex justify-between px-1">
                                             <span className={cn("text-[10px] font-black uppercase tracking-widest", formData.professionalSummary.length < 50 ? "text-red-400" : "text-emerald-500")}>
@@ -360,7 +360,7 @@ export default function OnboardingPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">صنعت</span></label>
                                         <SearchableSelect
                                             options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
                                             value={formData.desiredIndustry}
@@ -369,7 +369,7 @@ export default function OnboardingPage() {
                                         />
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Title / Role</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Title / Role <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مطلوبہ عہدہ</span></label>
                                         <input type="text" name="desiredJobTitle" value={formData.desiredJobTitle} onChange={handleInputChange} required placeholder="e.g. Software Engineer" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                     </div>
                                 </div>
@@ -399,7 +399,7 @@ export default function OnboardingPage() {
                                 </div>
                                 <div className="space-y-5">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">کمپنی کا نام</span></label>
                                         <input
                                             type="text"
                                             name="companyName"
@@ -413,14 +413,14 @@ export default function OnboardingPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Size</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Size <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">کمپنی کا حجم</span></label>
                                             <select name="companySize" value={formData.companySize} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900 text-xs">
                                                 <option value="">Select Size</option>
                                                 {COMPANY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
                                             </select>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Industry <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">صنعت</span></label>
                                             <SearchableSelect
                                                 options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
                                                 value={formData.desiredIndustry}
@@ -430,23 +430,23 @@ export default function OnboardingPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مقام</span></label>
                                         <input type="text" name="companyLocation" value={formData.companyLocation} onChange={handleInputChange} required placeholder="e.g. Karachi" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Year Established</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Year Established <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">قیام کا سال</span></label>
                                         <input type="number" name="yearEstablished" value={formData.yearEstablished} onChange={handleInputChange} required min="1900" max={new Date().getFullYear()} placeholder="e.g. 2015" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Website</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Website <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">ویب سائٹ</span></label>
                                         <input type="url" name="website" value={formData.website} onChange={handleInputChange} required placeholder="https://example.com" className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR / Admin Full Name</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR / Admin Full Name <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پورا نام</span></label>
                                         <input type="text" name="hrFullName" value={formData.hrFullName} onChange={handleInputChange} required className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR Mobile Number</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">HR Mobile Number <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">فون نمبر</span></label>
                                         <div className="relative">
                                             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                                             <input

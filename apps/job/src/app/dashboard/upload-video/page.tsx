@@ -1247,7 +1247,7 @@ function ProfileGate({ user, onComplete }: {
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                    {isEmployer ? 'Company Name' : 'Full Name'}
+                                    {isEmployer ? 'Company Name' : 'Full Name'} <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">پورا نام</span>
                                 </label>
                                 <input
                                     type="text"
@@ -1260,7 +1260,7 @@ function ProfileGate({ user, onComplete }: {
 
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                    Phone Number
+                                    Phone Number <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">فون نمبر</span>
                                 </label>
                                 <input
                                     type="tel"
@@ -1274,7 +1274,7 @@ function ProfileGate({ user, onComplete }: {
 
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                    Industry
+                                    Industry <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">صنعت</span>
                                 </label>
                                 <SearchableSelect
                                     options={INDUSTRIES.map(i => ({ id: i.id, label: i.label }))}
@@ -1288,7 +1288,7 @@ function ProfileGate({ user, onComplete }: {
                                 <>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                            Job Category
+                                            Job Category <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">ملازمت کی قسم</span>
                                         </label>
                                         <SearchableSelect
                                             options={getSubcategories(formData.industry).map(s => ({ id: s.id, label: s.label }))}
@@ -1301,7 +1301,7 @@ function ProfileGate({ user, onComplete }: {
 
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                            Job Title You're Targeting
+                                            Job Title You're Targeting <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مطلوبہ عہدہ</span>
                                         </label>
                                         <SearchableSelect
                                             options={getRoles(formData.industry, formData.subcategory).map(r => ({ id: r, label: r }))}
@@ -1362,7 +1362,7 @@ function VideoContextForm({
                 <h3 className="text-lg font-black text-slate-900 italic uppercase tracking-tighter">Hiring Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5 focus-within:z-10">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role You're Hiring For</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role You're Hiring For <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مطلوبہ عہدہ</span></label>
                         <input
                             type="text"
                             required
@@ -1373,7 +1373,7 @@ function VideoContextForm({
                         />
                     </div>
                     <div className="space-y-1.5 focus-within:z-10">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Experience</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Experience <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مطلوبہ تجربہ</span></label>
                         <select
                             required
                             value={videoContext.expectedExperience || ''}
@@ -1389,7 +1389,7 @@ function VideoContextForm({
                         </select>
                     </div>
                     <div className="space-y-1.5 focus-within:z-10 md:col-span-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Type</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Type <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">ملازمت کی قسم</span></label>
                         <div className="flex gap-2">
                             {['Onsite', 'Remote', 'Hybrid'].map(type => (
                                 <button
@@ -1405,7 +1405,7 @@ function VideoContextForm({
                     </div>
                     <div className="space-y-1.5 focus-within:z-10 md:col-span-2">
                         <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Salary Range (PKR / Month)</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Salary Range (PKR / Month) <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">تنخواہ کی حد</span></label>
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hide Salary</span>
                                 <input
@@ -1446,7 +1446,7 @@ function VideoContextForm({
             <h3 className="text-lg font-black text-slate-900 italic uppercase tracking-tighter">Candidate Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5 focus-within:z-10">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role You're Targeting</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role You're Targeting <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مطلوبہ عہدہ</span></label>
                     <input
                         type="text"
                         required
@@ -1457,7 +1457,7 @@ function VideoContextForm({
                     />
                 </div>
                 <div className="space-y-1.5 focus-within:z-10">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Your Experience</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Your Experience <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">آپ کا تجربہ</span></label>
                     <select
                         required
                         value={videoContext.seekerExperience || ''}
@@ -1557,7 +1557,7 @@ function PaymentModal({
 
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Upload Screenshot</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Upload Screenshot <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">تصویر اپ لوڈ کریں</span></label>
                                 <input
                                     type="file"
                                     required
@@ -1567,7 +1567,7 @@ function PaymentModal({
                                 />
                             </div>
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Notes</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Notes <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">نوٹس</span></label>
                                 <textarea
                                     rows={3}
                                     value={notes}
