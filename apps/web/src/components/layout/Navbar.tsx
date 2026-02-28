@@ -48,7 +48,7 @@ const Logo = memo(function Logo() {
         />
         <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-gradient-to-tr from-white/0 via-white/20 to-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </div>
-      <span className="font-display font-bold text-sm sm:text-lg lg:text-xl text-neutral-900 group-hover:text-primary-600 transition-colors duration-300">
+      <span className="font-display font-bold text-xs sm:text-lg lg:text-xl text-neutral-900 group-hover:text-primary-600 transition-colors duration-300">
         Khan<span className="text-primary-600 group-hover:text-primary-700">Hub</span>
       </span>
     </Link>
@@ -311,7 +311,7 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Icons Row - Compact to fit all 7 items */}
-            <div className="md:hidden flex items-center gap-0 flex-1 justify-end mr-0.5">
+            <div className="md:hidden flex items-center gap-0 sm:gap-1 flex-1 justify-end mr-0.5 sm:mr-1">
               {Object.entries(SITE.social).map(([platform, url]) => {
                 if (!url) return null;
                 const Icon = platform === 'facebook' ? Facebook :
@@ -326,45 +326,45 @@ export default function Navbar() {
                     href={url || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0 min-w-[34px] min-h-[34px] flex items-center justify-center"
+                    className="p-0.5 rounded-lg text-neutral-600 hover:text-primary-600 transition-colors flex-shrink-0 min-w-[28px] min-h-[28px] flex items-center justify-center"
                     aria-label={`Visit our ${platform} page`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-[15px] h-[15px] sm:w-4 sm:h-4" />
                   </a>
                 );
               })}
               {/* Download App - Compact Icon only Animates */}
               <a
                 href="/download-app"
-                className="flex flex-col items-center justify-center gap-0.5 px-1 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0"
+                className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[32px]"
                 aria-label="Download Mobile App"
               >
                 <div className="animate-flip">
                   <Image
                     src="/app-download.webp"
                     alt="Download App"
-                    width={18}
-                    height={18}
+                    width={16}
+                    height={16}
                     className="rounded-md shadow-sm"
                     priority
                   />
                 </div>
-                <span className="text-[7px] font-bold uppercase tracking-tighter leading-none">Mobile App</span>
+                <span className="text-[6.5px] font-bold uppercase tracking-tighter leading-none whitespace-nowrap">Mobile App</span>
               </a>
             </div>
 
             {/* Mobile Hamburger Button */}
             <button
               onClick={toggleMobileMenu}
-              className="md:hidden flex items-center justify-center p-2.5 rounded-lg group relative z-[60] hover:bg-primary-50/50 transition-all duration-300 touch-manipulation min-w-[44px] min-h-[44px]"
+              className="md:hidden flex items-center justify-center p-1.5 sm:p-2.5 rounded-lg group relative z-[60] hover:bg-primary-50/50 transition-all duration-300 touch-manipulation min-w-[36px] sm:min-w-[44px] min-h-[36px] sm:min-h-[44px]"
               aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileOpen}
               aria-controls="mobile-menu"
             >
               {mobileOpen ? (
-                <X className="w-6 h-6 text-primary-600" aria-hidden="true" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" aria-hidden="true" />
               ) : (
-                <Menu className="w-6 h-6 text-neutral-900 group-hover:text-primary-600" aria-hidden="true" />
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-900 group-hover:text-primary-600" aria-hidden="true" />
               )}
             </button>
           </nav>
