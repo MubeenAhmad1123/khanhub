@@ -179,7 +179,10 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                         ) : (
                             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 animate-in fade-in slide-in-from-top-2">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                        Full Name
+                                        <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">پورا نام</span>
+                                    </label>
                                     <input
                                         type="text"
                                         required
@@ -196,7 +199,10 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                     )}
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Professional Title</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                        Professional Title
+                                        <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">پیشہ ورانہ عہدہ</span>
+                                    </label>
                                     <input
                                         type="text"
                                         required
@@ -208,7 +214,10 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">City / Location</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                        City / Location
+                                        <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">شہر / مقام</span>
+                                    </label>
                                     <input
                                         type="text"
                                         required
@@ -225,7 +234,10 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                     )}
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                        Phone Number
+                                        <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">فون نمبر</span>
+                                    </label>
                                     <input
                                         type="tel"
                                         required

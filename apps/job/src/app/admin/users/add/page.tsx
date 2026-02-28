@@ -26,7 +26,9 @@ import {
     Plus,
     Building,
     Check,
-    ChevronRight
+    ChevronRight,
+    Sparkles,
+    TrendingUp
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -259,19 +261,30 @@ export default function AddUserPage() {
             }
 
             // 5. Save user doc
-            await setDoc(doc(db, 'users', userId), userData);
+            const finalUserData = {
+                ...userData,
+                profile_status: 'active',
+                video_upload_enabled: true,
+                updatedAt: serverTimestamp()
+            };
+            await setDoc(doc(db, 'users', userId), finalUserData, { merge: true });
 
             // 6. Write video doc to videos collection (if video was uploaded)
             if (finalVideoUrl) {
                 const videoDoc: any = {
                     userId,
                     userRole: role,
+                    role: role,     // Standardizing on 'role'
                     userName: formData.name,
                     userEmail: formData.email.toLowerCase(),
                     videoUrl: finalVideoUrl,
                     thumbnailUrl: finalThumbnailUrl || '',
-                    status: 'approved',
+                    admin_status: 'approved', // Query field
+                    status: 'approved',       // Legacy field
+                    is_live: true,            // Visibility field
                     uploadedAt: serverTimestamp(),
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
                     createdBy: adminUser?.uid || 'admin',
                 };
 
@@ -349,7 +362,7 @@ export default function AddUserPage() {
                     subcategory: row['Subcategory'] || row['Sub-sector'] || '',
                     role_in_category: row['Role'] || row['Job Title'] || '',
                     role: 'job_seeker',
-                    profile_status: 'video_pending', // Gate for mandatory video
+                    profile_status: 'active', // Admin upload bypasses gate
                     paymentStatus: 'approved',
                     isPremium: false,
                     video_upload_enabled: true,
@@ -1084,6 +1097,97 @@ export default function AddUserPage() {
                     <p className="text-slate-400 text-xs font-medium mt-1">Manual admin deployment automatically grants Premium status, bypasses verification loops, and marks profile as Active. Payment is considered as "Received at Office".</p>
                 </div>
             </div>
+
+            {/* Migration Tool */}
+            <MigrationTool />
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────
+   MigrationTool
+   Fixes legacy video docs in batches
+───────────────────────────────────────── */
+function MigrationTool() {
+    const [running, setRunning] = useState(false);
+    const [count, setCount] = useState<number | null>(null);
+    const [log, setLog] = useState<string[]>([]);
+
+    const runMigration = async () => {
+        if (!confirm('This will fix ALL broken videos in Firestore. Proceed?')) return;
+
+        try {
+            setRunning(true);
+            setLog(['Starting scan...']);
+
+            const { collection, query, getDocs, writeBatch, doc, limit } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase/firebase-config');
+
+            // Find videos missing is_live or admin_status
+            const q = query(collection(db, 'videos'), limit(500));
+            const snap = await getDocs(q);
+
+            let updated = 0;
+            const batch = writeBatch(db);
+
+            snap.docs.forEach(videoDoc => {
+                const data = videoDoc.data();
+                const needsFix = !data.is_live || !data.admin_status || !data.role;
+
+                if (needsFix) {
+                    batch.update(doc(db, 'videos', videoDoc.id), {
+                        admin_status: data.admin_status || data.status || 'approved',
+                        is_live: true,
+                        role: data.role || data.userRole || 'job_seeker',
+                        updatedAt: serverTimestamp()
+                    });
+                    updated++;
+                }
+            });
+
+            if (updated > 0) {
+                await batch.commit();
+                setLog(prev => [...prev, `Successfully fixed ${updated} videos.`]);
+                setCount(updated);
+            } else {
+                setLog(prev => [...prev, 'No videos needed fixing. System is healthy.']);
+                setCount(0);
+            }
+
+        } catch (err: any) {
+            setLog(prev => [...prev, `Error: ${err.message}`]);
+        } finally {
+            setRunning(false);
+        }
+    };
+
+    return (
+        <div className="mt-8 bg-blue-50 border-2 border-dashed border-blue-200 rounded-[32px] p-8">
+            <div className="flex items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <Sparkles className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h4 className="text-xl font-black text-slate-900 italic uppercase tracking-tighter">System Health: Schema Fixer</h4>
+                        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-0.5">Automated migration tool for legacy video entries</p>
+                    </div>
+                </div>
+                <button
+                    onClick={runMigration}
+                    disabled={running}
+                    className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-slate-800 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                    {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
+                    {running ? 'Repairing...' : 'Fix All Broken Videos'}
+                </button>
+            </div>
+
+            {log.length > 0 && (
+                <div className="mt-6 p-4 bg-white rounded-xl border border-blue-100 font-mono text-[10px] text-slate-600 max-h-32 overflow-auto">
+                    {log.map((line, i) => <div key={i} className="mb-1"> {line}</div>)}
+                </div>
+            )}
         </div>
     );
 }

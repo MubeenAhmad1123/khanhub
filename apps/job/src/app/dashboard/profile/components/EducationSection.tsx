@@ -126,7 +126,10 @@ export default function EducationSection({ profile, onSave }: EducationSectionPr
                     <form onSubmit={handleSubmit} className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 animate-in fade-in slide-in-from-top-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Degree Name</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Degree Name
+                                    <span className="text-emerald-600 font-medium normal-case tracking-normal" dir="rtl">ڈگری کا نام</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -137,7 +140,10 @@ export default function EducationSection({ profile, onSave }: EducationSectionPr
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Institution</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Institution
+                                    <span className="text-emerald-600 font-medium normal-case tracking-normal" dir="rtl">ادارہ / یونیورسٹی</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -148,7 +154,10 @@ export default function EducationSection({ profile, onSave }: EducationSectionPr
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Field of Study</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Field of Study
+                                    <span className="text-emerald-600 font-medium normal-case tracking-normal" dir="rtl">تعلیم کا شعبہ</span>
+                                </label>
                                 <input
                                     type="text"
                                     value={editingEntry.fieldOfStudy}
@@ -158,7 +167,10 @@ export default function EducationSection({ profile, onSave }: EducationSectionPr
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Degree Level</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Degree Level
+                                    <span className="text-emerald-600 font-medium normal-case tracking-normal" dir="rtl">تعلیم کا درجہ</span>
+                                </label>
                                 <select
                                     value={editingEntry.degreeLevel}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, degreeLevel: e.target.value as any })}
@@ -171,7 +183,10 @@ export default function EducationSection({ profile, onSave }: EducationSectionPr
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Year</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Start Year
+                                    <span className="text-emerald-600 font-medium normal-case tracking-normal" dir="rtl">شروع کرنے کا سال</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -182,7 +197,10 @@ export default function EducationSection({ profile, onSave }: EducationSectionPr
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">End Year (or Expected)</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    End Year (or Expected)
+                                    <span className="text-emerald-600 font-medium normal-case tracking-normal" dir="rtl">ختم ہونے کا سال</span>
+                                </label>
                                 <div className="flex flex-col gap-2">
                                     <input
                                         type="text"

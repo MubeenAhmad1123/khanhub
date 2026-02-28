@@ -131,7 +131,10 @@ export default function JobPreferencesSection({ profile, onSave }: JobPreference
                     <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-top-2">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Desired Job Title</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Desired Job Title
+                                    <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">پسندیدہ نوکری کا نام</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -142,7 +145,10 @@ export default function JobPreferencesSection({ profile, onSave }: JobPreference
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Salary Range (Monthly)</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Salary Range (Monthly)
+                                    <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">ماہانہ تنخواہ کی حد</span>
+                                </label>
                                 <div className="flex items-center gap-3">
                                     <input
                                         type="number"
@@ -162,7 +168,10 @@ export default function JobPreferencesSection({ profile, onSave }: JobPreference
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preferred Cities</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Preferred Cities
+                                    <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">پسندیدہ شہر</span>
+                                </label>
                                 <div className="flex gap-2 mb-3">
                                     <input
                                         type="text"

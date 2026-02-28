@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import TagInput from '@/components/ui/TagInput';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { checkFieldUniqueness } from '@/lib/firebase/firestore';
@@ -112,6 +113,18 @@ export default function RegisterPage() {
     const [isInitialized, setIsInitialized] = useState(false);
     const [emailError, setEmailError] = useState('');
     const [phoneError, setPhoneError] = useState('');
+
+    // Pre-fill phone and name from user if available (e.g. after Google login)
+    useEffect(() => {
+        if (user && isInitialized) {
+            setFormData(prev => ({
+                ...prev,
+                phone: prev.phone || user.phone || user.phoneNumber || '',
+                name: prev.name || user.displayName || '',
+                email: prev.email || user.email || '',
+            }));
+        }
+    }, [user, isInitialized]);
 
     const handleEmailBlur = async () => {
         if (!formData.email) return;
@@ -374,7 +387,9 @@ export default function RegisterPage() {
                         {step === 1 && (
                             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div className="text-center">
-                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">Who are you?</h2>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">
+                                        Who are you? <span className="text-blue-600 block text-lg mt-1" dir="rtl">آپ کون ہیں؟</span>
+                                    </h2>
                                     <p className="text-slate-500 font-medium text-sm">Select your journey on KhanHub</p>
                                 </div>
 
@@ -425,9 +440,13 @@ export default function RegisterPage() {
                                 <button
                                     type="button"
                                     onClick={nextStep}
-                                    className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/30 flex items-center justify-center gap-3 group"
+                                    className="w-full py-6 bg-blue-600 text-white rounded-[2rem] font-black italic uppercase tracking-tighter text-xl shadow-2xl shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-4 group"
                                 >
-                                    Continue to Credentials <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    <div className="flex flex-col items-center">
+                                        <span>Continue to Credentials</span>
+                                        <span className="text-xs font-medium opacity-80" dir="rtl">جاری رکھیں</span>
+                                    </div>
+                                    <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                                 </button>
 
                                 <div className="space-y-4 pt-4">
@@ -461,7 +480,9 @@ export default function RegisterPage() {
                         {step === 2 && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                                 <div className="text-center mb-8">
-                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">Create Account</h2>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">
+                                        Create Account <span className="text-blue-600 block text-lg mt-1" dir="rtl">اکاؤنٹ بنائیں</span>
+                                    </h2>
                                     <p className="text-slate-500 font-medium text-sm">Secure your professional workspace</p>
                                 </div>
 
@@ -577,6 +598,9 @@ export default function RegisterPage() {
                                 <div className="text-center mb-8">
                                     <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">
                                         {role === 'employer' ? 'Company Details' : 'Professional Info'}
+                                        <span className="text-blue-600 block text-lg mt-1" dir="rtl">
+                                            {role === 'employer' ? 'کمپنی کی تفصیلات' : 'پیشہ ورانہ معلومات'}
+                                        </span>
                                     </h2>
                                     <p className="text-slate-500 font-medium text-sm">Help us understand your background</p>
                                 </div>
@@ -672,9 +696,13 @@ export default function RegisterPage() {
                                     <button
                                         type="button"
                                         onClick={nextStep}
-                                        className="flex-1 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/30 flex items-center justify-center gap-3"
+                                        className="flex-1 py-6 bg-blue-600 text-white rounded-[2rem] font-black italic uppercase tracking-tighter text-xl shadow-2xl shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-4 group"
                                     >
-                                        Next Step <ArrowRight className="w-5 h-5" />
+                                        <div className="flex flex-col items-center">
+                                            <span>Next Step</span>
+                                            <span className="text-xs font-medium opacity-80" dir="rtl">اگلا مرحلہ</span>
+                                        </div>
+                                        <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                                     </button>
                                 </div>
                             </div>
@@ -684,7 +712,9 @@ export default function RegisterPage() {
                         {step === 4 && (
                             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                                 <div className="text-center mb-8">
-                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">Final Polish</h2>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic mb-2">
+                                        Final Polish <span className="text-blue-600 block text-lg mt-1" dir="rtl">آخری مراحل</span>
+                                    </h2>
                                     <p className="text-slate-500 font-medium text-sm">Tell us more about yourself</p>
                                 </div>
 
@@ -708,34 +738,13 @@ export default function RegisterPage() {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Skills / Specializations <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مہارتیں</span></label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. React, Project Management, Sales (Press Enter to add)"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    const val = (e.target as HTMLInputElement).value.trim();
-                                                    if (val && !formData.skills.includes(val)) {
-                                                        setFormData(prev => ({ ...prev, skills: [...prev.skills, val] }));
-                                                        (e.target as HTMLInputElement).value = '';
-                                                    }
-                                                }
-                                            }}
-                                            className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
-                                        />
-                                        <div className="flex flex-wrap gap-2 mt-3">
-                                            {formData.skills.map(skill => (
-                                                <span key={skill} className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase flex items-center gap-2 border border-blue-100">
-                                                    {skill}
-                                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, skills: prev.skills.filter(s => s !== skill) }))}>
-                                                        <Sparkles className="w-3 h-3 hover:text-red-500" />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    <TagInput
+                                        label="Skills / Specializations"
+                                        urduLabel="مہارتیں"
+                                        tags={formData.skills}
+                                        onChange={(tags) => setFormData(prev => ({ ...prev, skills: tags }))}
+                                        placeholder="e.g. React, Project Management, Sales"
+                                    />
                                 </div>
 
                                 <div className="flex gap-4 pt-4">
@@ -749,13 +758,13 @@ export default function RegisterPage() {
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="flex-1 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/30 flex items-center justify-center gap-3"
+                                        className="flex-1 py-6 bg-blue-600 text-white rounded-[2rem] font-black italic uppercase tracking-tighter text-xl shadow-2xl shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-4 group disabled:opacity-50"
                                     >
-                                        {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
-                                            <>
-                                                Complete Registration <ArrowRight className="w-5 h-5" />
-                                            </>
-                                        )}
+                                        <div className="flex flex-col items-center">
+                                            <span>{loading ? 'Processing...' : 'Complete Registration'}</span>
+                                            <span className="text-xs font-medium opacity-80" dir="rtl">رجسٹریشن مکمل کریں</span>
+                                        </div>
+                                        {!loading && <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />}
                                     </button>
                                 </div>
                             </div>

@@ -271,7 +271,8 @@ export default function OnboardingPage() {
                             KhanHub<span className="text-blue-600">Setup</span>
                         </h1>
                     </div>
-                    <p className="mt-2 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Completing your profile...</p>
+                    <p className="mt-2 text-blue-600 font-black italic text-lg" dir="rtl">اپنا پروفائل مکمل کریں</p>
+                    <p className="mt-1 text-slate-500 font-bold uppercase tracking-widest text-[10px]">Completing your profile...</p>
                 </div>
 
                 <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-500/5 border border-slate-100 overflow-hidden">
@@ -384,8 +385,12 @@ export default function OnboardingPage() {
                                     </div>
                                 </div>
 
-                                <button type="submit" disabled={submitting} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 disabled:opacity-70 mt-4">
-                                    {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Complete & Pay <ArrowRight className="w-6 h-6" /></>}
+                                <button type="submit" disabled={submitting} className="w-full py-6 bg-blue-600 text-white rounded-[2rem] font-black italic uppercase tracking-tighter text-xl shadow-2xl shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-4 group disabled:opacity-50 mt-4">
+                                    <div className="flex flex-col items-center">
+                                        <span>{submitting ? 'Saving...' : 'Complete & Pay'}</span>
+                                        <span className="text-xs font-medium opacity-80" dir="rtl">آن بورڈنگ مکمل کریں</span>
+                                    </div>
+                                    {!submitting && <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />}
                                 </button>
                             </div>
                         )}
@@ -474,8 +479,12 @@ export default function OnboardingPage() {
                                     </div>
                                 </div>
 
-                                <button type="submit" disabled={submitting} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 disabled:opacity-70 mt-4">
-                                    {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Complete & Pay <ArrowRight className="w-6 h-6" /></>}
+                                <button type="submit" disabled={submitting} className="w-full py-6 bg-blue-600 text-white rounded-[2rem] font-black italic uppercase tracking-tighter text-xl shadow-2xl shadow-blue-500/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-4 group disabled:opacity-50 mt-4">
+                                    <div className="flex flex-col items-center">
+                                        <span>{submitting ? 'Saving...' : 'Complete & Pay'}</span>
+                                        <span className="text-xs font-medium opacity-80" dir="rtl">آن بورڈنگ مکمل کریں</span>
+                                    </div>
+                                    {!submitting && <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />}
                                 </button>
                             </div>
                         )}

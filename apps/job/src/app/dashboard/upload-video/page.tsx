@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import TagInput from '@/components/ui/TagInput';
 
 export default function VideoUploadPage() {
     const router = useRouter();
@@ -52,7 +53,18 @@ export default function VideoUploadPage() {
     const [canUpload, setCanUpload] = useState(true);
     const [videoData, setVideoData] = useState<any>(null);
     const [allUserVideos, setAllUserVideos] = useState<any[]>([]);
-    const [videoContext, setVideoContext] = useState<any>({});
+    const [videoContext, setVideoContext] = useState<any>({
+        targetJobTitle: user?.profile?.desiredJobTitle || '',
+        seekerExperience: user?.profile?.totalExperience || '',
+        hiringFor: '',
+        expectedExperience: '',
+        salaryMin: '',
+        salaryMax: '',
+        hideSalary: false,
+        jobType: 'Onsite',
+        phone: user?.phone || user?.profile?.phone || '',
+        skills: user?.profile?.skills || [],
+    });
 
     // Max duration constant (60 seconds)
     const MAX_DURATION = 60;
@@ -658,6 +670,9 @@ export default function VideoUploadPage() {
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-none tracking-tighter italic">
                         {user.role === 'employer' ? 'Introduce Your Company' : 'Show Your True Self'}
+                        <span className="block text-xl text-blue-600 mt-2 font-black italic tracking-tight" dir="rtl">
+                            {user.role === 'employer' ? 'اپنی کمپنی کا تعارف کروائیں' : 'اپنی صلاحیتوں کا مظاہرہ کریں'}
+                        </span>
                     </h1>
                     <p className="text-slate-500 text-lg font-medium max-w-2xl mx-auto">
                         Traditional resumes are boring. Let recruiters see your passion, skills, and personality in action.
@@ -1403,6 +1418,16 @@ function VideoContextForm({
                             ))}
                         </div>
                     </div>
+
+                    <div className="space-y-1.5 md:col-span-2">
+                        <TagInput
+                            label="Key Skills · اہم مہارتیں"
+                            tags={videoContext.skills || []}
+                            onChange={(tags) => setVideoContext({ ...videoContext, skills: tags })}
+                            placeholder="e.g. Sales, Python, Marketing..."
+                        />
+                    </div>
+
                     <div className="space-y-1.5 focus-within:z-10 md:col-span-2">
                         <div className="flex items-center justify-between mb-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Salary Range (PKR / Month) <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">تنخواہ کی حد</span></label>
@@ -1417,7 +1442,7 @@ function VideoContextForm({
                             </label>
                         </div>
                         {!videoContext.hideSalary && (
-                            <div className="flex gap-4">
+                            <div className="flex gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <input
                                     type="number"
                                     placeholder="Min"

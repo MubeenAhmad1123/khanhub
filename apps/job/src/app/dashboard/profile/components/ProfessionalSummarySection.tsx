@@ -41,7 +41,10 @@ export default function ProfessionalSummarySection({ profile, onSave, isEmployer
                         <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
                             <Sparkles className="w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tighter italic uppercase">{isEmployer ? 'Company Description' : 'Professional Summary'}</h2>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tighter italic uppercase flex flex-col">
+                            {isEmployer ? 'Company Description' : 'Professional Summary'}
+                            <span className="text-blue-600 text-sm normal-case mt-1" dir="rtl">{isEmployer ? 'کمپنی کی تفصیل' : 'پیشہ ورانہ خلاصہ'}</span>
+                        </h2>
                     </div>
                     <button
                         onClick={() => setIsEditing(!isEditing)}

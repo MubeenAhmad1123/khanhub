@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Play, MapPin, User, Building2, Eye, Link as LinkIcon, Edit, CheckCircle2, Clock } from 'lucide-react';
+import { Play, MapPin, User, Building2, Eye, Link as LinkIcon, Edit, CheckCircle2, Clock, Volume2, VolumeX, Maximize2, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConnections } from '@/hooks/useConnections';
 import { useAuth } from '@/hooks/useAuth';
@@ -111,10 +111,34 @@ export default function VideoCard({
         window.location.href = `/profile/${role}/${seekerId}`;
     };
 
-    const handleCardClick = () => {
-        if (window.innerWidth < 1024) {
-            setShowVideoModal(true);
+    // Fullscreen toggler
+    const toggleFullscreen = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (videoRef.current) {
+            if (videoRef.current.requestFullscreen) {
+                videoRef.current.requestFullscreen();
+            } else if ((videoRef.current as any).webkitRequestFullscreen) {
+                (videoRef.current as any).webkitRequestFullscreen();
+            }
         }
+    };
+
+    const handleCardClick = () => {
+        // On mobile, card click toggles play/pause for the preview
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+        if (isMobile) {
+            if (videoRef.current) {
+                if (playing) {
+                    videoRef.current.pause();
+                    setPlaying(false);
+                } else {
+                    videoRef.current.play().catch(() => { });
+                    setPlaying(true);
+                }
+            }
+            return;
+        }
+        setShowVideoModal(true);
     };
 
     const connectionStatus = isOwnVideo ? 'own' : (connection?.status || 'none');
@@ -153,26 +177,26 @@ export default function VideoCard({
                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
                     <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
 
-                    {/* Floating Controls */}
-                    <div className="absolute top-4 right-4 flex flex-col gap-2 transition-all duration-300 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0">
+                    {/* Floating Controls - Visible on mobile ALWAYS, on desktop on HOVER */}
+                    <div className="absolute top-4 right-4 flex flex-col gap-2 transition-all duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 translate-x-0 lg:translate-x-4 lg:group-hover:translate-x-0 z-30 pointer-events-auto">
                         <button
-                            onClick={toggleMute}
-                            className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center text-white hover:bg-white/40 transition-all pointer-events-auto"
+                            onClick={(e) => { e.stopPropagation(); setMuted(!muted); }}
+                            className="w-10 h-10 rounded-full bg-slate-900/40 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white hover:bg-white/40 transition-all"
                         >
-                            {muted ? <span className="text-sm">🔇</span> : <span className="text-sm">🔊</span>}
+                            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                         </button>
                         <button
-                            onClick={togglePlay}
-                            className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center text-white hover:bg-white/40 transition-all pointer-events-auto"
+                            onClick={toggleFullscreen}
+                            className="w-10 h-10 rounded-full bg-slate-900/40 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white hover:bg-white/40 transition-all"
                         >
-                            {playing ? <span className="text-lg">⏸</span> : <Play className="w-4 h-4 fill-current" />}
+                            <Maximize2 className="w-4 h-4" />
                         </button>
                     </div>
 
                     {/* Central Play Button (Visible when not playing) */}
-                    {!playing && !isHovering && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:scale-125 transition-transform duration-700">
+                    {!playing && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                            <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center animate-pulse lg:animate-none group-hover:scale-110 transition-transform duration-500">
                                 <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/50">
                                     <Play className="w-6 h-6 text-white fill-white ml-1" />
                                 </div>

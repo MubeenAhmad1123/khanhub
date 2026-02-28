@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import TagInput from '@/components/ui/TagInput';
 
 interface ProfileFormProps {
     onSuccess?: () => void;
@@ -16,7 +17,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
         location: '',
         experience: '',
         education: '',
-        skills: '',
+        skills: [] as string[],
         bio: '',
     });
     const [loading, setLoading] = useState(false);
@@ -36,12 +37,12 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                     const data = userDoc.data();
                     if (data) {
                         setFormData({
-                            fullName: data.name || data.displayName || '',
-                            phone: data.phone || '',
-                            location: data.city || '',
+                            fullName: data.name || data.displayName || user.displayName || '',
+                            phone: data.phone || user.phone || '',
+                            location: data.city || user.city || '',
                             experience: data.totalExperience || '',
                             education: data.education || '',
-                            skills: Array.isArray(data.skills) ? data.skills.join(', ') : (data.skills || ''),
+                            skills: Array.isArray(data.skills) ? data.skills : [],
                             bio: data.professionalSummary || data.bio || '',
                         });
                     }
@@ -67,11 +68,8 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
             const { doc, setDoc } = await import('firebase/firestore');
             const { db } = await import('@/lib/firebase/firebase-config');
 
-            // Convert skills string to array
-            const skillsArray = formData.skills
-                .split(',')
-                .map((s) => s.trim())
-                .filter((s) => s.length > 0);
+            // Convert skills string to array is no longer needed as TagInput uses array
+            const skillsArray = formData.skills;
 
             await setDoc(doc(db, 'users', user.uid), {
                 name: formData.fullName,
@@ -210,24 +208,13 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
             </div>
 
             {/* Skills */}
-            <div>
-                <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-2">
-                    Skills * (comma-separated) <span className="text-slate-400 font-medium normal-case tracking-normal" dir="rtl">مہارتیں</span>
-                </label>
-                <input
-                    type="text"
-                    id="skills"
-                    name="skills"
-                    value={formData.skills}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="JavaScript, React, Node.js, Python · مہارتیں"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                    Separate skills with commas · کاما سے الگ کریں
-                </p>
-            </div>
+            <TagInput
+                label="Skills"
+                urduLabel="مہارتیں"
+                tags={formData.skills}
+                onChange={(tags) => setFormData(prev => ({ ...prev, skills: tags }))}
+                placeholder="e.g. JavaScript, React, Python"
+            />
 
             {/* Bio */}
             <div>

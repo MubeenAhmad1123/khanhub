@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Target, X, Plus, Save, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import TagInput from '@/components/ui/TagInput';
 import { JobSeekerProfile } from '@/types/user';
 
 interface SkillsSectionProps {
@@ -87,40 +88,15 @@ export default function SkillsSection({ profile, onSave }: SkillsSectionProps) {
                     </div>
                 ) : (
                     <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
-                        <form onSubmit={handleAddSkill} className="flex gap-3">
-                            <input
-                                type="text"
-                                value={newSkill}
-                                onChange={(e) => setNewSkill(e.target.value)}
-                                className="flex-1 px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
-                                placeholder="Add a skill (e.g. React, UI Design, Marketing)"
-                            />
-                            <button
-                                type="submit"
-                                className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all"
-                            >
-                                <Plus className="w-5 h-5" />
-                            </button>
-                        </form>
+                        <TagInput
+                            label="Skills"
+                            urduLabel="مہارتیں"
+                            tags={skills}
+                            onChange={setSkills}
+                            placeholder="Add a skill (e.g. React, UI Design, Marketing)"
+                        />
 
-                        <div className="flex flex-wrap gap-2 min-h-[100px] p-6 bg-slate-50/50 rounded-3xl border border-slate-100">
-                            {skills.map((skill, idx) => (
-                                <div
-                                    key={idx}
-                                    className="px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 flex items-center gap-2 group hover:border-blue-300 transition-all"
-                                >
-                                    {skill}
-                                    <button
-                                        onClick={() => handleRemoveSkill(skill)}
-                                        className="text-slate-300 hover:text-red-500 transition-colors"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-4">
+                        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                             <button
                                 type="button"
                                 onClick={() => { setIsEditing(false); setSkills(getNormalizedSkills()); }}

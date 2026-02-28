@@ -110,7 +110,10 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                     <form onSubmit={handleSubmit} className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 animate-in fade-in slide-in-from-top-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Project Title</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Project Title
+                                    <span className="text-orange-600 font-medium normal-case tracking-normal" dir="rtl">پروجیکٹ کا نام</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -121,7 +124,10 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Project URL (Optional)</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Project URL (Optional)
+                                    <span className="text-orange-600 font-medium normal-case tracking-normal" dir="rtl">پروجیکٹ کا لنک</span>
+                                </label>
                                 <input
                                     type="url"
                                     value={editingEntry.url}
@@ -131,7 +137,10 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Date</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Start Date
+                                    <span className="text-orange-600 font-medium normal-case tracking-normal" dir="rtl">شروع کرنے کی تاریخ</span>
+                                </label>
                                 <input
                                     type="month"
                                     value={editingEntry.startDate}
@@ -140,7 +149,10 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">End Date</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    End Date
+                                    <span className="text-orange-600 font-medium normal-case tracking-normal" dir="rtl">ختم کرنے کی تاریخ</span>
+                                </label>
                                 <div className="flex flex-col gap-2">
                                     <input
                                         type="month"
@@ -161,7 +173,10 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                 </div>
                             </div>
                             <div className="md:col-span-2 space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Short Description</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Short Description
+                                    <span className="text-orange-600 font-medium normal-case tracking-normal" dir="rtl">مختصر تفصیل</span>
+                                </label>
                                 <textarea
                                     required
                                     value={editingEntry.description}

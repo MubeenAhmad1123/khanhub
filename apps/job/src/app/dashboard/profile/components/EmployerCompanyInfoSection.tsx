@@ -68,7 +68,10 @@ export default function EmployerCompanyInfoSection({ userData }: EmployerCompany
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                         <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Company Name</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 flex justify-between">
+                                Company Name
+                                <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">کمپنی کا نام</span>
+                            </label>
                             <input
                                 type="text"
                                 disabled={!isEditing}
@@ -79,7 +82,10 @@ export default function EmployerCompanyInfoSection({ userData }: EmployerCompany
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Industry</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 flex justify-between">
+                                Industry
+                                <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">صنعت</span>
+                            </label>
                             <input
                                 type="text"
                                 disabled={!isEditing}
@@ -90,7 +96,10 @@ export default function EmployerCompanyInfoSection({ userData }: EmployerCompany
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Company Size</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 flex justify-between">
+                                Company Size
+                                <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">کمپنی کا سائز</span>
+                            </label>
                             <select
                                 disabled={!isEditing}
                                 value={formData.companySize}
@@ -109,7 +118,10 @@ export default function EmployerCompanyInfoSection({ userData }: EmployerCompany
 
                     <div className="space-y-4">
                         <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Location</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 flex justify-between">
+                                Location
+                                <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">مقام</span>
+                            </label>
                             <input
                                 type="text"
                                 disabled={!isEditing}
@@ -120,7 +132,10 @@ export default function EmployerCompanyInfoSection({ userData }: EmployerCompany
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Website</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 flex justify-between">
+                                Website
+                                <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">ویب سائٹ</span>
+                            </label>
                             <input
                                 type="url"
                                 disabled={!isEditing}
@@ -131,7 +146,10 @@ export default function EmployerCompanyInfoSection({ userData }: EmployerCompany
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">WhatsApp / Contact</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 flex justify-between">
+                                WhatsApp / Contact
+                                <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">واٹس ایپ / رابطہ</span>
+                            </label>
                             <input
                                 type="text"
                                 disabled={!isEditing}

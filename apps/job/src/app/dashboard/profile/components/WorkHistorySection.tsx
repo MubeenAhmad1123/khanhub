@@ -121,7 +121,10 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                     <form onSubmit={handleSubmit} className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 animate-in fade-in slide-in-from-top-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Job Title</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Job Title
+                                    <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">عہدے کا نام</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -132,7 +135,10 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Company Name</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Company Name
+                                    <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">کمپنی کا نام</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -143,7 +149,10 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Date</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Start Date
+                                    <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">شروع کرنے کی تاریخ</span>
+                                </label>
                                 <input
                                     type="month"
                                     required
@@ -153,7 +162,10 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">End Date</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    End Date
+                                    <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">ختم کرنے کی تاریخ</span>
+                                </label>
                                 <div className="flex flex-col gap-2">
                                     <input
                                         type="month"
@@ -174,7 +186,10 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                 </div>
                             </div>
                             <div className="md:col-span-2 space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Description</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    Description
+                                    <span className="text-blue-600 font-medium normal-case tracking-normal" dir="rtl">تفصیلات</span>
+                                </label>
                                 <textarea
                                     value={editingEntry.description}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}

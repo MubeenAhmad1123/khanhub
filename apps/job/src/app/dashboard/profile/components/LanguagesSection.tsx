@@ -66,7 +66,10 @@ export default function LanguagesSection({ profile, onSave }: LanguagesSectionPr
                         <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                             <Languages className="w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tighter italic uppercase">Languages</h2>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tighter italic uppercase flex flex-col">
+                            Languages
+                            <span className="text-blue-600 text-sm normal-case mt-1" dir="rtl">زبانیں</span>
+                        </h2>
                     </div>
                     {!isEditing && (
                         <button
@@ -105,7 +108,7 @@ export default function LanguagesSection({ profile, onSave }: LanguagesSectionPr
                                     value={newLang.name}
                                     onChange={(e) => setNewLang({ ...newLang, name: e.target.value })}
                                     className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
-                                    placeholder="Language"
+                                    placeholder="زبان (Language)"
                                 />
                             </div>
                             <div className="sm:col-span-1">

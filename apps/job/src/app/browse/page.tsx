@@ -69,36 +69,49 @@ function BrowseContent() {
                 // REQUIRED FIRESTORE INDEX: videos collection
                 // Fields: is_live (ASC), admin_status (ASC)
                 // Create at: Firebase Console → Firestore → Indexes
-                const videosQuery = query(
+                const q1 = query(
                     collection(db, 'videos'),
                     where('is_live', '==', true),
                     where('admin_status', '==', 'approved')
                 );
-                const videosSnap = await getDocs(videosQuery);
+
+                const q2 = query(
+                    collection(db, 'videos'),
+                    where('status', '==', 'approved')
+                );
+
+                const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
 
                 const usersSnap = await getDocs(collection(db, 'users'));
                 const usersMap: Record<string, any> = {};
                 usersSnap.forEach(d => usersMap[d.id] = d.data());
 
-                videosSnap.forEach((docSnap) => {
-                    const data = docSnap.data();
+                // Merge and deduplicate
+                const docMap = new Map();
+                snap1.forEach(d => docMap.set(d.id, d.data()));
+                snap2.forEach(d => {
+                    if (!docMap.has(d.id)) docMap.set(d.id, d.data());
+                });
+
+                docMap.forEach((data, id) => {
                     const userData = usersMap[data.userId] || {};
 
-                    const videoRole = (data.role === 'employer' || data.role === 'company')
+                    const videoRole = (data.role === 'employer' || data.role === 'company' || data.userRole === 'employer' || data.userRole === 'company')
                         ? 'employer'
                         : 'jobseeker';
 
                     loadedVideos.push({
-                        id: docSnap.id,
+                        id,
                         seekerId: data.userId,
                         role: videoRole,
                         industry: data.industry || userData.industry || 'General',
                         subcategory: data.subcategory
+                            || data.subCategory
                             || userData.subcategory
                             || userData.desiredJobTitle
                             || 'General',
-                        videoUrl: data.videoUrl || data.cloudinaryUrl || '',
-                        thumbnailUrl: data.thumbnailUrl || userData.photoURL || '',
+                        videoUrl: data.videoUrl || data.cloudinaryUrl || data.url || '',
+                        thumbnailUrl: data.thumbnailUrl || data.thumbnail || userData.photoURL || '',
                         experience: userData.totalExperience
                             || userData.profile?.yearsOfExperience
                             || '',

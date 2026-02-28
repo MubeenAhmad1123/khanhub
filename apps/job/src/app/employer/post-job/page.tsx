@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import TagInput from '@/components/ui/TagInput';
 
 export default function PostJobPage() {
     const router = useRouter();
@@ -242,7 +243,9 @@ export default function PostJobPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">
                     <div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">Post Video Job</h1>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase flex flex-col">
+                            Post Video Job <span className="text-blue-600 text-lg normal-case mt-1" dir="rtl">ویڈیو جاب پوسٹ کریں</span>
+                        </h1>
                         <p className="text-slate-500 font-bold">Step {step} of 4 • {step === 1 ? 'Details' : step === 2 ? 'Logistics' : step === 3 ? 'Review' : 'Video'}</p>
                     </div>
                     <div className="flex gap-2">
@@ -257,9 +260,11 @@ export default function PostJobPage() {
                         <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-xl">
                             <CheckCircle className="w-12 h-12 text-emerald-600" />
                         </div>
-                        <h2 className="text-4xl font-black text-slate-900 italic tracking-tighter uppercase mb-4">Job Posted!</h2>
+                        <h2 className="text-4xl font-black text-slate-900 italic tracking-tighter uppercase mb-4">
+                            Job Posted! <span className="text-emerald-600 block text-xl normal-case" dir="rtl">جاب پوسٹ ہو گئی!</span>
+                        </h2>
                         <p className="text-slate-500 font-bold mb-8">Your video job posting is being processed. Returning to dashboard...</p>
-                        <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto" />
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
                     </div>
                 ) : (
                     <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-100 overflow-hidden">
@@ -275,8 +280,9 @@ export default function PostJobPage() {
                             {step === 1 && (
                                 <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
                                     <div className="space-y-4">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                            <Briefcase className="w-4 h-4" /> Role Title
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Role Title</div>
+                                            <span className="text-[10px] font-medium" dir="rtl">عہدے کا نام</span>
                                         </label>
                                         <input
                                             type="text"
@@ -287,34 +293,20 @@ export default function PostJobPage() {
                                         />
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                            <Tag className="w-4 h-4" /> Skills (Press Enter to add)
-                                        </label>
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                            {formData.skills.map(skill => (
-                                                <button
-                                                    key={skill}
-                                                    onClick={() => handleRemoveSkill(skill)}
-                                                    className="px-4 py-2 bg-orange-100 text-orange-700 rounded-xl text-xs font-black uppercase tracking-tight hover:bg-red-100 hover:text-red-700 transition-colors flex items-center gap-2"
-                                                >
-                                                    {skill} <X className="w-3 h-3" />
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g., React, Node.js, Firebase..."
-                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-bold"
-                                            value={skillInput}
-                                            onChange={e => setSkillInput(e.target.value)}
-                                            onKeyDown={handleAddSkill}
-                                        />
-                                    </div>
+                                    <TagInput
+                                        label="Required Skills"
+                                        urduLabel="مہارتیں"
+                                        tags={formData.skills}
+                                        onChange={(tags) => setFormData(prev => ({ ...prev, skills: tags }))}
+                                        placeholder="e.g. React, Node.js, Firebase..."
+                                    />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-4">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Experience Range</label>
+                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                                                Experience Range
+                                                <span className="text-[10px] font-medium" dir="rtl">تجربہ</span>
+                                            </label>
                                             <select
                                                 className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none"
                                                 value={formData.experienceRequired}
@@ -329,7 +321,10 @@ export default function PostJobPage() {
                                             </select>
                                         </div>
                                         <div className="space-y-4">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Job Type</label>
+                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                                                Job Type
+                                                <span className="text-[10px] font-medium" dir="rtl">کام کی قسم</span>
+                                            </label>
                                             <select
                                                 className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none"
                                                 value={formData.type}
@@ -345,7 +340,10 @@ export default function PostJobPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Detailed Description</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                                            Detailed Description
+                                            <span className="text-[10px] font-medium" dir="rtl">تفصیلات</span>
+                                        </label>
                                         <textarea
                                             rows={6}
                                             placeholder="Tell candidates what they'll be doing..."
@@ -361,8 +359,9 @@ export default function PostJobPage() {
                             {step === 2 && (
                                 <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
                                     <div className="space-y-4">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                            <MapPin className="w-4 h-4" /> Job City
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Job City</div>
+                                            <span className="text-[10px] font-medium" dir="rtl">شہر</span>
                                         </label>
                                         <input
                                             type="text"
@@ -374,8 +373,9 @@ export default function PostJobPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                            <DollarSign className="w-4 h-4" /> Salary Range (PKR)
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2"><DollarSign className="w-4 h-4" /> Salary Range (PKR)</div>
+                                            <span className="text-[10px] font-medium" dir="rtl">تنخواہ</span>
                                         </label>
                                         <input
                                             type="text"
@@ -566,18 +566,13 @@ export default function PostJobPage() {
                                 <button
                                     onClick={step === 4 ? handleFinalSubmit : nextStep}
                                     disabled={saving}
-                                    className="inline-flex items-center gap-3 px-10 py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-[2rem] font-black italic uppercase tracking-tighter shadow-xl shadow-slate-900/10 active:scale-95 transition-all disabled:opacity-50"
+                                    className="flex-1 py-6 bg-blue-600 text-white rounded-[2rem] font-black italic uppercase tracking-tighter text-xl shadow-2xl shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-4 group"
                                 >
-                                    {saving ? (
-                                        <>
-                                            <Loader2 className="w-6 h-6 animate-spin" /> Processing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            {step === 4 ? 'Confirm & Post' : 'Continue'}
-                                            {step < 4 && <ArrowRight className="w-5 h-5" />}
-                                        </>
-                                    )}
+                                    <div className="flex flex-col items-center">
+                                        <span>{saving ? 'Processing...' : (step === 4 ? 'Confirm & Post' : 'Continue')}</span>
+                                        <span className="text-xs font-medium opacity-80" dir="rtl">{step === 4 ? 'پوسٹ مکمل کریں' : 'جاری رکھیں'}</span>
+                                    </div>
+                                    {!saving && <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />}
                                 </button>
                             </div>
                         </div>

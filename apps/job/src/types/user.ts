@@ -192,6 +192,7 @@ export interface User {
     // Account Information
     name?: string;
     phone?: string;
+    phoneNumber?: string; // For Firebase Auth/Legacy compatibility
 
     // Personal Information
     dateOfBirth?: string;         // "YYYY-MM-DD"
