@@ -6,7 +6,7 @@ import Image from 'next/image';
 import {
     Users,
     ClipboardCheck,
-    HandCoins,
+    Coins,
     Stethoscope,
     GraduationCap,
     Briefcase,
@@ -57,7 +57,7 @@ const CONTENT = {
                 {
                     title: "You Earn",
                     text: "Once confirmed, we calculate your commission based on the agreed percentage for that department and transfer it to you.",
-                    icon: HandCoins
+                    icon: Coins
                 }
             ]
         },
@@ -169,7 +169,7 @@ const CONTENT = {
                 {
                     title: "آپ کماتے ہیں",
                     text: "تصدیق کے بعد، ہم اس شعبے کے لیے طے شدہ فیصد کی بنیاد پر آپ کے کمیشن کا حساب لگاتے ہیں اور اسے آپ کو منتقل کر دیتے ہیں۔",
-                    icon: HandCoins
+                    icon: Coins
                 }
             ]
         },
@@ -532,7 +532,7 @@ export default function AffiliatePageContent() {
                                         {t.story.items.slice(2).map((text, i) => (
                                             <div key={i} className="flex gap-6 group">
                                                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 font-bold shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-all transform group-hover:rotate-12">
-                                                    {i === 0 ? <Stethoscope className="w-6 h-6" /> : <HandCoins className="w-6 h-6" />}
+                                                    {i === 0 ? <Stethoscope className="w-6 h-6" /> : <Coins className="w-6 h-6" />}
                                                 </div>
                                                 <p className="text-neutral-700 text-base sm:text-lg leading-relaxed">{text}</p>
                                             </div>
