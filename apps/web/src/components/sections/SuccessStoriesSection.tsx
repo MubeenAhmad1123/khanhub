@@ -3,6 +3,8 @@
 // Section for Home Page showcasing top success stories/reviews
 // ─────────────────────────────────────────────────────────────────
 
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/ui';

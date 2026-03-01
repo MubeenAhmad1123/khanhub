@@ -6,13 +6,15 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Suspense } from 'react';
 import { PageHero, SectionHeader } from '@/components/ui';
-import { SuccessStoryCard } from '@/components/ui/SuccessStoryCard';
-import { SUCCESS_STORIES } from '@/data/success-stories';
-import { getDepartmentBySlug } from '@/data/departments';
 import { SuccessStoriesClient } from './SuccessStoriesClient';
+import { getDepartmentBySlug } from '@/data/departments';
+import { SUCCESS_STORIES } from '@/data/success-stories';
 
-export default async function SuccessStoriesPage({
+export const dynamic = 'force-dynamic';
+
+async function SuccessStoriesContent({
     searchParams
 }: {
     searchParams: Promise<{ dept?: string }>
@@ -84,5 +86,19 @@ export default async function SuccessStoriesPage({
                 </div>
             </section>
         </article>
+    );
+}
+
+export default function SuccessStoriesPage(props: {
+    searchParams: Promise<{ dept?: string }>
+}) {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary-600"></div>
+            </div>
+        }>
+            <SuccessStoriesContent searchParams={props.searchParams} />
+        </Suspense>
     );
 }
