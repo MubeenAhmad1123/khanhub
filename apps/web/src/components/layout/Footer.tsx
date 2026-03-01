@@ -103,7 +103,7 @@ export default function Footer() {
               <h4 className="font-black text-xs uppercase tracking-widest text-neutral-900">Organization</h4>
             </div>
             <ul className="space-y-4">
-              {['Media', 'About Us', 'Certificates', 'Departments'].map((item) => (
+              {['Media', 'About Us', 'Certificates', 'Affiliate Program', 'Departments'].map((item) => (
                 <li key={item} className="flex items-center gap-3 group">
                   <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 group-hover:bg-primary-500 transition-all duration-300 group-hover:scale-125"></div>
                   <Link href={`/${item.toLowerCase().replace(' ', '-')}`} className="text-neutral-600 hover:text-primary-600 text-sm transition-all duration-300 group-hover:translate-x-1">

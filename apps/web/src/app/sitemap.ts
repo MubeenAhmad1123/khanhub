@@ -21,6 +21,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         '/terms',
         '/auth/signin',
         '/app-download',
+        '/affiliate',
     ].map((route) => ({
         url: `${baseUrl}${route}`,
         lastModified: new Date(),

@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast'
 import '@/styles/globals.css'
 import SocialMediaSidebar from '@/components/SocialMediaSidebar'
 import FloatingDonateButton from '@/components/FloatingDonateButton'
+import FloatingAffiliateButton from '@/components/FloatingAffiliateButton'
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
@@ -168,6 +169,7 @@ export default function RootLayout({
           {children}
         </main>
         <SocialMediaSidebar />
+        <FloatingAffiliateButton />
         <FloatingDonateButton />
         <Footer />
         <Toaster position="bottom-right" />
