@@ -28,7 +28,7 @@ const NAV_LINKS = [
   { label: 'Media', href: '/media', icon: '📸' },
   { label: 'Contact', href: '/contact', icon: '📞' },
   { label: 'Certificates', href: '/certificates', icon: '🏆' },
-  { label: 'Affiliate Program', href: '/affiliate', icon: '🤝' },
+  { label: 'Affiliate Program', href: '/affiliate', icon: '🤝', mobileOnly: true },
   { label: 'Success Stories', href: '/success-stories', icon: '🌟', mobileOnly: true },
   { label: 'About', href: '/about', icon: 'ℹ️' },
 ] as const;
