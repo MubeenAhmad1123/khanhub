@@ -4,6 +4,8 @@
 import { useState, FormEvent } from 'react';
 import { submitContactForm } from '@/lib/firestore';
 import { Spinner } from '@/components/ui';
+import { getWhatsAppUrl } from '@/lib/whatsapp';
+import { SiWhatsapp } from 'react-icons/si';
 
 export default function ContactForm() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
@@ -22,7 +24,7 @@ export default function ContactForm() {
     try {
       await submitContactForm(form);
       setSuccess(true);
-      setForm({ name: '', email: '', phone: '', subject: '', message: '' });
+      // We don't clear the form immediately so it can be shared on WhatsApp
     } catch (err) {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -31,12 +33,35 @@ export default function ContactForm() {
   };
 
   if (success) {
+    const whatsappUrl = getWhatsAppUrl(form, `Contact: ${form.subject || 'General Inquiry'}`);
+
     return (
       <div className="text-center py-12">
         <div className="text-5xl mb-4">✅</div>
         <h3 className="font-display font-semibold text-white text-xl mb-2">Message Sent!</h3>
-        <p className="text-neutral-500 text-sm">We&apos;ll get back to you within 24 hours.</p>
-        <button onClick={() => setSuccess(false)} className="btn-secondary mt-6 text-sm px-5 py-2">Send Another</button>
+        <p className="text-neutral-500 text-sm mb-8">We&apos;ll get back to you within 24 hours.</p>
+
+        <div className="flex flex-col gap-4 max-w-xs mx-auto">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary w-full justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] border-none text-white shadow-lg shadow-[#25D366]/20 py-3"
+          >
+            <SiWhatsapp className="w-5 h-5" />
+            Share on WhatsApp for Quick Response
+          </a>
+
+          <button
+            onClick={() => {
+              setSuccess(false);
+              setForm({ name: '', email: '', phone: '', subject: '', message: '' });
+            }}
+            className="text-neutral-500 hover:text-white text-sm font-medium transition-colors"
+          >
+            Send Another Message
+          </button>
+        </div>
       </div>
     );
   }

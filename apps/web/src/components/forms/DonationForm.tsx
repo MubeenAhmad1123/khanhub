@@ -4,6 +4,8 @@
 import { useState, FormEvent } from 'react';
 import { submitDonation } from '@/lib/firestore';
 import { Spinner } from '@/components/ui';
+import { getWhatsAppUrl } from '@/lib/whatsapp';
+import { SiWhatsapp } from 'react-icons/si';
 
 const PRESET_AMOUNTS = [500, 1000, 2500, 5000, 10000];
 
@@ -51,17 +53,47 @@ export default function DonationForm() {
   };
 
   if (success) {
+    const whatsappUrl = getWhatsAppUrl(
+      {
+        ...form,
+        amount: `PKR ${Number(finalAmount).toLocaleString()}`,
+        method: method.charAt(0).toUpperCase() + method.slice(1),
+      },
+      'Donation Intent'
+    );
+
     return (
       <div className="text-center py-14">
         <div className="text-6xl mb-4">🎉</div>
         <h3 className="font-display font-bold text-white text-2xl mb-2">Thank You!</h3>
-        <p className="text-neutral-500 text-sm max-w-sm mx-auto">
+        <p className="text-neutral-500 text-sm max-w-sm mx-auto mb-8">
           Your donation of <span className="text-primary-400 font-semibold">PKR {finalAmount.toLocaleString()}</span> has been recorded.
           You will receive bank details via email.
         </p>
-        <button onClick={() => { setSuccess(false); setAmount(''); setCustom(''); }} className="btn-secondary mt-6 text-sm px-5 py-2">
-          Donate Again
-        </button>
+
+        <div className="flex flex-col gap-4 max-w-xs mx-auto">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary w-full justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] border-none text-white shadow-lg shadow-[#25D366]/20 py-3"
+          >
+            <SiWhatsapp className="w-5 h-5" />
+            Share on WhatsApp for Quick Response
+          </a>
+
+          <button
+            onClick={() => {
+              setSuccess(false);
+              setAmount('');
+              setCustom('');
+              setForm({ name: '', email: '', phone: '', message: '' });
+            }}
+            className="text-neutral-500 hover:text-white text-sm font-medium transition-colors"
+          >
+            Donate Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -75,16 +107,16 @@ export default function DonationForm() {
           {PRESET_AMOUNTS.map((amt) => (
             <button type="button" key={amt} onClick={() => { setAmount(amt); setCustom(''); }}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${amount === amt
-                  ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/20'
-                  : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-primary-500/40'
+                ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/20'
+                : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-primary-500/40'
                 }`}>
               {amt.toLocaleString()}
             </button>
           ))}
           <button type="button" onClick={() => setAmount('custom')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${amount === 'custom'
-                ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/20'
-                : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-primary-500/40'
+              ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/20'
+              : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-primary-500/40'
               }`}>
             Custom
           </button>
@@ -102,8 +134,8 @@ export default function DonationForm() {
           {PAYMENT_METHODS.map((m) => (
             <button type="button" key={m.value} onClick={() => setMethod(m.value)}
               className={`flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm transition-all border ${method === m.value
-                  ? 'bg-primary-500/10 border-primary-500 text-white'
-                  : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:border-neutral-600'
+                ? 'bg-primary-500/10 border-primary-500 text-white'
+                : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:border-neutral-600'
                 }`}>
               <span className="text-lg">{m.icon}</span>
               <span className="font-medium">{m.label}</span>

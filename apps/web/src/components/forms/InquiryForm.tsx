@@ -5,6 +5,8 @@
 import { useState, FormEvent } from 'react';
 import { submitInquiryForm } from '@/lib/firestore';
 import { Spinner } from '@/components/ui';
+import { getWhatsAppUrl } from '@/lib/whatsapp';
+import { SiWhatsapp } from 'react-icons/si';
 
 interface InquiryFormProps {
   department: string; // slug
@@ -27,7 +29,7 @@ export default function InquiryForm({ department }: InquiryFormProps) {
     try {
       await submitInquiryForm({ ...form, department });
       setSuccess(true);
-      setForm({ name: '', email: '', phone: '', message: '' });
+      // We don't clear the form immediately so it can be shared on WhatsApp
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -36,12 +38,38 @@ export default function InquiryForm({ department }: InquiryFormProps) {
   };
 
   if (success) {
+    const whatsappUrl = getWhatsAppUrl(
+      { ...form, department },
+      'New Inquiry'
+    );
+
     return (
       <div className="text-center py-10">
         <div className="text-5xl mb-3">✅</div>
         <h3 className="font-display font-semibold text-white text-lg mb-1">Inquiry Submitted!</h3>
-        <p className="text-neutral-500 text-sm">Our team will reach out to you shortly.</p>
-        <button onClick={() => setSuccess(false)} className="btn-secondary mt-5 text-sm px-4 py-2">Submit Another</button>
+        <p className="text-neutral-500 text-sm mb-6">Our team will reach out to you shortly.</p>
+
+        <div className="flex flex-col gap-3">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary w-full justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] border-none text-white shadow-lg shadow-[#25D366]/20"
+          >
+            <SiWhatsapp className="w-5 h-5" />
+            Share on WhatsApp for Quick Response
+          </a>
+
+          <button
+            onClick={() => {
+              setSuccess(false);
+              setForm({ name: '', email: '', phone: '', message: '' });
+            }}
+            className="text-neutral-500 hover:text-white text-xs font-medium transition-colors"
+          >
+            Submit Another Inquiry
+          </button>
+        </div>
       </div>
     );
   }
