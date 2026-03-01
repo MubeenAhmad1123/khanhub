@@ -8,8 +8,10 @@ import Link from 'next/link';
 import { SectionHeader } from '@/components/ui';
 import { SuccessStoryCard } from '@/components/ui/SuccessStoryCard';
 import { SUCCESS_STORIES } from '@/data/success-stories';
+import { SuccessStoryCategorySelector } from '@/components/modals/SuccessStoryCategorySelector';
 
 export const SuccessStoriesSection: React.FC = () => {
+    const [isSelectorOpen, setIsSelectorOpen] = React.useState(false);
     // We only show the first 3 stories on the home page as requested
     const featuredStories = SUCCESS_STORIES.slice(0, 3);
 
@@ -41,8 +43,8 @@ export const SuccessStoriesSection: React.FC = () => {
                     </div>
 
                     <div className="mt-16 text-center animate-fade-in" style={{ animationDelay: '0.6s', animationFillMode: 'forwards' }}>
-                        <Link
-                            href="/success-stories"
+                        <button
+                            onClick={() => setIsSelectorOpen(true)}
                             className="group inline-flex items-center gap-2 bg-neutral-900 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 hover:bg-primary-600 hover:shadow-xl hover:shadow-primary-500/20 active:scale-95"
                         >
                             <span>Read More Success Stories</span>
@@ -54,10 +56,16 @@ export const SuccessStoriesSection: React.FC = () => {
                             >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </div>
+
+            {/* Category Selector Modal */}
+            <SuccessStoryCategorySelector
+                isOpen={isSelectorOpen}
+                onClose={() => setIsSelectorOpen(false)}
+            />
         </section>
     );
 };

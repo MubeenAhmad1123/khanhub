@@ -9,107 +9,57 @@ import Image from 'next/image';
 import { PageHero, SectionHeader } from '@/components/ui';
 import { SuccessStoryCard } from '@/components/ui/SuccessStoryCard';
 import { SUCCESS_STORIES } from '@/data/success-stories';
+import { getDepartmentBySlug } from '@/data/departments';
+import { SuccessStoriesClient } from './SuccessStoriesClient';
 
-export default function SuccessStoriesPage() {
+export default async function SuccessStoriesPage({
+    searchParams
+}: {
+    searchParams: Promise<{ dept?: string }>
+}) {
+    const { dept: deptSlug } = await searchParams;
+    const activeDept = deptSlug ? getDepartmentBySlug(deptSlug) : null;
+
+    // Filter stories based on department if slug is provided
+    const filteredStories = activeDept
+        ? SUCCESS_STORIES.filter(s => s.departmentSlug === deptSlug)
+        : SUCCESS_STORIES;
+
     return (
         <article className="overflow-x-hidden">
             {/* Hero Section */}
             <PageHero
                 type="split"
-                badge="Success Stories"
-                title="Impact We Create Together"
-                subtitle="Read real-life transformations from our patients and students who have benefited from Khan Hub's diverse services."
-                image="/success-stories.webp"
+                badge={activeDept ? `Success Stories: ${activeDept.name}` : "Success Stories"}
+                title={activeDept ? `Impact in ${activeDept.name}` : "Impact We Create Together"}
+                subtitle={activeDept
+                    ? `Read about the lives transformed through our ${activeDept.name} services and programs.`
+                    : "Read real-life transformations from our patients and students who have benefited from Khan Hub's diverse services."}
+                image={activeDept?.image || "/success-stories.webp"}
                 cta={
                     <Link href="#all-reviews" className="btn-primary">
                         📖 Read Stories
                     </Link>
                 }
             >
-                <Link href="/contact" className="btn-secondary">
-                    🤝 Share Your Story
-                </Link>
+                {activeDept ? (
+                    <Link href="/success-stories" className="btn-secondary">
+                        ✨ View All Categories
+                    </Link>
+                ) : (
+                    <Link href="/contact" className="btn-secondary">
+                        🤝 Share Your Story
+                    </Link>
+                )}
             </PageHero>
 
             {/* Main Content */}
             <section className="section bg-gradient-light">
                 <div className="section-inner">
-
-                    {/* Section: Transformation Gallery (Before & After Highlight) */}
-                    <div className="mb-24">
-                        <SectionHeader
-                            badge="Visual Results"
-                            title="Transformations that Matter"
-                            subtitle="A glimpse into the life-changing results achieved through our specialized surgical and rehabilitation services."
-                            align="left"
-                        />
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                            {SUCCESS_STORIES.filter(s => s.imageBefore).map((story, index) => (
-                                <div key={story.id} className="group bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500">
-                                    <div className="grid grid-cols-2 gap-px bg-neutral-200">
-                                        <div className="relative aspect-[4/5] overflow-hidden">
-                                            <Image
-                                                src={story.imageBefore || ''}
-                                                alt="Before transformation"
-                                                fill
-                                                className="object-cover"
-                                            />
-                                            <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/60 text-white text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">Before</div>
-                                        </div>
-                                        <div className="relative aspect-[4/5] overflow-hidden">
-                                            <Image
-                                                src={story.imageAfter || ''}
-                                                alt="After transformation"
-                                                fill
-                                                className="object-cover"
-                                            />
-                                            <div className="absolute top-4 right-4 px-3 py-1 rounded-lg bg-primary-600 text-white text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">After</div>
-                                        </div>
-                                    </div>
-                                    <div className="p-6 sm:p-8">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <span className="w-2 h-2 rounded-full bg-primary-500" />
-                                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{story.department}</span>
-                                        </div>
-                                        <h3 className="text-xl sm:text-2xl font-display font-bold text-neutral-900 mb-4">{story.title}</h3>
-                                        <p className="text-neutral-700 leading-relaxed italic">"{story.content}"</p>
-                                        <div className="mt-6 flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-neutral-100 overflow-hidden relative">
-                                                <Image
-                                                    src={story.avatar || '/placeholder-avatar.webp'}
-                                                    alt={story.name}
-                                                    fill
-                                                    className="object-cover"
-                                                />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-neutral-900">{story.name}</p>
-                                                <p className="text-[11px] text-neutral-500">{story.location}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <hr className="border-neutral-200 mb-24" />
-
-                    {/* Section: All Reviews */}
-                    <div id="all-reviews">
-                        <SectionHeader
-                            badge="Patient Reviews"
-                            title="Voices of Gratitude"
-                            subtitle="Our commitment to excellence reflected in the words of those we've had the privilege to serve."
-                        />
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {SUCCESS_STORIES.map((story) => (
-                                <SuccessStoryCard key={story.id} story={story} />
-                            ))}
-                        </div>
-                    </div>
+                    <SuccessStoriesClient
+                        stories={filteredStories}
+                        activeDeptName={activeDept?.name}
+                    />
                 </div>
             </section>
 
