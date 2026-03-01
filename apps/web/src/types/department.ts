@@ -74,6 +74,7 @@ export interface Course {
     image?: string;
     features?: string[];
     details?: { label: string; value: string }[];
+    tags?: string[];
 }
 
 export interface DepartmentTheme {

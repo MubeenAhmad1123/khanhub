@@ -750,7 +750,8 @@ export const DEPARTMENTS: Department[] = [
               { label: 'Level', value: 'Doctorate' },
               { label: 'Credits', value: '198 Credit Hours' },
               { label: 'Affiliation', value: 'Pharmacy Council' }
-            ]
+            ],
+            tags: ['degree']
           },
           {
             name: 'Pharmacy Technician (Category-B)',
@@ -764,7 +765,8 @@ export const DEPARTMENTS: Department[] = [
               'Retail Pharmacy Practical',
               'Drug Dispensing Skills',
               'Medical Store Management'
-            ]
+            ],
+            tags: ['diploma']
           }
         ]
       },
@@ -783,7 +785,8 @@ export const DEPARTMENTS: Department[] = [
               'Clinical Rotations in Top Hospitals',
               'Advanced Simulation Labs',
               'Community Health Outreach'
-            ]
+            ],
+            tags: ['degree', 'nursing']
           },
           {
             name: 'Post RN BSN',
@@ -791,7 +794,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Diploma in Nursing + 1 year experience',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/post-rn-bsn.webp'
+            image: '/images/ihs/courses/post-rn-bsn.webp',
+            tags: ['degree', 'nursing']
           },
           {
             name: 'Lady Health Visitor (LHV)',
@@ -799,7 +803,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma',
-            image: '/images/ihs/courses/lhv.webp'
+            image: '/images/ihs/courses/lhv.webp',
+            tags: ['diploma', 'nursing']
           },
           {
             name: 'Community Midwife (CMW)',
@@ -807,7 +812,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma',
-            image: '/images/ihs/courses/cmw.webp'
+            image: '/images/ihs/courses/cmw.webp',
+            tags: ['diploma', 'nursing']
           },
           {
             name: 'Certified Nursing Assistant (CNA)',
@@ -815,7 +821,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma',
-            image: '/images/ihs/courses/cna.webp'
+            image: '/images/ihs/courses/cna.webp',
+            tags: ['diploma', 'nursing']
           }
         ]
       },
@@ -828,7 +835,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/optometry.webp'
+            image: '/images/ihs/courses/optometry.webp',
+            tags: ['degree']
           },
           {
             name: 'BS Forensic Science',
@@ -836,7 +844,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc Pre-Medical/Pre-Engineering or equivalent',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/forensic-science.webp'
+            image: '/images/ihs/courses/forensic-science.webp',
+            tags: ['degree']
           },
           {
             name: 'BS Clinical Psychology',
@@ -844,7 +853,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc or equivalent - Min 45% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/clinical-psychology.webp'
+            image: '/images/ihs/courses/clinical-psychology.webp',
+            tags: ['degree']
           },
           {
             name: 'BS Human Nutrition & Dietetics',
@@ -852,7 +862,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/nutrition-dietetics.webp'
+            image: '/images/ihs/courses/nutrition-dietetics.webp',
+            tags: ['degree']
           },
           {
             name: 'BS Food Science & Technology',
@@ -860,7 +871,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/food-science.webp'
+            image: '/images/ihs/courses/food-science.webp',
+            tags: ['degree']
           },
           {
             name: 'BS Operation Theater Technology',
@@ -868,7 +880,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/ott-bs.webp'
+            image: '/images/ihs/courses/ott-bs.webp',
+            tags: ['degree']
           },
           {
             name: 'BS Cosmetology & Dermatology',
@@ -876,7 +889,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc or equivalent - Min 45% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/cosmetology.webp'
+            image: '/images/ihs/courses/cosmetology.webp',
+            tags: ['degree']
           },
           {
             name: 'BS Medical Laboratory Technology',
@@ -884,7 +898,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/mlt-bs.webp'
+            image: '/images/ihs/courses/mlt-bs.webp',
+            tags: ['degree']
           },
           {
             name: 'BS Radiology & Imaging Technology',
@@ -892,7 +907,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '4 Years',
             eligibility: 'FSc Pre-Medical or equivalent - Min 45% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/radiology-bs.webp'
+            image: '/images/ihs/courses/radiology-bs.webp',
+            tags: ['degree']
           }
         ]
       },
@@ -905,7 +921,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '5 Years',
             eligibility: 'FSc Pre-Medical or equivalent - Min 50% marks',
             degree: 'Degree Program',
-            image: '/images/ihs/courses/dpt.webp'
+            image: '/images/ihs/courses/dpt.webp',
+            tags: ['degree']
           }
         ]
       },
@@ -918,7 +935,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma (Equal to FSc Pre-Medical)',
-            image: '/images/ihs/courses/dispenser.webp'
+            image: '/images/ihs/courses/dispenser.webp',
+            tags: ['diploma']
           },
           {
             name: 'Operation Theater Technician (OTT)',
@@ -926,7 +944,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma (Equal to FSc Pre-Medical)',
-            image: '/images/ihs/courses/ott.webp'
+            image: '/images/ihs/courses/ott.webp',
+            tags: ['diploma']
           },
           {
             name: 'Medical Laboratory Technician (MLT)',
@@ -934,7 +953,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma (Equal to FSc Pre-Medical)',
-            image: '/images/ihs/courses/mlt.webp'
+            image: '/images/ihs/courses/mlt.webp',
+            tags: ['diploma']
           },
           {
             name: 'Radiography & Imaging Technician (RIT)',
@@ -942,7 +962,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma (Equal to FSc Pre-Medical)',
-            image: '/images/ihs/courses/rit.webp'
+            image: '/images/ihs/courses/rit.webp',
+            tags: ['diploma']
           },
           {
             name: 'Dental Technician',
@@ -950,7 +971,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma',
-            image: '/images/ihs/courses/dental-technician.webp'
+            image: '/images/ihs/courses/dental-technician.webp',
+            tags: ['diploma']
           },
           {
             name: 'Dialysis Technician',
@@ -958,7 +980,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma',
-            image: '/images/ihs/courses/dialysis-technician.webp'
+            image: '/images/ihs/courses/dialysis-technician.webp',
+            tags: ['diploma']
           },
           {
             name: 'Anesthesia Technician',
@@ -966,7 +989,8 @@ export const DEPARTMENTS: Department[] = [
             duration: '2 Years',
             eligibility: 'Matric (Science) or above - Min 45% marks',
             degree: 'Diploma',
-            image: '/images/ihs/courses/anesthesia-technician.webp'
+            image: '/images/ihs/courses/anesthesia-technician.webp',
+            tags: ['diploma']
           }
         ]
       }

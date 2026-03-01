@@ -27,6 +27,25 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
         setSelectedImage(url);
     };
 
+    // Filter state
+    const [activeTag, setActiveTag] = useState<string>('all');
+
+    // Categorization options for Medical Institute
+    const categories = [
+        { key: 'all', label: 'All Programs', icon: '✨' },
+        { key: 'degree', label: 'BS & Degree Programs', icon: '🎓' },
+        { key: 'nursing', label: 'Nursing Programs', icon: '🩺' },
+        { key: 'diploma', label: 'Diploma Programs', icon: '📜' }
+    ];
+
+    // Filter subDepartments based on activeTag
+    const filteredSubDepartments = department.subDepartments?.map(subDept => ({
+        ...subDept,
+        courses: subDept.courses.filter(course =>
+            activeTag === 'all' || (course.tags && course.tags.includes(activeTag))
+        )
+    })).filter(subDept => subDept.courses.length > 0);
+
     return (
         <main className="min-h-screen bg-neutral-50">
             {/* ── HERO SECTION ── */}
@@ -147,82 +166,122 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                             {/* Programs / Courses Section */}
                             {department.subDepartments ? (
                                 <div className="space-y-8">
-                                    <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
-                                        Our Departments & Courses
-                                    </h2>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
+                                        <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
+                                            Our Departments & Courses
+                                        </h2>
 
-                                    {department.subDepartments.map((subDept, idx) => (
-                                        <div key={idx} className="bg-white rounded-2xl border-2 border-neutral-100 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-                                            <div
-                                                className="p-4 sm:p-6 text-white"
-                                                style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})` }}
-                                            >
-                                                <h3 className="text-xl sm:text-2xl font-bold font-display">{subDept.title}</h3>
-                                                {subDept.description && <p className="text-white/80 mt-1">{subDept.description}</p>}
-                                            </div>
+                                        {/* Course Filter Badges */}
+                                        <div className="flex flex-wrap gap-2">
+                                            {categories.map((cat) => (
+                                                <button
+                                                    key={cat.key}
+                                                    onClick={() => setActiveTag(cat.key)}
+                                                    className={cn(
+                                                        "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 border-2 flex items-center gap-2",
+                                                        activeTag === cat.key
+                                                            ? "bg-primary-600 border-primary-600 text-white shadow-lg shadow-primary-600/20"
+                                                            : "bg-white border-neutral-200 text-neutral-600 hover:border-primary-400"
+                                                    )}
+                                                    style={activeTag === cat.key ? { backgroundColor: theme.primary, borderColor: theme.primary } : {}}
+                                                >
+                                                    <span>{cat.icon}</span>
+                                                    {cat.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                                            <div className="p-4 sm:p-6 grid gap-4">
-                                                {subDept.courses.map((course, cIdx) => (
-                                                    <div key={cIdx} className="flex flex-col md:flex-row gap-4 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 hover:border-neutral-300 hover:bg-white hover:shadow-md transition-all group relative">
-                                                        {course.image && (
-                                                            <Link
-                                                                href={course.slug ? `/departments/${department.slug}/${course.slug}` : '#'}
-                                                                className="relative w-full md:w-48 aspect-square rounded-xl overflow-hidden shadow-md flex-shrink-0 shimmer border border-neutral-100 group/img block"
-                                                            >
-                                                                <Image
-                                                                    src={course.image}
-                                                                    alt={course.name}
-                                                                    fill
-                                                                    className="object-cover transition-transform duration-500 group-hover/img:scale-110"
-                                                                    sizes="(max-width: 768px) 100vw, 192px"
-                                                                />
-                                                            </Link>
-                                                        )}
-                                                        <div className="flex-1 flex flex-col justify-between">
-                                                            <div>
+                                    {filteredSubDepartments && filteredSubDepartments.length > 0 ? (
+                                        filteredSubDepartments.map((subDept, idx) => (
+                                            <div key={idx} className="bg-white rounded-2xl border-2 border-neutral-100 overflow-hidden shadow-lg hover:shadow-xl transition-shadow animate-fade-in">
+                                                <div
+                                                    className="p-4 sm:p-6 text-white"
+                                                    style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})` }}
+                                                >
+                                                    <h3 className="text-xl sm:text-2xl font-bold font-display">{subDept.title}</h3>
+                                                    {subDept.description && <p className="text-white/80 mt-1">{subDept.description}</p>}
+                                                </div>
+
+                                                <div className="p-4 sm:p-6 grid gap-4">
+                                                    {subDept.courses.map((course, cIdx) => (
+                                                        <div key={cIdx} className="flex flex-col md:flex-row gap-4 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 hover:border-neutral-300 hover:bg-white hover:shadow-md transition-all group relative">
+                                                            {course.image && (
                                                                 <Link
                                                                     href={course.slug ? `/departments/${department.slug}/${course.slug}` : '#'}
-                                                                    className="group/course-link"
+                                                                    className="relative w-full md:w-48 aspect-square rounded-xl overflow-hidden shadow-md flex-shrink-0 shimmer border border-neutral-100 group/img block"
                                                                 >
-                                                                    <h4 className="font-bold text-lg text-neutral-900 group-hover/course-link:text-primary-600 transition-colors">
-                                                                        {course.name}
-                                                                    </h4>
+                                                                    <Image
+                                                                        src={course.image}
+                                                                        alt={course.name}
+                                                                        fill
+                                                                        className="object-cover transition-transform duration-500 group-hover/img:scale-110"
+                                                                        sizes="(max-width: 768px) 100vw, 192px"
+                                                                    />
                                                                 </Link>
-                                                                <div className="flex items-center gap-4 mt-2 text-sm text-neutral-600">
-                                                                    <span className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-neutral-100">
-                                                                        <Calendar className="w-4 h-4 text-primary-500" /> {course.duration}
-                                                                    </span>
-                                                                    {course.degree && (
-                                                                        <span className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-neutral-100 font-medium">
-                                                                            <Award className="w-4 h-4 text-amber-500" /> {course.degree}
+                                                            )}
+                                                            <div className="flex-1 flex flex-col justify-between">
+                                                                <div>
+                                                                    <Link
+                                                                        href={course.slug ? `/departments/${department.slug}/${course.slug}` : '#'}
+                                                                        className="group/course-link"
+                                                                    >
+                                                                        <h4 className="font-bold text-lg text-neutral-900 group-hover/course-link:text-primary-600 transition-colors">
+                                                                            {course.name}
+                                                                        </h4>
+                                                                    </Link>
+                                                                    <div className="flex items-center gap-4 mt-2 text-sm text-neutral-600">
+                                                                        <span className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-neutral-100">
+                                                                            <Calendar className="w-4 h-4 text-primary-500" /> {course.duration}
                                                                         </span>
+                                                                        {course.degree && (
+                                                                            <span className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-neutral-100 font-medium">
+                                                                                <Award className="w-4 h-4 text-amber-500" /> {course.degree}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="mt-4 pt-4 border-t border-dashed border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                                    <div>
+                                                                        <div className="text-[10px] font-bold uppercase text-neutral-400 mb-1.5 tracking-widest">Eligibility Criteria</div>
+                                                                        <div className="inline-flex px-3 py-1.5 rounded-lg text-sm font-semibold bg-primary-50 text-primary-700 border border-primary-100">
+                                                                            {course.eligibility}
+                                                                        </div>
+                                                                    </div>
+                                                                    {course.slug && (
+                                                                        <Link
+                                                                            href={`/departments/${department.slug}/${course.slug}`}
+                                                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border-2 text-sm font-bold transition-all hover:shadow-md active:scale-95 hover:bg-neutral-50"
+                                                                            style={{ borderColor: theme.primary, color: theme.primary }}
+                                                                        >
+                                                                            View Program
+                                                                            <ArrowLeft className="w-4 h-4 rotate-180" />
+                                                                        </Link>
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <div className="mt-4 pt-4 border-t border-dashed border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                                <div>
-                                                                    <div className="text-[10px] font-bold uppercase text-neutral-400 mb-1.5 tracking-widest">Eligibility Criteria</div>
-                                                                    <div className="inline-flex px-3 py-1.5 rounded-lg text-sm font-semibold bg-primary-50 text-primary-700 border border-primary-100">
-                                                                        {course.eligibility}
-                                                                    </div>
-                                                                </div>
-                                                                {course.slug && (
-                                                                    <Link
-                                                                        href={`/departments/${department.slug}/${course.slug}`}
-                                                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border-2 text-sm font-bold transition-all hover:shadow-md active:scale-95 hover:bg-neutral-50"
-                                                                        style={{ borderColor: theme.primary, color: theme.primary }}
-                                                                    >
-                                                                        View Program
-                                                                        <ArrowLeft className="w-4 h-4 rotate-180" />
-                                                                    </Link>
-                                                                )}
-                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    ))}
+                                                </div>
                                             </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-neutral-200 animate-fade-in">
+                                            <div className="inline-flex items-center justify-center w-20 h-20 bg-neutral-100 rounded-full mb-6">
+                                                <X className="w-10 h-10 text-neutral-400" />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-neutral-900 mb-2">No programs match this filter</h3>
+                                            <p className="text-neutral-500 mb-8 max-w-sm mx-auto">
+                                                Try selecting a different category or view all programs to see what we offer.
+                                            </p>
+                                            <button
+                                                onClick={() => setActiveTag('all')}
+                                                className="btn-secondary px-8 py-3 rounded-2xl font-bold text-sm"
+                                            >
+                                                View All Programs
+                                            </button>
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             ) : (
                                 department.programs && department.programs.length > 0 && (
