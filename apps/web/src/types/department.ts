@@ -48,6 +48,7 @@ export interface Department {
     facilities: string[];
     contactPhone: string;
     contactEmail: string;
+    externalUrl?: string;
 
     // Enhanced structure for Institute of Health Sciences
     subDepartments?: SubDepartment[];

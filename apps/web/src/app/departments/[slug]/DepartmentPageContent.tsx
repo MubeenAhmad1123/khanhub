@@ -98,20 +98,45 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                             )}
 
                             <div className="flex flex-wrap gap-4">
-                                <a
-                                    href={`tel:${department.contactPhone}`}
-                                    className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all shadow-xl hover:shadow-2xl active:scale-95 group"
-                                >
-                                    <Phone className="w-5 h-5 transition-transform group-hover:rotate-12" />
-                                    Contact Now
-                                </a>
-                                <a
-                                    href="#inquiry-form"
-                                    className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-2xl font-bold hover:bg-white/20 transition-all active:scale-95"
-                                >
-                                    <Mail className="w-5 h-5" />
-                                    Send Inquiry
-                                </a>
+                                {department.externalUrl ? (
+                                    <>
+                                        <a
+                                            href={department.externalUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all shadow-xl hover:shadow-2xl active:scale-95 group"
+                                        >
+                                            <ZoomIn className="w-5 h-5 transition-transform group-hover:scale-110" />
+                                            Visit Main Job Portal
+                                        </a>
+                                        <a
+                                            href={department.externalUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-2xl font-bold hover:bg-white/20 transition-all active:scale-95"
+                                        >
+                                            <ArrowLeft className="w-5 h-5 rotate-180" />
+                                            Apply for Jobs
+                                        </a>
+                                    </>
+                                ) : (
+                                    <>
+                                        <a
+                                            href={`tel:${department.contactPhone}`}
+                                            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-neutral-900 rounded-2xl font-bold hover:bg-neutral-50 transition-all shadow-xl hover:shadow-2xl active:scale-95 group"
+                                        >
+                                            <Phone className="w-5 h-5 transition-transform group-hover:rotate-12" />
+                                            Contact Now
+                                        </a>
+                                        <a
+                                            href="#inquiry-form"
+                                            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-2xl font-bold hover:bg-white/20 transition-all active:scale-95"
+                                        >
+                                            <Mail className="w-5 h-5" />
+                                            Send Inquiry
+                                        </a>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -208,7 +233,9 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                         <div key={cIdx} className="flex flex-col md:flex-row gap-4 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 hover:border-neutral-300 hover:bg-white hover:shadow-md transition-all group relative">
                                                             {course.image && (
                                                                 <Link
-                                                                    href={course.slug ? `/departments/${department.slug}/${course.slug}` : '#'}
+                                                                    href={department.externalUrl || (course.slug ? `/departments/${department.slug}/${course.slug}` : '#')}
+                                                                    target={department.externalUrl ? "_blank" : undefined}
+                                                                    rel={department.externalUrl ? "noopener noreferrer" : undefined}
                                                                     className="relative w-full md:w-48 aspect-square rounded-xl overflow-hidden shadow-md flex-shrink-0 shimmer border border-neutral-100 group/img block"
                                                                 >
                                                                     <Image
@@ -223,7 +250,9 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                             <div className="flex-1 flex flex-col justify-between">
                                                                 <div>
                                                                     <Link
-                                                                        href={course.slug ? `/departments/${department.slug}/${course.slug}` : '#'}
+                                                                        href={department.externalUrl || (course.slug ? `/departments/${department.slug}/${course.slug}` : '#')}
+                                                                        target={department.externalUrl ? "_blank" : undefined}
+                                                                        rel={department.externalUrl ? "noopener noreferrer" : undefined}
                                                                         className="group/course-link"
                                                                     >
                                                                         <h4 className="font-bold text-lg text-neutral-900 group-hover/course-link:text-primary-600 transition-colors">
@@ -250,11 +279,13 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                                     </div>
                                                                     {course.slug && (
                                                                         <Link
-                                                                            href={`/departments/${department.slug}/${course.slug}`}
+                                                                            href={department.externalUrl || `/departments/${department.slug}/${course.slug}`}
+                                                                            target={department.externalUrl ? "_blank" : undefined}
+                                                                            rel={department.externalUrl ? "noopener noreferrer" : undefined}
                                                                             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border-2 text-sm font-bold transition-all hover:shadow-md active:scale-95 hover:bg-neutral-50"
                                                                             style={{ borderColor: theme.primary, color: theme.primary }}
                                                                         >
-                                                                            View Program
+                                                                            {department.externalUrl ? "Visit Program" : "View Program"}
                                                                             <ArrowLeft className="w-4 h-4 rotate-180" />
                                                                         </Link>
                                                                     )}
@@ -313,7 +344,9 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                     >
                                                         {programImg && (
                                                             <Link
-                                                                href={isObject && programSlug ? `/departments/${department.slug}/${programSlug}` : '#'}
+                                                                href={department.externalUrl || (isObject && programSlug ? `/departments/${department.slug}/${programSlug}` : '#')}
+                                                                target={department.externalUrl ? "_blank" : undefined}
+                                                                rel={department.externalUrl ? "noopener noreferrer" : undefined}
                                                                 className="relative aspect-square w-full shimmer overflow-hidden group/img block"
                                                             >
                                                                 <Image
@@ -327,7 +360,9 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                         )}
                                                         <div className="p-5 flex-1 flex flex-col">
                                                             <Link
-                                                                href={isObject && programSlug ? `/departments/${department.slug}/${programSlug}` : '#'}
+                                                                href={department.externalUrl || (isObject && programSlug ? `/departments/${department.slug}/${programSlug}` : '#')}
+                                                                target={department.externalUrl ? "_blank" : undefined}
+                                                                rel={department.externalUrl ? "noopener noreferrer" : undefined}
                                                                 className="flex items-start gap-3 mb-3 group/link"
                                                             >
                                                                 <div
@@ -347,7 +382,9 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                                             )}
                                                             {isObject && (
                                                                 <Link
-                                                                    href={`/departments/${department.slug}/${programSlug}`}
+                                                                    href={department.externalUrl || `/departments/${department.slug}/${programSlug}`}
+                                                                    target={department.externalUrl ? "_blank" : undefined}
+                                                                    rel={department.externalUrl ? "noopener noreferrer" : undefined}
                                                                     className="mt-auto flex items-center gap-2 text-sm font-bold group/btn"
                                                                     style={{ color: theme.primary }}
                                                                 >
@@ -490,11 +527,13 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                     </h3>
                                     <div className="space-y-3">
                                         <a
-                                            href="#inquiry-form"
+                                            href={department.externalUrl || "#inquiry-form"}
+                                            target={department.externalUrl ? "_blank" : undefined}
+                                            rel={department.externalUrl ? "noopener noreferrer" : undefined}
                                             className="block w-full px-4 py-3 rounded-xl border-2 text-center font-semibold transition-all hover:shadow-md min-h-[48px] flex items-center justify-center"
                                             style={{ borderColor: theme.primary, color: theme.primary, background: theme.light }}
                                         >
-                                            Apply Now
+                                            {department.externalUrl ? "Go to Job Portal" : "Apply Now"}
                                         </a>
                                     </div>
                                 </div>
