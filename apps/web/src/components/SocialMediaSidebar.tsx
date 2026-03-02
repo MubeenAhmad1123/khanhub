@@ -5,9 +5,11 @@
 // - Fully draggable to all 4 edges of the screen (snaps to nearest edge on release)
 // - Green online dot on the toggle button image
 // - Main toggle with "social-media.webp"
-// - Sequential auto-expand animation on open (2s per icon)
+// - Sequential auto-expand animation on open (2s per icon) — ALL ICONS ALWAYS VISIBLE
 // - Click-outside to close (Mobile)
 // - Hover/Click logic preserved
+// - ✅ RIGHT dock → label expands LEFTWARD  (icon pinned to right, label slides left)
+// - ✅ LEFT dock  → label expands RIGHTWARD (icon pinned to left,  label slides right)
 // ─────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -76,7 +78,6 @@ const SOCIAL_PLATFORMS: SocialPlatform[] = [
   },
 ];
 
-// Which edge the sidebar is docked to
 type Edge = 'left' | 'right' | 'top' | 'bottom';
 
 interface Position {
@@ -84,37 +85,51 @@ interface Position {
   y: number;
 }
 
+// Collapsed = w-10 (40px), Expanded = w-40 (160px)
+// When right-docked, shift button LEFT by this amount so the icon stays pinned to screen edge
+const SHIFT_PX = 160 - 40; // 120px
+
 export default function SocialMediaSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isAutoAnimating, setIsAutoAnimating] = useState(false);
 
-  // ─── Drag / Position State ───
-  const [pos, setPos] = useState<Position>({ x: 8, y: 200 }); // default: left edge
-  const [dockedEdge, setDockedEdge] = useState<Edge>('left');
+  const [pos, setPos] = useState<Position>({ x: -100, y: 200 });
+  const [dockedEdge, setDockedEdge] = useState<Edge>('right');
   const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number }>({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 });
-  const hasDragged = useRef(false);
 
+  useEffect(() => {
+    const W = window.innerWidth;
+    const isMobile = W < 1024;
+    const TOGGLE_SIZE = 56;
+    const NAVBAR_HEIGHT = 64; // adjust if your navbar is taller
+    setPos({
+      x: W - TOGGLE_SIZE - 8,
+      y: isMobile ? NAVBAR_HEIGHT + 10 : 200,
+    });
+  }, []);
+
+  const dragStart = useRef<{ mouseX: number; mouseY: number; posX: number; posY: number }>({
+    mouseX: 0, mouseY: 0, posX: 0, posY: 0,
+  });
+  const hasDragged = useRef(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const animationTimers = useRef<NodeJS.Timeout[]>([]);
 
-  // ─── Auto-Animation Logic ───
+  // ─── Auto-Animation ───
   const startAutoAnimation = useCallback(() => {
     setIsAutoAnimating(true);
     animationTimers.current.forEach(clearTimeout);
     animationTimers.current = [];
-
     SOCIAL_PLATFORMS.forEach((_, index) => {
       const t = setTimeout(() => setExpandedIndex(index), index * 2000);
       animationTimers.current.push(t);
     });
-
-    const endTimer = setTimeout(() => {
+    const end = setTimeout(() => {
       setExpandedIndex(null);
       setIsAutoAnimating(false);
     }, SOCIAL_PLATFORMS.length * 2000);
-    animationTimers.current.push(endTimer);
+    animationTimers.current.push(end);
   }, []);
 
   const stopAutoAnimation = useCallback(() => {
@@ -130,46 +145,29 @@ export default function SocialMediaSidebar() {
     return () => stopAutoAnimation();
   }, [isOpen, startAutoAnimation, stopAutoAnimation]);
 
-  // Click Outside to Close
+  // Click outside to close
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+    const handler = (e: MouseEvent) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) setIsOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ─── Snap to nearest edge on drag end ───
+  // ─── Snap to edge ───
   const snapToEdge = useCallback((x: number, y: number) => {
     const W = window.innerWidth;
     const H = window.innerHeight;
-    const TOGGLE_SIZE = 56; // ~w-14
-
-    const distLeft = x;
-    const distRight = W - x - TOGGLE_SIZE;
-    const distTop = y;
-    const distBottom = H - y - TOGGLE_SIZE;
-
-    const min = Math.min(distLeft, distRight, distTop, distBottom);
-
-    if (min === distLeft) {
-      setDockedEdge('left');
-      setPos({ x: 8, y: Math.max(80, Math.min(H - TOGGLE_SIZE - 20, y)) });
-    } else if (min === distRight) {
-      setDockedEdge('right');
-      setPos({ x: W - TOGGLE_SIZE - 8, y: Math.max(80, Math.min(H - TOGGLE_SIZE - 20, y)) });
-    } else if (min === distTop) {
-      setDockedEdge('top');
-      setPos({ x: Math.max(8, Math.min(W - TOGGLE_SIZE - 8, x)), y: 80 });
-    } else {
-      setDockedEdge('bottom');
-      setPos({ x: Math.max(8, Math.min(W - TOGGLE_SIZE - 8, x)), y: H - TOGGLE_SIZE - 20 });
-    }
+    const S = 56;
+    const dL = x, dR = W - x - S, dT = y, dB = H - y - S;
+    const min = Math.min(dL, dR, dT, dB);
+    if (min === dL) { setDockedEdge('left'); setPos({ x: 8, y: Math.max(80, Math.min(H - S - 20, y)) }); }
+    else if (min === dR) { setDockedEdge('right'); setPos({ x: W - S - 8, y: Math.max(80, Math.min(H - S - 20, y)) }); }
+    else if (min === dT) { setDockedEdge('top'); setPos({ x: Math.max(8, Math.min(W - S - 8, x)), y: 80 }); }
+    else { setDockedEdge('bottom'); setPos({ x: Math.max(8, Math.min(W - S - 8, x)), y: H - S - 20 }); }
   }, []);
 
-  // ─── Mouse Drag ───
+  // ─── Mouse drag ───
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     hasDragged.current = false;
@@ -183,27 +181,24 @@ export default function SocialMediaSidebar() {
       const dx = e.clientX - dragStart.current.mouseX;
       const dy = e.clientY - dragStart.current.mouseY;
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) hasDragged.current = true;
-      const newX = Math.max(0, Math.min(window.innerWidth - 60, dragStart.current.posX + dx));
-      const newY = Math.max(80, Math.min(window.innerHeight - 80, dragStart.current.posY + dy));
-      setPos({ x: newX, y: newY });
+      setPos({
+        x: Math.max(0, Math.min(window.innerWidth - 60, dragStart.current.posX + dx)),
+        y: Math.max(80, Math.min(window.innerHeight - 80, dragStart.current.posY + dy)),
+      });
     };
     const onUp = (e: MouseEvent) => {
       setIsDragging(false);
-      const dx = e.clientX - dragStart.current.mouseX;
-      const dy = e.clientY - dragStart.current.mouseY;
-      const newX = Math.max(0, Math.min(window.innerWidth - 60, dragStart.current.posX + dx));
-      const newY = Math.max(80, Math.min(window.innerHeight - 80, dragStart.current.posY + dy));
-      snapToEdge(newX, newY);
+      snapToEdge(
+        Math.max(0, Math.min(window.innerWidth - 60, dragStart.current.posX + e.clientX - dragStart.current.mouseX)),
+        Math.max(80, Math.min(window.innerHeight - 80, dragStart.current.posY + e.clientY - dragStart.current.mouseY))
+      );
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [isDragging, snapToEdge]);
 
-  // ─── Touch Drag ───
+  // ─── Touch drag ───
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     hasDragged.current = false;
     dragStart.current = { mouseX: e.touches[0].clientX, mouseY: e.touches[0].clientY, posX: pos.x, posY: pos.y };
@@ -216,56 +211,40 @@ export default function SocialMediaSidebar() {
       const dx = e.touches[0].clientX - dragStart.current.mouseX;
       const dy = e.touches[0].clientY - dragStart.current.mouseY;
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) hasDragged.current = true;
-      const newX = Math.max(0, Math.min(window.innerWidth - 60, dragStart.current.posX + dx));
-      const newY = Math.max(80, Math.min(window.innerHeight - 80, dragStart.current.posY + dy));
-      setPos({ x: newX, y: newY });
+      setPos({
+        x: Math.max(0, Math.min(window.innerWidth - 60, dragStart.current.posX + dx)),
+        y: Math.max(80, Math.min(window.innerHeight - 80, dragStart.current.posY + dy)),
+      });
     };
     const onEnd = (e: TouchEvent) => {
       setIsDragging(false);
-      const touch = e.changedTouches[0];
-      const dx = touch.clientX - dragStart.current.mouseX;
-      const dy = touch.clientY - dragStart.current.mouseY;
-      const newX = Math.max(0, Math.min(window.innerWidth - 60, dragStart.current.posX + dx));
-      const newY = Math.max(80, Math.min(window.innerHeight - 80, dragStart.current.posY + dy));
-      snapToEdge(newX, newY);
+      const t = e.changedTouches[0];
+      snapToEdge(
+        Math.max(0, Math.min(window.innerWidth - 60, dragStart.current.posX + t.clientX - dragStart.current.mouseX)),
+        Math.max(80, Math.min(window.innerHeight - 80, dragStart.current.posY + t.clientY - dragStart.current.mouseY))
+      );
     };
     window.addEventListener('touchmove', onMove, { passive: true });
     window.addEventListener('touchend', onEnd);
-    return () => {
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-    };
+    return () => { window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd); };
   }, [isDragging, snapToEdge]);
 
-  // ─── Handlers ───
-  const toggleSidebar = () => {
-    if (hasDragged.current) return;
-    setIsOpen((prev) => !prev);
-  };
-
+  // ─── UI Handlers ───
+  const toggleSidebar = () => { if (!hasDragged.current) setIsOpen(p => !p); };
   const handleMouseEnter = (index: number) => {
     if (isAutoAnimating) stopAutoAnimation();
     if (window.innerWidth >= 1024) setExpandedIndex(index);
   };
-
-  const handleMouseLeave = () => {
-    if (window.innerWidth >= 1024) setExpandedIndex(null);
-  };
-
+  const handleMouseLeave = () => { if (window.innerWidth >= 1024) setExpandedIndex(null); };
   const handleIconClick = (index: number, url: string) => {
     if (window.innerWidth < 1024) {
-      if (expandedIndex === index) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      } else {
-        if (isAutoAnimating) stopAutoAnimation();
-        setExpandedIndex(index);
-      }
+      if (expandedIndex === index) window.open(url, '_blank', 'noopener,noreferrer');
+      else { if (isAutoAnimating) stopAutoAnimation(); setExpandedIndex(index); }
     } else {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
-  // Determine expand direction based on docked edge
   const isRight = dockedEdge === 'right';
   const isBottom = dockedEdge === 'bottom';
   const isTop = dockedEdge === 'top';
@@ -273,12 +252,12 @@ export default function SocialMediaSidebar() {
   return (
     <div
       ref={sidebarRef}
-      className={`fixed z-50 transition-[box-shadow] duration-300 ${isDragging ? 'cursor-grabbing select-none' : ''}`}
+      className={`fixed z-50 ${isDragging ? 'cursor-grabbing select-none' : ''}`}
       style={{ left: pos.x, top: pos.y }}
     >
       <div className={`flex ${isBottom || isTop ? 'flex-row' : 'flex-col'} gap-3`}>
 
-        {/* Main Toggle Button */}
+        {/* ── Toggle Button ── */}
         <button
           onMouseDown={onMouseDown}
           onTouchStart={onTouchStart}
@@ -287,18 +266,8 @@ export default function SocialMediaSidebar() {
             }`}
           aria-label="Toggle Social Media"
         >
-          <Image
-            src="/social-media.webp"
-            alt="Connect"
-            fill
-            className="object-contain p-1 rounded-full"
-            priority
-          />
-
-          {/* 🟢 Green online dot */}
+          <Image src="/social-media.webp" alt="Connect" fill className="object-contain p-1 rounded-full" priority />
           <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-[#25D366] border-2 border-white rounded-full shadow-sm z-20" />
-
-          {/* Close X when open */}
           {isOpen && (
             <div className="absolute -top-1 -right-1 bg-neutral-900/80 text-white rounded-full p-0.5 scale-75 animate-in fade-in zoom-in z-30">
               <X className="w-3 h-3" />
@@ -306,11 +275,12 @@ export default function SocialMediaSidebar() {
           )}
         </button>
 
-        {/* Expandable List */}
+        {/* ── Icon List ── */}
         <div
           className={`
             flex ${isBottom || isTop ? 'flex-row' : 'flex-col'} gap-3
-            transition-all duration-500 ease-out origin-top-left
+            transition-all duration-500 ease-out
+            ${isRight ? 'origin-right' : 'origin-left'}
             ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-0 pointer-events-none absolute'}
           `}
         >
@@ -327,31 +297,46 @@ export default function SocialMediaSidebar() {
               >
                 <button
                   onClick={() => handleIconClick(index, platform.url)}
+                  /**
+                   * ✅ DIRECTION FIX — translateX trick:
+                   *
+                   * RIGHT dock: on expand, translate button LEFT by 120px.
+                   *   → The icon (anchored at `right-0`) stays at the screen edge.
+                   *   → The button body + label grows OUT to the LEFT. ✓
+                   *
+                   * LEFT dock: no translation needed.
+                   *   → Button grows rightward naturally from the screen edge. ✓
+                   */
+                  style={{
+                    transform: isRight && isExpanded ? `translateX(-${SHIFT_PX}px)` : 'translateX(0)',
+                  }}
                   className={`
                     group relative flex items-center justify-start
                     ${platform.bgColor} ${platform.hoverBgColor} ${platform.textColor}
                     rounded-full shadow-lg hover:shadow-xl
                     transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-                    ${isExpanded
-                      ? isRight ? 'w-40 pr-3 flex-row-reverse' : 'w-40 pl-3'
-                      : 'w-10 pl-0'
-                    }
-                    h-10
-                    overflow-hidden
+                    ${isExpanded ? 'w-40' : 'w-10'}
+                    h-10 overflow-hidden
                   `}
                   aria-label={platform.name}
                 >
-                  {/* Icon Circle */}
-                  <div className={`absolute ${isRight && isExpanded ? 'right-0' : 'left-0'} w-10 h-10 rounded-full flex items-center justify-center z-10`}>
+                  {/* Icon — pinned to the screen-edge side of the button */}
+                  <div className={`absolute ${isRight ? 'right-0' : 'left-0'} w-10 h-10 rounded-full flex items-center justify-center z-10`}>
                     <Icon className="w-5 h-5 drop-shadow-sm" />
                   </div>
 
-                  {/* Label */}
+                  {/* Label — slides in from the screen-edge side */}
                   <div
                     className={`
-                      absolute ${isRight ? 'right-10' : 'left-10'} font-bold text-sm whitespace-nowrap ${isRight ? 'pl-4' : 'pr-4'}
+                      absolute font-bold text-sm whitespace-nowrap
+                      ${isRight ? 'right-10 pr-3' : 'left-10 pl-3'}
                       transition-all duration-300
-                      ${isExpanded ? 'opacity-100 translate-x-0' : isRight ? 'opacity-0 translate-x-4' : 'opacity-0 -translate-x-4'}
+                      ${isExpanded
+                        ? 'opacity-100 translate-x-0'
+                        : isRight
+                          ? 'opacity-0 translate-x-4'
+                          : 'opacity-0 -translate-x-4'
+                      }
                     `}
                   >
                     {platform.name}

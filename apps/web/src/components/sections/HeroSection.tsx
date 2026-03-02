@@ -439,7 +439,7 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.6 }}
-          className="fixed right-4 sm:right-8 bottom-4 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20"
+          className="fixed right-4 sm:right-8 bottom-2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 scale-[0.96] sm:scale-100"
         >
           <Link
             href="tel:067-3364220"
@@ -463,7 +463,7 @@ export default function HeroSection() {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </motion.svg>
-            <div className="text-left sm:text-center">
+            <div className="text-left sm:text-center z-index-10">
               <div className="text-xs text-white/80 font-medium">24/7 Emergency</div>
               <div className="text-sm font-bold text-white">067-3364220</div>
             </div>
