@@ -275,17 +275,6 @@ export const DEPARTMENTS: Department[] = [
         ]
       },
       {
-        slug: 'drug-rehab',
-        name: 'Drug Rehabilitation',
-        description: 'Holistic recovery programs combining medical detox with psychological counseling and community support.',
-        image: '/images/rehab/drug.webp',
-        features: ['Medical Detox', 'Counseling', 'Aftercare'],
-        details: [
-          { label: 'Program', value: 'Inpatient' },
-          { label: 'Support', value: '24/7' }
-        ]
-      },
-      {
         slug: 'psychological-counseling',
         name: 'Psychological Counseling',
         description: 'Expert-led sessions focusing on trauma recovery, depression, and mental resilience.',
@@ -305,6 +294,126 @@ export const DEPARTMENTS: Department[] = [
         details: [
           { label: 'Goal', value: 'Independence' },
           { label: 'Benefit', value: 'Career Skills' }
+        ]
+      }
+    ],
+    subDepartments: [
+      {
+        title: 'Addiction Treatment Categories',
+        description: 'Expert treatment and professional care for various types of addictions with a high success rate.',
+        courses: [
+          {
+            name: 'Ice Addiction',
+            slug: 'ice-addiction',
+            duration: '3-6 Months',
+            eligibility: 'Adults & Youth',
+            description: 'Comprehensive treatment for Crystal Meth (Ice) addiction, focusing on neuro-rehabilitation and behavioral therapy.',
+            image: '/images/rehab/ice-Addiction.webp',
+            features: ['Neuro-rehabilitation', 'Behavioral Therapy', '24/7 Monitoring'],
+            details: [
+              { label: 'Treatment', value: 'Intensive' },
+              { label: 'Approach', value: 'Professional' }
+            ],
+            tags: ['addiction', 'ice']
+          },
+          {
+            name: 'Cigarette Addiction',
+            slug: 'cigarette-addiction',
+            duration: '1-3 Months',
+            eligibility: 'All Ages',
+            description: 'Professional smoking cessation programs using modern techniques and psychological support to help you quit for good.',
+            image: '/images/rehab/cigarette-Addiction.webp',
+            features: ['Nicotine Therapy', 'Habit Reform', 'Support Groups'],
+            details: [
+              { label: 'Type', value: 'Outpatient' },
+              { label: 'Success', value: 'High' }
+            ],
+            tags: ['addiction', 'smoke']
+          },
+          {
+            name: 'Injection Addiction',
+            slug: 'injection-addiction',
+            duration: '6-12 Months',
+            eligibility: 'Adults',
+            description: 'Specialized care for intravenous drug users, addressing physical risks and underlying psychological factors.',
+            image: '/images/rehab/injection-Addiction.webp',
+            features: ['Medical Detox', 'Infection Prevention', 'Harming Reduction'],
+            details: [
+              { label: 'Care', value: 'Clinical' },
+              { label: 'Status', value: 'Restricted' }
+            ],
+            tags: ['addiction', 'injection']
+          },
+          {
+            name: 'Liquor (Sharab) Addiction',
+            slug: 'liquor-addiction',
+            duration: '3-6 Months',
+            eligibility: 'Adults',
+            description: 'Dedicated alcohol rehabilitation programs focusing on liver health recovery and social reintegration.',
+            image: '/images/rehab/lquor.png',
+            features: ['Liver Detox', 'AA Meetings', 'Life Skills'],
+            details: [
+              { label: 'Process', value: 'Holistic' },
+              { label: 'Focus', value: 'Social Care' }
+            ],
+            tags: ['addiction', 'alcohol']
+          },
+          {
+            name: 'Psycho (Nafsiat) Patient',
+            slug: 'psycho-patient',
+            duration: 'Variable',
+            eligibility: 'Open to All',
+            description: 'Comprehensive psychiatric care for patients with mental health disorders and psychological distress.',
+            image: '/images/rehab/psycho.webp',
+            features: ['Psychiatric Consult', 'Art Therapy', 'Medication Management'],
+            details: [
+              { label: 'Specialty', value: 'Mental Health' },
+              { label: 'Care', value: 'Personalized' }
+            ],
+            tags: ['mental-health', 'psycho']
+          },
+          {
+            name: 'Charas Addiction',
+            slug: 'charas-addiction',
+            duration: '2-4 Months',
+            eligibility: 'Youth & Adults',
+            description: 'Specialized treatment for cannabis addiction, focusing on cognitive functions and motivation enhancement.',
+            image: '/images/rehab/charas-Addiction.webp',
+            features: ['CBT Therapy', 'Motivational Interviewing', 'Skill Building'],
+            details: [
+              { label: 'Recovery', value: 'Natural' },
+              { label: 'Focus', value: 'Mindfulness' }
+            ],
+            tags: ['addiction', 'charas']
+          },
+          {
+            name: 'Heroin Addiction',
+            slug: 'heroin-addiction',
+            duration: '6-12 Months',
+            eligibility: 'Adults',
+            description: 'Advanced medical and psychological treatment for opioid dependency with long-term recovery support.',
+            image: '/images/rehab/heroin-Addiction.webp',
+            features: ['Maintenance Therapy', 'Intensive Counseling', 'Aftercare Plan'],
+            details: [
+              { label: 'Medical', value: 'Assisted' },
+              { label: 'Phase', value: 'Long-term' }
+            ],
+            tags: ['addiction', 'heroin']
+          },
+          {
+            name: 'Powder Addiction',
+            slug: 'powder-addiction',
+            duration: '3-6 Months',
+            eligibility: 'Adults',
+            description: 'Targeted treatment for powdered drug addictions, combining physical detox with mental resilience training.',
+            image: '/images/rehab/powder-ddiction.webp',
+            features: ['Rapid Detox', 'Resilience Training', 'Relapse Prevention'],
+            details: [
+              { label: 'System', value: 'Comprehensive' },
+              { label: 'Goal', value: 'Stone-free' }
+            ],
+            tags: ['addiction', 'powder']
+          }
         ]
       }
     ],

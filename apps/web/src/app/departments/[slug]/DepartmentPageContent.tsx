@@ -7,7 +7,7 @@ import {
     ArrowLeft, Phone, Mail, MapPin, Check,
     Calendar, Users, Award, X, ZoomIn
 } from 'lucide-react';
-import { Department, DepartmentTheme } from '@/types/department';
+import { Department, DepartmentTheme, Course } from '@/types/department';
 import InquiryForm from '@/components/forms/InquiryForm';
 import { cn } from '@/lib/utils';
 
@@ -189,7 +189,74 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                             </div>
 
                             {/* Programs / Courses Section */}
-                            {department.subDepartments ? (
+                            {department.slug === 'rehabilitation' && department.subDepartments ? (
+                                <div className="space-y-12 animate-fade-in">
+                                    <div className="text-center max-w-3xl mx-auto mb-12">
+                                        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-neutral-900 font-display mb-4">
+                                            Our Specialized Treatments
+                                        </h2>
+                                        <p className="text-neutral-600 text-lg">
+                                            We provide professional care and holistic recovery programs for various types of addictions.
+                                        </p>
+                                    </div>
+
+                                    {department.subDepartments.map((subDept, idx) => (
+                                        <div key={idx} className="space-y-8">
+                                            {/* Mobile-first 2x4 grid, Desktop 4x2 */}
+                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                                                {subDept.courses.map((course, cIdx) => (
+                                                    <Link
+                                                        key={cIdx}
+                                                        href={`/departments/${department.slug}/${course.slug}`}
+                                                        className="group relative flex flex-col h-full bg-white rounded-2xl border border-neutral-200 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:border-transparent"
+                                                    >
+                                                        {/* Gradient Glow on Hover */}
+                                                        <div
+                                                            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl -z-10"
+                                                            style={{ background: `radial-gradient(circle at 50% 50%, ${theme.primary}33, transparent 70%)` }}
+                                                        />
+
+                                                        <div className="relative aspect-[4/5] sm:aspect-square w-full overflow-hidden">
+                                                            {course.image && (
+                                                                <Image
+                                                                    src={course.image}
+                                                                    alt={course.name}
+                                                                    fill
+                                                                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 300px"
+                                                                />
+                                                            )}
+                                                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                                                            <div className="absolute bottom-4 left-4 right-4 text-white">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">Success Rate: High</span>
+                                                                </div>
+                                                                <h3 className="text-lg sm:text-xl font-bold font-display leading-tight group-hover:text-primary-400 transition-colors">
+                                                                    {course.name}
+                                                                </h3>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="p-4 flex-1 flex flex-col bg-white">
+                                                            <p className="text-xs sm:text-sm text-neutral-600 line-clamp-2 mb-4">
+                                                                {course.description}
+                                                            </p>
+                                                            <div className="mt-auto flex items-center justify-between gap-2 border-t border-neutral-100 pt-3">
+                                                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{course.duration}</span>
+                                                                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-neutral-50 group-hover:bg-primary-50 transition-colors">
+                                                                    <ArrowLeft className="w-4 h-4 rotate-180 text-neutral-400 group-hover:text-primary-600 transition-all" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : department.subDepartments ? (
                                 <div className="space-y-8">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
                                         <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
