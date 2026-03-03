@@ -33,7 +33,13 @@ const CONTENT = {
             badge: "Partner With Us",
             title: "Turn Your Network Into Impact — And Earn While You Help",
             subtitle: "KhanHub's Affiliate Program rewards you every time you connect someone in need with our services. Help your community and grow your income.",
-            cta: "Join the Program"
+            cta: "Join the Program",
+            franchiseCta: "Franchise Opportunities"
+        },
+        franchisePromo: {
+            title: "Ready to Level Up?",
+            subtitle: "Become a KhanHub Franchise owner and lead your own department with our proven success model.",
+            cta: "Explore Franchises"
         },
         whatIsIt: {
             title: "What is the Affiliate Program?",
@@ -145,7 +151,13 @@ const CONTENT = {
             badge: "ہمارے ساتھ شراکت دار بنیں",
             title: "اپنے نیٹ ورک کو اثر میں بدلیں — اور مدد کرتے ہوئے کمائیں",
             subtitle: "خان ہب کا ایفی لیٹ پروگرام آپ کو ہر اس وقت انعام دیتا ہے جب آپ کسی ضرورت مند کو ہماری خدمات سے جوڑتے ہیں۔ اپنے معاشرے کی مدد کریں اور اپنی آمدنی بڑھائیں۔",
-            cta: "پروگرام میں شامل ہوں"
+            cta: "پروگرام میں شامل ہوں",
+            franchiseCta: "فرنچائز کے مواقع"
+        },
+        franchisePromo: {
+            title: "کیا آپ مزید آگے بڑھنا چاہتے ہیں؟",
+            subtitle: "خان ہب فرنچائز کے مالک بنیں اور ہمارے ثابت شدہ کامیابی کے ماڈل کے ساتھ اپنے شعبے کی قیادت کریں۔",
+            cta: "فرنچائزز دریافت کریں"
         },
         whatIsIt: {
             title: "ایفی لیٹ پروگرام کیا ہے؟",
@@ -350,6 +362,12 @@ export default function AffiliatePageContent() {
                                     className="w-full sm:w-auto px-8 py-5 bg-white text-emerald-900 font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-black/20 hover:bg-emerald-50 hover:scale-105 active:scale-95 transition-all text-center"
                                 >
                                     {t.hero.cta}
+                                </Link>
+                                <Link
+                                    href="/franchise"
+                                    className="w-full sm:w-auto px-8 py-5 bg-emerald-700 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-black/10 hover:bg-emerald-600 hover:scale-105 active:scale-95 transition-all text-center border border-emerald-500/30"
+                                >
+                                    {t.hero.franchiseCta}
                                 </Link>
                                 <div className="hidden sm:flex items-center gap-3">
                                     <div className="flex -space-x-3">
@@ -568,6 +586,25 @@ export default function AffiliatePageContent() {
                             ))}
                         </div>
                     </FadeInSection>
+                </div>
+            </section>
+
+            {/* ── Section 6: Franchise Promo ── */}
+            <section className="py-20 bg-emerald-50/50">
+                <div className="container mx-auto px-6">
+                    <div className="bg-gradient-to-r from-emerald-600 to-green-600 rounded-[3rem] p-10 sm:p-20 text-center text-white shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
+                        <div className="relative z-10 max-w-3xl mx-auto">
+                            <h2 className="text-3xl sm:text-5xl font-display font-black mb-6">{t.franchisePromo.title}</h2>
+                            <p className="text-lg sm:text-xl text-emerald-50 mb-10 opacity-90">{t.franchisePromo.subtitle}</p>
+                            <Link
+                                href="/franchise"
+                                className="inline-block px-10 py-5 bg-white text-emerald-600 font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl hover:bg-emerald-50 hover:scale-105 transition-all"
+                            >
+                                {t.franchisePromo.cta}
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </section>
 

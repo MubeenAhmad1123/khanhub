@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 
 const GoogleIcon = () => (
     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -17,7 +17,7 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, loginWithGoogle, user, loading } = useAuth();
+    const { login, loginWithGoogle, user, isAuthenticated, loading } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -25,31 +25,11 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    // Redirect user based on role and payment status
     useEffect(() => {
-        if (!loading && user) {
-            // Admin gets immediate access
-            if (user.role === 'admin') {
-                router.push('/admin');
-                return;
-            }
-
-            // Priority 1: Onboarding MUST be completed (Google Sync fix)
-            if (!user.onboardingCompleted) {
-                router.push('/auth/onboarding');
-                return;
-            }
-
-            // Priority 2: Payment approved -> send to dashboard
-            if (user.paymentStatus === 'approved') {
-                router.push(user.role === 'employer' ? '/employer/dashboard' : '/dashboard');
-                return;
-            }
-
-            // Priority 3: Pending / rejected / missing -> payment page
-            router.push('/auth/verify-payment');
+        if (isAuthenticated) {
+            router.push('/feed');
         }
-    }, [user, loading, router]);
+    }, [isAuthenticated, router]);
 
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -57,9 +37,8 @@ export default function LoginPage() {
         setIsLoading(true);
         try {
             await login(email.trim(), password);
-            // useEffect handles redirect
         } catch (err: any) {
-            setError(err.message || 'Failed to login. Check your email and password.');
+            setError(err.message || 'Invalid credentials');
         } finally {
             setIsLoading(false);
         }
@@ -70,137 +49,110 @@ export default function LoginPage() {
         setIsLoading(true);
         try {
             await loginWithGoogle(role);
-            // useEffect handles redirect
         } catch (err: any) {
-            setError(err.message || 'Failed to login with Google.');
+            setError(err.message || 'Google login failed');
         } finally {
             setIsLoading(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center p-4">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-white text-lg font-semibold">Loading...</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-                {/* Logo */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-teal-700">KhanHub Jobs</h1>
-                    <p className="text-gray-600 mt-2">Welcome back!</p>
+        <div className="min-h-screen bg-black text-white font-sans flex items-center justify-center p-6 selection:bg-[#FF0069] selection:text-white">
+            <div className="max-w-md w-full space-y-12">
+                {/* Logo Section */}
+                <div className="text-center">
+                    <h1 className="text-5xl font-black font-syne tracking-tighter italic text-transparent bg-clip-text bg-gradient-to-r from-[#FF0069] to-[#7638FA]">
+                        JOBREEL
+                    </h1>
+                    <p className="text-[#888888] font-dm-sans uppercase tracking-[0.3em] text-[10px] mt-2">
+                        Welcome Back to the Feed
+                    </p>
                 </div>
 
-                {/* Error */}
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
-                        {error}
-                    </div>
-                )}
+                <div className="bg-[#0D0D0D] p-8 md:p-10 rounded-[32px] border border-[#1F1F1F] shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF0069]/5 blur-[60px] rounded-full" />
 
-                {/* Email / Password Form */}
-                <form onSubmit={handleEmailLogin} className="space-y-5">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                        <input
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
-                            placeholder="your@email.com"
-                        />
-                    </div>
+                    <h2 className="text-xl font-black font-syne uppercase tracking-tight mb-8">
+                        Login
+                    </h2>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                        <div className="relative">
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
-                                placeholder="••••••••"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-600 transition-colors"
-                            >
-                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                            </button>
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-bold text-center">
+                            {error}
                         </div>
+                    )}
+
+                    <form onSubmit={handleEmailLogin} className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] uppercase font-black tracking-widest text-[#888888] ml-1">Email</label>
+                            <div className="relative group/input">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#888888] group-focus-within/input:text-[#FF0069] transition-colors" />
+                                <input
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="ali@example.com"
+                                    className="w-full bg-black border border-[#1F1F1F] rounded-xl pl-12 pr-4 py-4 focus:border-[#FF0069] outline-none transition-all font-medium"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] uppercase font-black tracking-widest text-[#888888] ml-1">Password</label>
+                            <div className="relative group/input">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#888888] group-focus-within/input:text-[#FF0069] transition-colors" />
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="w-full bg-black border border-[#1F1F1F] rounded-xl pl-12 pr-12 py-4 focus:border-[#FF0069] outline-none transition-all font-medium"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#888888] hover:text-white transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full py-5 rounded-[20px] font-black font-syne uppercase italic tracking-[0.2em] text-sm bg-gradient-to-r from-[#FF0069] to-[#7638FA] hover:shadow-[0_0_30px_rgba(255,0,105,0.3)] transition-all duration-300 transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
+                        >
+                            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                                <>
+                                    Enter Feed
+                                    <ArrowRight className="w-4 h-4" />
+                                </>
+                            )}
+                        </button>
+                    </form>
+
+                    <div className="relative my-8">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#1F1F1F]" /></div>
+                        <div className="relative flex justify-center text-[10px] font-black uppercase text-[#888888] tracking-widest bg-[#0D0D0D] px-4">OR FAST TRACK</div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" className="rounded" />
-                            <span className="text-sm text-gray-600">Remember me</span>
-                        </label>
-                        <Link href="/auth/reset-password" className="text-sm text-teal-600 hover:text-teal-700 font-medium">
-                            Forgot password?
-                        </Link>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                        {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Logging in...</> : 'Login'}
-                    </button>
-                </form>
-
-                {/* Divider */}
-                <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300" />
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                        <span className="px-4 bg-white text-gray-500">Or continue with</span>
+                    <div className="space-y-3">
+                        <button
+                            type="button"
+                            onClick={() => handleGoogleLogin('job_seeker')}
+                            className="w-full py-4 bg-black border border-[#1F1F1F] rounded-xl font-bold text-sm hover:border-[#888888] transition-all flex items-center justify-center gap-3"
+                        >
+                            <GoogleIcon />
+                            Sign in with Google
+                        </button>
                     </div>
                 </div>
 
-                {/* Google Buttons */}
-                <div className="space-y-3">
-                    <button
-                        type="button"
-                        onClick={() => handleGoogleLogin('job_seeker')}
-                        disabled={isLoading}
-                        className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                        <GoogleIcon />
-                        Google (Job Seeker)
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleGoogleLogin('employer')}
-                        disabled={isLoading}
-                        className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                        <GoogleIcon />
-                        Google (Employer)
-                    </button>
-                </div>
-
-                {/* Links */}
-                <p className="text-center text-gray-600 mt-6">
-                    Don&apos;t have an account?{' '}
-                    <Link href="/auth/register" className="text-teal-600 font-semibold hover:text-teal-700">
-                        Sign up
-                    </Link>
-                </p>
-                <p className="text-center text-gray-400 text-xs mt-4 italic">
-                    Internal System?{' '}
-                    <Link href="/admin/login" className="hover:underline">Admin Login</Link>
+                <p className="text-center text-[#888888] font-dm-sans text-sm">
+                    New here? <Link href="/auth/register" className="text-[#FF0069] font-bold hover:underline">Create Account</Link>
                 </p>
             </div>
         </div>

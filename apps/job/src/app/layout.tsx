@@ -1,15 +1,27 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Syne, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
 import StructuredData from '@/components/seo/StructuredData';
 import ClientLayout from '@/components/layout/ClientLayout';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const inter = Inter({
+const syne = Syne({
     subsets: ['latin'],
-    display: 'swap', // Improve font loading performance
-    preload: true,
+    variable: '--font-syne',
+    display: 'swap',
+});
+
+const dmSans = DM_Sans({
+    subsets: ['latin'],
+    variable: '--font-dm-sans',
+    display: 'swap',
+});
+
+const jetbrains = JetBrains_Mono({
+    subsets: ['latin'],
+    variable: '--font-jetbrains',
+    display: 'swap',
 });
 
 import { constructMetadata } from '@/lib/seo/metadata';
@@ -22,8 +34,8 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en">
-            <body className={inter.className}>
+        <html lang="en" className={`${syne.variable} ${dmSans.variable} ${jetbrains.variable}`}>
+            <body className="antialiased text-white bg-black">
                 <StructuredData />
                 <ClientLayout>{children}</ClientLayout>
                 <Analytics />

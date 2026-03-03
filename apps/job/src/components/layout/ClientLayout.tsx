@@ -1,12 +1,9 @@
 'use client';
 
-import ImprovedNavbar from '@/components/layout/ImprovedNavbar';
-import Footer from '@/components/layout/Footer';
+import { TopBar } from '@/components/layout/TopBar';
+import { BottomNav } from '@/components/layout/BottomNav';
 import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
-import LoginModal from '@/components/auth/LoginModal';
-
-import { ToastProvider } from '@/components/ui/toast'; // Import ToastProvider
-
+import { ToastProvider } from '@/components/ui/toast';
 import { usePathname } from 'next/navigation';
 
 export default function ClientLayout({
@@ -16,16 +13,21 @@ export default function ClientLayout({
 }) {
     const pathname = usePathname();
     const isAdminRoute = pathname?.startsWith('/admin');
-    const isAuthRoute = pathname?.startsWith('/dashboard') || pathname?.startsWith('/employer');
+    const isAuthRoute = pathname?.startsWith('/auth');
+
+    // Show new navigation only on non-admin and non-auth pages (main app area)
+    const showNav = !isAdminRoute && !isAuthRoute;
 
     return (
         <AuthProviderWrapper>
             <ToastProvider>
-                {!isAdminRoute && <ImprovedNavbar />}
-                <LoginModal />
-                <main>{children}</main>
-                {!isAdminRoute && !isAuthRoute && <Footer />}
+                {showNav && <TopBar />}
+                <main className={showNav ? 'pt-20 pb-28 md:pb-12' : ''}>
+                    {children}
+                </main>
+                {showNav && <BottomNav />}
             </ToastProvider>
         </AuthProviderWrapper>
     );
 }
+

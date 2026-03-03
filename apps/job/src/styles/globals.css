@@ -1,34 +1,78 @@
 @import "tailwindcss";
-@import "../../../../packages/config/tailwind.css";
-
-
-@layer base {
-    body {
-        @apply antialiased text-gray-900 bg-white;
-    }
-}
 
 @theme {
-    --animate-marquee: marquee 25s linear infinite;
-    --animate-marquee2: marquee2 25s linear infinite;
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #0D0D0D;
+  --color-bg-card: #111111;
+  --color-accent-pink: #FF0069;
+  --color-accent-purple: #7638FA;
+  --color-accent-yellow: #FFD600;
+  --color-text-primary: #FFFFFF;
+  --color-text-muted: #888888;
+  --color-border-primary: #1F1F1F;
 
-    @keyframes marquee {
-        0% {
-            transform: translateX(0%);
-        }
+  --font-syne: "Syne", sans-serif;
+  --font-dm-sans: "DM Sans", sans-serif;
+  --font-jetbrains: "JetBrains Mono", monospace;
 
-        100% {
-            transform: translateX(-100%);
-        }
-    }
+  --animate-marquee: marquee 25s linear infinite;
+  --animate-marquee2: marquee2 25s linear infinite;
 
-    @keyframes marquee2 {
-        0% {
-            transform: translateX(100%);
-        }
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-100%); }
+  }
 
-        100% {
-            transform: translateX(0%);
-        }
-    }
+  @keyframes marquee2 {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(0%); }
+  }
+}
+
+@layer base {
+  :root {
+    --bg-primary: #000000;
+    --bg-secondary: #0D0D0D;
+    --bg-card: #111111;
+    --accent-pink: #FF0069;
+    --accent-purple: #7638FA;
+    --accent-yellow: #FFD600;
+    --text-primary: #FFFFFF;
+    --text-muted: #888888;
+    --border: #1F1F1F;
+  }
+
+  body {
+    @apply antialiased text-white bg-black;
+    font-family: var(--font-dm-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-syne);
+    font-weight: 700;
+  }
+
+  code, pre {
+    font-family: var(--font-jetbrains);
+  }
+}
+
+@layer components {
+  .btn-gradient {
+    @apply relative overflow-hidden transition-all duration-300;
+    background: linear-gradient(135deg, #FF0069, #7638FA);
+  }
+
+  .btn-gradient:hover {
+    box-shadow: 0 0 20px rgba(255, 0, 105, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .glass-card {
+    @apply border border-[--border] bg-[--bg-card] rounded-[12px] backdrop-blur-sm;
+  }
+
+  .pill {
+    @apply px-4 py-1 rounded-full text-xs font-medium uppercase tracking-wider;
+  }
 }
