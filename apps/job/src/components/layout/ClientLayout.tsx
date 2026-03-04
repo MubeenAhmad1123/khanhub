@@ -6,6 +6,8 @@ import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 import { ToastProvider } from '@/components/ui/toast';
 import { usePathname } from 'next/navigation';
 
+import { CategoryProvider } from '@/context/CategoryContext';
+
 export default function ClientLayout({
     children,
 }: {
@@ -20,13 +22,15 @@ export default function ClientLayout({
 
     return (
         <AuthProviderWrapper>
-            <ToastProvider>
-                {showNav && <TopBar />}
-                <main className={showNav ? 'pt-20 pb-28 md:pb-12' : ''}>
-                    {children}
-                </main>
-                {showNav && <BottomNav />}
-            </ToastProvider>
+            <CategoryProvider>
+                <ToastProvider>
+                    {showNav && <TopBar />}
+                    <main className={showNav ? 'pt-20 pb-28 md:pb-12' : ''}>
+                        {children}
+                    </main>
+                    {showNav && <BottomNav />}
+                </ToastProvider>
+            </CategoryProvider>
         </AuthProviderWrapper>
     );
 }

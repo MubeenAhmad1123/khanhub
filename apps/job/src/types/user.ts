@@ -293,6 +293,25 @@ export interface User {
     video_upload_enabled: boolean;
     video_upload_payment_id?: string;
     profile_status: 'incomplete' | 'payment_pending' | 'video_pending' | 'active';
+    category: 'jobs' | 'healthcare' | 'education' | 'marriage' | 'domestic' | 'legal' | 'realestate' | 'it';
+    profileFields: {
+        // jobs provider
+        jobTitle?: string;
+        skills?: string[];
+        experienceLevel?: string;
+        // jobs seeker
+        companyName?: string;
+        hiringFor?: string;
+        salaryOffered?: number;
+        // professionals
+        specialization?: string;
+        subject?: string;
+        gradeLevel?: string;
+        teachingMode?: 'Online' | 'In-person';
+        // marriage
+        presentingFor?: string;
+        lookingFor?: string;
+    };
     industry?: string;
     subcategory?: string;
     videos_watched?: number;

@@ -30,4 +30,13 @@ export interface Video {
     submitted_at: Timestamp;
     published_at?: Timestamp | null;
     is_live: boolean;
+    category: string;
+    userRole: 'provider' | 'seeker';
+    overlayData: {
+        title: string;
+        badge: string;
+        field1?: string;
+        field2?: string;
+        location: string;
+    };
 }
