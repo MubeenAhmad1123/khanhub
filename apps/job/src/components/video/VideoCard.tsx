@@ -309,20 +309,20 @@ export default function VideoCard({
 
                         <button
                             onClick={handleConnectClick}
-                            disabled={connectionStatus === 'pending' || connectionStatus === 'approved' || connectionStatus === 'own'}
+                            disabled={connectionStatus === 'pending' || connectionStatus === 'accepted' || connectionStatus === 'own'}
                             className={cn(
                                 "py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 active:scale-95",
-                                connectionStatus === 'approved' ? "bg-green-600 text-white shadow-green-200" :
+                                connectionStatus === 'accepted' ? "bg-green-600 text-white shadow-green-200" :
                                     connectionStatus === 'pending' ? "bg-slate-100 text-slate-400" :
                                         connectionStatus === 'own' ? "bg-slate-100 text-slate-500" :
                                             "bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700 hover:shadow-blue-300"
                             )}
                         >
-                            {connectionStatus === 'approved' ? <CheckCircle2 className="w-4 h-4" /> :
+                            {connectionStatus === 'accepted' ? <CheckCircle2 className="w-4 h-4" /> :
                                 connectionStatus === 'pending' ? <Clock className="w-4 h-4" /> :
                                     isOwnVideo ? <Edit className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />}
 
-                            {connectionStatus === 'approved' ? 'Done' :
+                            {connectionStatus === 'accepted' ? 'Done' :
                                 connectionStatus === 'pending' ? 'Wait' :
                                     isOwnVideo ? 'Edit' : (role === 'employer' ? 'Hire' : 'Connect')}
                         </button>
