@@ -316,6 +316,12 @@ export interface User {
     subcategory?: string;
     videos_watched?: number;
     profile_views?: number;
+    followers: string[];
+    following: string[];
+    totalLikes: number;
+    savedVideos: string[];
+    likedVideos: string[];
+    isVerified: boolean;
 }
 
 // ==================== ROLE-SPECIFIC USER TYPES ====================

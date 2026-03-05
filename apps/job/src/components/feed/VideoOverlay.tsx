@@ -15,8 +15,8 @@ interface VideoOverlayProps {
 
 export function VideoOverlay({ data }: VideoOverlayProps) {
     return (
-        <div className="absolute bottom-[80px] left-0 right-[60px] p-6 pointer-events-none z-20">
-            <div className="max-w-[75%] space-y-3">
+        <div className="w-full p-4 pointer-events-none">
+            <div className="max-w-[80%] space-y-3">
                 {/* Category Badge */}
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[--accent] text-black w-fit">
                     <Zap className="w-3 h-3 fill-current" />

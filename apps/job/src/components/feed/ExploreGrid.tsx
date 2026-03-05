@@ -45,6 +45,12 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
         router.push('/feed');
     };
 
+    const formatCount = (n: number) => {
+        if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+        if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+        return String(n);
+    };
+
     const isFeatured = (index: number) => index % 7 === 3;
 
     return (
@@ -62,6 +68,19 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
                         alt={item.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
+
+                    {/* View count badge on thumbnail — bottom left */}
+                    <div style={{
+                        position: 'absolute', bottom: 6, left: 6,
+                        background: 'rgba(0,0,0,0.7)',
+                        color: '#fff', fontSize: '10px',
+                        padding: '2px 6px', borderRadius: '4px',
+                        fontFamily: 'DM Sans', fontWeight: 600,
+                        display: 'flex', alignItems: 'center', gap: '3px',
+                        zIndex: 10
+                    }}>
+                        ▶ {formatCount(item.views || 0)}
+                    </div>
 
                     {/* Overlay on hover/tap */}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-active:opacity-100 md:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 md:p-4">

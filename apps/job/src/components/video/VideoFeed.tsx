@@ -9,9 +9,10 @@ import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
 import { GuestWall } from '@/components/feed/GuestWall';
 import { FeedTabs } from '@/components/feed/FeedTabs';
 import { useAuth } from '@/hooks/useAuth';
-
-import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
 import { useRouter } from 'next/navigation';
+import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
+import { doc, updateDoc, increment } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase-config';
 
 export function VideoFeed() {
     const { activeCategory, categoryConfig, activeRole } = useCategory();
@@ -22,44 +23,70 @@ export function VideoFeed() {
     const [showGuestWall, setShowGuestWall] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const reelRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const watchedIndices = useRef<Set<number>>(new Set());
 
-    const incrementWatchCount = () => {
-        const isRegistered = !!user;
-        if (isRegistered) return;
+    const countView = async (videoId: string) => {
+        // For placeholder videos — skip Firestore update
+        if (!videoId || videoId.startsWith('placeholder-')) return;
 
-        const current = parseInt(localStorage.getItem('jobreel_videos_watched') || '0');
-        const newCount = current + 1;
-        localStorage.setItem('jobreel_videos_watched', String(newCount));
-
-        if (newCount >= 3) {
-            setShowGuestWall(true);
+        try {
+            await updateDoc(doc(db, 'reels', videoId), {
+                views: increment(1)
+            });
+        } catch (e) {
+            // Silent fail — view counting is non-critical
+            console.error('View count error:', e);
         }
     };
 
     useEffect(() => {
-        if (!containerRef.current || user) return;
+        if (user) return; // registered users skip all of this
 
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
-                    if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-                        const index = reelRefs.current.indexOf(entry.target as HTMLDivElement);
-                        if (index !== -1 && index !== activeIndex) {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                        const index = reelRefs.current.findIndex(ref => ref === entry.target);
+
+                        // Only count each video once per session
+                        if (index !== -1 && !watchedIndices.current.has(index)) {
+                            watchedIndices.current.add(index);
                             setActiveIndex(index);
-                            incrementWatchCount();
+
+                            const current = parseInt(localStorage.getItem('jobreel_videos_watched') || '0');
+                            const newCount = current + 1;
+                            localStorage.setItem('jobreel_videos_watched', String(newCount));
+
+                            console.log(`Video ${index} watched. Total: ${newCount}`); // debug
+
+                            if (newCount >= 3) {
+                                setShowGuestWall(true);
+                            }
+
+                            // Count view in Firestore
+                            const targetVideo = videos[index];
+                            if (targetVideo) {
+                                countView(targetVideo.id);
+                            }
                         }
                     }
                 });
             },
-            { threshold: 0.6 }
+            { threshold: 0.5, root: containerRef.current }
         );
 
-        reelRefs.current.forEach((ref) => {
-            if (ref) observer.observe(ref);
-        });
+        // Small delay to let refs attach
+        const timeout = setTimeout(() => {
+            reelRefs.current.forEach((ref) => {
+                if (ref) observer.observe(ref);
+            });
+        }, 100);
 
-        return () => observer.disconnect();
-    }, [user, activeIndex]);
+        return () => {
+            observer.disconnect();
+            clearTimeout(timeout);
+        };
+    }, [user, activeCategory]); // Re-run if user or category changes (category changes the video list)
 
     // Get Firestore videos (currently empty/mocked as empty for this phase)
     const firestoreVideos: any[] = [];
@@ -84,39 +111,66 @@ export function VideoFeed() {
             // Clear session storage but maybe keep feed_source for back button logic later
             sessionStorage.removeItem('feed_start_index');
         }
+        // Reset watched indices when category changes
+        watchedIndices.current = new Set();
     }, [activeCategory]);
 
     return (
-        <div className="relative h-[100dvh] bg-black overflow-hidden mt-20 md:mt-0">
-            <FeedTabs />
+        <div className="relative bg-black" style={{ height: '100dvh', overflow: 'hidden' }}>
+            {/* FeedTabs floats OVER the video — not inside the layout flow */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30 }}>
+                <FeedTabs />
+            </div>
 
             <div
                 ref={containerRef}
-                className="feed-container h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+                className="scrollbar-hide"
+                style={{
+                    height: '100dvh',
+                    overflowY: 'scroll',
+                    scrollSnapType: 'y mandatory',
+                    WebkitOverflowScrolling: 'touch',
+                }}
             >
                 {videos.map((video, index) => (
                     <div
                         key={video.id}
                         ref={(el) => { reelRefs.current[index] = el; }}
-                        className="relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black"
+                        style={{
+                            position: 'relative',
+                            height: '100dvh',
+                            width: '100%',
+                            overflow: 'hidden',
+                            background: '#000',
+                            scrollSnapAlign: 'start',
+                            scrollSnapStop: 'always',
+                            flexShrink: 0,
+                        }}
                     >
+                        {/* VIDEO — fills entire parent absolutely */}
                         <ReelPlayer
                             videoId={video.videoId}
                             isActive={activeIndex === index && !showGuestWall}
                         />
 
-                        <VideoOverlay data={video} />
+                        {/* OVERLAY — absolutely positioned over the video */}
+                        <div style={{ position: 'absolute', bottom: 80, left: 0, right: 60, zIndex: 20, pointerEvents: 'none' }}>
+                            <VideoOverlay data={video} />
+                        </div>
 
-                        <ActionButtons
-                            onConnect={() => setShowReveal(true)}
-                            connectLabel={
-                                activeCategory === 'jobs'
-                                    ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋')
-                                    : activeCategory === 'marriage'
-                                        ? 'Interest 💍'
-                                        : 'Connect'
-                            }
-                        />
+                        {/* ACTION BUTTONS — absolutely positioned right side */}
+                        <div style={{ position: 'absolute', right: 12, bottom: 100, zIndex: 20 }}>
+                            <ActionButtons
+                                onConnect={() => setShowReveal(true)}
+                                connectLabel={
+                                    activeCategory === 'jobs'
+                                        ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋')
+                                        : activeCategory === 'marriage'
+                                            ? 'Interest 💍'
+                                            : 'Connect'
+                                }
+                            />
+                        </div>
                     </div>
                 ))}
             </div>

@@ -39,4 +39,9 @@ export interface Video {
         field2?: string;
         location: string;
     };
+    views: number;
+    likes: number;
+    saves: number;
+    shares: number;
+    likedBy: string[];
 }

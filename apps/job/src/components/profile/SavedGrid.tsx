@@ -3,40 +3,16 @@
 import React, { useEffect, useState } from 'react';
 import { Play } from 'lucide-react';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
-interface VideosGridProps {
-    uid: string;
+interface SavedGridProps {
+    savedIds: string[];
     onVideoTap?: (index: number) => void;
 }
 
-export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
+export default function SavedGrid({ savedIds, onVideoTap }: SavedGridProps) {
     const [videos, setVideos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function fetchVideos() {
-            if (!uid) return;
-            try {
-                const q = query(
-                    collection(db, 'reels'),
-                    where('creatorId', '==', uid),
-                    orderBy('createdAt', 'desc')
-                );
-                const querySnapshot = await getDocs(q);
-                const vids = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                setVideos(vids);
-            } catch (error) {
-                console.error('Error fetching user videos:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchVideos();
-    }, [uid]);
 
     const formatCount = (n: number) => {
         if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -44,10 +20,33 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
         return String(n || 0);
     };
 
+    useEffect(() => {
+        async function fetchSavedVideos() {
+            if (!savedIds || savedIds.length === 0) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const videoPromises = savedIds.map(id => getDoc(doc(db, 'reels', id)));
+                const snaps = await Promise.all(videoPromises);
+                const vids = snaps
+                    .filter(s => s.exists())
+                    .map(s => ({ id: s.id, ...s.data() }));
+                setVideos(vids);
+            } catch (error) {
+                console.error('Error fetching saved videos:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchSavedVideos();
+    }, [savedIds]);
+
     if (loading) {
         return (
             <div className="grid grid-cols-3 gap-1 px-1 py-6">
-                {[1, 2, 3, 4, 5, 6].map((n) => (
+                {[1, 2, 3].map((n) => (
                     <div key={n} className="aspect-[9/16] bg-[#0d0d0d] animate-pulse rounded-sm" />
                 ))}
             </div>
@@ -56,8 +55,10 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
 
     if (videos.length === 0) {
         return (
-            <div className="py-20 text-center">
-                <p className="text-sm text-[--text-muted] font-bold uppercase tracking-widest">No videos posted yet</p>
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: '#555' }}>
+                <p style={{ fontSize: 13, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    No saved videos yet
+                </p>
             </div>
         );
     }

@@ -10,14 +10,27 @@ interface ReelPlayerProps {
 
 export function ReelPlayer({ videoId, isActive }: ReelPlayerProps) {
     const [isMuted, setIsMuted] = useState(true);
+    const [userUnmuted, setUserUnmuted] = useState(false);
     const [showMuteIndicator, setShowMuteIndicator] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Auto-unmute after video loads when active
+    useEffect(() => {
+        if (isActive && !userUnmuted) {
+            const timer = setTimeout(() => {
+                setIsMuted(false);
+                setUserUnmuted(true);
+            }, 800);
+            return () => clearTimeout(timer);
+        }
+    }, [isActive, userUnmuted]);
 
     // YouTube Shorts embed URL
     const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=${isActive ? 1 : 0}&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3`;
 
     const toggleMute = () => {
         setIsMuted(!isMuted);
+        setUserUnmuted(true);
         setShowMuteIndicator(true);
         setTimeout(() => setShowMuteIndicator(false), 1500);
     };
@@ -25,8 +38,14 @@ export function ReelPlayer({ videoId, isActive }: ReelPlayerProps) {
     return (
         <div
             ref={containerRef}
-            className="relative w-full h-[100dvh] bg-black overflow-hidden flex items-center justify-center cursor-pointer"
             onClick={toggleMute}
+            style={{
+                position: 'absolute',
+                inset: 0,
+                background: '#000',
+                overflow: 'hidden',
+                cursor: 'pointer',
+            }}
         >
             {/* VIDEO LAYER - fills entire container */}
             <div className="absolute inset-0">
