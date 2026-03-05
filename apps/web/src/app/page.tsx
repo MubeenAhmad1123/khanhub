@@ -9,6 +9,7 @@ import { DonateCTASection } from '@/components/sections/Donationsection';
 import DepartmentsSection from '@/components/sections/DepartmentsSection';
 import { MissionSection } from '@/components/sections/MissionSection';
 import { SuccessStoriesSection } from '@/components/sections/SuccessStoriesSection';
+import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
 
 export default function HomePage() {
   return (
@@ -17,6 +18,7 @@ export default function HomePage() {
       <MissionSection />
       <DepartmentsSection />
       <SuccessStoriesSection />
+      <TestimonialsSection />
       <DonateCTASection />
     </>
   );
