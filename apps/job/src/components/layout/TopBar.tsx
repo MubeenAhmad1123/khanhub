@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { Search, Bell, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useCategory } from '@/context/CategoryContext';
-import { CATEGORY_CONFIG, CategoryKey } from '@/lib/categories';
+import { CATEGORY_CONFIG, CategoryKey, CategoryConfig } from '@/lib/categories';
 import { motion, AnimatePresence } from 'framer-motion';
+
+import Image from 'next/image';
 
 export function TopBar() {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
@@ -23,10 +25,16 @@ export function TopBar() {
                     <div className="relative">
                         <button
                             onClick={() => setShowSwitcher(!showSwitcher)}
-                            className="flex items-center gap-2 bg-[--bg-card] border border-[--border] px-3 py-1.5 rounded-full hover:border-[--accent] transition-all"
+                            className="flex items-center gap-2 bg-[--bg-card] border border-[--border] px-2 py-1 rounded-full hover:border-[--accent] transition-all"
                         >
-                            <span className="text-sm">{categoryConfig.emoji}</span>
-                            <span className="text-xs font-bold font-syne uppercase tracking-wider hidden sm:inline">
+                            <div className="relative w-6 h-6 rounded-full overflow-hidden border border-white/20">
+                                {categoryConfig.imageUrl ? (
+                                    <Image src={categoryConfig.imageUrl} alt={categoryConfig.label} fill className="object-cover" />
+                                ) : (
+                                    <span className="text-xs">{categoryConfig.emoji}</span>
+                                )}
+                            </div>
+                            <span className="text-[10px] font-black font-syne uppercase tracking-wider hidden sm:inline">
                                 {categoryConfig.label}
                             </span>
                             <ChevronDown className={`w-3 h-3 text-[--text-muted] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
@@ -48,7 +56,7 @@ export function TopBar() {
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                         className="absolute top-full left-0 mt-2 w-64 bg-[--bg-secondary] border border-[--border] rounded-2xl shadow-2xl p-2 grid grid-cols-1 gap-1 z-50"
                                     >
-                                        {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, any][]).map(([key, config]) => (
+                                        {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
                                             <button
                                                 key={key}
                                                 onClick={() => {
@@ -56,12 +64,18 @@ export function TopBar() {
                                                     setShowSwitcher(false);
                                                 }}
                                                 className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all ${activeCategory === key
-                                                        ? 'bg-[--bg-card] border border-[--border] text-white'
-                                                        : 'hover:bg-white/5 text-[--text-muted]'
+                                                    ? 'bg-[--bg-card] border border-[--border] text-white'
+                                                    : 'hover:bg-white/5 text-[--text-muted]'
                                                     }`}
                                             >
-                                                <span className="text-xl">{config.emoji}</span>
-                                                <span className="text-xs font-bold font-syne uppercase tracking-wider">{config.label}</span>
+                                                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10">
+                                                    {config.imageUrl ? (
+                                                        <Image src={config.imageUrl} alt={config.label} fill className="object-cover" />
+                                                    ) : (
+                                                        <span className="text-sm">{config.emoji}</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] font-black font-syne uppercase tracking-wider">{config.label}</span>
                                                 {activeCategory === key && (
                                                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" />
                                                 )}

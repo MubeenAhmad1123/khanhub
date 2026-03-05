@@ -15,12 +15,14 @@ export interface CategoryConfig {
     providerLabel: string;
     seekerLabel: string;
     placeholderVideos: string[];
+    imageUrl?: string;
 }
 
 export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     jobs: {
         label: 'Jobs',
         emoji: '💼',
+        imageUrl: '/jobs.webp',
         accent: '#FF0069',
         providerLabel: 'Job Seeker',
         seekerLabel: 'Company',
@@ -32,6 +34,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     healthcare: {
         label: 'Healthcare',
         emoji: '🏥',
+        imageUrl: '/healthcare.webp',
         accent: '#00C896',
         providerLabel: 'Doctor',
         seekerLabel: 'Patient',
@@ -43,6 +46,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     education: {
         label: 'Education',
         emoji: '🎓',
+        imageUrl: '/education (2).webp',
         accent: '#FFD600',
         providerLabel: 'Teacher',
         seekerLabel: 'Student',
@@ -54,6 +58,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     marriage: {
         label: 'Marriage Bureau',
         emoji: '💍',
+        imageUrl: '/marraige.webp',
         accent: '#FF6B9D',
         providerLabel: 'Presenting',
         seekerLabel: 'Looking',
@@ -65,6 +70,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     domestic: {
         label: 'Domestic Help',
         emoji: '🏠',
+        imageUrl: '/domestic help.webp',
         accent: '#FF8C42',
         providerLabel: 'Helper',
         seekerLabel: 'Household',
@@ -76,6 +82,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     legal: {
         label: 'Legal',
         emoji: '⚖️',
+        imageUrl: '/lawyer.webp',
         accent: '#4A90D9',
         providerLabel: 'Lawyer',
         seekerLabel: 'Client',
@@ -87,6 +94,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     realestate: {
         label: 'Real Estate',
         emoji: '🏗️',
+        imageUrl: '/real-estate.webp',
         accent: '#7638FA',
         providerLabel: 'Agent',
         seekerLabel: 'Buyer / Renter',
@@ -98,6 +106,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
     it: {
         label: 'IT & Tech',
         emoji: '💻',
+        imageUrl: '/tech.webp',
         accent: '#00E5FF',
         providerLabel: 'Freelancer',
         seekerLabel: 'Client',

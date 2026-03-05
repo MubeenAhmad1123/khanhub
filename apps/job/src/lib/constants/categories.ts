@@ -8,6 +8,7 @@ export interface Industry {
     id: string;
     label: string;
     icon: string;
+    imageUrl?: string;
     subcategories: Subcategory[];
 }
 
@@ -16,6 +17,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'healthcare',
         label: 'Healthcare / Medical',
         icon: '🏥',
+        imageUrl: '/healthcare.webp',
         subcategories: [
             { id: 'doctors', label: 'Doctors & Specialists', roles: ['General Physician', 'Surgeon', 'Pediatrician', 'Cardiologist', 'Dermatologist'] },
             { id: 'nursing', label: 'Nursing', roles: ['Registered Nurse', 'Nurse Practitioner', 'Head Nurse'] },
@@ -29,6 +31,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'technology',
         label: 'Technology / IT',
         icon: '💻',
+        imageUrl: '/tech.webp',
         subcategories: [
             { id: 'software_dev', label: 'Software Development', roles: ['Frontend Developer', 'Backend Developer', 'Fullstack Developer', 'Mobile Developer'] },
             { id: 'design', label: 'Design & UI/UX', roles: ['UI/UX Designer', 'Graphic Designer', 'Product Designer'] },
@@ -42,6 +45,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'education',
         label: 'Education / Teaching',
         icon: '📚',
+        imageUrl: '/education (2).webp',
         subcategories: [
             { id: 'school_teaching', label: 'School Teaching', roles: ['Primary Teacher', 'High School Teacher', 'Subject Specialist'] },
             { id: 'higher_edu', label: 'Higher Education', roles: ['Lecturer', 'Professor', 'Researcher'] },
@@ -53,6 +57,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'finance',
         label: 'Finance / Banking',
         icon: '💰',
+        imageUrl: '/jobs.webp',
         subcategories: [
             { id: 'accounting', label: 'Accounting & Audit', roles: ['Accountant', 'Auditor', 'Tax Consultant'] },
             { id: 'banking', label: 'Banking Operations', roles: ['Bank Manager', 'Cashier', 'Loan Officer'] },
@@ -64,6 +69,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'engineering',
         label: 'Engineering',
         icon: '⚙️',
+        imageUrl: '/jobs.webp',
         subcategories: [
             { id: 'civil_eng', label: 'Civil Engineering' },
             { id: 'mech_eng', label: 'Mechanical Engineering' },
@@ -75,6 +81,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'transportation',
         label: 'Transportation / Logistics',
         icon: '🚛',
+        imageUrl: '/jobs.webp',
         subcategories: [
             { id: 'driving', label: 'Driving', roles: ['Truck Driver', 'Delivery Rider', 'Personal Driver'] },
             { id: 'logistics', label: 'Logistics & Warehouse', roles: ['Warehouse Manager', 'Dispatcher'] },
@@ -85,6 +92,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'hospitality',
         label: 'Hospitality / Food',
         icon: '🍽️',
+        imageUrl: '/jobs.webp',
         subcategories: [
             { id: 'kitchen', label: 'Kitchen & Cooking', roles: ['Head Chef', 'Cook', 'Kitchen Helper'] },
             { id: 'serving', label: 'Serving & Front Desk', roles: ['Waiter/Waitress', 'Receptionist'] },
@@ -95,6 +103,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'retail',
         label: 'Retail / Sales',
         icon: '🛒',
+        imageUrl: '/jobs.webp',
         subcategories: [
             { id: 'sales', label: 'Sales & Marketing', roles: ['Sales Executive', 'Digital Marketer', 'Field Sales'] },
             { id: 'store_mgmt', label: 'Store Management' },
@@ -105,6 +114,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'skilled_trades',
         label: 'Skilled Trades / Labor',
         icon: '🔧',
+        imageUrl: '/domestic help.webp',
         subcategories: [
             { id: 'electrical_work', label: 'Electrical Work' },
             { id: 'plumbing', label: 'Plumbing' },
@@ -116,6 +126,7 @@ export const INDUSTRIES: Industry[] = [
         id: 'other',
         label: 'Other',
         icon: '✨',
+        imageUrl: '/translation.webp',
         subcategories: [
             { id: 'general_admin', label: 'General Administration' },
             { id: 'human_resources', label: 'Human Resources' },

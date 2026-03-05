@@ -135,7 +135,7 @@ export default function OnboardingPage() {
         }
 
         if (user?.onboardingCompleted) {
-            router.push('/auth/verify-payment');
+            router.push('/categories');
             return;
         }
     }, [user, loading, router]);
@@ -238,7 +238,7 @@ export default function OnboardingPage() {
 
             // 3. Success & Redirect
             setSuccess(true);
-            router.push('/auth/verify-payment');
+            router.push('/categories');
         } catch (err: any) {
             console.error('Onboarding update error:', err);
             setError(err.message || 'Failed to complete profile.');
