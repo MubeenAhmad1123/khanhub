@@ -55,6 +55,7 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
 
             // 5. Clear guest wall counter
             localStorage.removeItem('jobreel_videos_watched');
+            localStorage.setItem('jobreel_registered', 'true');
 
             // 6. Update guest session if exists
             if (sessionId) {

@@ -43,7 +43,7 @@ export const PLACEHOLDER_VIDEO_IDS = [
 
 export const CATEGORY_PLACEHOLDERS: Record<string, string[]> = {
     jobs: ['jNQXAC9IVRw', 'kJQP7kiw5Fk', 'OPf0YbXqDm0', 'YQHsXMglC9A', 'fJ9rUzIMcZQ'],
-    healthcare: ['hT_nvWreIhg', 'CevxZvSJLk8', 'pRpeEdMmmQ0', '09R8_2nJtjg', 'RgKAFK5djSk'],
+    healthcare: ['wITuU8SIrHs', 'Z9h6fOHnYN4', 'GsGA3h5SSrc', 'h6gh3uJIefU', '6rnYbvhaY6Q', 'wO56974d0GU', 'DfXciGskaQk'],
     education: ['ru0K8uLgygA', '60ItHLz5WEA', 'JGwWNGJdvx8', 'y6120QOlsfU', 'ZbZSe6N_BXs'],
     marriage: ['nfWlot6h_JM', '9bZkp7q19f0', 'e-ORhEE9VVg', 'lp-EO5I60KA', 'dQw4w9WgXcQ'],
     domestic: ['jNQXAC9IVRw', 'RgKAFK5djSk', 'fJ9rUzIMcZQ', 'hT_nvWreIhg', 'kJQP7kiw5Fk'],
@@ -61,11 +61,13 @@ export const PLACEHOLDER_OVERLAY_DATA: Record<string, any[]> = {
         { title: 'Graphic Designer', badge: 'Job Seeker', field1: 'Illustrator • Photoshop', field2: 'Fresher', location: 'Lahore' },
     ],
     healthcare: [
-        { title: 'Dr. Ahmed Raza', badge: 'Doctor', field1: 'Cardiology • 12 yrs exp', field2: 'PMDC Verified', location: 'Karachi' },
-        { title: 'City Hospital', badge: 'Seeking', field1: 'Need: Pediatrician', field2: 'Full Time Position', location: 'Lahore' },
-        { title: 'Dr. Sara Khan', badge: 'Dentist', field1: 'Orthodontics • 8 yrs exp', field2: 'Clinic Available', location: 'Islamabad' },
-        { title: 'HealthCare Clinic', badge: 'Seeking', field1: 'Need: General Physician', field2: 'Part Time OK', location: 'Karachi' },
-        { title: 'Dr. Ali Hassan', badge: 'Neurologist', field1: '15 yrs exp • FCPS', field2: 'Consultation Available', location: 'Lahore' },
+        { title: 'AI Transcription for Doctors', badge: 'Doctor', field1: 'Reducing clinical burnout', field2: 'AI & Documentation', city: 'Karachi' },
+        { title: 'AI Transforming Healthcare', badge: 'Doctor', field1: 'Real-time patient care AI', field2: 'Digital Health', city: 'Lahore' },
+        { title: 'Future of Wearable Tech', badge: 'Specialist', field1: 'Chronic pain management', field2: 'MedTech Innovation', city: 'Islamabad' },
+        { title: 'Revolutionising Imaging', badge: 'Radiologist', field1: '40 years of imaging tech', field2: 'Medical Imaging', city: 'Karachi' },
+        { title: 'Digital Diagnosis', badge: 'Doctor', field1: 'Remote diagnostic tools', field2: 'Digital Health', city: 'Peshawar' },
+        { title: 'Wearable Technology', badge: 'HealthTech', field1: 'Smartwatches in healthcare', field2: 'Wearables', city: 'Lahore' },
+        { title: 'Healthcare to Tech Transition', badge: 'IT + Healthcare', field1: 'Clinician to IT role', field2: 'Career Shift', city: 'Karachi' },
     ],
     education: [
         { title: 'Math Professor', badge: 'Teacher', field1: 'Calculus • Linear Algebra', field2: '10 years exp', location: 'Karachi' },
@@ -126,8 +128,8 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '🏥',
         imageUrl: '/healthcare.webp',
         accent: '#00C896',
-        providerLabel: 'Doctor',
-        seekerLabel: 'Patient',
+        providerLabel: 'Doctor / Specialist',
+        seekerLabel: 'Patient / Client',
         placeholderVideos: CATEGORY_PLACEHOLDERS.healthcare
     },
     education: {

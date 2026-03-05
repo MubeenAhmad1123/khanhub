@@ -141,7 +141,7 @@ export function TestimonialsSection() {
                 {/* Section Footer */}
                 <div className="mt-16 flex flex-col md:flex-row items-center justify-between gap-8">
                     <a
-                        href="https://www.google.com/search?q=Khan+Hub+Medical+Center+Vehari#lrd=0x3922f3d5cdfb5c9b:0x5e5b38ed6c0a7f1a,3,,,"
+                        href="https://g.page/r/CRlw4v0AEnHaEBM/review"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="bg-[#F59E0B] text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-[#F59E0B]/20 hover:scale-105 transition-transform"
@@ -149,11 +149,7 @@ export function TestimonialsSection() {
                         Post Your Review
                     </a>
 
-                    {/* Trustindex Badge */}
-                    <div className="bg-[#065F46] text-white px-4 py-2 rounded-full flex items-center gap-2 text-xs font-bold shadow-sm">
-                        <span>Verified by Trustindex</span>
-                        <span className="w-4 h-4 rounded-full border border-white/50 flex items-center justify-center text-[10px]">i</span>
-                    </div>
+
                 </div>
             </div>
         </section>

@@ -20,8 +20,46 @@ export function VideoFeed() {
     const [activeIndex, setActiveIndex] = useState(0);
     const [showReveal, setShowReveal] = useState(false);
     const [showGuestWall, setShowGuestWall] = useState(false);
-    const [videosWatched, setVideosWatched] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
+    const reelRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+    const incrementWatchCount = () => {
+        const isRegistered = !!user;
+        if (isRegistered) return;
+
+        const current = parseInt(localStorage.getItem('jobreel_videos_watched') || '0');
+        const newCount = current + 1;
+        localStorage.setItem('jobreel_videos_watched', String(newCount));
+
+        if (newCount >= 3) {
+            setShowGuestWall(true);
+        }
+    };
+
+    useEffect(() => {
+        if (!containerRef.current || user) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+                        const index = reelRefs.current.indexOf(entry.target as HTMLDivElement);
+                        if (index !== -1 && index !== activeIndex) {
+                            setActiveIndex(index);
+                            incrementWatchCount();
+                        }
+                    }
+                });
+            },
+            { threshold: 0.6 }
+        );
+
+        reelRefs.current.forEach((ref) => {
+            if (ref) observer.observe(ref);
+        });
+
+        return () => observer.disconnect();
+    }, [user, activeIndex]);
 
     // Get Firestore videos (currently empty/mocked as empty for this phase)
     const firestoreVideos: any[] = [];
@@ -48,31 +86,6 @@ export function VideoFeed() {
         }
     }, [activeCategory]);
 
-    useEffect(() => {
-        const handleScroll = () => {
-            if (!containerRef.current) return;
-            const index = Math.round(containerRef.current.scrollTop / window.innerHeight);
-            if (index !== activeIndex) {
-                setActiveIndex(index);
-
-                // Guest tracking
-                if (!user) {
-                    const newCount = videosWatched + 1;
-                    setVideosWatched(newCount);
-                    if (newCount >= 3) {
-                        setShowGuestWall(true);
-                    }
-                }
-            }
-        };
-
-        const container = containerRef.current;
-        if (container) {
-            container.addEventListener('scroll', handleScroll);
-        }
-        return () => container?.removeEventListener('scroll', handleScroll);
-    }, [activeIndex, videosWatched, user]);
-
     return (
         <div className="relative h-[100dvh] bg-black overflow-hidden mt-20 md:mt-0">
             <FeedTabs />
@@ -82,7 +95,11 @@ export function VideoFeed() {
                 className="feed-container h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
             >
                 {videos.map((video, index) => (
-                    <div key={video.id} className="relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black">
+                    <div
+                        key={video.id}
+                        ref={(el) => { reelRefs.current[index] = el; }}
+                        className="relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black"
+                    >
                         <ReelPlayer
                             videoId={video.videoId}
                             isActive={activeIndex === index && !showGuestWall}
@@ -113,7 +130,10 @@ export function VideoFeed() {
 
             <GuestWall
                 isVisible={showGuestWall}
-                onContinue={() => setShowGuestWall(false)}
+                onContinue={() => {
+                    localStorage.setItem('jobreel_videos_watched', '0');
+                    setShowGuestWall(false);
+                }}
             />
         </div>
     );
