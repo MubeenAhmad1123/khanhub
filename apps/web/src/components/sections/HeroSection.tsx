@@ -495,6 +495,29 @@ export default function HeroSection() {
         </motion.div>
       </motion.div>
 
+      {/* Video Services Portal CTA - Centered below scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.3, duration: 0.6 }}
+        className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-4"
+      >
+        <Link
+          href="https://job.khanhub.com.pk/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group inline-flex items-center gap-2 px-5 py-2.5 bg-primary-500/10 hover:bg-primary-500 border border-primary-400/40 hover:border-primary-500 rounded-full text-primary-700 hover:text-white text-sm font-semibold transition-all duration-300 hover:scale-105 hover:shadow-primary-md backdrop-blur-sm"
+        >
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+          </svg>
+          <span>Visit our Video Services Portal</span>
+          <svg className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+          </svg>
+        </Link>
+      </motion.div>
+
       {/* SEO Schema Markup */}
       <script
         type="application/ld+json"
