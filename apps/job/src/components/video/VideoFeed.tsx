@@ -10,26 +10,43 @@ import { GuestWall } from '@/components/feed/GuestWall';
 import { FeedTabs } from '@/components/feed/FeedTabs';
 import { useAuth } from '@/hooks/useAuth';
 
+import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
+import { useRouter } from 'next/navigation';
+
 export function VideoFeed() {
     const { activeCategory, categoryConfig, activeRole } = useCategory();
     const { user } = useAuth();
+    const router = useRouter();
     const [activeIndex, setActiveIndex] = useState(0);
     const [showReveal, setShowReveal] = useState(false);
     const [showGuestWall, setShowGuestWall] = useState(false);
     const [videosWatched, setVideosWatched] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Use placeholder videos from config
-    const videos = categoryConfig.placeholderVideos.map((id, index) => ({
-        id: `${activeCategory}-${index}`,
-        videoId: id,
-        title: index === 0 ? `Premium ${categoryConfig.label} Expert` : `${categoryConfig.label} Specialist`,
-        badge: activeRole === 'provider' ? categoryConfig.seekerLabel : categoryConfig.providerLabel,
-        field1: categoryConfig.label === 'Jobs' ? 'UI/UX Design • React' : 'Specialist • 10+ yrs exp',
-        field2: categoryConfig.label === 'Jobs' ? 'Rs. 150k/mo' : 'Verified Professional',
-        location: index % 2 === 0 ? 'Karachi' : 'Lahore',
-        name: index === 0 ? 'Ahmed Raza' : 'Sara Khan'
-    }));
+    // Get Firestore videos (currently empty/mocked as empty for this phase)
+    const firestoreVideos: any[] = [];
+
+    // Fallback to placeholders
+    const videos = firestoreVideos.length > 0
+        ? firestoreVideos
+        : CATEGORY_PLACEHOLDERS[activeCategory].map((id, i) => ({
+            id: `placeholder-${i}`,
+            isPlaceholder: true,
+            videoId: id,
+            category: activeCategory,
+            ...(PLACEHOLDER_OVERLAY_DATA[activeCategory][i % 5])
+        }));
+
+    useEffect(() => {
+        // Initial scroll to index if coming from Explore
+        const startIndex = Number(sessionStorage.getItem('feed_start_index') || 0);
+        if (startIndex > 0 && containerRef.current) {
+            containerRef.current.scrollTop = startIndex * window.innerHeight;
+            setActiveIndex(startIndex);
+            // Clear session storage but maybe keep feed_source for back button logic later
+            sessionStorage.removeItem('feed_start_index');
+        }
+    }, [activeCategory]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -42,7 +59,7 @@ export function VideoFeed() {
                 if (!user) {
                     const newCount = videosWatched + 1;
                     setVideosWatched(newCount);
-                    if (newCount % 4 === 0) {
+                    if (newCount >= 3) {
                         setShowGuestWall(true);
                     }
                 }
@@ -57,15 +74,15 @@ export function VideoFeed() {
     }, [activeIndex, videosWatched, user]);
 
     return (
-        <div className="relative h-screen bg-black overflow-hidden mt-20 md:mt-0">
+        <div className="relative h-[100dvh] bg-black overflow-hidden mt-20 md:mt-0">
             <FeedTabs />
 
             <div
                 ref={containerRef}
-                className="feed-container h-full"
+                className="feed-container h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
             >
                 {videos.map((video, index) => (
-                    <div key={video.id} className="reel-item">
+                    <div key={video.id} className="relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black">
                         <ReelPlayer
                             videoId={video.videoId}
                             isActive={activeIndex === index && !showGuestWall}
@@ -90,7 +107,7 @@ export function VideoFeed() {
             <RevealContactSheet
                 isOpen={showReveal}
                 onClose={() => setShowReveal(false)}
-                targetName={videos[activeIndex]?.name}
+                targetName={videos[activeIndex]?.title}
                 userId={videos[activeIndex]?.id}
             />
 

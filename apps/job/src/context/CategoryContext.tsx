@@ -14,10 +14,15 @@ interface CategoryContextType {
 
 const CategoryContext = createContext<CategoryContextType | undefined>(undefined);
 
+import { auth, db } from '@/lib/firebase/firebase-config';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+
 export function CategoryProvider({ children }: { children: React.ReactNode }) {
     const [activeCategory, setActiveCategory] = useState<CategoryKey>('jobs');
     const [activeRole, setActiveRole] = useState<'provider' | 'seeker'>('provider');
 
+    // Restore from localStorage (Guest)
     useEffect(() => {
         const saved = localStorage.getItem('jobreel_active_category');
         if (saved && Object.keys(CATEGORY_CONFIG).includes(saved)) {
@@ -27,6 +32,25 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
         if (savedRole === 'provider' || savedRole === 'seeker') {
             setActiveRole(savedRole);
         }
+    }, []);
+
+    // Sync with Firebase Auth
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    if (data.category) setActiveCategory(data.category as CategoryKey);
+                    if (data.role) setActiveRole(data.role as 'provider' | 'seeker');
+                }
+            } else {
+                // Return to localStorage prefs if logged out
+                const saved = localStorage.getItem('jobreel_active_category');
+                if (saved) setActiveCategory(saved as CategoryKey);
+            }
+        });
+        return () => unsubscribe();
     }, []);
 
     useEffect(() => {

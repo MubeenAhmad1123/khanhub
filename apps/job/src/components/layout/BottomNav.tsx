@@ -2,15 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Compass, PlusSquare, MessageCircle, User } from 'lucide-react';
+import { Home, Search, PlusSquare, MessageCircle, User } from 'lucide-react';
 import { useCategory } from '@/context/CategoryContext';
 
 const navItems = [
     { label: 'Feed', icon: Home, href: '/feed' },
-    { label: 'Explore', icon: Compass, href: '/explore' },
+    { label: 'Explore', icon: Search, href: '/explore' },
     { label: 'Post', icon: PlusSquare, href: '/dashboard/upload-video', highlight: true },
     { label: 'Inbox', icon: MessageCircle, href: '/messages' },
-    { label: 'Profile', icon: User, href: '/profile' },
+    { label: 'Profile', icon: User, href: '/dashboard/profile' },
 ];
 
 export function BottomNav() {

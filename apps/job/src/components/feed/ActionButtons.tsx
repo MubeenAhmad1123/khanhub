@@ -14,7 +14,7 @@ export function ActionButtons({ onConnect, connectLabel }: ActionButtonsProps) {
     const [saved, setSaved] = useState(false);
 
     return (
-        <div className="absolute right-4 bottom-24 flex flex-col items-center gap-6 z-30">
+        <div className="absolute right-3 bottom-[100px] flex flex-col items-center gap-5 z-30">
             {/* Profile / Connect Button */}
             <button
                 onClick={onConnect}

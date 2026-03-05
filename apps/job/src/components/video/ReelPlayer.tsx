@@ -25,22 +25,27 @@ export function ReelPlayer({ videoId, isActive }: ReelPlayerProps) {
     return (
         <div
             ref={containerRef}
-            className="relative w-full h-full bg-black overflow-hidden flex items-center justify-center cursor-pointer"
+            className="relative w-full h-[100dvh] bg-black overflow-hidden flex items-center justify-center cursor-pointer"
             onClick={toggleMute}
         >
-            {/* YouTube Iframe */}
-            {isActive && (
-                <iframe
-                    src={embedUrl}
-                    className="w-full h-full scale-[1.3] pointer-events-none"
-                    style={{ height: '100%', width: '100%', objectFit: 'cover' }}
-                    allow="autoplay; encrypted-media"
-                    loading="lazy"
-                />
-            )}
+            {/* VIDEO LAYER - fills entire container */}
+            <div className="absolute inset-0">
+                {isActive && (
+                    <iframe
+                        src={embedUrl}
+                        className="w-full h-full border-none"
+                        style={{ objectFit: 'cover' }}
+                        allow="autoplay; encrypted-media; fullscreen"
+                        loading="lazy"
+                    />
+                )}
+            </div>
+
+            {/* GRADIENT OVERLAY - bottom fade */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none z-[5]" />
 
             {/* Placeholder / Black Screen when not active */}
-            {!isActive && <div className="w-full h-full bg-black" />}
+            {!isActive && <div className="absolute inset-0 bg-black z-[1]" />}
 
             {/* Mute Indicator */}
             <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none z-40 ${showMuteIndicator ? 'opacity-100' : 'opacity-0'}`}>
