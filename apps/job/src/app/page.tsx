@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useCategory } from '@/context/CategoryContext';
 import { CategoryKey, CATEGORY_CONFIG, CategoryConfig } from '@/lib/categories';
