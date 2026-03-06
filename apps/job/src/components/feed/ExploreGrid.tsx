@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
 import { Play } from 'lucide-react';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
 interface ExploreGridProps {
@@ -30,32 +30,58 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
     const [videos, setVideos] = useState<VideoItem[]>([]);
 
     useEffect(() => {
+        // Simple single-field query — no composite index needed.
+        // Category + admin_status filtering happens client-side.
         const q = query(
             collection(db, 'videos'),
-            where('admin_status', '==', 'approved'),
-            where('is_live', '==', true),
-            where('category', '==', category),
-            orderBy('createdAt', 'desc'),
-            limit(50)
+            where('is_live', '==', true)
         );
 
         const unsubscribe = onSnapshot(q, (snap) => {
-            if (snap.docs.length > 0) {
-                const real: VideoItem[] = snap.docs.map(d => ({
+            const real = snap.docs
+                .map(d => ({ id: d.id, ...d.data() } as any))
+                .filter(d =>
+                    d.admin_status === 'approved' &&
+                    (d.category === category || !d.category)
+                )
+                .sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+                .slice(0, 50)
+                .map((d: any): VideoItem => ({
                     id: d.id,
                     isPlaceholder: false,
-                    cloudinaryUrl: d.data().cloudinaryUrl,
+                    cloudinaryUrl: d.cloudinaryUrl,
                     youtubeId: undefined,
-                    title: d.data().overlayData?.title || '',
-                    badge: d.data().overlayData?.badge || '',
-                    field1: d.data().overlayData?.field1,
-                    field2: d.data().overlayData?.field2,
-                    views: d.data().views || 0,
+                    title: d.overlayData?.title || d.title || '',
+                    badge: d.overlayData?.badge || d.role || '',
+                    field1: d.overlayData?.field1,
+                    field2: d.overlayData?.field2,
+                    views: d.views || 0,
                 }));
+
+            if (real.length > 0) {
                 setVideos(real);
             } else {
+                // Fallback: placeholders
                 const overlays = PLACEHOLDER_OVERLAY_DATA[category] || [];
-                const ph: VideoItem[] = CATEGORY_PLACEHOLDERS[category].map((id, i) => ({
+                setVideos(
+                    CATEGORY_PLACEHOLDERS[category].map((id, i): VideoItem => ({
+                        id: `ph-${i}`,
+                        isPlaceholder: true,
+                        cloudinaryUrl: undefined,
+                        youtubeId: id,
+                        title: overlays[i % overlays.length]?.title || '',
+                        badge: overlays[i % overlays.length]?.badge || '',
+                        field1: overlays[i % overlays.length]?.field1,
+                        field2: overlays[i % overlays.length]?.field2,
+                        views: overlays[i % overlays.length]?.views || 0,
+                    }))
+                );
+            }
+        }, () => {
+            // Index error or permission error → show placeholders
+            const overlays = PLACEHOLDER_OVERLAY_DATA[category] || [];
+            setVideos(
+                CATEGORY_PLACEHOLDERS[category].map((id, i): VideoItem => ({
                     id: `ph-${i}`,
                     isPlaceholder: true,
                     cloudinaryUrl: undefined,
@@ -65,30 +91,14 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
                     field1: overlays[i % overlays.length]?.field1,
                     field2: overlays[i % overlays.length]?.field2,
                     views: overlays[i % overlays.length]?.views || 0,
-                }));
-                setVideos(ph);
-            }
-        }, () => {
-            // Fallback on error (e.g. index not yet built)
-            const overlays = PLACEHOLDER_OVERLAY_DATA[category] || [];
-            const ph: VideoItem[] = CATEGORY_PLACEHOLDERS[category].map((id, i) => ({
-                id: `ph-${i}`,
-                isPlaceholder: true,
-                cloudinaryUrl: undefined,
-                youtubeId: id,
-                title: overlays[i % overlays.length]?.title || '',
-                badge: overlays[i % overlays.length]?.badge || '',
-                field1: overlays[i % overlays.length]?.field1,
-                field2: overlays[i % overlays.length]?.field2,
-                views: overlays[i % overlays.length]?.views || 0,
-            }));
-            setVideos(ph);
+                }))
+            );
         });
 
         return () => unsubscribe();
     }, [category]);
 
-    // Thumbnail helper
+    // ── Thumbnail helper ──────────────────────────────────────────
     const getThumbnail = (item: VideoItem): string => {
         if (!item.isPlaceholder && item.cloudinaryUrl) {
             return item.cloudinaryUrl.replace('/upload/', '/upload/so_0,w_400,h_600,c_fill/');
@@ -96,7 +106,7 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
         return `https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`;
     };
 
-    // Filter logic
+    // ── Filter ────────────────────────────────────────────────────
     const providerBadges = ['Doctor', 'Teacher', 'Agent', 'Freelancer', 'Job Seeker', 'Helper', 'Lawyer', 'Profile'];
     const seekerBadges = ['Patient', 'Student', 'Buyer / Renter', 'Client', 'Company', 'Household', 'Hiring', 'Seeking', 'Looking'];
 
@@ -134,14 +144,12 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
                     className={`relative aspect-square overflow-hidden cursor-pointer bg-[#111] group ${isFeatured(i) ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'}`}
                     onClick={() => openFeedAtIndex(i)}
                 >
-                    {/* Thumbnail */}
                     <img
                         src={getThumbnail(item)}
                         alt={item.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         onError={(e) => {
-                            // Fallback thumbnail on error
-                            (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`;
+                            (e.target as HTMLImageElement).src = `https://via.placeholder.com/400x600/111111/333333?text=Video`;
                         }}
                     />
 
@@ -162,7 +170,6 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
                         <span className="text-[8px] md:text-[10px] text-[--accent] font-black uppercase tracking-wider">{item.badge}</span>
                     </div>
 
-                    {/* Play icon */}
                     <div className="absolute top-2 right-2 text-white/80">
                         <Play className="w-3 h-3 md:w-4 md:h-4 fill-current" />
                     </div>

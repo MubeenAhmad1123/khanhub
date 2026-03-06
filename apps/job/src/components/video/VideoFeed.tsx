@@ -33,34 +33,41 @@ export function VideoFeed() {
         setFirestoreLoading(true);
         setFirestoreVideos([]);
 
+        // Simple query on a single field — no composite index required
+        // Category filtering happens client-side to avoid Firestore index deployment
         const q = query(
             collection(db, 'videos'),
-            where('admin_status', '==', 'approved'),
-            where('is_live', '==', true),
-            where('category', '==', activeCategory),
-            orderBy('createdAt', 'desc')
+            where('is_live', '==', true)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const videos = snapshot.docs.map(d => ({
-                id: d.id,
-                isPlaceholder: false,
-                videoId: undefined,
-                cloudinaryUrl: d.data().cloudinaryUrl,
-                category: d.data().category,
-                title: d.data().overlayData?.title || '',
-                badge: d.data().overlayData?.badge || '',
-                field1: d.data().overlayData?.field1 || '',
-                field2: d.data().overlayData?.field2 || '',
-                location: d.data().overlayData?.location || '',
-                views: d.data().views || 0,
-                likes: d.data().likes || 0,
-                userId: d.data().userId,
-            }));
+            const videos = snapshot.docs
+                .map(d => ({ id: d.id, ...d.data() } as any))
+                // Filter client-side: must be approved + matching category
+                .filter(d =>
+                    d.admin_status === 'approved' &&
+                    (d.category === activeCategory || !d.category)
+                )
+                // Sort newest first
+                .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+                .map(d => ({
+                    id: d.id,
+                    isPlaceholder: false,
+                    videoId: undefined,
+                    cloudinaryUrl: d.cloudinaryUrl,
+                    category: d.category,
+                    title: d.overlayData?.title || d.title || '',
+                    badge: d.overlayData?.badge || d.role || '',
+                    field1: d.overlayData?.field1 || '',
+                    field2: d.overlayData?.field2 || '',
+                    location: d.overlayData?.location || d.city || '',
+                    views: d.views || 0,
+                    likes: d.likes || 0,
+                    userId: d.userId,
+                }));
             setFirestoreVideos(videos);
             setFirestoreLoading(false);
         }, () => {
-            // On error (e.g. missing index), fall back silently
             setFirestoreLoading(false);
         });
 
