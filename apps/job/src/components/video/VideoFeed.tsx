@@ -15,7 +15,7 @@ import { db } from '@/lib/firebase/firebase-config';
 
 export function VideoFeed() {
     const { activeCategory, activeRole } = useCategory();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const router = useRouter();
     const [activeIndex, setActiveIndex] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
@@ -113,7 +113,7 @@ export function VideoFeed() {
 
     // ── Guest wall via IntersectionObserver ───────────────────────
     useEffect(() => {
-        if (user) return;
+        if (loading || user) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -151,7 +151,7 @@ export function VideoFeed() {
 
     // ── Logged-in user: track active index via IntersectionObserver
     useEffect(() => {
-        if (!user) return;
+        if (loading || !user) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -368,17 +368,19 @@ export function VideoFeed() {
                 </button>
             </div>
 
-            <GuestWall
-                isVisible={showGuestWall}
-                onContinue={() => {
-                    const round = parseInt(localStorage.getItem('jobreel_guest_round') || '0');
-                    if (round === 0) {
-                        localStorage.setItem('jobreel_guest_round', '1');
-                        localStorage.setItem('jobreel_videos_watched', '0');
-                        setShowGuestWall(false);
-                    }
-                }}
-            />
+            {!user && !loading && (
+                <GuestWall
+                    isVisible={showGuestWall}
+                    onContinue={() => {
+                        const round = parseInt(localStorage.getItem('jobreel_guest_round') || '0');
+                        if (round === 0) {
+                            localStorage.setItem('jobreel_guest_round', '1');
+                            localStorage.setItem('jobreel_videos_watched', '0');
+                            setShowGuestWall(false);
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 }
