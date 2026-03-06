@@ -76,6 +76,7 @@ export function VideoFeed() {
                     shares: d.shares || 0,
                     userId: d.userId,
                     userPhoto: d.userPhoto || '',
+                    userRole: d.userRole || '',
                 }));
             setFirestoreVideos(videos);
             setFirestoreLoading(false);
@@ -303,9 +304,10 @@ export function VideoFeed() {
                                 <ActionButtons
                                     videoUserId={video.userId}
                                     videoUserPhoto={video.userPhoto}
+                                    videoUserRole={video.userRole}
                                     onConnect={() => {
-                                        if (video.userId || video.id) {
-                                            router.push(`/profile/jobseeker/${video.userId || video.id}`);
+                                        if (video.userId) {
+                                            router.push(`/profile/${video.userRole || 'user'}/${video.userId}`);
                                         }
                                     }}
                                     connectLabel={

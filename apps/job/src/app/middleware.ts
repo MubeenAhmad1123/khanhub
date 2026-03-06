@@ -22,22 +22,15 @@ export function middleware(request: NextRequest) {
 
     // 3. Define route groups
     const authRoutes = ['/auth/login', '/auth/register', '/auth/reset-password', '/auth/verify-payment'];
-    const protectedRoutes = ['/feed', '/dashboard', '/profile'];
+    const protectedRoutes = ['/dashboard/settings']; // Reduced scope since client-side auth handles most protection
 
     const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
     // 4. Implement redirect logic
 
-    // If authenticated and trying to access auth pages -> redirect to /feed
-    if (isAuthenticated && isAuthRoute) {
-        return NextResponse.redirect(new URL('/feed', request.url));
-    }
-
-    // If NOT authenticated and trying to access protected pages -> redirect to /auth/register
-    if (!isAuthenticated && isProtectedRoute) {
-        return NextResponse.redirect(new URL('/auth/register', request.url));
-    }
+    // We no longer strictly redirect protected routes here because Firebase client-side 
+    // auth handles it, and we don't currently have a session cookie synced.
 
     // Default: allow
     return NextResponse.next();

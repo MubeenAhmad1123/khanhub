@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 import { doc, updateDoc, increment, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
 interface ActionButtonsProps {
-    videoUserId?: string;        // ← NEW: to fetch uploader's avatar
-    videoUserPhoto?: string;     // ← NEW: uploader's profile photo
+    videoUserId?: string;
+    videoUserPhoto?: string;
+    videoUserRole?: string;
     onConnect: () => void;
     connectLabel: string;
     likes: number;
@@ -17,12 +19,18 @@ interface ActionButtonsProps {
 }
 
 export function ActionButtons({
-    videoUserId, videoUserPhoto,
+    videoUserId, videoUserPhoto, videoUserRole,
     onConnect, connectLabel,
     likes, saves, shares, videoId
 }: ActionButtonsProps) {
     const { user } = useAuth();
+    const router = useRouter();
     const [liked, setLiked] = useState(false);
+
+    const handleAvatarTap = () => {
+        if (!videoUserId) return;
+        router.push(`/profile/${videoUserRole || 'user'}/${videoUserId}`);
+    };
     const [saved, setSaved] = useState(false);
     const [localLikes, setLocalLikes] = useState(likes);
 
@@ -54,9 +62,9 @@ export function ActionButtons({
             {/* PROFILE AVATAR — top of action buttons (TikTok style) */}
             <div style={{ position: 'relative', marginBottom: 4 }}>
                 <div
-                    onClick={onConnect}
+                    onClick={handleAvatarTap}
                     style={{
-                        width: 44,              // ← TikTok size: 44px
+                        width: 44,
                         height: 44,
                         borderRadius: '50%',
                         overflow: 'hidden',
