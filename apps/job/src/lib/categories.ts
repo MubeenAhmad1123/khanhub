@@ -18,6 +18,17 @@ export interface CategoryConfig {
     imageUrl?: string;
 }
 
+export const CATEGORY_FEED_TABS: Record<string, string[]> = {
+    jobs: ['For You', 'Companies', 'Job Seekers'],
+    healthcare: ['For You', 'Doctors', 'Patients'],
+    education: ['For You', 'Teachers', 'Students'],
+    marriage: ['For You', 'Groom Side', 'Bride Side'],
+    domestic: ['For You', 'Helpers', 'Households'],
+    legal: ['For You', 'Lawyers', 'Clients'],
+    realestate: ['For You', 'Agents', 'Buyers'],
+    it: ['For You', 'Freelancers', 'Clients'],
+};
+
 export const PLACEHOLDER_VIDEO_IDS = [
     'jNQXAC9IVRw',
     'kJQP7kiw5Fk',

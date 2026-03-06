@@ -19,6 +19,7 @@ export function VideoFeed() {
     const { user } = useAuth();
     const router = useRouter();
     const [activeIndex, setActiveIndex] = useState(0);
+    const [activeTab, setActiveTab] = useState(0);
     const [showReveal, setShowReveal] = useState(false);
     const [showGuestWall, setShowGuestWall] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -40,13 +41,23 @@ export function VideoFeed() {
             where('is_live', '==', true)
         );
 
+        const getTabFilter = (tabIndex: number) => {
+            if (tabIndex === 0) return null;           // no filter
+            if (tabIndex === 1) return 'seeker';       // companies hiring, doctors, agents
+            if (tabIndex === 2) return 'provider';     // job seekers, patients looking
+            return null;
+        };
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
+            const roleFilter = getTabFilter(activeTab);
+
             const videos = snapshot.docs
                 .map(d => ({ id: d.id, ...d.data() } as any))
-                // Filter client-side: must be approved + matching category
+                // Filter client-side: must be approved + matching category + role tab
                 .filter(d =>
                     d.admin_status === 'approved' &&
-                    (d.category === activeCategory || !d.category)
+                    (d.category === activeCategory || !d.category) &&
+                    (!roleFilter || d.userRole === roleFilter)
                 )
                 // Sort newest first
                 .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
@@ -63,7 +74,10 @@ export function VideoFeed() {
                     location: d.overlayData?.location || d.city || '',
                     views: d.views || 0,
                     likes: d.likes || 0,
+                    saves: d.saves || 0,
+                    shares: d.shares || 0,
                     userId: d.userId,
+                    userPhoto: d.userPhoto || '',
                 }));
             setFirestoreVideos(videos);
             setFirestoreLoading(false);
@@ -72,7 +86,7 @@ export function VideoFeed() {
         });
 
         return () => unsubscribe();
-    }, [activeCategory]);
+    }, [activeCategory, activeTab]);
 
     // ── Build video list: real first, then placeholders ───────────
     const placeholderList = CATEGORY_PLACEHOLDERS[activeCategory].map((id, i) => ({
@@ -235,8 +249,8 @@ export function VideoFeed() {
                 flexShrink: 0,
             }}>
                 {/* FeedTabs floats over */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30 }}>
-                    <FeedTabs />
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30, pointerEvents: 'none', paddingTop: 'env(safe-area-inset-top, 12px)' }}>
+                    <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
                 </div>
 
                 <div
@@ -289,6 +303,8 @@ export function VideoFeed() {
                                 zIndex: 20,
                             }}>
                                 <ActionButtons
+                                    videoUserId={video.userId}
+                                    videoUserPhoto={video.userPhoto}
                                     onConnect={() => setShowReveal(true)}
                                     connectLabel={
                                         activeCategory === 'jobs'
@@ -297,6 +313,10 @@ export function VideoFeed() {
                                                 ? 'Interest 💍'
                                                 : 'Connect'
                                     }
+                                    likes={video.likes || 0}
+                                    saves={video.saves || 0}
+                                    shares={video.shares || 0}
+                                    videoId={video.id}
                                 />
                             </div>
                         </div>

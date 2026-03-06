@@ -16,44 +16,74 @@ interface VideoOverlayProps {
 export function VideoOverlay({ data }: VideoOverlayProps) {
     return (
         <div className="w-full px-4 pb-2 pointer-events-none">
-            <div className="max-w-[80%] space-y-3">
-                {/* Category Badge */}
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[--accent] text-black w-fit">
-                    <Zap className="w-3 h-3 fill-current" />
-                    <span className="text-[10px] font-black uppercase tracking-wider">{data.badge}</span>
-                </div>
+            {/* Badge — smaller */}
+            <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: 'var(--accent)',
+                padding: '2px 8px', borderRadius: 999,
+                marginBottom: 6,
+            }}>
+                <span style={{ fontSize: 9, fontWeight: 800, color: '#000', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'DM Sans' }}>
+                    {data.badge}
+                </span>
+            </div>
 
-                {/* Title / Name */}
-                <h3 className="text-2xl font-bold font-syne leading-tight text-white drop-shadow-md">
-                    {data.title}
-                </h3>
+            {/* Title — REDUCED from 24px to 17px */}
+            <h3 style={{
+                fontFamily: 'Syne',
+                fontWeight: 700,
+                fontSize: 17,            // ← was 24px, now 17px
+                color: '#fff',
+                margin: '0 0 4px',
+                lineHeight: 1.3,
+                textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+                maxWidth: '85%',
+            }}>
+                {data.title}
+            </h3>
 
-                {/* Dynamic Fields */}
-                <div className="space-y-1">
-                    {data.field1 && (
-                        <p className="text-sm font-medium text-white/90 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[--accent]" />
-                            {data.field1}
-                        </p>
-                    )}
-                    {data.field2 && (
-                        <p className="text-sm font-medium text-white/80 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                            {data.field2}
-                        </p>
-                    )}
-                </div>
+            {/* Fields — smaller */}
+            {data.field1 && (
+                <p style={{
+                    fontSize: 13,         // ← was 14px
+                    color: 'rgba(255,255,255,0.85)',
+                    margin: '0 0 2px',
+                    fontFamily: 'DM Sans',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+                    {data.field1}
+                </p>
+            )}
 
-                {/* Location & Verification */}
-                <div className="flex items-center gap-4 pt-1">
-                    <div className="flex items-center gap-1.5 text-[--text-muted]">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold uppercase tracking-widest">{data.location}</span>
+            {data.field2 && (
+                <p style={{
+                    fontSize: 12,
+                    color: 'rgba(255,255,255,0.7)',
+                    margin: '0 0 6px',
+                    fontFamily: 'DM Sans',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
+                    {data.field2}
+                </p>
+            )}
+
+            {/* Location + Verified — smaller */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {data.location && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(255,255,255,0.6)' }}>
+                        <span style={{ fontSize: 11 }}>📍</span>
+                        <span style={{ fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {data.location}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-1 text-[--accent]">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-black uppercase tracking-wider">Verified</span>
-                    </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--accent)' }}>
+                    <span style={{ fontSize: 11 }}>✓</span>
+                    <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        Verified
+                    </span>
                 </div>
             </div>
         </div>

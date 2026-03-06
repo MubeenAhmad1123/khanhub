@@ -2,35 +2,63 @@
 
 import React from 'react';
 import { useCategory } from '@/context/CategoryContext';
+import { CATEGORY_FEED_TABS } from '@/lib/categories';
 
-export function FeedTabs() {
-    const [activeTab, setActiveTab] = React.useState('for-you');
+interface FeedTabsProps {
+    activeTab: number;
+    onChange: (index: number) => void;
+}
 
-    const tabs = [
-        { id: 'for-you', label: 'For You' },
-        { id: 'nearby', label: 'Nearby' },
-        { id: 'following', label: 'Following' },
-    ];
+export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
+    const { activeCategory } = useCategory();
+
+    // Default to a generic list if category isn't found
+    const tabs = CATEGORY_FEED_TABS[activeCategory] || ['For You', 'Providers', 'Seekers'];
 
     return (
-        <div className="fixed top-16 left-0 right-0 z-40 flex justify-center pointer-events-none">
-            <div className="flex items-center gap-6 bg-black/20 backdrop-blur-sm px-6 py-2 rounded-full pointer-events-auto">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className="relative"
-                    >
-                        <span className={`text-xs font-black uppercase tracking-widest transition-colors ${activeTab === tab.id ? 'text-white' : 'text-white/40'
-                            }`}>
-                            {tab.label}
-                        </span>
-                        {activeTab === tab.id && (
-                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-[--accent] rounded-full" />
-                        )}
-                    </button>
-                ))}
-            </div>
+        <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 24,
+            padding: '12px 16px 8px',
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%)',
+            pointerEvents: 'all',
+        }}>
+            {tabs.map((tab, i) => (
+                <button
+                    key={tab}
+                    onClick={() => onChange(i)}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans',
+                        fontWeight: activeTab === i ? 700 : 400,
+                        fontSize: 15,
+                        color: activeTab === i ? '#fff' : 'rgba(255,255,255,0.55)',
+                        position: 'relative',
+                        padding: '2px 0',
+                        letterSpacing: '0.01em',
+                        transition: 'color 0.2s',
+                    }}
+                >
+                    {tab}
+                    {/* Active underline */}
+                    {activeTab === i && (
+                        <span style={{
+                            position: 'absolute',
+                            bottom: -4,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: 20,
+                            height: 2,
+                            background: '#fff',
+                            borderRadius: 999,
+                            display: 'block',
+                        }} />
+                    )}
+                </button>
+            ))}
         </div>
     );
 }

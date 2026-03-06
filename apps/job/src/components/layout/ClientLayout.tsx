@@ -19,7 +19,9 @@ export default function ClientLayout({
     const isAuthRoute = pathname?.startsWith('/auth');
 
     // Show new navigation only on non-admin and non-auth pages (main app area)
-    const showNav = !isAdminRoute && !isAuthRoute;
+    const hiddenRoutes = ['/feed']; // hide topbar on feed
+    const isFeedRoute = hiddenRoutes.includes(pathname || '');
+    const showNav = !isAdminRoute && !isAuthRoute && !isFeedRoute;
 
     const router = useRouter();
 
