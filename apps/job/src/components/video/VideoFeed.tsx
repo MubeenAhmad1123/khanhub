@@ -163,75 +163,185 @@ export function VideoFeed() {
 
     // ── Jump to index from Explore page ──────────────────────────
     useEffect(() => {
-        const startIndex = Number(sessionStorage.getItem('feed_start_index') || 0);
-        if (startIndex > 0 && containerRef.current) {
-            containerRef.current.scrollTop = startIndex * window.innerHeight;
-            setActiveIndex(startIndex);
+        const startIndex = sessionStorage.getItem('feed_start_index');
+        const videoId = sessionStorage.getItem('feed_video_id');
+
+        if (startIndex && containerRef.current) {
+            const idx = Number(startIndex);
+            setTimeout(() => {
+                containerRef.current!.scrollTop = idx * window.innerHeight;
+                setActiveIndex(idx);
+            }, 100);
             sessionStorage.removeItem('feed_start_index');
+            sessionStorage.removeItem('feed_video_id');
+            sessionStorage.removeItem('feed_source');
         }
         watchedIndices.current = new Set();
-    }, [activeCategory]);
+    }, [videos.length]);
+
+    // Scroll to specific index programmatically
+    const scrollToIndex = (index: number) => {
+        if (index < 0 || index >= videos.length) return;
+        reelRefs.current[index]?.scrollIntoView({ behavior: 'smooth' });
+        setActiveIndex(index);
+    };
+
+    // Keyboard arrow keys — desktop navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                scrollToIndex(activeIndex + 1);
+            }
+            if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                scrollToIndex(activeIndex - 1);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [activeIndex, videos.length]);
 
     return (
-        <div className="relative bg-black" style={{ height: '100dvh', overflow: 'hidden' }}>
-            {/* FeedTabs floats OVER the video */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30 }}>
-                <FeedTabs />
+        <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: '#000',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+        }}>
+            {/* Desktop side panels — black with subtle content */}
+            <div className="hidden md:flex" style={{
+                flex: 1,
+                height: '100dvh',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                paddingRight: 24,
+                gap: 16,
+            }}>
+                <div style={{ color: '#333', fontSize: 12, fontFamily: 'DM Sans', textAlign: 'right' }}>
+                    <div>↑ ↓ to navigate</div>
+                </div>
             </div>
 
-            <div
-                ref={containerRef}
-                className="scrollbar-hide"
-                style={{
-                    height: '100dvh',
-                    overflowY: 'scroll',
-                    scrollSnapType: 'y mandatory',
-                    WebkitOverflowScrolling: 'touch',
-                }}
-            >
-                {videos.map((video, index) => (
-                    <div
-                        key={video.id}
-                        ref={(el) => { reelRefs.current[index] = el; }}
-                        style={{
-                            position: 'relative',
-                            height: '100dvh',
-                            width: '100%',
-                            overflow: 'hidden',
-                            background: '#000',
-                            scrollSnapAlign: 'start',
-                            scrollSnapStop: 'always',
-                            flexShrink: 0,
-                        }}
-                    >
-                        {/* VIDEO */}
-                        <ReelPlayer
-                            videoId={video.videoId}
-                            cloudinaryUrl={video.cloudinaryUrl}
-                            isPlaceholder={video.isPlaceholder}
-                            isActive={activeIndex === index && !showGuestWall}
-                        />
+            {/* CENTER COLUMN — the actual feed */}
+            <div style={{
+                width: '100%',
+                maxWidth: 400,
+                height: '100dvh',
+                position: 'relative',
+                overflow: 'hidden',
+                flexShrink: 0,
+            }}>
+                {/* FeedTabs floats over */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30 }}>
+                    <FeedTabs />
+                </div>
 
-                        {/* OVERLAY */}
-                        <div style={{ position: 'absolute', bottom: 80, left: 0, right: 60, zIndex: 20, pointerEvents: 'none' }}>
-                            <VideoOverlay data={video} />
-                        </div>
-
-                        {/* ACTION BUTTONS */}
-                        <div style={{ position: 'absolute', right: 12, bottom: 100, zIndex: 20 }}>
-                            <ActionButtons
-                                onConnect={() => setShowReveal(true)}
-                                connectLabel={
-                                    activeCategory === 'jobs'
-                                        ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋')
-                                        : activeCategory === 'marriage'
-                                            ? 'Interest 💍'
-                                            : 'Connect'
-                                }
+                <div
+                    ref={containerRef}
+                    className="scrollbar-hide"
+                    style={{
+                        height: '100dvh',
+                        overflowY: 'scroll',
+                        scrollSnapType: 'y mandatory',
+                        WebkitOverflowScrolling: 'touch',
+                    }}
+                >
+                    {videos.map((video, index) => (
+                        <div
+                            key={video.id}
+                            ref={(el) => { reelRefs.current[index] = el; }}
+                            style={{
+                                position: 'relative',
+                                height: '100dvh',
+                                width: '100%',
+                                overflow: 'hidden',
+                                background: '#000',
+                                scrollSnapAlign: 'start',
+                                scrollSnapStop: 'always',
+                                flexShrink: 0,
+                            }}
+                        >
+                            <ReelPlayer
+                                videoId={video.videoId}
+                                cloudinaryUrl={video.cloudinaryUrl}
+                                isPlaceholder={video.isPlaceholder}
+                                isActive={activeIndex === index && !showGuestWall}
                             />
+
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 80,
+                                left: 0,
+                                right: 60,
+                                zIndex: 20,
+                                pointerEvents: 'none',
+                            }}>
+                                <VideoOverlay data={video} />
+                            </div>
+
+                            <div style={{
+                                position: 'absolute',
+                                right: 12,
+                                bottom: 100,
+                                zIndex: 20,
+                            }}>
+                                <ActionButtons
+                                    onConnect={() => setShowReveal(true)}
+                                    connectLabel={
+                                        activeCategory === 'jobs'
+                                            ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋')
+                                            : activeCategory === 'marriage'
+                                                ? 'Interest 💍'
+                                                : 'Connect'
+                                    }
+                                />
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
+            </div>
+
+            {/* RIGHT SIDE — desktop navigation arrows */}
+            <div className="hidden md:flex" style={{
+                flex: 1,
+                height: '100dvh',
+                alignItems: 'center',
+                paddingLeft: 24,
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: 16,
+            }}>
+                <button
+                    onClick={() => scrollToIndex(activeIndex - 1)}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#333')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#1A1A1A')}
+                    style={{
+                        width: 44, height: 44, borderRadius: '50%',
+                        background: '#1A1A1A', border: '1px solid #333',
+                        color: '#fff', fontSize: 18, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'background 0.2s',
+                    }}
+                >
+                    ↑
+                </button>
+                <button
+                    onClick={() => scrollToIndex(activeIndex + 1)}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#333')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#1A1A1A')}
+                    style={{
+                        width: 44, height: 44, borderRadius: '50%',
+                        background: '#1A1A1A', border: '1px solid #333',
+                        color: '#fff', fontSize: 18, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'background 0.2s',
+                    }}
+                >
+                    ↓
+                </button>
             </div>
 
             <RevealContactSheet
@@ -246,12 +356,10 @@ export function VideoFeed() {
                 onContinue={() => {
                     const round = parseInt(localStorage.getItem('jobreel_guest_round') || '0');
                     if (round === 0) {
-                        // Allow 3 more — enter round 2
                         localStorage.setItem('jobreel_guest_round', '1');
                         localStorage.setItem('jobreel_videos_watched', '0');
                         setShowGuestWall(false);
                     }
-                    // If round >= 1: wall stays (GuestWall hides the bypass button)
                 }}
             />
         </div>

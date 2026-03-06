@@ -63,24 +63,55 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
         >
             {/* REAL VIDEO — Cloudinary native <video> */}
             {!isPlaceholder && cloudinaryUrl && (
-                <video
-                    ref={videoRef}
-                    src={cloudinaryUrl}
-                    muted={isMuted}
-                    loop
-                    playsInline
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                <>
+                    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0 }}>
+                        <video
+                            src={cloudinaryUrl}
+                            muted loop playsInline
+                            style={{
+                                width: '100%', height: '100%',
+                                objectFit: 'cover',
+                                filter: 'blur(20px) brightness(0.4)',
+                                transform: 'scale(1.1)',
+                            }}
+                        />
+                    </div>
+                    <video
+                        ref={videoRef}
+                        src={cloudinaryUrl}
+                        muted={isMuted}
+                        loop playsInline
+                        style={{
+                            position: 'absolute', inset: 0,
+                            width: '100%', height: '100%',
+                            objectFit: 'contain',
+                            zIndex: 1,
+                        }}
+                    />
+                </>
             )}
 
             {/* PLACEHOLDER — YouTube iframe */}
             {isPlaceholder && isActive && embedUrl && (
-                <iframe
-                    src={embedUrl}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                    allow="autoplay; encrypted-media; fullscreen"
-                    loading="lazy"
-                />
+                <div style={{ position: 'absolute', inset: 0 }}>
+                    <iframe
+                        src={embedUrl}
+                        style={{
+                            position: 'absolute',
+                            top: '-10%',
+                            left: 0,
+                            width: '100%',
+                            height: '120%',
+                            border: 'none',
+                            pointerEvents: 'none',
+                        }}
+                        allow="autoplay; encrypted-media"
+                    />
+                    <div
+                        style={{ position: 'absolute', inset: 0, zIndex: 2 }}
+                        onClick={toggleMute}
+                    />
+                </div>
             )}
 
             {/* Gradient overlay */}

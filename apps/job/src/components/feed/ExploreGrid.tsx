@@ -99,9 +99,19 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
     }, [category]);
 
     // ── Thumbnail helper ──────────────────────────────────────────
+    const getCloudinaryThumbnail = (videoUrl: string): string => {
+        if (!videoUrl) return '';
+        if (!videoUrl.includes('cloudinary.com')) return videoUrl;
+        return videoUrl
+            .replace('/video/upload/', '/video/upload/so_0,w_400,h_711,c_fill,q_80/')
+            .replace('.mp4', '.jpg')
+            .replace('.webm', '.jpg')
+            .replace('.mov', '.jpg');
+    };
+
     const getThumbnail = (item: VideoItem): string => {
         if (!item.isPlaceholder && item.cloudinaryUrl) {
-            return item.cloudinaryUrl.replace('/upload/', '/upload/so_0,w_400,h_600,c_fill/');
+            return getCloudinaryThumbnail(item.cloudinaryUrl);
         }
         return `https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`;
     };
@@ -137,7 +147,14 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
     const isFeatured = (index: number) => index % 7 === 3;
 
     return (
-        <div className="grid grid-cols-3 gap-[2px] w-full">
+        <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+            gap: 2,
+            maxWidth: 935,
+            margin: '0 auto',
+            padding: '0 0 80px',
+        }}>
             {filteredItems.map((item, i) => (
                 <div
                     key={item.id}

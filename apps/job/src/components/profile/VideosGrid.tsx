@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Play, Video } from 'lucide-react';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 interface VideosGridProps {
     uid: string;
@@ -13,6 +14,14 @@ interface VideosGridProps {
 export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
     const [videos, setVideos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
+
+    const openVideoInFeed = (videoIndex: number, videoId: string) => {
+        sessionStorage.setItem('feed_start_index', String(videoIndex));
+        sessionStorage.setItem('feed_source', 'profile');
+        sessionStorage.setItem('feed_video_id', videoId);
+        router.push('/feed');
+    };
 
     useEffect(() => {
         if (!uid) return;
@@ -106,7 +115,7 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
                         key={vid.id}
                         className="relative overflow-hidden group cursor-pointer bg-[#0d0d0d]"
                         style={{ aspectRatio: '9/16' }}
-                        onClick={() => onVideoTap?.(index)}
+                        onClick={() => openVideoInFeed(index, vid.id)}
                     >
                         {thumb ? (
                             <img

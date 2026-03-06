@@ -60,11 +60,16 @@ export default function HomePage() {
             </nav>
 
             {/* Hero Section */}
-            <header className="px-6 pt-12 pb-16 max-w-7xl mx-auto w-full">
+            <header className="px-6 pt-12 pb-16 max-w-7xl mx-auto w-full flex flex-col items-center text-center">
                 <motion.h1
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-6xl md:text-8xl font-syne font-bold mb-6 leading-[0.9] tracking-tight"
+                    style={{
+                        fontFamily: 'Syne', fontWeight: 900,
+                        fontSize: 'clamp(36px, 6vw, 72px)',
+                        color: '#fff', lineHeight: 1.1, margin: 0,
+                        marginBottom: 16
+                    }}
                 >
                     Find Your<br />
                     <span className="text-[#FF0069] italic">Perfect Match.</span>
@@ -73,21 +78,52 @@ export default function HomePage() {
                 <p className="text-[--text-muted] max-w-md text-lg leading-relaxed mb-4">
                     Video-first platform connecting people across 8 industries in Pakistan.
                 </p>
-                <p className="text-[--text-muted] font-bold text-sm uppercase tracking-widest">
+                <p className="font-bold uppercase tracking-widest text-[#888] font-sans" style={{ fontSize: 'clamp(14px, 1.5vw, 16px)' }}>
                     Select your industry to begin
                 </p>
             </header>
 
             {/* Category Grid */}
-            <main className="px-6 pb-24 max-w-7xl mx-auto w-full">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <main className="px-6 pb-24 max-w-7xl mx-auto w-full flex flex-col items-center">
+                <div style={{
+                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24,
+                    width: '100%', maxWidth: 800,
+                }} className="category-grid">
                     {HOMEPAGE_CATEGORIES.map((cat) => (
-                        <CategoryCard
+                        <div
                             key={cat.key}
-                            category={cat}
-                            isSelected={selectedCat?.key === cat.key}
                             onClick={() => handleCategorySelect(cat)}
-                        />
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                        >
+                            <div style={{
+                                width: 'clamp(70px, 10vw, 100px)', height: 'clamp(70px, 10vw, 100px)',
+                                borderRadius: '50%', overflow: 'hidden',
+                                border: `2px solid #1A1A1A`,
+                                transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.2s',
+                                position: 'relative', flexShrink: 0,
+                            }}
+                                className={`cat-circle ${selectedCat?.key === cat.key ? 'selected' : ''}`}
+                            >
+                                <img
+                                    src={`/${cat.image}`} alt={cat.label}
+                                    style={{
+                                        width: '100%', height: '100%', objectFit: 'cover',
+                                        filter: selectedCat?.key === cat.key ? 'brightness(0.8)' : 'brightness(0.6)',
+                                        transition: 'filter 0.3s, transform 0.4s',
+                                    }}
+                                />
+                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
+                                    {cat.emoji}
+                                </div>
+                            </div>
+                            <span style={{
+                                fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12,
+                                color: selectedCat?.key === cat.key ? cat.accent : '#888',
+                                textAlign: 'center', transition: 'color 0.3s', lineHeight: 1.2,
+                            }}>
+                                {cat.label}
+                            </span>
+                        </div>
                     ))}
                 </div>
             </main>
@@ -174,56 +210,31 @@ export default function HomePage() {
                     transform: scale(1.05);
                 }
 
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
+                }
+                
+                @media (max-width: 480px) {
+                    .category-grid {
+                        grid-template-columns: repeat(4, 1fr) !important;
+                        gap: 12px !important;
+                    }
+                }
+                .cat-circle.selected {
+                    border-color: var(--accent) !important;
+                    box-shadow: 0 0 20px rgba(255,0,105,0.4);
+                    transform: scale(1.05);
+                }
+                .cat-circle:hover {
+                    border-color: var(--accent) !important;
+                    transform: scale(1.05);
+                }
+                .cat-circle:hover img {
+                    filter: brightness(0.8) !important;
                 }
             `}</style>
         </div>
     );
 }
 
-function CategoryCard({ category, isSelected, onClick }: any) {
-    return (
-        <div
-            onClick={onClick}
-            className={`category-card relative aspect-[1/1.1] rounded-[24px] overflow-hidden cursor-pointer border border-[#1A1A1A] transition-all duration-300 group ${isSelected ? 'scale-[0.98]' : ''
-                }`}
-        >
-            {/* Background image */}
-            <img
-                src={`/${category.image}`}
-                alt={category.label}
-                className="absolute inset-0 w-full h-full object-cover brightness-[0.4] transition-all duration-500"
-            />
-
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-
-            {/* Content */}
-            <div className="absolute inset-0 p-5 flex flex-col justify-end">
-                <div className="text-3xl mb-2 transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1 origin-left">
-                    {category.emoji}
-                </div>
-                <div className="font-syne font-bold text-xl leading-tight text-white mb-1">
-                    {category.label}
-                </div>
-                <div className="text-[10px] text-[--text-muted] font-medium tracking-wide">
-                    {category.tagline}
-                </div>
-            </div>
-
-            {/* Selection Glow Border */}
-            <div
-                className={`absolute inset-0 border-2 rounded-[24px] transition-opacity duration-300 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'
-                    }`}
-                style={{
-                    borderColor: category.accent,
-                    boxShadow: `inset 0 0 30px ${category.accent}33`
-                }}
-            />
-        </div>
-    );
-}
 
 function RoleOption({ title, tagline, icon, accent, onClick }: any) {
     return (

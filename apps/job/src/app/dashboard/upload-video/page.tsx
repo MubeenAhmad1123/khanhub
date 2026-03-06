@@ -40,6 +40,43 @@ const formatDuration = (seconds: number) => {
     return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+const generateVideoFrames = async (file: File): Promise<string[]> => {
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(file);
+    video.muted = true;
+
+    await new Promise(resolve => { video.onloadeddata = resolve; });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 200;
+    canvas.height = 356;  // 9:16 aspect ratio
+    const ctx = canvas.getContext('2d')!;
+
+    const frames: string[] = [];
+    const times = [1, video.duration * 0.3, video.duration * 0.6];
+
+    for (const time of times) {
+        if (!isFinite(time)) continue;
+        video.currentTime = time;
+        await new Promise(resolve => { video.onseeked = resolve; });
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        frames.push(canvas.toDataURL('image/jpeg', 0.8));
+    }
+
+    window.URL.revokeObjectURL(video.src);
+    return frames;
+};
+
+const getCloudinaryThumb = (videoUrl: string): string => {
+    if (!videoUrl) return '';
+    if (!videoUrl.includes('cloudinary.com')) return videoUrl;
+    return videoUrl
+        .replace('/video/upload/', '/video/upload/so_0,w_400,h_711,c_fill,q_80/')
+        .replace('.mp4', '.jpg')
+        .replace('.webm', '.jpg')
+        .replace('.mov', '.jpg');
+};
+
 /* ─── buildOverlayData ─────────────────────────────────────────── */
 function buildOverlayData(formData: Record<string, any>, category: string, role: string) {
     const map: Record<string, Record<string, any>> = {
@@ -419,6 +456,10 @@ export default function UploadVideoPage() {
     const [videoDuration, setVideoDuration] = useState<number>(0);
     const [validationError, setValidationError] = useState<string | null>(null);
 
+    const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+    const [videoFrames, setVideoFrames] = useState<string[]>([]);
+    const [selectedFrame, setSelectedFrame] = useState<number | null>(null);
+
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [caption, setCaption] = useState('');
 
@@ -468,6 +509,11 @@ export default function UploadVideoPage() {
         setVideoDuration(duration);
         setVideoFile(file);
         setPreviewUrl(URL.createObjectURL(file));
+
+        generateVideoFrames(file).then(frames => {
+            setVideoFrames(frames);
+            setSelectedFrame(0);
+        });
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -494,10 +540,24 @@ export default function UploadVideoPage() {
                 (progress) => setUploadProgress(progress.percentage)
             );
 
-            // 2. Build overlay data
+            // 2. Thumbnail Processing
+            let thumbnailUrl = '';
+            if (thumbnailFile) {
+                const thumbResult = await uploadToCloudinary(thumbnailFile, 'jobreel_thumbnails', () => { });
+                thumbnailUrl = thumbResult.secureUrl;
+            } else if (selectedFrame !== null && videoFrames[selectedFrame]) {
+                const blob = await fetch(videoFrames[selectedFrame]).then(r => r.blob());
+                const frameFile = new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' });
+                const thumbResult = await uploadToCloudinary(frameFile, 'jobreel_thumbnails', () => { });
+                thumbnailUrl = thumbResult.secureUrl;
+            } else {
+                thumbnailUrl = getCloudinaryThumb(result.secureUrl);
+            }
+
+            // 3. Build overlay data
             const overlayData = buildOverlayData(formData, userCategory, userRole);
 
-            // 3. Write to Firestore 'videos' collection (schema admin page reads)
+            // 4. Write to Firestore 'videos' collection (schema admin page reads)
             const videoDocRef = await addDoc(collection(db, 'videos'), {
                 // User info
                 userId: user.uid,
@@ -508,6 +568,7 @@ export default function UploadVideoPage() {
                 // Video
                 cloudinaryUrl: result.secureUrl,
                 cloudinaryPublicId: result.publicId,
+                thumbnailUrl,
 
                 // Category
                 category: userCategory,
@@ -576,6 +637,9 @@ export default function UploadVideoPage() {
         setPreviewUrl(null);
         setVideoDuration(0);
         setValidationError(null);
+        setThumbnailFile(null);
+        setVideoFrames([]);
+        setSelectedFrame(null);
         setFormData({});
         setCaption('');
         setUploadError(null);
@@ -847,6 +911,61 @@ export default function UploadVideoPage() {
                             {formatDuration(videoDuration)} · {formatBytes(videoFile?.size || 0)}
                         </p>
                     </div>
+                </div>
+
+                {/* Thumbnail selector — after video selected */}
+                <div style={{ marginBottom: 24 }}>
+                    <div style={{ color: '#ccc', fontSize: 13, fontWeight: 600, fontFamily: 'DM Sans', marginBottom: 8 }}>
+                        Cover Image (optional)
+                    </div>
+
+                    {!thumbnailFile ? (
+                        <div style={{
+                            display: 'flex', gap: 12, alignItems: 'center', overflowX: 'auto', paddingBottom: 8
+                        }}>
+                            {/* Auto-generated frames from video */}
+                            {videoFrames.map((frame, i) => (
+                                <div
+                                    key={i}
+                                    onClick={() => setSelectedFrame(i)}
+                                    style={{
+                                        width: 56, height: 80, borderRadius: 8, overflow: 'hidden',
+                                        border: selectedFrame === i ? '2px solid var(--accent)' : '2px solid #2a2a2a',
+                                        background: '#0a0a0a', cursor: 'pointer', flexShrink: 0,
+                                    }}
+                                >
+                                    <img src={frame} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                            ))}
+
+                            {/* Custom upload option */}
+                            <label style={{
+                                width: 56, height: 80, borderRadius: 8,
+                                border: '2px dashed #2a2a2a', background: '#0a0a0a',
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyItems: 'center',
+                                cursor: 'pointer', color: '#888', fontSize: 10,
+                                fontFamily: 'DM Sans', gap: 4, flexShrink: 0,
+                                transition: 'all 0.2s', padding: 4, textAlign: 'center'
+                            }}>
+                                <input type="file" accept="image/*" style={{ display: 'none' }}
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) setThumbnailFile(e.target.files[0]);
+                                    }} />
+                                <span style={{ fontSize: 18 }}>📷</span>
+                                Custom
+                            </label>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#0a0a0a', padding: 8, borderRadius: 12, border: '1px solid #1a1a1a' }}>
+                            <img src={URL.createObjectURL(thumbnailFile)}
+                                style={{ width: 56, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                            <button onClick={() => setThumbnailFile(null)}
+                                style={{ color: '#FF0069', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '8px 16px' }}>
+                                Remove Custom Cover
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Section label */}

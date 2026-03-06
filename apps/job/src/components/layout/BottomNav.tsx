@@ -13,11 +13,10 @@ export function BottomNav() {
     const { activeCategory } = useCategory();
 
     const navItems = [
-        { label: 'Feed', icon: Home, href: '/feed' },
-        { label: 'Explore', icon: Search, href: '/explore' },
-        { label: 'Post', icon: PlusSquare, href: '/dashboard/upload-video', highlight: true },
-        { label: 'Inbox', icon: MessageCircle, href: '/messages' },
-        { label: 'Profile', icon: User, href: '/dashboard/profile' },
+        { icon: Home, label: 'Feed', href: '/feed' },
+        { icon: Search, label: 'Explore', href: '/explore' },
+        { icon: PlusSquare, label: 'Post', href: '/dashboard/upload-video' },
+        { icon: User, label: 'Profile', href: '/dashboard/profile', requiresAuth: true },
     ];
 
     const handleProfileClick = (e: React.MouseEvent, href: string) => {
@@ -28,30 +27,58 @@ export function BottomNav() {
     };
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-lg border-t border-[--border] px-6 py-2 pt-3 pb-8 md:pb-4 z-50">
-            <div className="flex justify-between items-center max-w-lg mx-auto">
-                {navItems.map((item) => {
-                    const isActive = pathname === item.href;
-                    const Icon = item.icon;
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={(e) => handleProfileClick(e, item.href)}
-                            className={`flex flex-col items-center gap-1 transition-all ${isActive ? 'text-white' : 'text-[--text-muted]'
-                                } hover:text-white`}
-                        >
-                            <div className="relative">
-                                <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-110' : ''}`} style={{ color: isActive ? 'var(--accent)' : 'inherit' }} />
-                                {isActive && (
-                                    <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[--accent] blur-[2px] opacity-50" />
-                                )}
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
-                        </Link>
-                    );
-                })}
-            </div>
+        <nav
+            className="md:hidden"
+            style={{
+                position: 'fixed', bottom: 0, left: 0, right: 0,
+                background: 'rgba(0,0,0,0.95)',
+                backdropFilter: 'blur(20px)',
+                borderTop: '1px solid #1A1A1A',
+                display: 'flex',
+                zIndex: 50,
+                paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+            }}
+        >
+            {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
+
+                const handleClick = (e: React.MouseEvent) => {
+                    if (item.requiresAuth && !auth.currentUser) {
+                        e.preventDefault();
+                        router.push('/auth/register?from=profile');
+                    }
+                };
+
+                return (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={handleClick}
+                        style={{
+                            flex: 1, padding: '10px 0',
+                            background: 'none', border: 'none',
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', gap: 4,
+                            cursor: 'pointer',
+                            color: isActive ? 'var(--accent)' : '#555',
+                            transition: 'color 0.2s',
+                        }}
+                    >
+                        <Icon size={item.label === 'Post' ? 28 : 22}
+                            strokeWidth={item.label === 'Post' ? 2.5 : 1.5}
+                            style={item.label === 'Post' ? {
+                                background: 'linear-gradient(135deg, var(--accent), #7638FA)',
+                                borderRadius: 8, padding: 2,
+                                color: '#fff',
+                            } : {}}
+                        />
+                        <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 600 }}>
+                            {item.label}
+                        </span>
+                    </Link>
+                );
+            })}
         </nav>
     );
 }
