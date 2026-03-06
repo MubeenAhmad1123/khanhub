@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, UserPlus, LogIn, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
-
+import { UserPlus } from 'lucide-react';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/firebase-config';
 import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -20,6 +18,13 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
+    // Round 0: user just hit 3 videos for the first time → show bypass button
+    // Round 1: user has already used the bypass → show ONLY Google sign-in, no bypass
+    const guestRound = parseInt(
+        typeof window !== 'undefined' ? localStorage.getItem('jobreel_guest_round') || '0' : '0'
+    );
+    const isHardWall = guestRound >= 1;
+
     const handleGoogleSignIn = async () => {
         setLoading(true);
         try {
@@ -27,16 +32,13 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
 
-            // 2. Read stored guest prefs
             const guestPrefs = JSON.parse(localStorage.getItem('jobreel_guest_prefs') || '{}');
             const sessionId = localStorage.getItem('jobreel_session_id');
 
-            // 3. Check if user already exists in Firestore
             const userRef = doc(db, 'users', user.uid);
             const userSnap = await getDoc(userRef);
 
             if (!userSnap.exists()) {
-                // 4. Create new user document (One-Time)
                 await setDoc(userRef, {
                     uid: user.uid,
                     name: user.displayName,
@@ -53,17 +55,17 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                 });
             }
 
-            // 5. Clear guest wall counter
+            // Clear guest counters
             localStorage.removeItem('jobreel_videos_watched');
+            localStorage.removeItem('jobreel_guest_round');
             localStorage.setItem('jobreel_registered', 'true');
 
-            // 6. Update guest session if exists
             if (sessionId) {
                 await updateDoc(doc(db, 'guest_sessions', sessionId), {
                     converted: true,
                     convertedAt: serverTimestamp(),
                     uid: user.uid,
-                });
+                }).catch(() => { });
             }
 
             onContinue();
@@ -96,9 +98,13 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                         <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[--accent] shadow-[0_0_10px_var(--accent-glow)]" />
                     </div>
 
-                    <h2 className="text-3xl font-bold font-syne mb-3">You've seen 3 reels</h2>
+                    <h2 className="text-3xl font-bold font-syne mb-3">
+                        {isHardWall ? "That's your limit!" : "You've seen 3 reels"}
+                    </h2>
                     <p className="text-[--text-muted] mb-12 max-w-xs leading-relaxed text-sm">
-                        🎬 Register free to keep watching and connect with people in your industry.
+                        {isHardWall
+                            ? '🔒 Register free to keep watching and connect with people in your industry.'
+                            : '🎬 Register free to keep watching and connect with people in your industry.'}
                     </p>
 
                     <div className="w-full max-w-xs space-y-4">
@@ -117,12 +123,15 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                         </button>
                     </div>
 
-                    <button
-                        onClick={onContinue}
-                        className="mt-12 text-[--text-muted] hover:text-white text-[10px] font-black uppercase tracking-[0.3em] transition-colors"
-                    >
-                        ✕ Watch 3 more as guest
-                    </button>
+                    {/* Only show bypass on first wall (round 0) */}
+                    {!isHardWall && (
+                        <button
+                            onClick={onContinue}
+                            className="mt-12 text-[--text-muted] hover:text-white text-[10px] font-black uppercase tracking-[0.3em] transition-colors"
+                        >
+                            ✕ Watch 3 more as guest
+                        </button>
+                    )}
 
                     <div className="absolute bottom-12 text-[10px] text-[--text-muted] uppercase tracking-[0.3em] font-black italic">
                         <span className="text-[--accent]">JOB</span>REEL

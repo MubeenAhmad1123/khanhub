@@ -1,80 +1,115 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Volume2, VolumeX, Play } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 
 interface ReelPlayerProps {
-    videoId: string;
+    videoId?: string;         // YouTube ID (placeholder)
+    cloudinaryUrl?: string;   // Cloudinary URL (real video)
+    isPlaceholder: boolean;
     isActive: boolean;
 }
 
-export function ReelPlayer({ videoId, isActive }: ReelPlayerProps) {
+export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: ReelPlayerProps) {
     const [isMuted, setIsMuted] = useState(true);
-    const [userUnmuted, setUserUnmuted] = useState(false);
+    const [userActed, setUserActed] = useState(false);
     const [showMuteIndicator, setShowMuteIndicator] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
-    // Auto-unmute after video loads when active
+    // Auto-unmute after 800ms for YouTube (autoplay workaround)
     useEffect(() => {
-        if (isActive && !userUnmuted) {
+        if (isActive && !userActed) {
             const timer = setTimeout(() => {
                 setIsMuted(false);
-                setUserUnmuted(true);
+                setUserActed(true);
             }, 800);
             return () => clearTimeout(timer);
         }
-    }, [isActive, userUnmuted]);
+    }, [isActive, userActed]);
 
-    // YouTube Shorts embed URL
-    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=${isActive ? 1 : 0}&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3`;
+    // Play/pause real Cloudinary video based on isActive
+    useEffect(() => {
+        if (!isPlaceholder && videoRef.current) {
+            if (isActive) {
+                videoRef.current.play().catch(() => { });
+            } else {
+                videoRef.current.pause();
+                videoRef.current.currentTime = 0;
+            }
+        }
+    }, [isActive, isPlaceholder]);
+
+    // YouTube embed URL
+    const embedUrl = isPlaceholder && videoId
+        ? `https://www.youtube.com/embed/${videoId}?autoplay=${isActive ? 1 : 0}&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3`
+        : null;
 
     const toggleMute = () => {
-        setIsMuted(!isMuted);
-        setUserUnmuted(true);
+        if (!isPlaceholder && videoRef.current) {
+            videoRef.current.muted = !videoRef.current.muted;
+            setIsMuted(videoRef.current.muted);
+        } else {
+            setIsMuted(prev => !prev);
+        }
+        setUserActed(true);
         setShowMuteIndicator(true);
         setTimeout(() => setShowMuteIndicator(false), 1500);
     };
 
     return (
         <div
-            ref={containerRef}
             onClick={toggleMute}
-            style={{
-                position: 'absolute',
-                inset: 0,
-                background: '#000',
-                overflow: 'hidden',
-                cursor: 'pointer',
-            }}
+            style={{ position: 'absolute', inset: 0, background: '#000', overflow: 'hidden', cursor: 'pointer' }}
         >
-            {/* VIDEO LAYER - fills entire container */}
-            <div className="absolute inset-0">
-                {isActive && (
-                    <iframe
-                        src={embedUrl}
-                        className="w-full h-full border-none"
-                        style={{ objectFit: 'cover' }}
-                        allow="autoplay; encrypted-media; fullscreen"
-                        loading="lazy"
-                    />
-                )}
-            </div>
+            {/* REAL VIDEO — Cloudinary native <video> */}
+            {!isPlaceholder && cloudinaryUrl && (
+                <video
+                    ref={videoRef}
+                    src={cloudinaryUrl}
+                    muted={isMuted}
+                    loop
+                    playsInline
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+            )}
 
-            {/* GRADIENT OVERLAY - bottom fade */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none z-[5]" />
+            {/* PLACEHOLDER — YouTube iframe */}
+            {isPlaceholder && isActive && embedUrl && (
+                <iframe
+                    src={embedUrl}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                    allow="autoplay; encrypted-media; fullscreen"
+                    loading="lazy"
+                />
+            )}
 
-            {/* Placeholder / Black Screen when not active */}
-            {!isActive && <div className="absolute inset-0 bg-black z-[1]" />}
+            {/* Gradient overlay */}
+            <div
+                style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 40%, transparent 70%)',
+                    pointerEvents: 'none', zIndex: 5,
+                }}
+            />
 
-            {/* Mute Indicator */}
-            <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none z-40 ${showMuteIndicator ? 'opacity-100' : 'opacity-0'}`}>
-                <div className="bg-black/40 backdrop-blur-md p-4 rounded-full">
-                    {isMuted ? <VolumeX className="w-8 h-8 text-white" /> : <Volume2 className="w-8 h-8 text-white" />}
+            {/* Black screen when inactive */}
+            {!isActive && <div style={{ position: 'absolute', inset: 0, background: '#000', zIndex: 1 }} />}
+
+            {/* Mute indicator */}
+            <div
+                style={{
+                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none', zIndex: 40,
+                    opacity: showMuteIndicator ? 1 : 0, transition: 'opacity 0.3s',
+                }}
+            >
+                <div style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', borderRadius: '50%', padding: 16 }}>
+                    {isMuted ? <VolumeX size={28} color="#fff" /> : <Volume2 size={28} color="#fff" />}
                 </div>
             </div>
 
-            {/* Tap Overlay (Invisible) */}
-            <div className="absolute inset-0 z-10" />
+            {/* Tap overlay */}
+            <div style={{ position: 'absolute', inset: 0, zIndex: 10 }} />
         </div>
     );
 }

@@ -11,11 +11,11 @@ import { FeedTabs } from '@/components/feed/FeedTabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
 export function VideoFeed() {
-    const { activeCategory, categoryConfig, activeRole } = useCategory();
+    const { activeCategory, activeRole } = useCategory();
     const { user } = useAuth();
     const router = useRouter();
     const [activeIndex, setActiveIndex] = useState(0);
@@ -25,22 +25,75 @@ export function VideoFeed() {
     const reelRefs = useRef<(HTMLDivElement | null)[]>([]);
     const watchedIndices = useRef<Set<number>>(new Set());
 
-    const countView = async (videoId: string) => {
-        // For placeholder videos — skip Firestore update
-        if (!videoId || videoId.startsWith('placeholder-')) return;
+    // ── Real Firestore videos ─────────────────────────────────────
+    const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
+    const [firestoreLoading, setFirestoreLoading] = useState(true);
 
+    useEffect(() => {
+        setFirestoreLoading(true);
+        setFirestoreVideos([]);
+
+        const q = query(
+            collection(db, 'videos'),
+            where('admin_status', '==', 'approved'),
+            where('is_live', '==', true),
+            where('category', '==', activeCategory),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const videos = snapshot.docs.map(d => ({
+                id: d.id,
+                isPlaceholder: false,
+                videoId: undefined,
+                cloudinaryUrl: d.data().cloudinaryUrl,
+                category: d.data().category,
+                title: d.data().overlayData?.title || '',
+                badge: d.data().overlayData?.badge || '',
+                field1: d.data().overlayData?.field1 || '',
+                field2: d.data().overlayData?.field2 || '',
+                location: d.data().overlayData?.location || '',
+                views: d.data().views || 0,
+                likes: d.data().likes || 0,
+                userId: d.data().userId,
+            }));
+            setFirestoreVideos(videos);
+            setFirestoreLoading(false);
+        }, () => {
+            // On error (e.g. missing index), fall back silently
+            setFirestoreLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [activeCategory]);
+
+    // ── Build video list: real first, then placeholders ───────────
+    const placeholderList = CATEGORY_PLACEHOLDERS[activeCategory].map((id, i) => ({
+        id: `placeholder-${i}`,
+        isPlaceholder: true,
+        videoId: id,
+        cloudinaryUrl: undefined,
+        category: activeCategory,
+        ...(PLACEHOLDER_OVERLAY_DATA[activeCategory][i % PLACEHOLDER_OVERLAY_DATA[activeCategory].length] || {}),
+    }));
+
+    const videos = firestoreVideos.length > 0 ? firestoreVideos : placeholderList;
+
+    // ── View counting ─────────────────────────────────────────────
+    const countView = async (videoId: string) => {
+        if (!videoId || videoId.startsWith('placeholder-')) return;
         try {
-            await updateDoc(doc(db, 'reels', videoId), {
-                views: increment(1)
+            await updateDoc(doc(db, 'videos', videoId), {
+                views: increment(1),
             });
-        } catch (e) {
+        } catch {
             // Silent fail — view counting is non-critical
-            console.error('View count error:', e);
         }
     };
 
+    // ── Guest wall via IntersectionObserver ───────────────────────
     useEffect(() => {
-        if (user) return; // registered users skip all of this
+        if (user) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -48,7 +101,6 @@ export function VideoFeed() {
                     if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
                         const index = reelRefs.current.findIndex(ref => ref === entry.target);
 
-                        // Only count each video once per session
                         if (index !== -1 && !watchedIndices.current.has(index)) {
                             watchedIndices.current.add(index);
                             setActiveIndex(index);
@@ -57,17 +109,12 @@ export function VideoFeed() {
                             const newCount = current + 1;
                             localStorage.setItem('jobreel_videos_watched', String(newCount));
 
-                            console.log(`Video ${index} watched. Total: ${newCount}`); // debug
-
                             if (newCount >= 3) {
                                 setShowGuestWall(true);
                             }
 
-                            // Count view in Firestore
                             const targetVideo = videos[index];
-                            if (targetVideo) {
-                                countView(targetVideo.id);
-                            }
+                            if (targetVideo) countView(targetVideo.id);
                         }
                     }
                 });
@@ -75,49 +122,52 @@ export function VideoFeed() {
             { threshold: 0.5, root: containerRef.current }
         );
 
-        // Small delay to let refs attach
         const timeout = setTimeout(() => {
-            reelRefs.current.forEach((ref) => {
-                if (ref) observer.observe(ref);
-            });
+            reelRefs.current.forEach((ref) => { if (ref) observer.observe(ref); });
         }, 100);
 
-        return () => {
-            observer.disconnect();
-            clearTimeout(timeout);
-        };
-    }, [user, activeCategory]); // Re-run if user or category changes (category changes the video list)
+        return () => { observer.disconnect(); clearTimeout(timeout); };
+    }, [user, activeCategory, videos]);
 
-    // Get Firestore videos (currently empty/mocked as empty for this phase)
-    const firestoreVideos: any[] = [];
-
-    // Fallback to placeholders
-    const videos = firestoreVideos.length > 0
-        ? firestoreVideos
-        : CATEGORY_PLACEHOLDERS[activeCategory].map((id, i) => ({
-            id: `placeholder-${i}`,
-            isPlaceholder: true,
-            videoId: id,
-            category: activeCategory,
-            ...(PLACEHOLDER_OVERLAY_DATA[activeCategory][i % 5])
-        }));
-
+    // ── Logged-in user: track active index via IntersectionObserver
     useEffect(() => {
-        // Initial scroll to index if coming from Explore
+        if (!user) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                        const index = reelRefs.current.findIndex(ref => ref === entry.target);
+                        if (index !== -1) {
+                            setActiveIndex(index);
+                            const targetVideo = videos[index];
+                            if (targetVideo) countView(targetVideo.id);
+                        }
+                    }
+                });
+            },
+            { threshold: 0.5, root: containerRef.current }
+        );
+        const timeout = setTimeout(() => {
+            reelRefs.current.forEach((ref) => { if (ref) observer.observe(ref); });
+        }, 100);
+        return () => { observer.disconnect(); clearTimeout(timeout); };
+    }, [user, activeCategory, videos]);
+
+    // ── Jump to index from Explore page ──────────────────────────
+    useEffect(() => {
         const startIndex = Number(sessionStorage.getItem('feed_start_index') || 0);
         if (startIndex > 0 && containerRef.current) {
             containerRef.current.scrollTop = startIndex * window.innerHeight;
             setActiveIndex(startIndex);
-            // Clear session storage but maybe keep feed_source for back button logic later
             sessionStorage.removeItem('feed_start_index');
         }
-        // Reset watched indices when category changes
         watchedIndices.current = new Set();
     }, [activeCategory]);
 
     return (
         <div className="relative bg-black" style={{ height: '100dvh', overflow: 'hidden' }}>
-            {/* FeedTabs floats OVER the video — not inside the layout flow */}
+            {/* FeedTabs floats OVER the video */}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30 }}>
                 <FeedTabs />
             </div>
@@ -147,18 +197,20 @@ export function VideoFeed() {
                             flexShrink: 0,
                         }}
                     >
-                        {/* VIDEO — fills entire parent absolutely */}
+                        {/* VIDEO */}
                         <ReelPlayer
                             videoId={video.videoId}
+                            cloudinaryUrl={video.cloudinaryUrl}
+                            isPlaceholder={video.isPlaceholder}
                             isActive={activeIndex === index && !showGuestWall}
                         />
 
-                        {/* OVERLAY — absolutely positioned over the video */}
+                        {/* OVERLAY */}
                         <div style={{ position: 'absolute', bottom: 80, left: 0, right: 60, zIndex: 20, pointerEvents: 'none' }}>
                             <VideoOverlay data={video} />
                         </div>
 
-                        {/* ACTION BUTTONS — absolutely positioned right side */}
+                        {/* ACTION BUTTONS */}
                         <div style={{ position: 'absolute', right: 12, bottom: 100, zIndex: 20 }}>
                             <ActionButtons
                                 onConnect={() => setShowReveal(true)}
@@ -179,14 +231,20 @@ export function VideoFeed() {
                 isOpen={showReveal}
                 onClose={() => setShowReveal(false)}
                 targetName={videos[activeIndex]?.title}
-                userId={videos[activeIndex]?.id}
+                userId={videos[activeIndex]?.userId || videos[activeIndex]?.id}
             />
 
             <GuestWall
                 isVisible={showGuestWall}
                 onContinue={() => {
-                    localStorage.setItem('jobreel_videos_watched', '0');
-                    setShowGuestWall(false);
+                    const round = parseInt(localStorage.getItem('jobreel_guest_round') || '0');
+                    if (round === 0) {
+                        // Allow 3 more — enter round 2
+                        localStorage.setItem('jobreel_guest_round', '1');
+                        localStorage.setItem('jobreel_videos_watched', '0');
+                        setShowGuestWall(false);
+                    }
+                    // If round >= 1: wall stays (GuestWall hides the bypass button)
                 }}
             />
         </div>
