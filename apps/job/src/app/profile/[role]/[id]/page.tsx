@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase/firebase-config';
 import Image from 'next/image';
 import { MapPin, Phone, Building2, User, Play, Briefcase, GraduationCap, Award, Lightbulb, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import ConnectModal from '@/components/video/ConnectModal';
+import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
 import StructuredData from '@/components/seo/StructuredData';
 
 // Generate dynamic data for SEO
@@ -36,7 +36,7 @@ export default function PublicProfilePage() {
     const id = params.id as string;
 
     const { user } = useAuth();
-    const [showConnectModal, setShowConnectModal] = useState(false);
+    const [showReveal, setShowReveal] = useState(false);
 
     const [userData, setUserData] = useState<any>(null);
     const [userVideos, setUserVideos] = useState<any[]>([]);
@@ -242,7 +242,7 @@ export default function PublicProfilePage() {
                                     {/* Case 1: Employer viewing a Job Seeker */}
                                     {viewerRole === 'employer' && profileRole === 'job_seeker' && (
                                         <button
-                                            onClick={() => setShowConnectModal(true)}
+                                            onClick={() => setShowReveal(true)}
                                             className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-3"
                                         >
                                             <span>💼</span>
@@ -254,7 +254,7 @@ export default function PublicProfilePage() {
                                     {viewerRole === 'job_seeker' && profileRole === 'employer' && (
                                         <>
                                             <button
-                                                onClick={() => setShowConnectModal(true)}
+                                                onClick={() => setShowReveal(true)}
                                                 className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-3"
                                             >
                                                 <span>📨</span>
@@ -417,10 +417,11 @@ export default function PublicProfilePage() {
                     </div>
                 </div>
             </div>
-            <ConnectModal
-                isOpen={showConnectModal}
-                onClose={() => setShowConnectModal(false)}
-                seekerId={id}
+            <RevealContactSheet
+                isOpen={showReveal}
+                onClose={() => setShowReveal(false)}
+                targetName={displayName}
+                userId={id}
             />
         </div>
     );

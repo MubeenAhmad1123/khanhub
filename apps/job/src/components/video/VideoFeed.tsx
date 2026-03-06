@@ -5,7 +5,6 @@ import { useCategory } from '@/context/CategoryContext';
 import { ReelPlayer } from './ReelPlayer';
 import { VideoOverlay } from '@/components/feed/VideoOverlay';
 import { ActionButtons } from '@/components/feed/ActionButtons';
-import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
 import { GuestWall } from '@/components/feed/GuestWall';
 import { FeedTabs } from '@/components/feed/FeedTabs';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,7 +19,6 @@ export function VideoFeed() {
     const router = useRouter();
     const [activeIndex, setActiveIndex] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
-    const [showReveal, setShowReveal] = useState(false);
     const [showGuestWall, setShowGuestWall] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const reelRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -305,7 +303,11 @@ export function VideoFeed() {
                                 <ActionButtons
                                     videoUserId={video.userId}
                                     videoUserPhoto={video.userPhoto}
-                                    onConnect={() => setShowReveal(true)}
+                                    onConnect={() => {
+                                        if (video.userId || video.id) {
+                                            router.push(`/profile/jobseeker/${video.userId || video.id}`);
+                                        }
+                                    }}
                                     connectLabel={
                                         activeCategory === 'jobs'
                                             ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋')
@@ -363,13 +365,6 @@ export function VideoFeed() {
                     ↓
                 </button>
             </div>
-
-            <RevealContactSheet
-                isOpen={showReveal}
-                onClose={() => setShowReveal(false)}
-                targetName={videos[activeIndex]?.title}
-                userId={videos[activeIndex]?.userId || videos[activeIndex]?.id}
-            />
 
             <GuestWall
                 isVisible={showGuestWall}
