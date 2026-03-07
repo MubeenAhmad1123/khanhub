@@ -21,21 +21,51 @@ export default function UserProfilePage() {
     const [activeTab, setActiveTab] = useState<'videos' | 'info'>('videos');
     const [contactRevealed, setContactRevealed] = useState(false);
     const [showRevealSheet, setShowRevealSheet] = useState(false);
+    const [isPlaceholderUser, setIsPlaceholderUser] = useState(false);
 
     useEffect(() => {
-        if (!id) return;
-        const fetchProfile = async () => {
-            const userSnap = await getDoc(doc(db, 'users', id as string));
-            if (userSnap.exists()) setProfile(userSnap.data());
-
-            const vids = await getDocs(query(
-                collection(db, 'videos'),
-                where('userId', '==', id),
-                where('is_live', '==', true),
-                orderBy('createdAt', 'desc')
-            ));
-            setVideos(vids.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!id) {
             setLoading(false);
+            return;
+        }
+
+        const isPlaceholderId = (
+            String(id).startsWith('placeholder-') ||
+            String(id).startsWith('manual_') ||
+            String(id).startsWith('ph-') ||
+            String(id) === 'undefined' ||
+            String(id) === 'null' ||
+            id.length < 10
+        );
+
+        if (isPlaceholderId) {
+            setIsPlaceholderUser(true);
+            setLoading(false);
+            return;
+        }
+
+        const fetchProfile = async () => {
+            try {
+                const userSnap = await getDoc(doc(db, 'users', id as string));
+                if (userSnap.exists()) {
+                    setProfile(userSnap.data());
+                } else {
+                    setProfile(null);
+                }
+
+                const vidsSnap = await getDocs(query(
+                    collection(db, 'videos'),
+                    where('userId', '==', id),
+                    where('is_live', '==', true),
+                    orderBy('createdAt', 'desc')
+                ));
+                setVideos(vidsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            } catch (err) {
+                console.error('Error fetching profile:', err);
+                setProfile(null);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchProfile();
     }, [id]);
@@ -87,12 +117,104 @@ export default function UserProfilePage() {
         );
     }
 
-    if (!profile) {
+    if (isPlaceholderUser) {
         return (
-            <div style={{ background: '#fff', minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+            <div style={{
+                background: '#fff', minHeight: '100dvh',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                padding: 24, textAlign: 'center', gap: 16,
+                maxWidth: 400, margin: '0 auto',
+            }}>
+                <button
+                    onClick={() => router.back()}
+                    style={{
+                        position: 'absolute', top: 16, left: 16,
+                        background: 'none', border: 'none',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        gap: 6, color: '#333', fontFamily: 'DM Sans', fontSize: 14,
+                    }}
+                >
+                    <ArrowLeft size={16} /> Back
+                </button>
+
+                <div style={{
+                    background: '#FFF3E0', border: '1px solid #FFB74D',
+                    borderRadius: 999, padding: '4px 14px',
+                    fontSize: 11, color: '#E65100',
+                    fontFamily: 'DM Sans', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                }}>
+                    Demo Content
+                </div>
+
+                <div style={{
+                    width: 80, height: 80, borderRadius: '50%',
+                    background: '#F0F0F0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 36,
+                }}>
+                    🎬
+                </div>
+
+                <div>
+                    <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 8px' }}>
+                        Demo Video
+                    </h2>
+                    <p style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+                        This is a sample video shown while the platform is being set up.
+                        Real user profiles will appear once people start uploading videos.
+                    </p>
+                </div>
+
+                <button
+                    onClick={() => router.push('/feed')}
+                    style={{
+                        background: '#FF0069', color: '#fff',
+                        border: 'none', borderRadius: 10,
+                        padding: '12px 28px',
+                        fontFamily: 'Syne', fontWeight: 700,
+                        fontSize: 14, cursor: 'pointer',
+                        marginTop: 8,
+                    }}
+                >
+                    Back to Feed
+                </button>
+            </div>
+        );
+    }
+
+    if (!loading && !profile && !isPlaceholderUser) {
+        return (
+            <div style={{
+                background: '#fff', minHeight: '100dvh',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: 16, padding: 24,
+            }}>
+                <button onClick={() => router.back()} style={{
+                    position: 'absolute', top: 16, left: 16,
+                    background: 'none', border: 'none',
+                    cursor: 'pointer', color: '#333',
+                    fontFamily: 'DM Sans', fontSize: 14,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                    <ArrowLeft size={16} /> Back
+                </button>
                 <div style={{ fontSize: 48 }}>👤</div>
-                <p style={{ color: '#666', fontFamily: 'DM Sans' }}>User not found</p>
-                <button onClick={() => router.back()} style={{ color: '#FF0069', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans' }}>← Go back</button>
+                <h3 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 18, color: '#0A0A0A', margin: 0 }}>
+                    Profile not found
+                </h3>
+                <p style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 13, margin: 0 }}>
+                    This user may have deleted their account.
+                </p>
+                <button onClick={() => router.push('/feed')} style={{
+                    background: '#FF0069', color: '#fff', border: 'none',
+                    borderRadius: 10, padding: '10px 24px',
+                    fontFamily: 'Syne', fontWeight: 700, cursor: 'pointer',
+                }}>
+                    Back to Feed
+                </button>
             </div>
         );
     }

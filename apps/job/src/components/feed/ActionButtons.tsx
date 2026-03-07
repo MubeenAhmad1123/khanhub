@@ -26,9 +26,25 @@ export function ActionButtons({
     const { user } = useAuth();
     const router = useRouter();
     const [liked, setLiked] = useState(false);
+    const [toastVisible, setToastVisible] = useState(false);
+
+    const showDemoToast = () => {
+        setToastVisible(true);
+        setTimeout(() => setToastVisible(false), 2500);
+    };
 
     const handleAvatarTap = () => {
         if (!videoUserId) return;
+        if (
+            videoUserId.startsWith('placeholder-') ||
+            videoUserId.startsWith('manual_') ||
+            videoUserId.startsWith('ph-') ||
+            videoUserId === 'undefined' ||
+            videoUserId.length < 10
+        ) {
+            showDemoToast();
+            return;
+        }
         router.push(`/profile/${videoUserRole || 'user'}/${videoUserId}`);
     };
     const [saved, setSaved] = useState(false);
@@ -59,6 +75,23 @@ export function ActionButtons({
             alignItems: 'center',
             gap: 20,           // ← gap between buttons
         }}>
+            {/* Demo video toast */}
+            {toastVisible && (
+                <div style={{
+                    position: 'fixed', top: 60, left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(0,0,0,0.75)',
+                    backdropFilter: 'blur(8px)',
+                    color: '#fff', fontFamily: 'DM Sans',
+                    fontSize: 12, padding: '8px 16px',
+                    borderRadius: 999, zIndex: 200,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                }}>
+                    🎬 Demo video — no profile available
+                </div>
+            )}
+
             {/* PROFILE AVATAR — top of action buttons (TikTok style) */}
             <div style={{ position: 'relative', marginBottom: 4 }}>
                 <div
