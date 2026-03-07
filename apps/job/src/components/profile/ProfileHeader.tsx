@@ -45,7 +45,7 @@ export default function ProfileHeader({ user, accentColor }: ProfileHeaderProps)
                 <div className="relative group">
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#1A1A1A] p-1">
                         <img
-                            src={user?.photoURL || '/default-avatar.png'}
+                            src={user?.photoURL || '/default-avatar.svg'}
                             alt={user?.name}
                             className="w-full h-full rounded-full object-cover"
                         />

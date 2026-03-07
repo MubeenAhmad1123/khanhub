@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, Search, PlusSquare, User } from 'lucide-react';
 
 import { CategoryProvider } from '@/context/CategoryContext';
+import { useEffect } from 'react';
 
 export default function ClientLayout({
     children,
@@ -23,6 +24,16 @@ export default function ClientLayout({
     const isFeedRoute = hiddenRoutes.includes(pathname || '');
     const showNav = !isAdminRoute && !isAuthRoute;
     const showTopBar = showNav && !isFeedRoute;
+
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            }).catch(err => console.error('SW unregistration error:', err));
+        }
+    }, []);
 
     const router = useRouter();
 
