@@ -21,7 +21,7 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
             justifyContent: 'center',
             gap: 24,
             padding: '12px 16px 8px',
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%)',
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%)',
             pointerEvents: 'all',
         }}>
             {tabs.map((tab, i) => (
@@ -35,7 +35,7 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
                         fontFamily: 'DM Sans',
                         fontWeight: activeTab === i ? 700 : 400,
                         fontSize: 15,
-                        color: activeTab === i ? '#fff' : 'rgba(255,255,255,0.55)',
+                        color: activeTab === i ? '#000' : 'rgba(0,0,0,0.55)',
                         position: 'relative',
                         padding: '2px 0',
                         letterSpacing: '0.01em',
@@ -52,7 +52,7 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
                             transform: 'translateX(-50%)',
                             width: 20,
                             height: 2,
-                            background: '#fff',
+                            background: '#000',
                             borderRadius: 999,
                             display: 'block',
                         }} />

@@ -89,7 +89,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
             {/* ── STORIES BAR ── */}
             <div style={{
                 padding: '10px 0 10px 12px',
-                background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%)',
+                background: 'linear-gradient(to bottom, rgba(255,255,255,0.9) 0%, transparent 100%)',
                 position: 'relative',
                 zIndex: 25,
             }}>
@@ -129,7 +129,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     padding: 2.5,
                                     background: isActive
                                         ? `linear-gradient(135deg, ${cat.accent}, #7638FA)`
-                                        : 'linear-gradient(135deg, #333, #222)',
+                                        : 'linear-gradient(135deg, #eee, #ddd)',
                                     transition: 'background 0.3s, transform 0.2s',
                                     transform: isActive ? 'scale(1.08)' : 'scale(1)',
                                     flexShrink: 0,
@@ -138,7 +138,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                         width: '100%', height: '100%',
                                         borderRadius: '50%',
                                         overflow: 'hidden',
-                                        border: '2px solid #000',
+                                        border: '2px solid #fff',
                                         position: 'relative',
                                     }}>
                                         {/* Background image */}
@@ -170,7 +170,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     fontSize: 10,
                                     fontFamily: 'DM Sans',
                                     fontWeight: isActive ? 700 : 400,
-                                    color: isActive ? cat.accent : 'rgba(255,255,255,0.55)',
+                                    color: isActive ? cat.accent : 'rgba(0,0,0,0.55)',
                                     textAlign: 'center',
                                     maxWidth: 62,
                                     lineHeight: 1.2,
@@ -199,7 +199,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                             onClick={() => setSheetOpen(false)}
                             style={{
                                 position: 'fixed', inset: 0,
-                                background: 'rgba(0,0,0,0.7)',
+                                background: 'rgba(255,255,255,0.7)',
                                 zIndex: 90,
                                 backdropFilter: 'blur(4px)',
                             }}
@@ -213,7 +213,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                             style={{
                                 position: 'fixed', bottom: 0, left: 0, right: 0,
-                                background: '#111',
+                                background: '#fff',
                                 borderRadius: '20px 20px 0 0',
                                 padding: '16px 20px 40px',
                                 zIndex: 91,
@@ -224,7 +224,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                             {/* Drag handle */}
                             <div style={{
                                 width: 36, height: 4, borderRadius: 999,
-                                background: '#333', margin: '0 auto 20px',
+                                background: '#ddd', margin: '0 auto 20px',
                             }} />
 
                             {/* Category header */}
@@ -232,7 +232,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                 <div style={{ fontSize: 36, marginBottom: 6 }}>{pending.emoji}</div>
                                 <h3 style={{
                                     fontFamily: 'Syne', fontWeight: 800,
-                                    fontSize: 20, color: '#fff', margin: '0 0 4px',
+                                    fontSize: 20, color: '#000', margin: '0 0 4px',
                                 }}>
                                     {pending.label}
                                 </h3>
@@ -248,7 +248,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     onClick={() => handleRoleSelect('provider')}
                                     style={{
                                         width: '100%', padding: '16px 20px',
-                                        background: '#1A1A1A',
+                                        background: '#f9f9f9',
                                         border: `1px solid ${pending.accent}44`,
                                         borderRadius: 14, cursor: 'pointer',
                                         display: 'flex', alignItems: 'center',
@@ -261,7 +261,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     }}
                                     onMouseLeave={e => {
                                         e.currentTarget.style.borderColor = `${pending.accent}44`;
-                                        e.currentTarget.style.background = '#1A1A1A';
+                                        e.currentTarget.style.background = '#f9f9f9';
                                     }}
                                 >
                                     <div style={{
@@ -278,7 +278,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     </div>
                                     <div>
                                         <div style={{
-                                            color: '#fff', fontFamily: 'Syne',
+                                            color: '#000', fontFamily: 'Syne',
                                             fontWeight: 700, fontSize: 15,
                                         }}>
                                             {ROLE_OPTIONS[pending.key]?.provider}
@@ -302,23 +302,23 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     onClick={() => handleRoleSelect('seeker')}
                                     style={{
                                         width: '100%', padding: '16px 20px',
-                                        background: '#1A1A1A',
-                                        border: '1px solid #2A2A2A',
+                                        background: '#f9f9f9',
+                                        border: '1px solid #eee',
                                         borderRadius: 14, cursor: 'pointer',
                                         display: 'flex', alignItems: 'center',
                                         gap: 14, textAlign: 'left',
                                         transition: 'border-color 0.2s, background 0.2s',
                                     }}
                                     onMouseEnter={e => {
-                                        e.currentTarget.style.borderColor = '#555';
+                                        e.currentTarget.style.borderColor = '#ccc';
                                     }}
                                     onMouseLeave={e => {
-                                        e.currentTarget.style.borderColor = '#2A2A2A';
+                                        e.currentTarget.style.borderColor = '#eee';
                                     }}
                                 >
                                     <div style={{
                                         width: 44, height: 44, borderRadius: '50%',
-                                        background: '#222',
+                                        background: '#eee',
                                         display: 'flex', alignItems: 'center',
                                         justifyContent: 'center', fontSize: 20, flexShrink: 0,
                                     }}>
@@ -330,7 +330,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     </div>
                                     <div>
                                         <div style={{
-                                            color: '#fff', fontFamily: 'Syne',
+                                            color: '#000', fontFamily: 'Syne',
                                             fontWeight: 700, fontSize: 15,
                                         }}>
                                             {ROLE_OPTIONS[pending.key]?.seeker}
@@ -346,7 +346,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                                                 'I need the service'}
                                         </div>
                                     </div>
-                                    <div style={{ marginLeft: 'auto', color: '#555', fontSize: 18 }}>›</div>
+                                    <div style={{ marginLeft: 'auto', color: '#888', fontSize: 18 }}>›</div>
                                 </button>
                             </div>
 
@@ -356,7 +356,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                 style={{
                                     width: '100%', marginTop: 14,
                                     padding: '12px', background: 'none',
-                                    border: 'none', color: '#555',
+                                    border: 'none', color: '#666',
                                     fontFamily: 'DM Sans', fontSize: 13,
                                     cursor: 'pointer',
                                 }}

@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #000000;
-  --color-bg-secondary: #0D0D0D;
-  --color-bg-card: #111111;
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F5F5F5;
+  --color-bg-card: #FFFFFF;
   --color-accent-pink: #FF0069;
   --color-accent-purple: #7638FA;
   --color-accent-yellow: #FFD600;
-  --color-text-primary: #FFFFFF;
-  --color-text-muted: #888888;
-  --color-border-primary: #1F1F1F;
+  --color-text-primary: #000000;
+  --color-text-muted: #666666;
+  --color-border-primary: #E5E5E5;
 
   --font-syne: "Syne", sans-serif;
   --font-dm-sans: "DM Sans", sans-serif;
@@ -31,18 +31,18 @@
 
 @layer base {
   :root {
-    --bg-primary: #000000;
-    --bg-secondary: #0A0A0A;
-    --bg-card: #111111;
-    --text-primary: #FFFFFF;
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F5F5F5;
+    --bg-card: #FFFFFF;
+    --text-primary: #000000;
     --text-muted: #666666;
-    --border: #1A1A1A;
+    --border: #E5E5E5;
     --accent: #FF0069; /* Default to Jobs accent */
     --accent-glow: rgba(255, 0, 105, 0.3);
   }
 
   body {
-    @apply antialiased text-white bg-black;
+    @apply antialiased text-black bg-white;
     font-family: var(--font-dm-sans);
   }
 

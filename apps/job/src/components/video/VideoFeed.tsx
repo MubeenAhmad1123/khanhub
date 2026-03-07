@@ -243,7 +243,7 @@ export function VideoFeed() {
         <div style={{
             position: 'fixed',
             inset: 0,
-            background: '#000',
+            background: '#fff',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -388,12 +388,12 @@ export function VideoFeed() {
             }}>
                 <button
                     onClick={() => scrollToIndex(activeIndex - 1)}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#333')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#1A1A1A')}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#e0e0e0')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#f5f5f5')}
                     style={{
                         width: 44, height: 44, borderRadius: '50%',
-                        background: '#1A1A1A', border: '1px solid #333',
-                        color: '#fff', fontSize: 18, cursor: 'pointer',
+                        background: '#f5f5f5', border: '1px solid #ddd',
+                        color: '#000', fontSize: 18, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'background 0.2s',
                     }}
@@ -402,12 +402,12 @@ export function VideoFeed() {
                 </button>
                 <button
                     onClick={() => scrollToIndex(activeIndex + 1)}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#333')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#1A1A1A')}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#e0e0e0')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#f5f5f5')}
                     style={{
                         width: 44, height: 44, borderRadius: '50%',
-                        background: '#1A1A1A', border: '1px solid #333',
-                        color: '#fff', fontSize: 18, cursor: 'pointer',
+                        background: '#f5f5f5', border: '1px solid #ddd',
+                        color: '#000', fontSize: 18, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'background 0.2s',
                     }}
