@@ -28,13 +28,12 @@ export function BottomNav() {
 
     return (
         <nav
-            className="md:hidden"
+            className="flex md:hidden"
             style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0,
                 background: 'rgba(255,255,255,0.95)',
                 backdropFilter: 'blur(20px)',
                 borderTop: '1px solid #E5E5E5',
-                display: 'flex',
                 zIndex: 50,
                 paddingBottom: 'env(safe-area-inset-bottom, 16px)',
             }}

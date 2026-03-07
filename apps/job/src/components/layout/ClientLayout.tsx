@@ -54,8 +54,8 @@ export default function ClientLayout({
                     {showNav && (
                         <aside className="hidden md:flex" style={{
                             position: 'fixed', left: 0, top: 0, bottom: 0,
-                            width: 72, background: '#000',
-                            borderRight: '1px solid #111',
+                            width: 72, background: '#FFFFFF',
+                            borderRight: '1px solid #E5E5E5',
                             flexDirection: 'column',
                             alignItems: 'center',
                             paddingTop: 20,
@@ -63,16 +63,16 @@ export default function ClientLayout({
                             zIndex: 40,
                         }}>
                             {/* Logo */}
-                            <div style={{ fontFamily: 'Syne', fontWeight: 900, fontSize: 14, color: '#fff', marginBottom: 16 }}>
+                            <div style={{ fontFamily: 'Syne', fontWeight: 900, fontSize: 14, color: '#0A0A0A', marginBottom: 16 }}>
                                 <span style={{ color: 'var(--accent)' }}>J</span>R
                             </div>
 
                             {desktopNavItems.map(item => (
                                 <button key={item.href} onClick={() => router.push(item.href)} style={{
                                     width: 48, height: 48, borderRadius: 12,
-                                    background: pathname === item.href ? '#1A1A1A' : 'none',
+                                    background: pathname === item.href ? '#F0F0F0' : 'none',
                                     border: pathname === item.href ? '1px solid var(--accent)' : '1px solid transparent',
-                                    color: pathname === item.href ? 'var(--accent)' : '#555',
+                                    color: pathname === item.href ? 'var(--accent)' : '#888888',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     cursor: 'pointer', transition: 'all 0.2s',
                                 }}>
