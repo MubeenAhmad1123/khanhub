@@ -1,0 +1,372 @@
+'use client';
+
+import { useRef, useEffect, useState } from 'react';
+import { useCategory } from '@/context/CategoryContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { CategoryKey } from '@/lib/categories';
+
+const CATEGORIES = [
+    { key: 'jobs', label: 'Jobs', emoji: '💼', image: '/jobs.webp', accent: '#FF0069' },
+    { key: 'healthcare', label: 'Healthcare', emoji: '🏥', image: '/healthcare.webp', accent: '#00C896' },
+    { key: 'it', label: 'IT & Tech', emoji: '💻', image: '/tech.webp', accent: '#00E5FF' },
+    { key: 'education', label: 'Education', emoji: '🎓', image: '/education (2).webp', accent: '#FFD600' },
+    { key: 'marriage', label: 'Marriage', emoji: '💍', image: '/marraige.webp', accent: '#FF6B9D' },
+    { key: 'domestic', label: 'Domestic', emoji: '🏠', image: '/domestic help.webp', accent: '#FF8C42' },
+    { key: 'legal', label: 'Legal', emoji: '⚖️', image: '/lawyer.webp', accent: '#4A90D9' },
+    { key: 'realestate', label: 'Real Estate', emoji: '🏗️', image: '/real-estate.webp', accent: '#7638FA' },
+];
+
+// Role labels per category
+const ROLE_OPTIONS: Record<string, { provider: string; seeker: string }> = {
+    jobs: { provider: 'Job Seeker', seeker: 'Company / Hiring' },
+    healthcare: { provider: 'Doctor', seeker: 'Patient' },
+    it: { provider: 'Freelancer', seeker: 'Client' },
+    education: { provider: 'Teacher', seeker: 'Student' },
+    marriage: { provider: 'Presenting', seeker: 'Looking' },
+    domestic: { provider: 'Helper', seeker: 'Household' },
+    legal: { provider: 'Lawyer', seeker: 'Client' },
+    realestate: { provider: 'Agent', seeker: 'Buyer / Renter' },
+};
+
+interface CategoryStoriesBarProps {
+    onCategoryChange: () => void; // called after category+role set — triggers feed refresh
+}
+
+export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps) {
+    const { activeCategory, setActiveCategory, setActiveRole } = useCategory();
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Bottom sheet state
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const [pendingCategory, setPendingCategory] = useState<string | null>(null);
+
+    // Auto-slide animation — scrolls right then loops back
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (!container) return;
+
+        let direction = 1;
+        let pos = 0;
+        const maxScroll = container.scrollWidth - container.clientWidth;
+
+        const interval = setInterval(() => {
+            pos += direction * 0.6; // slow drift speed
+            if (pos >= maxScroll) { direction = -1; }
+            if (pos <= 0) { direction = 1; }
+            container.scrollLeft = pos;
+        }, 16); // ~60fps
+
+        // Pause auto-slide on user touch
+        const pause = () => clearInterval(interval);
+        container.addEventListener('touchstart', pause, { passive: true });
+        container.addEventListener('mousedown', pause);
+
+        return () => {
+            clearInterval(interval);
+            container.removeEventListener('touchstart', pause);
+            container.removeEventListener('mousedown', pause);
+        };
+    }, []);
+
+    const handleCategoryTap = (catKey: string) => {
+        setPendingCategory(catKey);
+        setSheetOpen(true);
+    };
+
+    const handleRoleSelect = (role: 'provider' | 'seeker') => {
+        if (!pendingCategory) return;
+        setActiveCategory(pendingCategory as CategoryKey);
+        setActiveRole(role);
+        setSheetOpen(false);
+        setPendingCategory(null);
+        onCategoryChange(); // signal VideoFeed to re-query and scroll to top
+    };
+
+    const pending = CATEGORIES.find(c => c.key === pendingCategory);
+
+    return (
+        <>
+            {/* ── STORIES BAR ── */}
+            <div style={{
+                padding: '10px 0 10px 12px',
+                background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%)',
+                position: 'relative',
+                zIndex: 25,
+            }}>
+                <div
+                    ref={scrollRef}
+                    style={{
+                        display: 'flex',
+                        gap: 12,
+                        overflowX: 'scroll',
+                        scrollbarWidth: 'none',
+                        WebkitOverflowScrolling: 'touch',
+                        paddingRight: 12,
+                        userSelect: 'none',
+                    }}
+                    className="scrollbar-hide"
+                >
+                    {CATEGORIES.map((cat) => {
+                        const isActive = activeCategory === cat.key;
+                        return (
+                            <div
+                                key={cat.key}
+                                onClick={() => handleCategoryTap(cat.key)}
+                                style={{
+                                    flexShrink: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                {/* Circle card — like Instagram story */}
+                                <div style={{
+                                    width: 62,
+                                    height: 62,
+                                    borderRadius: '50%',
+                                    padding: 2.5,
+                                    background: isActive
+                                        ? `linear-gradient(135deg, ${cat.accent}, #7638FA)`
+                                        : 'linear-gradient(135deg, #333, #222)',
+                                    transition: 'background 0.3s, transform 0.2s',
+                                    transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                                    flexShrink: 0,
+                                }}>
+                                    <div style={{
+                                        width: '100%', height: '100%',
+                                        borderRadius: '50%',
+                                        overflow: 'hidden',
+                                        border: '2px solid #000',
+                                        position: 'relative',
+                                    }}>
+                                        {/* Background image */}
+                                        <img
+                                            src={cat.image}
+                                            alt={cat.label}
+                                            style={{
+                                                width: '100%', height: '100%',
+                                                objectFit: 'cover',
+                                                filter: isActive ? 'brightness(0.75)' : 'brightness(0.5)',
+                                                transition: 'filter 0.3s',
+                                            }}
+                                            draggable={false}
+                                        />
+                                        {/* Emoji overlay */}
+                                        <div style={{
+                                            position: 'absolute', inset: 0,
+                                            display: 'flex', alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 22,
+                                        }}>
+                                            {cat.emoji}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Label */}
+                                <span style={{
+                                    fontSize: 10,
+                                    fontFamily: 'DM Sans',
+                                    fontWeight: isActive ? 700 : 400,
+                                    color: isActive ? cat.accent : 'rgba(255,255,255,0.55)',
+                                    textAlign: 'center',
+                                    maxWidth: 62,
+                                    lineHeight: 1.2,
+                                    transition: 'color 0.3s',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                }}>
+                                    {cat.label}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* ── ROLE PICKER BOTTOM SHEET ── */}
+            <AnimatePresence>
+                {sheetOpen && pending && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSheetOpen(false)}
+                            style={{
+                                position: 'fixed', inset: 0,
+                                background: 'rgba(0,0,0,0.7)',
+                                zIndex: 90,
+                                backdropFilter: 'blur(4px)',
+                            }}
+                        />
+
+                        {/* Sheet */}
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                            style={{
+                                position: 'fixed', bottom: 0, left: 0, right: 0,
+                                background: '#111',
+                                borderRadius: '20px 20px 0 0',
+                                padding: '16px 20px 40px',
+                                zIndex: 91,
+                                maxWidth: 600,
+                                margin: '0 auto',
+                            }}
+                        >
+                            {/* Drag handle */}
+                            <div style={{
+                                width: 36, height: 4, borderRadius: 999,
+                                background: '#333', margin: '0 auto 20px',
+                            }} />
+
+                            {/* Category header */}
+                            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                                <div style={{ fontSize: 36, marginBottom: 6 }}>{pending.emoji}</div>
+                                <h3 style={{
+                                    fontFamily: 'Syne', fontWeight: 800,
+                                    fontSize: 20, color: '#fff', margin: '0 0 4px',
+                                }}>
+                                    {pending.label}
+                                </h3>
+                                <p style={{ color: '#666', fontFamily: 'DM Sans', fontSize: 13, margin: 0 }}>
+                                    I am a...
+                                </p>
+                            </div>
+
+                            {/* Role options */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {/* Provider option */}
+                                <button
+                                    onClick={() => handleRoleSelect('provider')}
+                                    style={{
+                                        width: '100%', padding: '16px 20px',
+                                        background: '#1A1A1A',
+                                        border: `1px solid ${pending.accent}44`,
+                                        borderRadius: 14, cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center',
+                                        gap: 14, textAlign: 'left',
+                                        transition: 'border-color 0.2s, background 0.2s',
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.borderColor = pending.accent;
+                                        e.currentTarget.style.background = `${pending.accent}11`;
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.borderColor = `${pending.accent}44`;
+                                        e.currentTarget.style.background = '#1A1A1A';
+                                    }}
+                                >
+                                    <div style={{
+                                        width: 44, height: 44, borderRadius: '50%',
+                                        background: `${pending.accent}22`,
+                                        display: 'flex', alignItems: 'center',
+                                        justifyContent: 'center', fontSize: 20, flexShrink: 0,
+                                    }}>
+                                        {pending.key === 'jobs' ? '👤' :
+                                            pending.key === 'healthcare' ? '🩺' :
+                                                pending.key === 'education' ? '📚' :
+                                                    pending.key === 'legal' ? '⚖️' :
+                                                        pending.key === 'it' ? '💻' : '🙋'}
+                                    </div>
+                                    <div>
+                                        <div style={{
+                                            color: '#fff', fontFamily: 'Syne',
+                                            fontWeight: 700, fontSize: 15,
+                                        }}>
+                                            {ROLE_OPTIONS[pending.key]?.provider}
+                                        </div>
+                                        <div style={{
+                                            color: '#666', fontFamily: 'DM Sans', fontSize: 12, marginTop: 2,
+                                        }}>
+                                            {pending.key === 'jobs' ? 'Looking for work opportunities' :
+                                                pending.key === 'healthcare' ? 'Offering medical services' :
+                                                    pending.key === 'education' ? 'Teaching & training others' :
+                                                        pending.key === 'legal' ? 'Providing legal services' :
+                                                            pending.key === 'it' ? 'Offering tech services' :
+                                                                'I provide the service'}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginLeft: 'auto', color: pending.accent, fontSize: 18 }}>›</div>
+                                </button>
+
+                                {/* Seeker option */}
+                                <button
+                                    onClick={() => handleRoleSelect('seeker')}
+                                    style={{
+                                        width: '100%', padding: '16px 20px',
+                                        background: '#1A1A1A',
+                                        border: '1px solid #2A2A2A',
+                                        borderRadius: 14, cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center',
+                                        gap: 14, textAlign: 'left',
+                                        transition: 'border-color 0.2s, background 0.2s',
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.borderColor = '#555';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.borderColor = '#2A2A2A';
+                                    }}
+                                >
+                                    <div style={{
+                                        width: 44, height: 44, borderRadius: '50%',
+                                        background: '#222',
+                                        display: 'flex', alignItems: 'center',
+                                        justifyContent: 'center', fontSize: 20, flexShrink: 0,
+                                    }}>
+                                        {pending.key === 'jobs' ? '🏢' :
+                                            pending.key === 'healthcare' ? '🤒' :
+                                                pending.key === 'education' ? '🎒' :
+                                                    pending.key === 'legal' ? '📋' :
+                                                        pending.key === 'it' ? '🧑💼' : '🔍'}
+                                    </div>
+                                    <div>
+                                        <div style={{
+                                            color: '#fff', fontFamily: 'Syne',
+                                            fontWeight: 700, fontSize: 15,
+                                        }}>
+                                            {ROLE_OPTIONS[pending.key]?.seeker}
+                                        </div>
+                                        <div style={{
+                                            color: '#666', fontFamily: 'DM Sans', fontSize: 12, marginTop: 2,
+                                        }}>
+                                            {pending.key === 'jobs' ? 'Hiring talent for my team' :
+                                                pending.key === 'healthcare' ? 'Looking for medical help' :
+                                                    pending.key === 'education' ? 'Looking for a tutor' :
+                                                        pending.key === 'legal' ? 'Need legal representation' :
+                                                            pending.key === 'it' ? 'Looking for a developer' :
+                                                                'I need the service'}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginLeft: 'auto', color: '#555', fontSize: 18 }}>›</div>
+                                </button>
+                            </div>
+
+                            {/* Cancel */}
+                            <button
+                                onClick={() => setSheetOpen(false)}
+                                style={{
+                                    width: '100%', marginTop: 14,
+                                    padding: '12px', background: 'none',
+                                    border: 'none', color: '#555',
+                                    fontFamily: 'DM Sans', fontSize: 13,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+        </>
+    );
+}

@@ -8,6 +8,8 @@ interface CategoryContextType {
     activeRole: 'provider' | 'seeker';
     setCategory: (cat: CategoryKey) => void;
     setRole: (role: 'provider' | 'seeker') => void;
+    setActiveCategory: (cat: CategoryKey) => void;
+    setActiveRole: (role: 'provider' | 'seeker') => void;
     accentColor: string;
     categoryConfig: CategoryConfig;
 }
@@ -78,6 +80,8 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
                 activeRole,
                 setCategory,
                 setRole,
+                setActiveCategory: setCategory,
+                setActiveRole: setRole,
                 accentColor: categoryConfig.accent,
                 categoryConfig
             }}

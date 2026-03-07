@@ -7,6 +7,8 @@ import { VideoOverlay } from '@/components/feed/VideoOverlay';
 import { ActionButtons } from '@/components/feed/ActionButtons';
 import { GuestWall } from '@/components/feed/GuestWall';
 import { FeedTabs } from '@/components/feed/FeedTabs';
+import { CategoryStoriesBar } from '@/components/feed/CategoryStoriesBar';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
@@ -20,6 +22,8 @@ export function VideoFeed() {
     const [activeIndex, setActiveIndex] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
     const [showGuestWall, setShowGuestWall] = useState(false);
+    const [showStoriesBar, setShowStoriesBar] = useState(true);
+    const [feedKey, setFeedKey] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const reelRefs = useRef<(HTMLDivElement | null)[]>([]);
     const watchedIndices = useRef<Set<number>>(new Set());
@@ -215,6 +219,26 @@ export function VideoFeed() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [activeIndex, videos.length]);
 
+    // Hide stories bar when user scrolls past first video
+    useEffect(() => {
+        if (activeIndex > 0 && showStoriesBar) {
+            setShowStoriesBar(false);
+        }
+        // Show again only if user scrolls back to top
+        if (activeIndex === 0) {
+            setShowStoriesBar(true);
+        }
+    }, [activeIndex, showStoriesBar]);
+
+    // When category changes from stories bar — scroll to top + refresh
+    const handleCategoryChange = () => {
+        setActiveIndex(0);
+        setFeedKey(prev => prev + 1);  // forces re-mount of video list
+        if (containerRef.current) {
+            containerRef.current.scrollTop = 0;
+        }
+    };
+
     return (
         <div style={{
             position: 'fixed',
@@ -252,8 +276,28 @@ export function VideoFeed() {
                     <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
                 </div>
 
+                {/* STORIES BAR — only visible on first video */}
+                <AnimatePresence>
+                    {showStoriesBar && (
+                        <motion.div
+                            initial={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.25 }}
+                            style={{
+                                position: 'absolute',
+                                top: 48,       // below FeedTabs
+                                left: 0, right: 0,
+                                zIndex: 28,
+                            }}
+                        >
+                            <CategoryStoriesBar onCategoryChange={handleCategoryChange} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <div
                     ref={containerRef}
+                    key={feedKey}
                     className="scrollbar-hide"
                     style={{
                         height: '100dvh',
@@ -268,13 +312,17 @@ export function VideoFeed() {
                             ref={(el) => { reelRefs.current[index] = el; }}
                             style={{
                                 position: 'relative',
-                                height: '100dvh',
+                                height: index === 0 && showStoriesBar
+                                    ? 'calc(100dvh - 130px)'
+                                    : '100dvh',
                                 width: '100%',
                                 overflow: 'hidden',
                                 background: '#000',
                                 scrollSnapAlign: 'start',
                                 scrollSnapStop: 'always',
                                 flexShrink: 0,
+                                marginTop: index === 0 && showStoriesBar ? 130 : 0,
+                                transition: 'height 0.3s ease, margin-top 0.3s ease',
                             }}
                         >
                             <ReelPlayer
