@@ -46,22 +46,39 @@ export default function UserProfilePage() {
 
         const fetchProfile = async () => {
             try {
+                console.log(`[Profile Page] Fetching user profile for ID: ${id}`);
                 const userSnap = await getDoc(doc(db, 'users', id as string));
                 if (userSnap.exists()) {
+                    console.log('[Profile Page] Profile found successfully:', userSnap.data());
                     setProfile(userSnap.data());
                 } else {
+                    console.warn(`[Profile Page] User document does not exist for ID: ${id}`);
                     setProfile(null);
+                    return; // No need to fetch videos if user doesn't exist
                 }
 
-                const vidsSnap = await getDocs(query(
-                    collection(db, 'videos'),
-                    where('userId', '==', id),
-                    where('is_live', '==', true),
-                    orderBy('createdAt', 'desc')
-                ));
-                setVideos(vidsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-            } catch (err) {
-                console.error('Error fetching profile:', err);
+                // Fetch videos in a separate try-catch so it doesn't wipe profile if index is missing
+                try {
+                    console.log('[Profile Page] Fetching user videos...');
+                    // User requested to see the index link in console, so revert to the full query
+                    const vidsSnap = await getDocs(query(
+                        collection(db, 'videos'),
+                        where('userId', '==', id),
+                        where('is_live', '==', true),
+                        orderBy('createdAt', 'desc')
+                    ));
+
+                    const userVideos = vidsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+                    console.log(`[Profile Page] Fetched ${userVideos.length} videos`);
+                    setVideos(userVideos);
+                } catch (vidErr: any) {
+                    console.error('🔥 [Profile Page] Error fetching videos. IF THIS SAYS MISSING INDEX, COPY THE LINK BELOW:');
+                    console.error(vidErr.message || vidErr);
+                    setVideos([]); // Just show no videos, but keep the profile intact
+                }
+
+            } catch (err: any) {
+                console.error('❌ [Profile Page] Error fetching profile:', err.message || err);
                 setProfile(null);
             } finally {
                 setLoading(false);
