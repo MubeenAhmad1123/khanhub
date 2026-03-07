@@ -202,7 +202,7 @@ function PillSelector({
 }: { label: string; options: string[]; value: string; onChange: (v: string) => void; required?: boolean }) {
     return (
         <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 8, fontFamily: 'DM Sans' }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
                 {label}{required && <span style={{ color: 'var(--accent)', marginLeft: 4 }}>*</span>}
             </label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -213,9 +213,9 @@ function PillSelector({
                         onClick={() => onChange(o)}
                         style={{
                             padding: '7px 14px', borderRadius: 999, fontSize: 12, fontFamily: 'DM Sans', fontWeight: 600, cursor: 'pointer',
-                            border: value === o ? '1.5px solid var(--accent)' : '1.5px solid #2a2a2a',
-                            background: value === o ? 'rgba(255,0,105,0.12)' : '#111',
-                            color: value === o ? 'var(--accent)' : '#888',
+                            border: value === o ? '1.5px solid var(--accent)' : '1.5px solid #E5E5E5',
+                            background: value === o ? 'rgba(255,0,105,0.12)' : '#F8F8F8',
+                            color: value === o ? 'var(--accent)' : '#888888',
                             transition: 'all 0.15s',
                         }}
                     >
@@ -233,7 +233,7 @@ function TextInput({ label, placeholder, value, onChange, required, type = 'text
 }) {
     return (
         <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 8, fontFamily: 'DM Sans' }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
                 {label}{required && <span style={{ color: 'var(--accent)', marginLeft: 4 }}>*</span>}
             </label>
             <input
@@ -242,8 +242,8 @@ function TextInput({ label, placeholder, value, onChange, required, type = 'text
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
                 style={{
-                    width: '100%', padding: '12px 14px', background: '#111', border: '1.5px solid #2a2a2a',
-                    borderRadius: 10, color: '#fff', fontSize: 14, fontFamily: 'DM Sans', outline: 'none',
+                    width: '100%', padding: '12px 14px', background: '#F8F8F8', border: '1.5px solid #E5E5E5',
+                    borderRadius: 10, color: '#0A0A0A', fontSize: 14, fontFamily: 'DM Sans', outline: 'none',
                     boxSizing: 'border-box',
                 }}
             />
@@ -268,7 +268,7 @@ function ConditionalFields({
                 <TextInput label="Job Title" placeholder='e.g. "Senior UI Designer"' value={formData.jobTitle || ''} onChange={set('jobTitle')} required />
                 <PillSelector label="Experience Level" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
                 <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 8, fontFamily: 'DM Sans' }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
                         Top 3 Skills <span style={{ color: 'var(--accent)' }}>*</span>
                     </label>
                     <TagInput
@@ -286,7 +286,7 @@ function ConditionalFields({
                 <TextInput label="Job Role You're Hiring For" placeholder='e.g. "Full Stack Developer"' value={formData.hiringFor || ''} onChange={set('hiringFor')} required />
                 <PillSelector label="Required Experience" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
                 <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 8, fontFamily: 'DM Sans' }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
                         Top 3 Required Skills <span style={{ color: 'var(--accent)' }}>*</span>
                     </label>
                     <TagInput
@@ -407,7 +407,7 @@ function ConditionalFields({
             <>
                 <TextInput label="Role / Title" placeholder='e.g. "React Developer"' value={formData.roleTitle || ''} onChange={set('roleTitle')} required />
                 <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 8, fontFamily: 'DM Sans' }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
                         Top 3 Skills <span style={{ color: 'var(--accent)' }}>*</span>
                     </label>
                     <TagInput
@@ -649,7 +649,7 @@ export default function UploadVideoPage() {
     /* ─── STYLES ────────────────────────────────────────────────── */
     const pageStyle: React.CSSProperties = {
         minHeight: '100dvh',
-        background: '#000',
+        background: '#FFFFFF',
         paddingBottom: 80,
     };
 
@@ -658,10 +658,10 @@ export default function UploadVideoPage() {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '16px 20px',
-        borderBottom: '1px solid #111',
+        borderBottom: '1px solid #E5E5E5',
         position: 'sticky',
         top: 0,
-        background: 'rgba(0,0,0,0.95)',
+        background: 'rgba(255,255,255,0.95)',
         backdropFilter: 'blur(12px)',
         zIndex: 50,
     };
@@ -686,11 +686,11 @@ export default function UploadVideoPage() {
         return (
             <div style={pageStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#fff' }}>Upload Complete</span>
+                    <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#0A0A0A' }}>Upload Complete</span>
                 </div>
                 <div style={{ textAlign: 'center', padding: '64px 24px' }}>
                     <div style={{ fontSize: 72, marginBottom: 20 }}>🎉</div>
-                    <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 26, color: '#fff', marginBottom: 10 }}>
+                    <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 26, color: '#0A0A0A', marginBottom: 10 }}>
                         Video Uploaded!
                     </h2>
                     <p style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 14, marginBottom: 40, lineHeight: 1.7, maxWidth: 320, margin: '0 auto 40px' }}>
@@ -724,10 +724,10 @@ export default function UploadVideoPage() {
                 {/* Header */}
                 <div style={headerStyle}>
                     <button onClick={() => router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
-                        <ArrowLeft size={20} color="#fff" />
+                        <ArrowLeft size={20} color="#0A0A0A" />
                     </button>
-                    <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 15, color: '#fff' }}>Upload Video</span>
-                    <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#555' }}>1 of 2</span>
+                    <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 15, color: '#0A0A0A' }}>Upload Video</span>
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#888888' }}>1 of 2</span>
                 </div>
 
                 {/* Step indicator */}
@@ -744,11 +744,11 @@ export default function UploadVideoPage() {
                         onDrop={handleDrop}
                         onDragOver={(e) => e.preventDefault()}
                         style={{
-                            border: videoFile ? '2px solid var(--accent)' : '2px dashed #2a2a2a',
+                            border: videoFile ? '2px solid var(--accent)' : '2px dashed #CCCCCC',
                             borderRadius: 20,
                             overflow: 'hidden',
                             cursor: videoFile ? 'default' : 'pointer',
-                            background: '#0a0a0a',
+                            background: '#F8F8F8',
                             marginBottom: 16,
                             minHeight: videoFile ? 'auto' : 220,
                             display: 'flex',
@@ -760,13 +760,13 @@ export default function UploadVideoPage() {
                         {!videoFile ? (
                             <div style={{ textAlign: 'center', padding: '40px 24px' }}>
                                 <div style={{ fontSize: 48, marginBottom: 12 }}>📹</div>
-                                <p style={{ color: '#fff', fontFamily: 'Syne', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                                <p style={{ color: '#0A0A0A', fontFamily: 'Syne', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
                                     Tap to select your video
                                 </p>
-                                <p style={{ color: '#555', fontFamily: 'DM Sans', fontSize: 12 }}>
+                                <p style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 12 }}>
                                     MP4, MOV, WebM
                                 </p>
-                                <p style={{ color: '#555', fontFamily: 'DM Sans', fontSize: 12, marginTop: 4 }}>
+                                <p style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 12, marginTop: 4 }}>
                                     Max 80 seconds · Max 200 MB
                                 </p>
                             </div>
@@ -831,8 +831,8 @@ export default function UploadVideoPage() {
                             onClick={() => fileInputRef.current?.click()}
                             style={{
                                 width: '100%', padding: '11px',
-                                background: '#111', border: '1.5px solid #2a2a2a',
-                                borderRadius: 12, color: '#888', fontFamily: 'DM Sans',
+                                background: '#F8F8F8', border: '1.5px solid #E5E5E5',
+                                borderRadius: 12, color: '#444444', fontFamily: 'DM Sans',
                                 fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 10,
                             }}
                         >
@@ -880,10 +880,10 @@ export default function UploadVideoPage() {
             {/* Header */}
             <div style={headerStyle}>
                 <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
-                    <ArrowLeft size={20} color="#fff" />
+                    <ArrowLeft size={20} color="#0A0A0A" />
                 </button>
-                <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 15, color: '#fff' }}>Video Details</span>
-                <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#555' }}>2 of 2</span>
+                <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 15, color: '#0A0A0A' }}>Video Details</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#888888' }}>2 of 2</span>
             </div>
 
             {/* Step indicator */}
@@ -895,7 +895,7 @@ export default function UploadVideoPage() {
 
             <div style={{ padding: '16px 20px' }}>
                 {/* Mini preview */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24, background: '#0a0a0a', borderRadius: 14, padding: '12px', border: '1px solid #1a1a1a' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24, background: '#F8F8F8', borderRadius: 14, padding: '12px', border: '1px solid #E5E5E5' }}>
                     <video
                         src={previewUrl!}
                         style={{ width: 60, height: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0, background: '#000' }}
@@ -907,7 +907,7 @@ export default function UploadVideoPage() {
                             <CheckCircle size={14} color="#00C864" />
                             <span style={{ color: '#00C864', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700 }}>Your video is ready ✓</span>
                         </div>
-                        <p style={{ color: '#555', fontFamily: 'DM Sans', fontSize: 11, margin: 0 }}>
+                        <p style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 11, margin: 0 }}>
                             {formatDuration(videoDuration)} · {formatBytes(videoFile?.size || 0)}
                         </p>
                     </div>
@@ -915,7 +915,7 @@ export default function UploadVideoPage() {
 
                 {/* Thumbnail selector — after video selected */}
                 <div style={{ marginBottom: 24 }}>
-                    <div style={{ color: '#ccc', fontSize: 13, fontWeight: 600, fontFamily: 'DM Sans', marginBottom: 8 }}>
+                    <div style={{ color: '#444444', fontSize: 13, fontWeight: 600, fontFamily: 'DM Sans', marginBottom: 8 }}>
                         Cover Image (optional)
                     </div>
 
@@ -930,8 +930,8 @@ export default function UploadVideoPage() {
                                     onClick={() => setSelectedFrame(i)}
                                     style={{
                                         width: 56, height: 80, borderRadius: 8, overflow: 'hidden',
-                                        border: selectedFrame === i ? '2px solid var(--accent)' : '2px solid #2a2a2a',
-                                        background: '#0a0a0a', cursor: 'pointer', flexShrink: 0,
+                                        border: selectedFrame === i ? '2px solid var(--accent)' : '2px solid #E5E5E5',
+                                        background: '#F8F8F8', cursor: 'pointer', flexShrink: 0,
                                     }}
                                 >
                                     <img src={frame} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -941,7 +941,7 @@ export default function UploadVideoPage() {
                             {/* Custom upload option */}
                             <label style={{
                                 width: 56, height: 80, borderRadius: 8,
-                                border: '2px dashed #2a2a2a', background: '#0a0a0a',
+                                border: '2px dashed #CCCCCC', background: '#F8F8F8',
                                 display: 'flex', flexDirection: 'column',
                                 alignItems: 'center', justifyItems: 'center',
                                 cursor: 'pointer', color: '#888', fontSize: 10,
@@ -957,7 +957,7 @@ export default function UploadVideoPage() {
                             </label>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#0a0a0a', padding: 8, borderRadius: 12, border: '1px solid #1a1a1a' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F8F8F8', padding: 8, borderRadius: 12, border: '1px solid #E5E5E5' }}>
                             <img src={URL.createObjectURL(thumbnailFile)}
                                 style={{ width: 56, height: 80, borderRadius: 8, objectFit: 'cover' }} />
                             <button onClick={() => setThumbnailFile(null)}
@@ -970,11 +970,11 @@ export default function UploadVideoPage() {
 
                 {/* Section label */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                    <div style={{ flex: 1, height: 1, background: '#1a1a1a' }} />
-                    <span style={{ color: '#555', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <div style={{ flex: 1, height: 1, background: '#E5E5E5' }} />
+                    <span style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: 1 }}>
                         Tell us about this video
                     </span>
-                    <div style={{ flex: 1, height: 1, background: '#1a1a1a' }} />
+                    <div style={{ flex: 1, height: 1, background: '#E5E5E5' }} />
                 </div>
 
                 {/* Conditional fields */}
@@ -987,8 +987,8 @@ export default function UploadVideoPage() {
 
                 {/* Caption */}
                 <div style={{ marginBottom: 24 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 8, fontFamily: 'DM Sans' }}>
-                        Caption <span style={{ color: '#444' }}>(optional)</span>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
+                        Caption <span style={{ color: '#888888' }}>(optional)</span>
                     </label>
                     <textarea
                         value={caption}
@@ -999,8 +999,8 @@ export default function UploadVideoPage() {
                         rows={3}
                         style={{
                             width: '100%', padding: '12px 14px',
-                            background: '#111', border: '1.5px solid #2a2a2a',
-                            borderRadius: 10, color: '#fff', fontSize: 14,
+                            background: '#F8F8F8', border: '1.5px solid #E5E5E5',
+                            borderRadius: 10, color: '#0A0A0A', fontSize: 14,
                             fontFamily: 'DM Sans', outline: 'none', resize: 'none',
                             boxSizing: 'border-box',
                         }}

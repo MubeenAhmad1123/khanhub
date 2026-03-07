@@ -14,8 +14,8 @@ export function TopBar() {
     const [showSwitcher, setShowSwitcher] = useState(false);
 
     return (
-        <header className="fixed top-0 left-0 right-0 bg-black/60 backdrop-blur-md border-b border-[--border] z-50 px-4 py-3">
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <header className="fixed top-0 left-0 right-0 backdrop-blur-md z-50 px-4 py-3" style={{ background: 'rgba(255,255,255,0.95)', borderBottom: '1px solid #E5E5E5' }}>
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 text-[#0A0A0A]">
                 {/* Logo & Category Switcher */}
                 <div className="flex items-center gap-4">
                     <Link href="/" className="text-xl font-bold font-syne tracking-tighter italic whitespace-nowrap">
@@ -34,10 +34,10 @@ export function TopBar() {
                                     <span className="text-xs">{categoryConfig.emoji}</span>
                                 )}
                             </div>
-                            <span className="text-[10px] font-black font-syne uppercase tracking-wider hidden sm:inline">
+                            <span className="text-[10px] font-black font-syne uppercase tracking-wider hidden sm:inline text-[#0A0A0A]">
                                 {categoryConfig.label}
                             </span>
-                            <ChevronDown className={`w-3 h-3 text-[--text-muted] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-3 h-3 text-[#333333] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
                         </button>
 
                         <AnimatePresence>
@@ -64,8 +64,8 @@ export function TopBar() {
                                                     setShowSwitcher(false);
                                                 }}
                                                 className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all ${activeCategory === key
-                                                    ? 'bg-[--bg-card] border border-[--border] text-white'
-                                                    : 'hover:bg-white/5 text-[--text-muted]'
+                                                    ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'
+                                                    : 'hover:bg-black/5 text-[#444444]'
                                                     }`}
                                             >
                                                 <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10">
@@ -75,7 +75,7 @@ export function TopBar() {
                                                         <span className="text-sm">{config.emoji}</span>
                                                     )}
                                                 </div>
-                                                <span className="text-[10px] font-black font-syne uppercase tracking-wider">{config.label}</span>
+                                                <span className="text-[10px] font-black font-syne uppercase tracking-wider text-[#0A0A0A]">{config.label}</span>
                                                 {activeCategory === key && (
                                                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" />
                                                 )}
@@ -91,25 +91,26 @@ export function TopBar() {
                 {/* Search */}
                 <div className="flex-1 max-w-md hidden md:block">
                     <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted] group-focus-within:text-[--accent] transition-colors" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#333333] group-focus-within:text-[--accent] transition-colors" />
                         <input
                             type="text"
                             placeholder={`Search in ${categoryConfig.label}...`}
-                            className="w-full bg-[--bg-card] border border-[--border] rounded-full pl-12 pr-4 py-2 text-sm focus:border-[--accent] outline-none transition-all placeholder:text-[--text-muted]"
+                            style={{ background: '#F0F0F0', border: '1px solid #E5E5E5', color: '#0A0A0A' }}
+                            className="w-full rounded-full pl-12 pr-4 py-2 text-sm focus:border-[--accent] outline-none transition-all placeholder:text-[#BBBBBB]"
                         />
                     </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                    <button className="w-9 h-9 rounded-full bg-[--bg-card] border border-[--border] flex items-center justify-center text-[--text-muted] hover:text-white transition-colors relative md:hidden">
+                    <button className="w-9 h-9 rounded-full bg-[#F8F8F8] border border-[#E5E5E5] flex items-center justify-center text-[#333333] hover:text-[#0A0A0A] transition-colors relative md:hidden">
                         <Search className="w-4 h-4" />
                     </button>
-                    <button className="w-9 h-9 rounded-full bg-[--bg-card] border border-[--border] flex items-center justify-center text-[--text-muted] hover:text-white transition-colors relative">
+                    <button className="w-9 h-9 rounded-full bg-[#F8F8F8] border border-[#E5E5E5] flex items-center justify-center text-[#333333] hover:text-[#0A0A0A] transition-colors relative">
                         <Bell className="w-4 h-4" />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-[--accent] rounded-full border-2 border-black" />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-[--accent] rounded-full border-2 border-white" />
                     </button>
-                    <div className="w-8 h-8 rounded-full bg-[--accent] flex items-center justify-center font-bold text-[10px] text-black">
+                    <div className="w-8 h-8 rounded-full bg-[--accent] flex items-center justify-center font-bold text-[10px] text-white">
                         JD
                     </div>
                 </div>

@@ -35,7 +35,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" className={`${syne.variable} ${dmSans.variable} ${jetbrains.variable}`}>
-            <body className="antialiased text-white bg-black">
+            <body style={{ background: '#fff', color: '#0A0A0A' }} className="antialiased">
                 <StructuredData />
                 <ClientLayout>{children}</ClientLayout>
                 <Analytics />

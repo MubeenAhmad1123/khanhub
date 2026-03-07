@@ -33,10 +33,10 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                 fontFamily: 'Syne',
                 fontWeight: 700,
                 fontSize: 17,
-                color: '#000',
+                color: '#fff',
                 margin: '0 0 4px',
                 lineHeight: 1.3,
-                textShadow: '0 1px 4px rgba(255,255,255,0.8)',
+                textShadow: '0 1px 4px rgba(0,0,0,0.8)',
                 maxWidth: '85%',
             }}>
                 {data.title}
@@ -46,7 +46,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             {data.field1 && (
                 <p style={{
                     fontSize: 13,         // ← was 14px
-                    color: 'rgba(0,0,0,0.85)',
+                    color: 'rgba(255,255,255,0.85)',
                     margin: '0 0 2px',
                     fontFamily: 'DM Sans',
                     display: 'flex', alignItems: 'center', gap: 6,
@@ -59,12 +59,12 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             {data.field2 && (
                 <p style={{
                     fontSize: 12,
-                    color: 'rgba(0,0,0,0.7)',
+                    color: 'rgba(255,255,255,0.7)',
                     margin: '0 0 6px',
                     fontFamily: 'DM Sans',
                     display: 'flex', alignItems: 'center', gap: 6,
                 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(0,0,0,0.3)', flexShrink: 0 }} />
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
                     {data.field2}
                 </p>
             )}
@@ -72,7 +72,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             {/* Location + Verified — smaller */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {data.location && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(0,0,0,0.6)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(255,255,255,0.8)' }}>
                         <span style={{ fontSize: 11 }}>📍</span>
                         <span style={{ fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                             {data.location}

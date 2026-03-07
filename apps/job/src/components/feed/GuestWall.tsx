@@ -84,7 +84,7 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center px-8 text-center"
+                    className="fixed inset-0 bg-white/95 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center px-8 text-center text-[#0A0A0A]"
                 >
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[--accent] rounded-full blur-[120px] opacity-20 pointer-events-none" />
 
@@ -111,7 +111,7 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                         <button
                             onClick={handleGoogleSignIn}
                             disabled={loading}
-                            className="w-full py-4 bg-white text-black font-black font-syne uppercase tracking-widest text-xs rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_32px_rgba(255,255,255,0.1)] active:scale-95 transition-all disabled:opacity-50"
+                            className="w-full py-4 bg-[#0A0A0A] text-[#FFFFFF] font-black font-syne uppercase tracking-widest text-xs rounded-2xl flex items-center justify-center gap-3 shadow-[0_4px_14px_rgba(0,0,0,0.15)] active:scale-95 transition-all disabled:opacity-50"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -127,7 +127,7 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                     {!isHardWall && (
                         <button
                             onClick={onContinue}
-                            className="mt-12 text-[--text-muted] hover:text-white text-[10px] font-black uppercase tracking-[0.3em] transition-colors"
+                            className="mt-12 text-[#666666] hover:text-[#0A0A0A] text-[10px] font-black uppercase tracking-[0.3em] transition-colors"
                         >
                             ✕ Watch 3 more as guest
                         </button>

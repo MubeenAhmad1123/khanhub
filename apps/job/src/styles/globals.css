@@ -19,39 +19,73 @@
   --animate-marquee2: marquee2 25s linear infinite;
 
   @keyframes marquee {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-100%); }
+    0% {
+      transform: translateX(0%);
+    }
+
+    100% {
+      transform: translateX(-100%);
+    }
   }
 
   @keyframes marquee2 {
-    0% { transform: translateX(100%); }
-    100% { transform: translateX(0%); }
+    0% {
+      transform: translateX(100%);
+    }
+
+    100% {
+      transform: translateX(0%);
+    }
   }
 }
 
 @layer base {
   :root {
     --bg-primary: #FFFFFF;
-    --bg-secondary: #F5F5F5;
-    --bg-card: #FFFFFF;
-    --text-primary: #000000;
-    --text-muted: #666666;
+    --bg-card: #F8F8F8;
+    --bg-secondary: #F0F0F0;
     --border: #E5E5E5;
-    --accent: #FF0069; /* Default to Jobs accent */
+    --border-subtle: #F0F0F0;
+    --text-primary: #0A0A0A;
+    --text-secondary: #444444;
+    --text-muted: #888888;
+    --text-placeholder: #BBBBBB;
+    --accent: #FF0069;
+    /* Default to Jobs accent */
     --accent-glow: rgba(255, 0, 105, 0.3);
+
+    /* Feed video overlay — NEVER change these to white */
+    --video-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.2) 40%, transparent 70%);
   }
 
   body {
-    @apply antialiased text-black bg-white;
+    background: #FFFFFF;
+    color: #0A0A0A;
+    @apply antialiased;
     font-family: var(--font-dm-sans);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  /* scrollbar on light theme */
+  ::-webkit-scrollbar-track {
+    background: #F0F0F0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #CCCCCC;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-bold;
     font-family: var(--font-syne);
   }
 
-  code, pre {
+  code,
+  pre {
     font-family: var(--font-jetbrains);
   }
 }
@@ -76,12 +110,15 @@
     height: 100dvh;
     overflow-y: scroll;
     scroll-snap-type: y mandatory;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
   }
 
   .feed-container::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+    display: none;
+    /* Chrome, Safari and Opera */
   }
 
   .reel-item {

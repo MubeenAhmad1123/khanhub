@@ -126,11 +126,11 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
                 </div>
             )}
 
-            {/* Gradient overlay - changed to white for light theme */}
+            {/* Gradient overlay - always black to prevent video fog */}
             <div
                 style={{
                     position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to top, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.4) 40%, transparent 70%)',
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 40%, transparent 70%)',
                     pointerEvents: 'none', zIndex: 5,
                 }}
             />

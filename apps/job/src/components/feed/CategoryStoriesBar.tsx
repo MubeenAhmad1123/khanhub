@@ -89,7 +89,9 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
             {/* ── STORIES BAR ── */}
             <div style={{
                 padding: '10px 0 10px 12px',
-                background: 'linear-gradient(to bottom, rgba(255,255,255,0.9) 0%, transparent 100%)',
+                background: 'rgba(255,255,255,0.9)',
+                backdropFilter: 'blur(10px)',
+                borderBottom: '1px solid #E5E5E5',
                 position: 'relative',
                 zIndex: 25,
             }}>
@@ -129,7 +131,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     padding: 2.5,
                                     background: isActive
                                         ? `linear-gradient(135deg, ${cat.accent}, #7638FA)`
-                                        : 'linear-gradient(135deg, #eee, #ddd)',
+                                        : '#CCCCCC',
                                     transition: 'background 0.3s, transform 0.2s',
                                     transform: isActive ? 'scale(1.08)' : 'scale(1)',
                                     flexShrink: 0,
@@ -170,7 +172,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     fontSize: 10,
                                     fontFamily: 'DM Sans',
                                     fontWeight: isActive ? 700 : 400,
-                                    color: isActive ? cat.accent : 'rgba(0,0,0,0.55)',
+                                    color: isActive ? cat.accent : '#0A0A0A',
                                     textAlign: 'center',
                                     maxWidth: 62,
                                     lineHeight: 1.2,

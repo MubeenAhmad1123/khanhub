@@ -127,12 +127,12 @@ export default function UserProfilePage() {
             }}>
                 <button onClick={() => router.back()} style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#000', display: 'flex', alignItems: 'center', gap: 6,
+                    color: '#0A0A0A', display: 'flex', alignItems: 'center', gap: 6,
                     fontFamily: 'DM Sans', fontSize: 14,
                 }}>
                     <ArrowLeft size={20} /> Back
                 </button>
-                <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 15, color: '#000' }}>
+                <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 15, color: '#0A0A0A' }}>
                     {profile.name?.split(' ')[0] || 'Profile'}
                 </span>
                 <div style={{ width: 60 }} /> {/* spacer */}
@@ -175,7 +175,7 @@ export default function UserProfilePage() {
                 {/* Name */}
                 <h1 style={{
                     fontFamily: 'Syne', fontWeight: 800, fontSize: 20,
-                    color: '#000', margin: '0 0 6px',
+                    color: '#0A0A0A', margin: '0 0 6px',
                 }}>
                     {profile.name}
                 </h1>
@@ -235,10 +235,10 @@ export default function UserProfilePage() {
                         { label: 'Following', value: profile.following?.length || 0 },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
-                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, color: '#000' }}>
+                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, color: '#0A0A0A' }}>
                                 {formatCount(stat.value)}
                             </div>
-                            <div style={{ fontSize: 11, color: '#666', fontFamily: 'DM Sans' }}>
+                            <div style={{ fontSize: 11, color: '#888888', fontFamily: 'DM Sans' }}>
                                 {stat.label}
                             </div>
                         </div>
@@ -274,7 +274,7 @@ export default function UserProfilePage() {
 
             {/* ── TAB BAR ── */}
             <div style={{
-                display: 'flex', borderBottom: '1px solid #eee',
+                display: 'flex', borderBottom: '1px solid #E5E5E5',
                 position: 'sticky', top: 49, background: '#fff', zIndex: 9,
             }}>
                 {[
@@ -292,7 +292,7 @@ export default function UserProfilePage() {
                                 ? `2px solid ${catConfig.accent}`
                                 : '2px solid transparent',
                             transition: 'border-color 0.2s',
-                            color: activeTab === tab.key ? catConfig.accent : '#888',
+                            color: activeTab === tab.key ? catConfig.accent : '#888888',
                         }}
                     >
                         {tab.icon}
@@ -388,10 +388,10 @@ export default function UserProfilePage() {
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div>
-                                            <div style={{ color: '#000', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14 }}>
+                                            <div style={{ color: '#0A0A0A', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14 }}>
                                                 {exp.role}
                                             </div>
-                                            <div style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 13, marginTop: 2 }}>
+                                            <div style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 13, marginTop: 2 }}>
                                                 🏢 {exp.company}
                                             </div>
                                         </div>
@@ -400,7 +400,7 @@ export default function UserProfilePage() {
                                         </div>
                                     </div>
                                     {exp.description && (
-                                        <p style={{ color: '#666', fontSize: 12, fontFamily: 'DM Sans', marginTop: 6, lineHeight: 1.5 }}>
+                                        <p style={{ color: '#444444', fontSize: 12, fontFamily: 'DM Sans', marginTop: 6, lineHeight: 1.5 }}>
                                             {exp.description}
                                         </p>
                                     )}
@@ -415,15 +415,15 @@ export default function UserProfilePage() {
                             {profile.education.map((edu: any, i: number) => (
                                 <div key={i} style={{
                                     padding: '10px 0',
-                                    borderBottom: i < profile.education.length - 1 ? '1px solid #eee' : 'none',
+                                    borderBottom: i < profile.education.length - 1 ? '1px solid #E5E5E5' : 'none',
                                 }}>
-                                    <div style={{ color: '#000', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14 }}>
+                                    <div style={{ color: '#0A0A0A', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14 }}>
                                         🎓 {edu.institution}
                                     </div>
-                                    <div style={{ color: '#888', fontSize: 12, fontFamily: 'DM Sans', marginTop: 2 }}>
+                                    <div style={{ color: '#666666', fontSize: 12, fontFamily: 'DM Sans', marginTop: 2 }}>
                                         {edu.degree} {edu.field && `• ${edu.field}`}
                                     </div>
-                                    <div style={{ color: '#555', fontSize: 11, fontFamily: 'DM Sans', marginTop: 2 }}>
+                                    <div style={{ color: '#888888', fontSize: 11, fontFamily: 'DM Sans', marginTop: 2 }}>
                                         {edu.startYear} — {edu.endYear}
                                     </div>
                                 </div>
@@ -456,8 +456,8 @@ export default function UserProfilePage() {
                             </div>
                         ) : (
                             <div style={{ textAlign: 'center', padding: '12px 0' }}>
-                                <Lock size={28} color="#555" style={{ marginBottom: 8 }} />
-                                <p style={{ color: '#666', fontSize: 12, fontFamily: 'DM Sans', margin: '0 0 12px' }}>
+                                <Lock size={28} color="#AAAAAA" style={{ marginBottom: 8 }} />
+                                <p style={{ color: '#888888', fontSize: 12, fontFamily: 'DM Sans', margin: '0 0 12px' }}>
                                     Contact info is hidden. Pay Rs. 1,000 to unlock.
                                 </p>
                                 <button
@@ -498,12 +498,11 @@ export default function UserProfilePage() {
     );
 }
 
-// Reusable section component
 function Section({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
     return (
         <div style={{
-            background: '#fefefe',
-            border: '1px solid #eee',
+            background: '#F8F8F8',
+            border: '1px solid #E5E5E5',
             borderRadius: 14,
             padding: '14px 16px',
         }}>
@@ -516,7 +515,7 @@ function Section({ title, accent, children }: { title: string; accent: string; c
                 <div style={{ width: 3, height: 14, background: accent, borderRadius: 999 }} />
                 <h3 style={{
                     fontFamily: 'Syne', fontWeight: 700, fontSize: 13,
-                    color: '#000', margin: 0, textTransform: 'uppercase',
+                    color: '#0A0A0A', margin: 0, textTransform: 'uppercase',
                     letterSpacing: '0.08em',
                 }}>
                     {title}

@@ -31,9 +31,9 @@ export function BottomNav() {
             className="md:hidden"
             style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0,
-                background: 'rgba(0,0,0,0.95)',
+                background: 'rgba(255,255,255,0.95)',
                 backdropFilter: 'blur(20px)',
-                borderTop: '1px solid #1A1A1A',
+                borderTop: '1px solid #E5E5E5',
                 display: 'flex',
                 zIndex: 50,
                 paddingBottom: 'env(safe-area-inset-bottom, 16px)',
@@ -61,7 +61,7 @@ export function BottomNav() {
                             display: 'flex', flexDirection: 'column',
                             alignItems: 'center', gap: 4,
                             cursor: 'pointer',
-                            color: isActive ? 'var(--accent)' : '#555',
+                            color: isActive ? 'var(--accent)' : '#AAAAAA',
                             transition: 'color 0.2s',
                         }}
                     >

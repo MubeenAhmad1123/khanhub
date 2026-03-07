@@ -57,10 +57,10 @@ export default function ProfilePage() {
     if (loading || !user || !profile) return <ProfileSkeleton />;
 
     return (
-        <div style={{ background: '#000', minHeight: '100dvh', paddingBottom: 80, color: '#fff' }}>
+        <div style={{ background: '#FFFFFF', minHeight: '100dvh', paddingBottom: 80, color: '#0A0A0A' }}>
 
             {/* ── HEADER SECTION (TikTok style) ── */}
-            <div style={{ padding: '20px 16px 0', textAlign: 'center' }}>
+            <div style={{ padding: '20px 16px', textAlign: 'center', background: '#F8F8F8', borderBottom: '1px solid #E5E5E5' }}>
 
                 {/* Avatar */}
                 <div style={{ position: 'relative', width: 88, height: 88, margin: '0 auto 12px' }}>
@@ -76,7 +76,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Name */}
-                <h1 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 20, color: '#fff', margin: '0 0 4px' }}>
+                <h1 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 4px' }}>
                     {profile.name || user.displayName}
                 </h1>
 
@@ -90,7 +90,7 @@ export default function ProfilePage() {
                         {categoryConfig?.emoji} {categoryConfig?.label}
                     </span>
                     <span style={{
-                        background: '#1A1A1A', color: '#888',
+                        background: '#F0F0F0', color: '#666666', border: '1px solid #E5E5E5',
                         borderRadius: 999, padding: '3px 12px',
                         fontSize: 11, fontFamily: 'DM Sans',
                     }}>
@@ -106,10 +106,10 @@ export default function ProfilePage() {
                         { label: 'Likes', value: profile.totalLikes || 0 },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
-                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, color: '#fff' }}>
+                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, color: '#0A0A0A' }}>
                                 {formatCount(stat.value)}
                             </div>
-                            <div style={{ fontSize: 11, color: '#666', fontFamily: 'DM Sans' }}>
+                            <div style={{ fontSize: 11, color: '#888888', fontFamily: 'DM Sans' }}>
                                 {stat.label}
                             </div>
                         </div>
@@ -129,8 +129,8 @@ export default function ProfilePage() {
                     style={{
                         width: '100%', maxWidth: 280,
                         padding: '10px', borderRadius: 10,
-                        background: 'transparent', color: '#fff',
-                        border: '1px solid #333', fontFamily: 'DM Sans',
+                        background: 'transparent', color: '#0A0A0A',
+                        border: '1px solid #E5E5E5', fontFamily: 'DM Sans',
                         fontWeight: 600, fontSize: 14, cursor: 'pointer',
                         marginBottom: 16,
                     }}
@@ -141,8 +141,8 @@ export default function ProfilePage() {
 
             {/* ── TAB BAR (TikTok style) ── */}
             <div style={{
-                display: 'flex', borderBottom: '1px solid #1A1A1A',
-                position: 'sticky', top: 0, background: '#000', zIndex: 10,
+                display: 'flex', borderBottom: '1px solid #E5E5E5',
+                position: 'sticky', top: 0, background: '#FFFFFF', zIndex: 10,
             }}>
                 {[
                     { key: 'videos', icon: '⊞', label: 'Videos' },
@@ -155,7 +155,7 @@ export default function ProfilePage() {
                         style={{
                             flex: 1, padding: '12px 0',
                             background: 'none', border: 'none', cursor: 'pointer',
-                            color: activeTab === tab.key ? accentColor : '#555',
+                            color: activeTab === tab.key ? accentColor : '#BBBBBB',
                             borderBottom: activeTab === tab.key ? `2px solid ${accentColor}` : '2px solid transparent',
                             fontSize: 18, transition: 'color 0.2s',
                         }}
@@ -201,7 +201,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Sign Out */}
-            <div style={{ padding: '24px 16px 0', borderTop: '1px solid #111' }}>
+            <div style={{ padding: '24px 16px 0', borderTop: 'none' }}>
                 <button
                     onClick={() => { auth.signOut(); router.push('/'); }}
                     style={{

@@ -41,19 +41,19 @@ export default function HomePage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden">
+        <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans overflow-x-hidden">
             {/* Navbar */}
             <nav className="flex items-center justify-between px-6 py-6 max-w-7xl mx-auto w-full">
                 <div className="flex items-center gap-2">
                     <span className="font-syne font-black text-2xl tracking-tighter italic">
-                        <span className="text-[#FF0069]">JOB</span>REEL
+                        <span className="text-[#FF0069]">JOB</span><span className="text-[#0A0A0A]">REEL</span>
                     </span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Link href="/auth/login" className="text-sm font-bold uppercase tracking-widest hover:text-[#FF0069] transition-colors">
+                    <Link href="/auth/login" className="text-sm font-bold uppercase tracking-widest text-[#333333] hover:text-[#FF0069] transition-colors">
                         Login
                     </Link>
-                    <Link href="/auth/register" className="bg-white text-black px-6 py-2.5 rounded-full text-sm font-black uppercase tracking-widest hover:bg-[#FF0069] hover:text-white transition-all">
+                    <Link href="/auth/register" className="bg-[#FF0069] text-white px-6 py-2.5 rounded-full text-sm font-black uppercase tracking-widest hover:bg-[#D00055] transition-all">
                         Start →
                     </Link>
                 </div>
@@ -67,7 +67,7 @@ export default function HomePage() {
                     style={{
                         fontFamily: 'Syne', fontWeight: 900,
                         fontSize: 'clamp(36px, 6vw, 72px)',
-                        color: '#fff', lineHeight: 1.1, margin: 0,
+                        color: '#0A0A0A', lineHeight: 1.1, margin: 0,
                         marginBottom: 16
                     }}
                 >
@@ -75,10 +75,10 @@ export default function HomePage() {
                     <span className="text-[#FF0069] italic">Perfect Match.</span>
                 </motion.h1>
                 <div className="w-32 h-1 bg-[#FF0069] mb-8" />
-                <p className="text-[--text-muted] max-w-md text-lg leading-relaxed mb-4">
+                <p className="text-[#666666] max-w-md text-lg leading-relaxed mb-4">
                     Video-first platform connecting people across 8 industries in Pakistan.
                 </p>
-                <p className="font-bold uppercase tracking-widest text-[#888] font-sans" style={{ fontSize: 'clamp(14px, 1.5vw, 16px)' }}>
+                <p className="font-bold uppercase tracking-widest text-[#888888] font-sans" style={{ fontSize: 'clamp(14px, 1.5vw, 16px)' }}>
                     Select your industry to begin
                 </p>
             </header>
@@ -98,7 +98,7 @@ export default function HomePage() {
                             <div style={{
                                 width: 'clamp(70px, 10vw, 100px)', height: 'clamp(70px, 10vw, 100px)',
                                 borderRadius: '50%', overflow: 'hidden',
-                                border: `2px solid #1A1A1A`,
+                                border: `2px solid #E5E5E5`,
                                 transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.2s',
                                 position: 'relative', flexShrink: 0,
                             }}
@@ -108,7 +108,7 @@ export default function HomePage() {
                                     src={`/${cat.image}`} alt={cat.label}
                                     style={{
                                         width: '100%', height: '100%', objectFit: 'cover',
-                                        filter: selectedCat?.key === cat.key ? 'brightness(0.8)' : 'brightness(0.6)',
+                                        filter: selectedCat?.key === cat.key ? 'brightness(0.7)' : 'brightness(0.8)',
                                         transition: 'filter 0.3s, transform 0.4s',
                                     }}
                                 />
@@ -144,9 +144,9 @@ export default function HomePage() {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed bottom-0 left-0 right-0 bg-[#0D0D0D] border-t border-[#1A1A1A] rounded-t-[40px] p-8 z-[101] pb-16 max-w-lg mx-auto"
+                            className="fixed bottom-0 left-0 right-0 bg-[#FFFFFF] border-t border-[#E5E5E5] text-[#0A0A0A] rounded-t-[40px] p-8 z-[101] pb-16 max-w-lg mx-auto"
                         >
-                            <div className="w-12 h-1.5 bg-[#1A1A1A] rounded-full mx-auto mb-10" />
+                            <div className="w-12 h-1.5 bg-[#E5E5E5] rounded-full mx-auto mb-10" />
 
                             <div className="flex items-center gap-4 mb-2">
                                 <span className="text-3xl" style={{ textShadow: `0 0 20px ${selectedCat.accent}66` }}>
@@ -156,7 +156,7 @@ export default function HomePage() {
                                     You selected {selectedCat.label}
                                 </span>
                             </div>
-                            <div className="w-full h-[1px] bg-[#1A1A1A] mb-8" />
+                            <div className="w-full h-[1px] bg-[#E5E5E5] mb-8" />
 
                             <h3 className="text-3xl font-syne font-bold mb-8">I am a...</h3>
 
@@ -179,14 +179,14 @@ export default function HomePage() {
 
                                 <button
                                     onClick={() => router.push('/feed')}
-                                    className="w-full py-5 border border-[#1A1A1A] rounded-2xl font-bold uppercase tracking-widest text-[10px] text-[--text-muted] hover:text-white hover:border-white transition-all"
+                                    className="w-full py-5 border border-[#E5E5E5] rounded-2xl font-bold uppercase tracking-widest text-[10px] text-[#888888] hover:text-[#0A0A0A] hover:border-[#CCCCCC] transition-all"
                                 >
                                     → Browse as Guest
                                 </button>
                             </div>
 
-                            <div className="mt-8 text-center text-sm text-[--text-muted]">
-                                Already have an account? <Link href="/auth/login" className="text-white font-bold underline decoration-[#FF0069]">Login</Link>
+                            <div className="mt-8 text-center text-sm text-[#666666]">
+                                Already have an account? <Link href="/auth/login" className="text-[#0A0A0A] font-bold underline decoration-[#FF0069]">Login</Link>
                             </div>
                         </motion.div>
                     </>
@@ -197,7 +197,7 @@ export default function HomePage() {
                 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap');
                 
                 body {
-                    background: #050505;
+                    background: #FFFFFF;
                     font-family: 'DM Sans', sans-serif;
                 }
 
@@ -240,16 +240,16 @@ function RoleOption({ title, tagline, icon, accent, onClick }: any) {
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center gap-5 p-5 bg-[#141414] border border-[#1A1A1A] rounded-2xl hover:border-[#333] transition-all group relative overflow-hidden"
+            className="w-full flex items-center gap-5 p-5 bg-[#F8F8F8] border border-[#E5E5E5] rounded-2xl hover:border-[#CCCCCC] transition-all group relative overflow-hidden"
         >
-            <div className="w-12 h-12 rounded-xl bg-[#0d0d0d] flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-xl bg-[#F0F0F0] flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                 {icon}
             </div>
             <div className="text-left">
-                <div className="font-bold text-lg leading-tight mb-1 group-hover:text-white transition-colors">
+                <div className="font-bold text-lg leading-tight mb-1 text-[#0A0A0A] transition-colors">
                     {title}
                 </div>
-                <div className="text-xs text-[--text-muted]">
+                <div className="text-xs text-[#666666]">
                     {tagline}
                 </div>
             </div>
