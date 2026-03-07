@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, Play, Pause } from 'lucide-react';
 
 interface ReelPlayerProps {
     videoId?: string;         // YouTube ID (placeholder)
@@ -12,8 +12,9 @@ interface ReelPlayerProps {
 
 export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: ReelPlayerProps) {
     const [isMuted, setIsMuted] = useState(true);
+    const [isPlaying, setIsPlaying] = useState(true);
     const [userActed, setUserActed] = useState(false);
-    const [showMuteIndicator, setShowMuteIndicator] = useState(false);
+    const [showIndicator, setShowIndicator] = useState<'mute' | 'unmute' | 'play' | 'pause' | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     // Auto-unmute after 800ms for YouTube (autoplay workaround)
@@ -30,36 +31,47 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
     // Play/pause real Cloudinary video based on isActive
     useEffect(() => {
         if (!isPlaceholder && videoRef.current) {
-            if (isActive) {
+            if (isActive && isPlaying) {
                 videoRef.current.play().catch(() => { });
             } else {
                 videoRef.current.pause();
-                videoRef.current.currentTime = 0;
+                if (!isActive) {
+                    videoRef.current.currentTime = 0;
+                    setIsPlaying(true);
+                }
             }
         }
-    }, [isActive, isPlaceholder]);
+    }, [isActive, isPlaceholder, isPlaying]);
 
     // YouTube embed URL
     const embedUrl = isPlaceholder && videoId
         ? `https://www.youtube.com/embed/${videoId}?autoplay=${isActive ? 1 : 0}&mute=${isMuted ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3`
         : null;
 
-    const toggleMute = () => {
+    const toggleMute = (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (!isPlaceholder && videoRef.current) {
             videoRef.current.muted = !videoRef.current.muted;
             setIsMuted(videoRef.current.muted);
+            setShowIndicator(videoRef.current.muted ? 'mute' : 'unmute');
         } else {
             setIsMuted(prev => !prev);
+            setShowIndicator(!isMuted ? 'mute' : 'unmute');
         }
         setUserActed(true);
-        setShowMuteIndicator(true);
-        setTimeout(() => setShowMuteIndicator(false), 1500);
+        setTimeout(() => setShowIndicator(null), 1000);
+    };
+
+    const togglePlayPause = () => {
+        setIsPlaying(!isPlaying);
+        setShowIndicator(!isPlaying ? 'play' : 'pause');
+        setTimeout(() => setShowIndicator(null), 1000);
     };
 
     return (
         <div
-            onClick={toggleMute}
-            style={{ position: 'absolute', inset: 0, background: '#000', overflow: 'hidden', cursor: 'pointer' }}
+            onClick={togglePlayPause}
+            style={{ position: 'absolute', inset: 0, background: '#fff', overflow: 'hidden', cursor: 'pointer' }}
         >
             {/* REAL VIDEO — Cloudinary native <video> */}
             {!isPlaceholder && cloudinaryUrl && (
@@ -114,29 +126,45 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
                 </div>
             )}
 
-            {/* Gradient overlay */}
+            {/* Gradient overlay - changed to white for light theme */}
             <div
                 style={{
                     position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 40%, transparent 70%)',
+                    background: 'linear-gradient(to top, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.4) 40%, transparent 70%)',
                     pointerEvents: 'none', zIndex: 5,
                 }}
             />
 
-            {/* Black screen when inactive */}
-            {!isActive && <div style={{ position: 'absolute', inset: 0, background: '#000', zIndex: 1 }} />}
+            {/* White screen when inactive */}
+            {!isActive && <div style={{ position: 'absolute', inset: 0, background: '#fff', zIndex: 1 }} />}
 
-            {/* Mute indicator */}
+            {/* Play/Pause & Mute Indicator */}
             <div
                 style={{
                     position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     pointerEvents: 'none', zIndex: 40,
-                    opacity: showMuteIndicator ? 1 : 0, transition: 'opacity 0.3s',
+                    opacity: showIndicator ? 1 : 0, transition: 'opacity 0.3s',
                 }}
             >
-                <div style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', borderRadius: '50%', padding: 16 }}>
-                    {isMuted ? <VolumeX size={28} color="#fff" /> : <Volume2 size={28} color="#fff" />}
+                <div style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)', borderRadius: '50%', padding: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    {showIndicator === 'mute' && <VolumeX size={36} color="#000" />}
+                    {showIndicator === 'unmute' && <Volume2 size={36} color="#000" />}
+                    {showIndicator === 'play' && <Play size={36} color="#000" fill="#000" />}
+                    {showIndicator === 'pause' && <Pause size={36} color="#000" fill="#000" />}
                 </div>
+            </div>
+
+            {/* Volume Button Overlay */}
+            <div
+                style={{
+                    position: 'absolute', top: '120px', right: '16px', zIndex: 45,
+                    background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)',
+                    borderRadius: '50%', padding: '10px', display: 'flex', cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+                onClick={toggleMute}
+            >
+                {isMuted ? <VolumeX size={20} color="#000" /> : <Volume2 size={20} color="#000" />}
             </div>
 
             {/* Tap overlay */}

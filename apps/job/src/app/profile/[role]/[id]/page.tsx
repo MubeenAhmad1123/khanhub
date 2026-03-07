@@ -81,7 +81,7 @@ export default function UserProfilePage() {
 
     if (loading) {
         return (
-            <div style={{ background: '#000', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: '#fff', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #FF0069', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
             </div>
         );
@@ -89,7 +89,7 @@ export default function UserProfilePage() {
 
     if (!profile) {
         return (
-            <div style={{ background: '#000', minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+            <div style={{ background: '#fff', minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
                 <div style={{ fontSize: 48 }}>👤</div>
                 <p style={{ color: '#666', fontFamily: 'DM Sans' }}>User not found</p>
                 <button onClick={() => router.back()} style={{ color: '#FF0069', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans' }}>← Go back</button>
@@ -108,31 +108,31 @@ export default function UserProfilePage() {
 
     return (
         <div style={{
-            background: '#000',
+            background: '#fff',
             minHeight: '100dvh',
             paddingBottom: 80,
             maxWidth: 600,
             margin: '0 auto',
-            borderLeft: '1px solid #111',
-            borderRight: '1px solid #111'
+            borderLeft: '1px solid #eee',
+            borderRight: '1px solid #eee'
         }}>
 
             {/* ── TOP BAR ── */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '12px 16px',
-                position: 'sticky', top: 0, background: 'rgba(0,0,0,0.95)',
+                position: 'sticky', top: 0, background: 'rgba(255,255,255,0.95)',
                 backdropFilter: 'blur(10px)', zIndex: 10,
-                borderBottom: '1px solid #111',
+                borderBottom: '1px solid #eee',
             }}>
                 <button onClick={() => router.back()} style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#fff', display: 'flex', alignItems: 'center', gap: 6,
+                    color: '#000', display: 'flex', alignItems: 'center', gap: 6,
                     fontFamily: 'DM Sans', fontSize: 14,
                 }}>
                     <ArrowLeft size={20} /> Back
                 </button>
-                <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 15, color: '#fff' }}>
+                <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 15, color: '#000' }}>
                     {profile.name?.split(' ')[0] || 'Profile'}
                 </span>
                 <div style={{ width: 60 }} /> {/* spacer */}
@@ -149,12 +149,12 @@ export default function UserProfilePage() {
                         background: `linear-gradient(135deg, ${catConfig.accent}, #7638FA)`,
                     }}>
                         <img
-                            src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=111&color=fff&size=90`}
+                            src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000&size=90`}
                             alt={profile.name}
                             style={{
                                 width: '100%', height: '100%',
                                 borderRadius: '50%', objectFit: 'cover',
-                                border: '3px solid #000',
+                                border: '3px solid #fff',
                             }}
                         />
                     </div>
@@ -165,7 +165,7 @@ export default function UserProfilePage() {
                             width: 22, height: 22, borderRadius: '50%',
                             background: catConfig.accent,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '2px solid #000',
+                            border: '2px solid #fff',
                         }}>
                             <ShieldCheck size={12} color="#fff" strokeWidth={2.5} />
                         </div>
@@ -175,7 +175,7 @@ export default function UserProfilePage() {
                 {/* Name */}
                 <h1 style={{
                     fontFamily: 'Syne', fontWeight: 800, fontSize: 20,
-                    color: '#fff', margin: '0 0 6px',
+                    color: '#000', margin: '0 0 6px',
                 }}>
                     {profile.name}
                 </h1>
@@ -183,7 +183,7 @@ export default function UserProfilePage() {
                 {/* Category + Role badges */}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
                     <span style={{
-                        background: `${catConfig.accent}22`,
+                        background: `${catConfig.accent}15`,
                         color: catConfig.accent,
                         border: `1px solid ${catConfig.accent}`,
                         borderRadius: 999, padding: '3px 12px',
@@ -192,9 +192,9 @@ export default function UserProfilePage() {
                         {catConfig.emoji} {catConfig.label}
                     </span>
                     <span style={{
-                        background: '#1A1A1A', color: '#888',
+                        background: '#f5f5f5', color: '#666', border: '1px solid #e0e0e0',
                         borderRadius: 999, padding: '3px 12px',
-                        fontSize: 11, fontFamily: 'DM Sans',
+                        fontSize: 11, fontFamily: 'DM Sans', fontWeight: 500,
                     }}>
                         {profile.role === 'provider'
                             ? (profile.jobTitle || profile.specialization || profile.roleTitle || 'Provider')
@@ -203,9 +203,9 @@ export default function UserProfilePage() {
                     </span>
                     {profile.city && (
                         <span style={{
-                            background: '#1A1A1A', color: '#666',
+                            background: '#f5f5f5', color: '#666', border: '1px solid #e0e0e0',
                             borderRadius: 999, padding: '3px 10px',
-                            fontSize: 11, fontFamily: 'DM Sans',
+                            fontSize: 11, fontFamily: 'DM Sans', fontWeight: 500,
                             display: 'flex', alignItems: 'center', gap: 3,
                         }}>
                             <MapPin size={10} /> {profile.city}
@@ -235,7 +235,7 @@ export default function UserProfilePage() {
                         { label: 'Following', value: profile.following?.length || 0 },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
-                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, color: '#fff' }}>
+                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, color: '#000' }}>
                                 {formatCount(stat.value)}
                             </div>
                             <div style={{ fontSize: 11, color: '#666', fontFamily: 'DM Sans' }}>
@@ -274,8 +274,8 @@ export default function UserProfilePage() {
 
             {/* ── TAB BAR ── */}
             <div style={{
-                display: 'flex', borderBottom: '1px solid #1A1A1A',
-                position: 'sticky', top: 49, background: '#000', zIndex: 9,
+                display: 'flex', borderBottom: '1px solid #eee',
+                position: 'sticky', top: 49, background: '#fff', zIndex: 9,
             }}>
                 {[
                     { key: 'videos', icon: '⊞' },
@@ -292,7 +292,7 @@ export default function UserProfilePage() {
                                 ? `2px solid ${catConfig.accent}`
                                 : '2px solid transparent',
                             transition: 'border-color 0.2s',
-                            color: activeTab === tab.key ? catConfig.accent : '#444',
+                            color: activeTab === tab.key ? catConfig.accent : '#888',
                         }}
                     >
                         {tab.icon}
@@ -323,7 +323,7 @@ export default function UserProfilePage() {
                                         overflow: 'hidden',
                                         cursor: 'pointer',
                                         position: 'relative',
-                                        background: '#111',
+                                        background: '#eee',
                                     }}
                                 >
                                     {getThumbnail(video) ? (
@@ -384,11 +384,11 @@ export default function UserProfilePage() {
                             {profile.experience.map((exp: any, i: number) => (
                                 <div key={i} style={{
                                     padding: '12px 0',
-                                    borderBottom: i < profile.experience.length - 1 ? '1px solid #1A1A1A' : 'none',
+                                    borderBottom: i < profile.experience.length - 1 ? '1px solid #eee' : 'none',
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div>
-                                            <div style={{ color: '#fff', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14 }}>
+                                            <div style={{ color: '#000', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14 }}>
                                                 {exp.role}
                                             </div>
                                             <div style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 13, marginTop: 2 }}>
@@ -415,9 +415,9 @@ export default function UserProfilePage() {
                             {profile.education.map((edu: any, i: number) => (
                                 <div key={i} style={{
                                     padding: '10px 0',
-                                    borderBottom: i < profile.education.length - 1 ? '1px solid #1A1A1A' : 'none',
+                                    borderBottom: i < profile.education.length - 1 ? '1px solid #eee' : 'none',
                                 }}>
-                                    <div style={{ color: '#fff', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14 }}>
+                                    <div style={{ color: '#000', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 14 }}>
                                         🎓 {edu.institution}
                                     </div>
                                     <div style={{ color: '#888', fontSize: 12, fontFamily: 'DM Sans', marginTop: 2 }}>
@@ -502,21 +502,21 @@ export default function UserProfilePage() {
 function Section({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
     return (
         <div style={{
-            background: '#0D0D0D',
-            border: '1px solid #1A1A1A',
+            background: '#fefefe',
+            border: '1px solid #eee',
             borderRadius: 14,
             padding: '14px 16px',
         }}>
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 marginBottom: 12,
-                borderBottom: '1px solid #1A1A1A',
+                borderBottom: '1px solid #eee',
                 paddingBottom: 10,
             }}>
                 <div style={{ width: 3, height: 14, background: accent, borderRadius: 999 }} />
                 <h3 style={{
                     fontFamily: 'Syne', fontWeight: 700, fontSize: 13,
-                    color: '#fff', margin: 0, textTransform: 'uppercase',
+                    color: '#000', margin: 0, textTransform: 'uppercase',
                     letterSpacing: '0.08em',
                 }}>
                     {title}

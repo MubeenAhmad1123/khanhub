@@ -68,7 +68,7 @@ export function ActionButtons({
                         height: 44,
                         borderRadius: '50%',
                         overflow: 'hidden',
-                        border: '2px solid #fff',
+                        border: '2px solid #000',
                         cursor: 'pointer',
                     }}>
                     <img
@@ -103,7 +103,7 @@ export function ActionButtons({
                     style={{
                         width: 44, height: 44,       // ← reduced from ~56 to 44
                         borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.15)',
+                        background: 'rgba(0,0,0,0.05)',
                         border: 'none',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer',
@@ -114,11 +114,11 @@ export function ActionButtons({
                     onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill={liked ? '#FF0069' : 'none'}
-                        stroke={liked ? '#FF0069' : 'white'} strokeWidth="2">
+                        stroke={liked ? '#FF0069' : '#000'} strokeWidth="2">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                     </svg>
                 </button>
-                <span style={{ color: '#fff', fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600 }}>
+                <span style={{ color: '#000', fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600 }}>
                     {formatCount(localLikes)}
                 </span>
             </div>
@@ -130,19 +130,19 @@ export function ActionButtons({
                     style={{
                         width: 44, height: 44,
                         borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.15)',
+                        background: 'rgba(0,0,0,0.05)',
                         border: 'none',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer',
                         backdropFilter: 'blur(8px)',
                     }}
                 >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill={saved ? '#fff' : 'none'}
-                        stroke="white" strokeWidth="2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill={saved ? '#000' : 'none'}
+                        stroke="#000" strokeWidth="2">
                         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                     </svg>
                 </button>
-                <span style={{ color: '#fff', fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600 }}>
+                <span style={{ color: '#000', fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600 }}>
                     {formatCount(saves)}
                 </span>
             </div>
@@ -152,19 +152,19 @@ export function ActionButtons({
                 <button style={{
                     width: 44, height: 44,
                     borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.15)',
+                    background: 'rgba(0,0,0,0.05)',
                     border: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer',
                     backdropFilter: 'blur(8px)',
                 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="white" strokeWidth="2">
+                        stroke="#000" strokeWidth="2">
                         <line x1="22" y1="2" x2="11" y2="13" />
                         <polygon points="22 2 15 22 11 13 2 9 22 2" />
                     </svg>
                 </button>
-                <span style={{ color: '#fff', fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600 }}>
+                <span style={{ color: '#000', fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600 }}>
                     Share
                 </span>
             </div>
@@ -173,12 +173,12 @@ export function ActionButtons({
             <button style={{
                 width: 44, height: 44,
                 borderRadius: '50%',
-                background: 'rgba(255,255,255,0.15)',
+                background: 'rgba(0,0,0,0.05)',
                 border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
                 backdropFilter: 'blur(8px)',
-                color: '#fff', fontSize: 18,
+                color: '#000', fontSize: 18,
             }}>
                 ···
             </button>
