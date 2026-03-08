@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, getDocs, collection, query, where, orderBy, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
 import { ArrowLeft, MapPin, ShieldCheck, Lock, Phone, Mail, MessageCircle, Navigation, ExternalLink, X } from 'lucide-react';
@@ -129,45 +130,64 @@ export default function UserProfilePage() {
     }, [id]);
 
     useEffect(() => {
-        // Need both current user and target profile ID
-        if (!currentUser || !id) {
-            setCheckingUnlock(false)
-            return
+        if (!id) {
+            setCheckingUnlock(false);
+            return;
         }
 
-        console.log('[Unlock Check] Listening to buyer doc:', currentUser.uid)
-        console.log('[Unlock Check] Looking for target key:', id)
+        // Use onAuthStateChanged directly — this waits for Firebase Auth
+        // to fully initialize before checking. Fixes the race condition where
+        // currentUser from useAuth() is null during hydration.
+        const auth = getAuth();
+        let unsubscribeSnapshot: (() => void) | null = null;
 
-        // Real-time listener on the BUYER's user doc
-        const unsubscribe = onSnapshot(
-            doc(db, 'users', currentUser.uid),
-            (snap) => {
-                if (snap.exists()) {
-                    const data = snap.data()
-                    const unlockedContacts = data.unlockedContacts || {}
-
-                    console.log('[Unlock Check] unlockedContacts map:', unlockedContacts)
-                    console.log('[Unlock Check] Has key?', id in unlockedContacts)
-
-                    const isUnlocked = id in unlockedContacts
-                    setContactRevealed(isUnlocked)
-                } else {
-                    console.log('[Unlock Check] Buyer doc not found')
-                    setContactRevealed(false)
-                }
-                setCheckingUnlock(false)
-            },
-            (error) => {
-                console.error('[Unlock Check] Snapshot error:', error)
-                setCheckingUnlock(false)
+        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+            // Clean up any previous snapshot listener
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+                unsubscribeSnapshot = null;
             }
-        )
+
+            if (!firebaseUser) {
+                // Auth loaded — user is genuinely not logged in
+                console.log('[Unlock Check] User not logged in');
+                setContactRevealed(false);
+                setCheckingUnlock(false);
+                return;
+            }
+
+            console.log('[Unlock Check] Auth ready. Buyer UID:', firebaseUser.uid);
+            console.log('[Unlock Check] Target profile ID:', id);
+
+            // Now set up real-time listener on buyer's user doc
+            unsubscribeSnapshot = onSnapshot(
+                doc(db, 'users', firebaseUser.uid),
+                (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        const unlockedContacts = data.unlockedContacts || {};
+                        console.log('[Unlock Check] unlockedContacts:', unlockedContacts);
+                        const isUnlocked = Object.prototype.hasOwnProperty.call(unlockedContacts, id);
+                        console.log('[Unlock Check] isUnlocked:', isUnlocked);
+                        setContactRevealed(isUnlocked);
+                    } else {
+                        console.log('[Unlock Check] Buyer user doc does not exist');
+                        setContactRevealed(false);
+                    }
+                    setCheckingUnlock(false);
+                },
+                (error) => {
+                    console.error('[Unlock Check] Snapshot error:', error);
+                    setCheckingUnlock(false);
+                }
+            );
+        });
 
         return () => {
-            console.log('[Unlock Check] Cleaning up listener')
-            unsubscribe()
-        }
-    }, [currentUser, id]);
+            unsubscribeAuth();
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+        };
+    }, [id]);
 
     const getCategoryConfig = (cat: string) => {
         const configs: Record<string, { label: string; emoji: string; accent: string }> = {
