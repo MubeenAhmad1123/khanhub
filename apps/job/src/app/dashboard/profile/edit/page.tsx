@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { Loader2, ArrowLeft, Save, Sparkles } from 'lucide-react';
 import { INDUSTRIES, getSubcategories, getRoles } from '@/lib/constants/categories';
@@ -15,6 +16,7 @@ export default function EditProfilePage() {
     const [formData, setFormData] = useState<any>({
         fullName: '',
         phone: '',
+        whatsapp: '',
         location: '',
         bio: '',
         experience: 0,
@@ -32,7 +34,8 @@ export default function EditProfilePage() {
         if (user?.role === 'employer' && user?.company) {
             setFormData({
                 fullName: (user as any).company.name || user.displayName || '',
-                phone: (user as any).company.phone || (user as any).company.contactPhone || '',
+                phone: user.phone || (user as any).company.phone || (user as any).company.contactPhone || '',
+                whatsapp: user.whatsapp || '',
                 location: (user as any).company.location || '',
                 bio: (user as any).company.description || '',
                 experience: 0, // Not used for employers
@@ -47,7 +50,8 @@ export default function EditProfilePage() {
         } else if (user?.profile) {
             setFormData({
                 fullName: (user as any).profile.fullName || user.displayName || '',
-                phone: (user as any).profile.phone || '',
+                phone: user.phone || (user as any).profile.phone || '',
+                whatsapp: user.whatsapp || '',
                 location: (user as any).profile.location || '',
                 bio: (user as any).profile.bio || '',
                 experience: (user as any).profile.yearsOfExperience || (user as any).profile.experience || 0,
@@ -80,8 +84,12 @@ export default function EditProfilePage() {
 
             let updates: any = {
                 displayName: formData.fullName,
+                name: formData.fullName, // Root name
+                phone: formData.phone,   // Root phone
+                whatsapp: formData.whatsapp, // Root whatsapp
                 industry: formData.industry,
                 subcategory: formData.subcategory,
+                updatedAt: serverTimestamp(),
             };
 
             if (isEmployer) {
@@ -205,6 +213,18 @@ export default function EditProfilePage() {
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                     className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
                                     placeholder="e.g. 0300-1234567"
+                                />
+                            </div>
+
+                            {/* WhatsApp */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">WhatsApp Number <span className="text-gray-500 font-medium normal-case tracking-normal text-xs ml-1" dir="rtl">واٹس ایپ نمبر</span></label>
+                                <input
+                                    type="tel"
+                                    value={formData.whatsapp}
+                                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                    placeholder="If different from phone"
                                 />
                             </div>
 

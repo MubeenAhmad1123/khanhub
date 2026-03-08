@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
-import { ArrowLeft, MapPin, ShieldCheck, Lock } from 'lucide-react';
+import { ArrowLeft, MapPin, ShieldCheck, Lock, Phone, Mail, MessageCircle, Navigation, ExternalLink, X } from 'lucide-react';
 import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
 
 export default function UserProfilePage() {
@@ -20,8 +20,16 @@ export default function UserProfilePage() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'videos' | 'info'>('videos');
     const [contactRevealed, setContactRevealed] = useState(false);
+    const [checkingPayment, setCheckingPayment] = useState(true);
     const [showRevealSheet, setShowRevealSheet] = useState(false);
     const [isPlaceholderUser, setIsPlaceholderUser] = useState(false);
+
+    // Followers state
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followingLoading, setFollowingLoading] = useState(false);
+
+    // DP Zoom state
+    const [showDPZoom, setShowDPZoom] = useState(false);
 
     useEffect(() => {
         if (!id) {
@@ -57,15 +65,31 @@ export default function UserProfilePage() {
                     return; // No need to fetch videos if user doesn't exist
                 }
 
-                // CHECK IF UNLOCKED
+                // REAL-TIME CHECK IF UNLOCKED
                 if (currentUser && id) {
-                    const requesterSnap = await getDoc(doc(db, 'users', currentUser.uid));
-                    if (requesterSnap.exists()) {
-                        const unlocked = requesterSnap.data().unlockedContacts || {};
-                        if (unlocked[id as string]) {
-                            setContactRevealed(true);
+                    const unsubUnlock = onSnapshot(doc(db, 'users', currentUser.uid), (snap) => {
+                        if (snap.exists()) {
+                            const unlocked = snap.data().unlockedContacts || {};
+                            setContactRevealed(!!unlocked[id as string]);
                         }
-                    }
+                        setCheckingPayment(false);
+                    }, (err) => {
+                        console.error('[Profile Page] Unlock snapshot error:', err);
+                        setCheckingPayment(false);
+                    });
+
+                    // REAL-TIME FOLLOW STATUS
+                    const followDocId = `${currentUser.uid}_${id}`;
+                    const unsubFollow = onSnapshot(doc(db, 'follows', followDocId), (snap) => {
+                        setIsFollowing(snap.exists());
+                    });
+
+                    return () => {
+                        unsubUnlock();
+                        unsubFollow();
+                    };
+                } else {
+                    setCheckingPayment(false);
                 }
 
                 // Fetch videos in a separate try-catch so it doesn't wipe profile if index is missing
@@ -325,10 +349,12 @@ export default function UserProfilePage() {
                         <img
                             src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000&size=90`}
                             alt={profile.name}
+                            onClick={() => setShowDPZoom(true)}
                             style={{
                                 width: '100%', height: '100%',
                                 borderRadius: '50%', objectFit: 'cover',
                                 border: '3px solid #fff',
+                                cursor: 'pointer',
                             }}
                         />
                     </div>
@@ -421,14 +447,41 @@ export default function UserProfilePage() {
 
                 {/* Action buttons: Follow + Connect */}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
-                    <button style={{
-                        padding: '10px 28px', borderRadius: 8,
-                        background: catConfig.accent, border: 'none',
-                        color: '#fff', fontFamily: 'Syne', fontWeight: 700,
-                        fontSize: 14, cursor: 'pointer',
-                        boxShadow: `0 0 20px ${catConfig.accent}44`,
-                    }}>
-                        Follow
+                    <button
+                        onClick={async () => {
+                            if (!currentUser) { router.push('/auth/login'); return; }
+                            setFollowingLoading(true);
+                            try {
+                                const followDocId = `${currentUser.uid}_${id}`;
+                                const followRef = doc(db, 'follows', followDocId);
+                                if (isFollowing) {
+                                    await deleteDoc(followRef);
+                                } else {
+                                    await setDoc(followRef, {
+                                        followerId: currentUser.uid,
+                                        followingId: id,
+                                        createdAt: serverTimestamp()
+                                    });
+                                }
+                            } catch (err) {
+                                console.error('Follow error:', err);
+                            } finally {
+                                setFollowingLoading(false);
+                            }
+                        }}
+                        disabled={followingLoading}
+                        style={{
+                            padding: '10px 28px', borderRadius: 8,
+                            background: isFollowing ? '#f0f0f0' : catConfig.accent,
+                            border: 'none',
+                            color: isFollowing ? '#666' : '#fff',
+                            fontFamily: 'Syne', fontWeight: 700,
+                            fontSize: 14, cursor: 'pointer',
+                            boxShadow: isFollowing ? 'none' : `0 0 20px ${catConfig.accent}44`,
+                            minWidth: 120,
+                        }}
+                    >
+                        {followingLoading ? '...' : (isFollowing ? 'Following' : 'Follow')}
                     </button>
                     <button
                         onClick={() => setShowRevealSheet(true)}
@@ -607,46 +660,142 @@ export default function UserProfilePage() {
 
                     {/* Contact — LOCKED until paid */}
                     <Section title="Contact" accent={catConfig.accent}>
-                        {contactRevealed ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {checkingPayment ? (
+                            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                                <div style={{
+                                    width: 24, height: 24, borderRadius: '50%',
+                                    border: '2px solid #E5E5E5',
+                                    borderTopColor: catConfig.accent,
+                                    animation: 'spin 0.7s linear infinite',
+                                    margin: '0 auto',
+                                }} />
+                            </div>
+                        ) : contactRevealed ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                                {/* Unlocked badge */}
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    background: '#E8F5E9', borderRadius: 8,
+                                    padding: '8px 12px', marginBottom: 4,
+                                }}>
+                                    <span style={{ fontSize: 16 }}>🔓</span>
+                                    <span style={{
+                                        color: '#2E7D32', fontFamily: 'DM Sans',
+                                        fontWeight: 700, fontSize: 13,
+                                    }}>
+                                        Contact Unlocked
+                                    </span>
+                                </div>
+
+                                {/* Phone */}
                                 {profile.phone && (
                                     <a href={`tel:${profile.phone}`} style={{
-                                        color: catConfig.accent, fontFamily: 'DM Sans',
-                                        fontSize: 15, fontWeight: 600, textDecoration: 'none',
-                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        padding: '10px 12px',
+                                        background: '#F8F8F8', border: '1px solid #E5E5E5',
+                                        borderRadius: 10, textDecoration: 'none',
                                     }}>
-                                        📞 {profile.phone}
+                                        <div style={{ background: `${catConfig.accent}15`, padding: 8, borderRadius: 8 }}>
+                                            <Phone size={18} color={catConfig.accent} />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Phone</div>
+                                            <div style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                                {profile.phone}
+                                            </div>
+                                        </div>
+                                        <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#ccc' }} />
                                     </a>
                                 )}
+
+                                {/* WhatsApp */}
+                                {(profile.whatsapp || (profile.phone && profile.phone.length > 5)) && (
+                                    <a
+                                        href={`https://wa.me/${(profile.whatsapp || profile.phone).replace(/\D/g, '')}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 10,
+                                            padding: '10px 12px',
+                                            background: '#F0FFF4', border: '1px solid #B2DFDB',
+                                            borderRadius: 10, textDecoration: 'none',
+                                        }}
+                                    >
+                                        <div style={{ background: '#25D36615', padding: 8, borderRadius: 8 }}>
+                                            <MessageCircle size={18} color="#25D366" />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>WhatsApp</div>
+                                            <div style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                                {profile.whatsapp || profile.phone}
+                                            </div>
+                                        </div>
+                                        <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#25D36655' }} />
+                                    </a>
+                                )}
+
+                                {/* Email */}
                                 {profile.email && (
                                     <a href={`mailto:${profile.email}`} style={{
-                                        color: '#aaa', fontFamily: 'DM Sans',
-                                        fontSize: 13, textDecoration: 'none',
-                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        padding: '10px 12px',
+                                        background: '#F8F8F8', border: '1px solid #E5E5E5',
+                                        borderRadius: 10, textDecoration: 'none',
                                     }}>
-                                        ✉️ {profile.email}
+                                        <div style={{ background: '#4A90D915', padding: 8, borderRadius: 8 }}>
+                                            <Mail size={18} color="#4A90D9" />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Email</div>
+                                            <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                                {profile.email}
+                                            </div>
+                                        </div>
+                                        <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#ccc' }} />
                                     </a>
                                 )}
+
+                                {/* Location */}
+                                {(profile.address || profile.location || profile.city) && (
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        padding: '10px 12px',
+                                        background: '#F8F8F8', border: '1px solid #E5E5E5',
+                                        borderRadius: 10,
+                                    }}>
+                                        <div style={{ background: '#7638FA15', padding: 8, borderRadius: 8 }}>
+                                            <Navigation size={18} color="#7638FA" />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Location</div>
+                                            <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                                {profile.address || profile.location || profile.city}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Fallback if no specific fields found */}
+                                {!profile.phone && !profile.email && !profile.whatsapp && !profile.location && !profile.address && !profile.city && (
+                                    <div style={{
+                                        padding: '16px', textAlign: 'center',
+                                        background: '#FFF8E1', borderRadius: 10, border: '1px solid #FFE082',
+                                    }}>
+                                        <p style={{ color: '#F57F17', fontFamily: 'DM Sans', fontSize: 13, margin: 0 }}>
+                                            ⚠️ This user hasn't added contact info to their profile yet.
+                                        </p>
+                                    </div>
+                                )}
+
                             </div>
                         ) : (
                             <div style={{ textAlign: 'center', padding: '12px 0' }}>
-                                <Lock size={28} color="#AAAAAA" style={{ marginBottom: 8 }} />
-                                <p style={{ color: '#888888', fontSize: 12, fontFamily: 'DM Sans', margin: '0 0 12px' }}>
-                                    Contact info is hidden. Pay Rs. 1,000 to unlock.
-                                </p>
-                                <button
-                                    onClick={() => setShowRevealSheet(true)}
-                                    style={{
-                                        background: catConfig.accent,
-                                        border: 'none', color: '#fff',
-                                        padding: '10px 24px', borderRadius: 8,
-                                        fontFamily: 'Syne', fontWeight: 700,
-                                        fontSize: 13, cursor: 'pointer',
-                                        boxShadow: `0 0 16px ${catConfig.accent}44`,
-                                    }}
-                                >
-                                    🔓 Unlock Contact — Rs. 1,000
-                                </button>
+                                <PendingPaymentChecker
+                                    buyerId={currentUser?.uid}
+                                    targetId={id as string}
+                                    accent={catConfig.accent}
+                                    onOpenSheet={() => setShowRevealSheet(true)}
+                                />
                             </div>
                         )}
                     </Section>
@@ -669,8 +818,141 @@ export default function UserProfilePage() {
                 userId={id as string}
                 category={profile.category}
             />
+
+            {/* DP Zoom Modal */}
+            {showDPZoom && (
+                <div
+                    onClick={() => setShowDPZoom(false)}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)',
+                        zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: 20, cursor: 'zoom-out'
+                    }}
+                >
+                    <button
+                        style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', color: '#fff' }}
+                        onClick={() => setShowDPZoom(false)}
+                    >
+                        <X size={32} />
+                    </button>
+                    <img
+                        src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000&size=400`}
+                        style={{ maxWidth: '100%', maxHeight: '80dvh', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
         </div>
     );
+}
+
+function PendingPaymentChecker({
+    buyerId, targetId, accent, onOpenSheet
+}: {
+    buyerId?: string
+    targetId: string
+    accent: string
+    onOpenSheet: () => void
+}) {
+    const [paymentStatus, setPaymentStatus] = useState<'none' | 'pending' | 'rejected'>('none')
+
+    useEffect(() => {
+        if (!buyerId) return
+
+        // Listen in real-time to this user's payment request for this target
+        const q = query(
+            collection(db, 'paymentRequests'),
+            where('requestedBy', '==', buyerId),
+            where('targetUserId', '==', targetId),
+            where('status', 'in', ['pending', 'rejected'])
+        )
+
+        const unsubscribe = onSnapshot(q, (snap) => {
+            if (snap.empty) {
+                setPaymentStatus('none')
+                return
+            }
+            // Get most recent
+            const docs = snap.docs.sort((a, b) => b.data().createdAt?.seconds - a.data().createdAt?.seconds);
+            const latest = docs[0].data()
+            setPaymentStatus(latest.status as 'pending' | 'rejected')
+        })
+
+        return () => unsubscribe()
+    }, [buyerId, targetId])
+
+    if (paymentStatus === 'pending') {
+        return (
+            <div style={{
+                background: '#FFF3E0', borderRadius: 12,
+                padding: '16px', border: '1px solid #FFB74D',
+            }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
+                <p style={{
+                    color: '#E65100', fontFamily: 'DM Sans',
+                    fontWeight: 700, fontSize: 14, margin: '0 0 4px',
+                }}>
+                    Payment Under Review
+                </p>
+                <p style={{ color: '#BF360C', fontFamily: 'DM Sans', fontSize: 12, margin: 0 }}>
+                    Admin will approve within 24 hours.
+                    Contact info will appear here automatically.
+                </p>
+            </div>
+        )
+    }
+
+    if (paymentStatus === 'rejected') {
+        return (
+            <>
+                <div style={{
+                    background: '#FFEBEE', borderRadius: 12,
+                    padding: '12px', border: '1px solid #FFCDD2',
+                    marginBottom: 12,
+                }}>
+                    <p style={{ color: '#C62828', fontFamily: 'DM Sans', fontSize: 13, margin: 0 }}>
+                        ❌ Your previous payment was rejected.
+                        Please resubmit with correct proof.
+                    </p>
+                </div>
+                <button
+                    onClick={onOpenSheet}
+                    style={{
+                        width: '100%', padding: '12px',
+                        background: accent, color: '#fff',
+                        border: 'none', borderRadius: 10,
+                        fontFamily: 'Syne', fontWeight: 700,
+                        fontSize: 14, cursor: 'pointer',
+                    }}
+                >
+                    🔓 Resubmit Payment — Rs. 1,000
+                </button>
+            </>
+        )
+    }
+
+    // Default: not paid yet
+    return (
+        <>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>🔒</div>
+            <p style={{ color: '#666', fontFamily: 'DM Sans', fontSize: 13, margin: '0 0 14px' }}>
+                Pay Rs. 1,000 to unlock phone, email, WhatsApp & location
+            </p>
+            <button
+                onClick={onOpenSheet}
+                style={{
+                    width: '100%', padding: '13px',
+                    background: accent, color: '#fff',
+                    border: 'none', borderRadius: 10,
+                    fontFamily: 'Syne', fontWeight: 700,
+                    fontSize: 14, cursor: 'pointer',
+                    boxShadow: `0 4px 16px ${accent}44`,
+                }}
+            >
+                🔓 Unlock Contact — Rs. 1,000
+            </button>
+        </>
+    )
 }
 
 function Section({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {

@@ -59,18 +59,12 @@ export default function AdminPaymentsPage() {
             })
 
             // 2. Store in 'unlockedContacts' so user can see contact info
-            // Use current data to avoid overwriting other keys if needed, but simple update for now
-            const userRef = doc(db, 'users', payment.requestedBy)
-            const userSnap = await getDoc(userRef)
-            const currentUnlocked = userSnap.exists() ? (userSnap.data().unlockedContacts || {}) : {}
-
-            await updateDoc(userRef, {
-                unlockedContacts: {
-                    ...currentUnlocked,
-                    [payment.targetUserId]: {
-                        unlockedAt: new Date().toISOString(),
-                        paymentRequestId: payment.id,
-                    }
+            // Using dot notation correctly adds/updates one key in the map without overwriting others
+            await updateDoc(doc(db, 'users', payment.requestedBy), {
+                [`unlockedContacts.${payment.targetUserId}`]: {
+                    unlockedAt: new Date().toISOString(),
+                    paymentRequestId: payment.id,
+                    amount: payment.amount,
                 }
             })
 

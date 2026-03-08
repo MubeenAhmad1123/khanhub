@@ -56,6 +56,20 @@ service cloud.firestore {
       allow update: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
       allow delete: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
     }
+
+    // ✅ NEW — paymentRequests (contact unlock submissions)
+    match /paymentRequests/{requestId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.requestedBy || isAdmin());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ✅ NEW — reports (three dots → report video)
+    match /reports/{reportId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAdmin();
+    }
     
     match /jobPostings/{jobId} {
       allow read: if isAuthenticated();
@@ -84,7 +98,7 @@ service cloud.firestore {
     
     match /admin_logs/{logId} {
       allow read: if isAdmin();
-      allow create: if isAdmin(); // Only admins should create admin logs
+      allow create: if isAdmin();
       allow update, delete: if isAdmin();
     }
 
@@ -95,9 +109,17 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
     }
 
+
     match /adminNotifications/{notificationId} {
       allow read, update, delete: if isAdmin();
       allow create: if isAuthenticated();
+    }
+
+    // ✅ NEW — follows (followerId_followingId)
+    match /follows/{followId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.followerId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.followerId;
     }
   }
 }
