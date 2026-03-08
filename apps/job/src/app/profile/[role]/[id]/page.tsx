@@ -23,6 +23,7 @@ export default function UserProfilePage() {
     const [contactRevealed, setContactRevealed] = useState(false);
     const [checkingUnlock, setCheckingUnlock] = useState(true);
     const [showRevealSheet, setShowRevealSheet] = useState(false);
+    const [showContactModal, setShowContactModal] = useState(false);
     const [isPlaceholderUser, setIsPlaceholderUser] = useState(false);
 
     // Followers state
@@ -527,17 +528,19 @@ export default function UserProfilePage() {
                         {followingLoading ? '...' : (isFollowing ? 'Following' : 'Follow')}
                     </button>
                     <button
-                        onClick={() => setShowRevealSheet(true)}
+                        onClick={() => contactRevealed ? setShowContactModal(true) : setShowRevealSheet(true)}
                         style={{
                             padding: '10px 28px', borderRadius: 8,
-                            background: 'transparent',
+                            background: contactRevealed ? catConfig.accent : 'transparent',
                             border: `1px solid ${catConfig.accent}`,
-                            color: catConfig.accent,
+                            color: contactRevealed ? '#fff' : catConfig.accent,
                             fontFamily: 'Syne', fontWeight: 700,
                             fontSize: 14, cursor: 'pointer',
+                            boxShadow: contactRevealed ? `0 0 20px ${catConfig.accent}44` : 'none',
+                            transition: 'all 0.2s',
                         }}
                     >
-                        🔓 Connect
+                        {checkingUnlock ? '...' : contactRevealed ? '📞 View Contact' : '🔓 Connect'}
                     </button>
                 </div>
             </div>
@@ -871,6 +874,180 @@ export default function UserProfilePage() {
                             </p>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* ── CONTACT MODAL (shows when unlocked and button tapped) ── */}
+            {showContactModal && (
+                <div
+                    onClick={() => setShowContactModal(false)}
+                    style={{
+                        position: 'fixed', inset: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        zIndex: 300,
+                        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            background: '#fff',
+                            borderRadius: '20px 20px 0 0',
+                            padding: '20px 20px 40px',
+                            width: '100%',
+                            maxWidth: 600,
+                        }}
+                    >
+                        {/* Handle bar */}
+                        <div style={{
+                            width: 40, height: 4, background: '#E5E5E5',
+                            borderRadius: 99, margin: '0 auto 20px',
+                        }} />
+
+                        {/* Header */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            marginBottom: 20,
+                        }}>
+                            <img
+                                src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000`}
+                                style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                            <div>
+                                <div style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 15, color: '#0A0A0A' }}>
+                                    {profile.name || profile.displayName}
+                                </div>
+                                <div style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    background: '#E8F5E9', borderRadius: 99, padding: '2px 10px',
+                                    fontSize: 11, color: '#2E7D32', fontFamily: 'DM Sans', fontWeight: 700,
+                                }}>
+                                    🔓 Contact Unlocked
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Contact rows */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                            {(profile.phone || profile.hrPhone) && (
+                                <a href={`tel:${profile.phone || profile.hrPhone}`} style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '14px 16px', background: '#F8F8F8',
+                                    borderRadius: 12, border: '1px solid #E5E5E5',
+                                    textDecoration: 'none',
+                                }}>
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: '50%',
+                                        background: `${catConfig.accent}15`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 20, flexShrink: 0,
+                                    }}>📞</div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Phone</div>
+                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                            {profile.phone || profile.hrPhone}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginLeft: 'auto', color: catConfig.accent, fontSize: 18 }}>›</div>
+                                </a>
+                            )}
+
+                            {(profile.phone || profile.hrPhone) && (
+                                <a
+                                    href={`https://wa.me/92${(profile.phone || profile.hrPhone).replace(/^0/, '').replace(/\D/g, '')}`}
+                                    target="_blank" rel="noopener noreferrer"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 12,
+                                        padding: '14px 16px', background: '#F0FFF4',
+                                        borderRadius: 12, border: '1px solid #C8E6C9',
+                                        textDecoration: 'none',
+                                    }}
+                                >
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: '50%',
+                                        background: '#25D36620',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 20, flexShrink: 0,
+                                    }}>💬</div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>WhatsApp</div>
+                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                            {profile.phone || profile.hrPhone}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginLeft: 'auto', color: '#25D366', fontSize: 18 }}>›</div>
+                                </a>
+                            )}
+
+                            {profile.email && (
+                                <a href={`mailto:${profile.email}`} style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '14px 16px', background: '#F8F8F8',
+                                    borderRadius: 12, border: '1px solid #E5E5E5',
+                                    textDecoration: 'none',
+                                }}>
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: '50%',
+                                        background: `${catConfig.accent}15`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 20, flexShrink: 0,
+                                    }}>✉️</div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Email</div>
+                                        <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                            {profile.email}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginLeft: 'auto', color: catConfig.accent, fontSize: 18 }}>›</div>
+                                </a>
+                            )}
+
+                            {(profile.companyLocation || profile.city) && (
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '14px 16px', background: '#F8F8F8',
+                                    borderRadius: 12, border: '1px solid #E5E5E5',
+                                }}>
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: '50%',
+                                        background: `${catConfig.accent}15`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 20, flexShrink: 0,
+                                    }}>📍</div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Location</div>
+                                        <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                            {profile.companyLocation || profile.city}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {profile.website && (
+                                <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '14px 16px', background: '#F8F8F8',
+                                    borderRadius: 12, border: '1px solid #E5E5E5',
+                                    textDecoration: 'none',
+                                }}>
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: '50%',
+                                        background: `${catConfig.accent}15`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 20, flexShrink: 0,
+                                    }}>🌐</div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Website</div>
+                                        <div style={{ fontSize: 14, fontWeight: 600, color: catConfig.accent, fontFamily: 'DM Sans' }}>
+                                            {profile.website}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginLeft: 'auto', color: catConfig.accent, fontSize: 18 }}>›</div>
+                                </a>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
