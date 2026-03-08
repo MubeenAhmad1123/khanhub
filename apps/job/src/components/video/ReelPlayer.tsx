@@ -15,7 +15,9 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
     const [isPlaying, setIsPlaying] = useState(true);
     const [userActed, setUserActed] = useState(false);
     const [showIndicator, setShowIndicator] = useState<'mute' | 'unmute' | 'play' | 'pause' | null>(null);
+    const [isSpeed2x, setIsSpeed2x] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const holdTimer = useRef<NodeJS.Timeout | null>(null);
 
     // Auto-unmute after 800ms for YouTube (autoplay workaround)
     useEffect(() => {
@@ -68,8 +70,32 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
         setTimeout(() => setShowIndicator(null), 1000);
     };
 
+    // 2x speed handlers — only for real Cloudinary videos
+    const handlePointerDown = () => {
+        if (isPlaceholder) return;
+        holdTimer.current = setTimeout(() => {
+            setIsSpeed2x(true);
+            if (videoRef.current) {
+                videoRef.current.playbackRate = 2.0;
+            }
+        }, 300);
+    };
+
+    const handlePointerUp = () => {
+        if (holdTimer.current) clearTimeout(holdTimer.current);
+        if (isSpeed2x) {
+            setIsSpeed2x(false);
+            if (videoRef.current) {
+                videoRef.current.playbackRate = 1.0;
+            }
+        }
+    };
+
     return (
         <div
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
             onClick={togglePlayPause}
             style={{ position: 'absolute', inset: 0, background: '#fff', overflow: 'hidden', cursor: 'pointer' }}
         >
@@ -154,6 +180,25 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
                 </div>
             </div>
 
+            {/* 2x speed indicator */}
+            {isSpeed2x && (
+                <div style={{
+                    position: 'absolute',
+                    top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(8px)',
+                    color: '#fff',
+                    fontFamily: 'Syne', fontWeight: 800,
+                    fontSize: 18, padding: '8px 16px',
+                    borderRadius: 999, zIndex: 50,
+                    pointerEvents: 'none',
+                    letterSpacing: '0.05em',
+                }}>
+                    ⚡ 2x
+                </div>
+            )}
+
             {/* Volume Button Overlay */}
             <div
                 style={{
@@ -172,3 +217,4 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
         </div>
     );
 }
+

@@ -582,6 +582,8 @@ export default function UploadVideoPage() {
                     field1: overlayData.field1,
                     field2: overlayData.field2,
                     location: (user as any).city || '',
+                    userPhoto: (user as any).photoURL || '',
+                    userName: (user as any).displayName || (user as any).name || '',
                 },
 
                 // All form fields flat

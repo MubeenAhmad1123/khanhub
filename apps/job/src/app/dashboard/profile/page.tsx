@@ -132,10 +132,24 @@ export default function ProfilePage() {
                         background: 'transparent', color: '#0A0A0A',
                         border: '1px solid #E5E5E5', fontFamily: 'DM Sans',
                         fontWeight: 600, fontSize: 14, cursor: 'pointer',
-                        marginBottom: 16,
                     }}
                 >
                     Edit Profile
+                </button>
+                <button
+                    onClick={() => {
+                        localStorage.removeItem('jobreel_guest_prefs')
+                        router.push('/')
+                    }}
+                    style={{
+                        background: 'none', border: 'none',
+                        color: '#888', fontSize: 12,
+                        fontFamily: 'DM Sans', cursor: 'pointer',
+                        marginTop: 8,
+                        marginBottom: 16,
+                    }}
+                >
+                    🔄 Change Category
                 </button>
             </div>
 

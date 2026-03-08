@@ -3,51 +3,76 @@
 import React, { useEffect, useState } from 'react';
 import { Play } from 'lucide-react';
 import { db } from '@/lib/firebase/firebase-config';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface SavedGridProps {
     savedIds: string[];
     onVideoTap?: (index: number) => void;
 }
 
+const getThumbnail = (video: any): string => {
+    if (video.thumbnailUrl) return video.thumbnailUrl;
+    if (video.cloudinaryUrl) {
+        return video.cloudinaryUrl
+            .replace('/upload/', '/upload/so_0,w_400,h_711,c_fill,q_70/')
+            .replace(/\.(mp4|webm|mov)$/i, '.jpg');
+    }
+    const ytId = video.youtubeId || video.videoId;
+    if (ytId) return `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+    return '';
+};
+
+const formatCount = (n: number) => {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+    return String(n || 0);
+};
+
 export default function SavedGrid({ savedIds, onVideoTap }: SavedGridProps) {
     const [videos, setVideos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const formatCount = (n: number) => {
-        if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-        if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-        return String(n || 0);
-    };
-
     useEffect(() => {
-        async function fetchSavedVideos() {
-            if (!savedIds || savedIds.length === 0) {
-                setLoading(false);
-                return;
-            }
-
-            try {
-                const videoPromises = savedIds.map(id => getDoc(doc(db, 'reels', id)));
-                const snaps = await Promise.all(videoPromises);
-                const vids = snaps
-                    .filter(s => s.exists())
-                    .map(s => ({ id: s.id, ...s.data() }));
-                setVideos(vids);
-            } catch (error) {
-                console.error('Error fetching saved videos:', error);
-            } finally {
-                setLoading(false);
-            }
+        if (!savedIds || savedIds.length === 0) {
+            setLoading(false);
+            return;
         }
-        fetchSavedVideos();
+
+        // Filter out placeholder IDs
+        const realIds = savedIds.filter((id: string) =>
+            !id.startsWith('placeholder') && !id.startsWith('manual_') && id.length >= 10
+        );
+
+        if (realIds.length === 0) {
+            setLoading(false);
+            return;
+        }
+
+        // Batch fetch — Firestore 'in' supports max 10 per query
+        const chunks: string[][] = [];
+        for (let i = 0; i < realIds.length; i += 10) {
+            chunks.push(realIds.slice(i, i + 10));
+        }
+
+        Promise.all(chunks.map(chunk =>
+            getDocs(query(collection(db, 'videos'), where('__name__', 'in', chunk)))
+        )).then(results => {
+            const all = results.flatMap(snap =>
+                snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            );
+            setVideos(all);
+        }).catch(err => {
+            console.error('Error fetching saved videos:', err);
+        }).finally(() => {
+            setLoading(false);
+        });
     }, [savedIds]);
 
     if (loading) {
         return (
             <div className="grid grid-cols-3 gap-1 px-1 py-6">
                 {[1, 2, 3].map((n) => (
-                    <div key={n} className="aspect-[9/16] bg-[#0d0d0d] animate-pulse rounded-sm" />
+                    <div key={n} className="aspect-[9/16] bg-[#F0F0F0] animate-pulse rounded-sm" />
                 ))}
             </div>
         );
@@ -68,16 +93,17 @@ export default function SavedGrid({ savedIds, onVideoTap }: SavedGridProps) {
             {videos.map((vid, index) => (
                 <div
                     key={vid.id}
-                    className="relative aspect-[9/16] bg-[#0d0d0d] overflow-hidden group cursor-pointer"
+                    className="relative aspect-[9/16] bg-[#F0F0F0] overflow-hidden group cursor-pointer"
                     onClick={() => onVideoTap?.(index)}
                 >
                     <img
-                        src={`https://img.youtube.com/vi/${vid.videoId}/mqdefault.jpg`}
+                        src={getThumbnail(vid)}
                         className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all"
+                        onError={e => (e.currentTarget.style.display = 'none')}
                     />
                     <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white z-10">
                         <Play size={10} fill="white" />
-                        <span className="text-[10px] font-bold">{formatCount(vid.views)}</span>
+                        <span className="text-[10px] font-bold">{formatCount(vid.views || 0)}</span>
                     </div>
                 </div>
             ))}

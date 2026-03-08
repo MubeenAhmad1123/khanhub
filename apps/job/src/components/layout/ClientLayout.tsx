@@ -9,6 +9,7 @@ import { Home, Search, PlusSquare, User } from 'lucide-react';
 
 import { CategoryProvider } from '@/context/CategoryContext';
 import { useEffect } from 'react';
+import { FeedToastProvider } from '@/components/ui/FeedToast';
 
 export default function ClientLayout({
     children,
@@ -86,6 +87,7 @@ export default function ClientLayout({
                         {children}
                     </main>
                     {showNav && <BottomNav />}
+                    <FeedToastProvider />
                 </ToastProvider>
             </CategoryProvider>
         </AuthProviderWrapper>

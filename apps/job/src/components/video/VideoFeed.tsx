@@ -27,6 +27,8 @@ export function VideoFeed() {
     const containerRef = useRef<HTMLDivElement>(null);
     const reelRefs = useRef<(HTMLDivElement | null)[]>([]);
     const watchedIndices = useRef<Set<number>>(new Set());
+    const touchStartX = useRef<number>(0);
+    const touchStartY = useRef<number>(0);
 
     // ── Real Firestore videos ─────────────────────────────────────
     const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
@@ -242,6 +244,20 @@ export function VideoFeed() {
         }
     };
 
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent, video: any) => {
+        const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+        const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+        // Swipe left > 60px, vertical movement < 30px, and video has real userId
+        if (deltaX < -60 && deltaY < 30 && video.userId && video.userId.length >= 10) {
+            router.push(`/profile/${video.userRole || 'user'}/${video.userId}`);
+        }
+    };
+
     return (
         <div style={{
             position: 'fixed',
@@ -313,6 +329,8 @@ export function VideoFeed() {
                         <div
                             key={video.id}
                             ref={(el) => { reelRefs.current[index] = el; }}
+                            onTouchStart={handleTouchStart}
+                            onTouchEnd={(e) => handleTouchEnd(e, video)}
                             style={{
                                 position: 'relative',
                                 height: index === 0 && showStoriesBar

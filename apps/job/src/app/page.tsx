@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCategory } from '@/context/CategoryContext';
 import { CategoryKey, CATEGORY_CONFIG, CategoryConfig } from '@/lib/categories';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase/firebase-config';
 
 const HOMEPAGE_CATEGORIES = [
     { key: 'jobs', label: 'Jobs', emoji: '💼', image: 'jobs.webp', tagline: 'Find work & hire talent', accent: '#FF0069' },
@@ -24,6 +26,13 @@ export default function HomePage() {
     const [showRolePicker, setShowRolePicker] = useState(false);
     const router = useRouter();
 
+    useEffect(() => {
+        const saved = localStorage.getItem('jobreel_guest_prefs');
+        if (saved) {
+            router.replace('/feed');
+        }
+    }, [router]);
+
     const handleCategorySelect = (category: any) => {
         setSelectedCat(category);
         setCategory(category.key as CategoryKey);
@@ -34,8 +43,18 @@ export default function HomePage() {
         setRole(role);
         localStorage.setItem('jobreel_guest_prefs', JSON.stringify({
             category: selectedCat.key,
-            role: role
+            role: role,
+            selectedAt: Date.now(),
         }));
+
+        if (auth.currentUser) {
+            updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                category: selectedCat.key,
+                role: role,
+                updatedAt: serverTimestamp(),
+            }).catch(() => {});
+        }
+
         setShowRolePicker(false);
         router.push('/feed');
     };
@@ -61,26 +80,29 @@ export default function HomePage() {
 
             {/* Hero Section */}
             <header className="px-6 pt-12 pb-16 max-w-7xl mx-auto w-full flex flex-col items-center text-center">
-                <motion.h1
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                        fontFamily: 'Syne', fontWeight: 900,
-                        fontSize: 'clamp(36px, 6vw, 72px)',
-                        color: '#0A0A0A', lineHeight: 1.1, margin: 0,
-                        marginBottom: 16
-                    }}
-                >
-                    Find Your<br />
-                    <span className="text-[#FF0069] italic">Perfect Match.</span>
-                </motion.h1>
-                <div className="w-32 h-1 bg-[#FF0069] mb-8" />
-                <p className="text-[#666666] max-w-md text-lg leading-relaxed mb-4">
-                    Video-first platform connecting people across 8 industries in Pakistan.
-                </p>
-                <p className="font-bold uppercase tracking-widest text-[#888888] font-sans" style={{ fontSize: 'clamp(14px, 1.5vw, 16px)' }}>
-                    Select your industry to begin
-                </p>
+                <div style={{ textAlign: 'center', maxWidth: 480, margin: '0 auto 40px' }}>
+                    <h1 style={{
+                        fontFamily: 'Syne',
+                        fontWeight: 900,
+                        fontSize: 'clamp(28px, 5vw, 48px)',
+                        color: '#0A0A0A',
+                        lineHeight: 1.15,
+                        letterSpacing: '-0.02em',
+                        margin: '0 0 12px',
+                    }}>
+                        Find Your<br />
+                        <span style={{ color: '#FF0069', fontStyle: 'italic' }}>Perfect Match.</span>
+                    </h1>
+                    <p style={{
+                        color: '#888',
+                        fontFamily: 'DM Sans',
+                        fontSize: 15,
+                        margin: 0,
+                        lineHeight: 1.6,
+                    }}>
+                        Select your industry to get started
+                    </p>
+                </div>
             </header>
 
             {/* Category Grid */}

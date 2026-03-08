@@ -59,22 +59,46 @@ export default function UserProfilePage() {
 
                 // Fetch videos in a separate try-catch so it doesn't wipe profile if index is missing
                 try {
-                    console.log('[Profile Page] Fetching user videos...');
-                    // User requested to see the index link in console, so revert to the full query
-                    const vidsSnap = await getDocs(query(
+                    // Try 1: approved + is_live
+                    let vidsSnap = await getDocs(query(
                         collection(db, 'videos'),
                         where('userId', '==', id),
-                        where('is_live', '==', true),
+                        where('admin_status', '==', 'approved'),
                         orderBy('createdAt', 'desc')
                     ));
 
-                    const userVideos = vidsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-                    console.log(`[Profile Page] Fetched ${userVideos.length} videos`);
-                    setVideos(userVideos);
+                    if (vidsSnap.docs.length > 0) {
+                        setVideos(vidsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+                    } else {
+                        // Fallback 2: just userId, no filters
+                        try {
+                            const fallback2 = await getDocs(query(
+                                collection(db, 'videos'),
+                                where('userId', '==', id),
+                                orderBy('createdAt', 'desc')
+                            ));
+                            if (fallback2.docs.length > 0) {
+                                setVideos(fallback2.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+                            } else {
+                                // Fallback 3: no orderBy (handles missing index)
+                                const fallback3 = await getDocs(query(
+                                    collection(db, 'videos'),
+                                    where('userId', '==', id)
+                                ));
+                                setVideos(fallback3.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+                            }
+                        } catch {
+                            // Fallback 3 on inner error
+                            const fallback3 = await getDocs(query(
+                                collection(db, 'videos'),
+                                where('userId', '==', id)
+                            ));
+                            setVideos(fallback3.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+                        }
+                    }
                 } catch (vidErr: any) {
-                    console.error('🔥 [Profile Page] Error fetching videos. IF THIS SAYS MISSING INDEX, COPY THE LINK BELOW:');
-                    console.error(vidErr.message || vidErr);
-                    setVideos([]); // Just show no videos, but keep the profile intact
+                    console.error('[Profile Page] Error fetching videos:', vidErr.message || vidErr);
+                    setVideos([]);
                 }
 
             } catch (err: any) {

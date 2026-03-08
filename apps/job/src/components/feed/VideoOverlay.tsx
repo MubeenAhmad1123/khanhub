@@ -10,12 +10,34 @@ interface VideoOverlayProps {
         field1?: string;
         field2?: string;
         location: string;
+        userPhoto?: string;
+        userName?: string;
     };
 }
 
 export function VideoOverlay({ data }: VideoOverlayProps) {
     return (
         <div className="w-full px-4 pb-2 pointer-events-none">
+            {/* Uploader avatar + name */}
+            {(data.userPhoto || data.userName) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    {data.userPhoto && (
+                        <img
+                            src={data.userPhoto}
+                            style={{
+                                width: 32, height: 32, borderRadius: '50%',
+                                border: '1.5px solid rgba(255,255,255,0.8)',
+                                objectFit: 'cover', flexShrink: 0,
+                            }}
+                        />
+                    )}
+                    {data.userName && (
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans' }}>
+                            {data.userName}
+                        </div>
+                    )}
+                </div>
+            )}
             {/* Badge — smaller */}
             <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
