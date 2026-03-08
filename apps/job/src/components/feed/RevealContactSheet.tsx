@@ -13,6 +13,45 @@ interface RevealContactSheetProps {
     category?: string
 }
 
+// Upload payment screenshot to Cloudinary
+// Uses the same credentials already in your .env
+async function uploadScreenshotToCloudinary(file: File): Promise<string> {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+
+    if (!cloudName || !uploadPreset) {
+        throw new Error('Cloudinary not configured. Check NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in .env')
+    }
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', uploadPreset)
+    formData.append('folder', 'payment_screenshots')  // organized in its own folder
+
+    const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: 'POST', body: formData }
+    )
+
+    if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(`Upload failed: ${errorData.error?.message || 'Unknown error'}`)
+    }
+
+    const data = await response.json()
+    return data.secure_url  // e.g. "https://res.cloudinary.com/yourcloud/image/upload/..."
+}
+
+// Wrap the upload with a timeout
+async function uploadWithTimeout(file: File, timeoutMs = 30000): Promise<string> {
+    return Promise.race([
+        uploadScreenshotToCloudinary(file),
+        new Promise<string>((_, reject) =>
+            setTimeout(() => reject(new Error('Upload timed out. Check your internet and try again.')), timeoutMs)
+        )
+    ])
+}
+
 export function RevealContactSheet({
     isOpen, onClose, userId: targetUserId, targetName: targetUserName, videoId, category
 }: RevealContactSheetProps) {
@@ -41,7 +80,7 @@ export function RevealContactSheet({
     const handleSubmit = async () => {
         if (!user) return
         if (!canSubmit) {
-            setError('Please enter a Transaction ID or upload a payment screenshot.')
+            setError('Please enter a Transaction ID or upload a screenshot.')
             return
         }
 
@@ -49,16 +88,11 @@ export function RevealContactSheet({
         setError('')
 
         try {
-            let screenshotBase64 = ''
+            let screenshotUrl = ''
 
-            // Convert screenshot to base64 if provided
+            // Upload screenshot to Cloudinary if provided
             if (screenshotFile) {
-                screenshotBase64 = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader()
-                    reader.onload = () => resolve(reader.result as string)
-                    reader.onerror = reject
-                    reader.readAsDataURL(screenshotFile)
-                })
+                screenshotUrl = await uploadWithTimeout(screenshotFile, 30000)
             }
 
             // Save to Firestore 'paymentRequests' collection
@@ -75,7 +109,7 @@ export function RevealContactSheet({
 
                 // Payment proof (at least one)
                 transactionId: transactionId.trim() || null,
-                screenshotBase64: screenshotBase64 || null,
+                screenshotUrl: screenshotUrl || null,       // ← URL only, not base64
                 screenshotFileName: screenshotFile?.name || null,
 
                 // Context
@@ -91,9 +125,9 @@ export function RevealContactSheet({
             })
 
             setStep('done')
-        } catch (err) {
+        } catch (err: any) {
             console.error('Payment submission error:', err)
-            setError('Something went wrong. Please try again.')
+            setError(err.message || 'Something went wrong. Please try again.')
         } finally {
             setUploading(false)
         }

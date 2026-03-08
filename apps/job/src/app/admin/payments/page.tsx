@@ -14,7 +14,7 @@ interface PaymentRequest {
     targetUserId: string
     targetUserName: string
     transactionId: string | null
-    screenshotBase64: string | null
+    screenshotUrl: string | null
     screenshotFileName: string | null
     videoId: string | null
     category: string | null
@@ -231,13 +231,13 @@ export default function AdminPaymentsPage() {
                                     </div>
                                 )}
 
-                                {payment.screenshotBase64 && (
+                                {payment.screenshotUrl && (
                                     <div>
                                         <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>SCREENSHOT</div>
                                         <img
-                                            src={payment.screenshotBase64}
+                                            src={payment.screenshotUrl}
                                             alt="Payment screenshot"
-                                            onClick={() => setSelectedScreenshot(payment.screenshotBase64!)}
+                                            onClick={() => setSelectedScreenshot(payment.screenshotUrl!)}
                                             style={{
                                                 height: 64, width: 'auto', borderRadius: 6,
                                                 border: '1px solid #E5E5E5',
@@ -247,7 +247,7 @@ export default function AdminPaymentsPage() {
                                     </div>
                                 )}
 
-                                {!payment.transactionId && !payment.screenshotBase64 && (
+                                {!payment.transactionId && !payment.screenshotUrl && (
                                     <span style={{ color: '#aaa', fontSize: 13 }}>No proof submitted</span>
                                 )}
                             </div>
