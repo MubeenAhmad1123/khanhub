@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, orderBy, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, orderBy, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
@@ -20,7 +20,7 @@ export default function UserProfilePage() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'videos' | 'info'>('videos');
     const [contactRevealed, setContactRevealed] = useState(false);
-    const [checkingPayment, setCheckingPayment] = useState(true);
+    const [checkingUnlock, setCheckingUnlock] = useState(true);
     const [showRevealSheet, setShowRevealSheet] = useState(false);
     const [isPlaceholderUser, setIsPlaceholderUser] = useState(false);
 
@@ -65,35 +65,13 @@ export default function UserProfilePage() {
                     return; // No need to fetch videos if user doesn't exist
                 }
 
-                // REAL-TIME CHECK IF UNLOCKED
+                // REAL-TIME FOLLOW STATUS
                 if (currentUser && id) {
-                    const unsubUnlock = onSnapshot(doc(db, 'users', currentUser.uid), (snap) => {
-                        if (snap.exists()) {
-                            const data = snap.data();
-                            const unlocked = data.unlockedContacts || {};
-                            const isUnlocked = !!unlocked[id as string];
-                            console.log('[LockDebug] unlockedContacts:', unlocked);
-                            console.log('[LockDebug] id:', id, 'isUnlocked:', isUnlocked);
-                            setContactRevealed(isUnlocked);
-                        }
-                        setCheckingPayment(false);
-                    }, (err) => {
-                        console.error('[Profile Page] Unlock snapshot error:', err);
-                        setCheckingPayment(false);
-                    });
-
-                    // REAL-TIME FOLLOW STATUS
                     const followDocId = `${currentUser.uid}_${id}`;
                     const unsubFollow = onSnapshot(doc(db, 'follows', followDocId), (snap) => {
                         setIsFollowing(snap.exists());
                     });
-
-                    return () => {
-                        unsubUnlock();
-                        unsubFollow();
-                    };
-                } else {
-                    setCheckingPayment(false);
+                    return () => unsubFollow();
                 }
 
                 // Fetch videos in a separate try-catch so it doesn't wipe profile if index is missing
@@ -149,6 +127,47 @@ export default function UserProfilePage() {
         };
         fetchProfile();
     }, [id]);
+
+    useEffect(() => {
+        // Need both current user and target profile ID
+        if (!currentUser || !id) {
+            setCheckingUnlock(false)
+            return
+        }
+
+        console.log('[Unlock Check] Listening to buyer doc:', currentUser.uid)
+        console.log('[Unlock Check] Looking for target key:', id)
+
+        // Real-time listener on the BUYER's user doc
+        const unsubscribe = onSnapshot(
+            doc(db, 'users', currentUser.uid),
+            (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data()
+                    const unlockedContacts = data.unlockedContacts || {}
+
+                    console.log('[Unlock Check] unlockedContacts map:', unlockedContacts)
+                    console.log('[Unlock Check] Has key?', id in unlockedContacts)
+
+                    const isUnlocked = id in unlockedContacts
+                    setContactRevealed(isUnlocked)
+                } else {
+                    console.log('[Unlock Check] Buyer doc not found')
+                    setContactRevealed(false)
+                }
+                setCheckingUnlock(false)
+            },
+            (error) => {
+                console.error('[Unlock Check] Snapshot error:', error)
+                setCheckingUnlock(false)
+            }
+        )
+
+        return () => {
+            console.log('[Unlock Check] Cleaning up listener')
+            unsubscribe()
+        }
+    }, [currentUser, id]);
 
     const getCategoryConfig = (cat: string) => {
         const configs: Record<string, { label: string; emoji: string; accent: string }> = {
@@ -662,137 +681,121 @@ export default function UserProfilePage() {
                         </Section>
                     )}
 
-                    {/* Contact — LOCKED until paid */}
-                    <Section title="Contact" accent={catConfig.accent}>
-                        {checkingPayment ? (
+                    {/* CONTACT SECTION */}
+                    <div style={{
+                        background: '#F8F8F8',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: 14,
+                        padding: '14px 16px',
+                        marginTop: 12,
+                    }}>
+                        {/* Section header */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            marginBottom: 12, borderBottom: '1px solid #E5E5E5', paddingBottom: 10,
+                        }}>
+                            <div style={{ width: 3, height: 14, background: catConfig.accent, borderRadius: 999 }} />
+                            <h3 style={{
+                                fontFamily: 'Syne', fontWeight: 700, fontSize: 13,
+                                color: '#0A0A0A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em',
+                            }}>
+                                Contact
+                            </h3>
+                        </div>
+
+                        {checkingUnlock ? (
+                            /* Still checking */
                             <div style={{ textAlign: 'center', padding: '16px 0' }}>
                                 <div style={{
-                                    width: 24, height: 24, borderRadius: '50%',
-                                    border: '2px solid #E5E5E5',
+                                    width: 22, height: 22, borderRadius: '50%',
+                                    border: `2px solid #E5E5E5`,
                                     borderTopColor: catConfig.accent,
                                     animation: 'spin 0.7s linear infinite',
                                     margin: '0 auto',
                                 }} />
                             </div>
-                        ) : contactRevealed ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                                {/* Unlocked badge */}
+                        ) : contactRevealed ? (
+                            /* ✅ UNLOCKED — show contact info */
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
                                 <div style={{
                                     display: 'flex', alignItems: 'center', gap: 6,
-                                    background: '#E8F5E9', borderRadius: 8,
-                                    padding: '8px 12px', marginBottom: 4,
+                                    background: '#E8F5E9', borderRadius: 8, padding: '8px 12px',
                                 }}>
-                                    <span style={{ fontSize: 16 }}>🔓</span>
-                                    <span style={{
-                                        color: '#2E7D32', fontFamily: 'DM Sans',
-                                        fontWeight: 700, fontSize: 13,
-                                    }}>
+                                    <span>🔓</span>
+                                    <span style={{ color: '#2E7D32', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13 }}>
                                         Contact Unlocked
                                     </span>
                                 </div>
 
-                                {/* Phone — reads top-level 'phone' field */}
+                                {/* Phone */}
                                 {(profile.phone || profile.hrPhone) && (
                                     <a href={`tel:${profile.phone || profile.hrPhone}`} style={{
                                         display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '12px 14px',
-                                        background: '#F8F8F8', border: '1px solid #E5E5E5',
-                                        borderRadius: 10, textDecoration: 'none',
+                                        padding: '12px 14px', background: '#fff',
+                                        borderRadius: 10, border: '1px solid #E5E5E5', textDecoration: 'none',
                                     }}>
-                                        <div style={{ background: `${catConfig.accent}15`, padding: 8, borderRadius: 8 }}>
-                                            <Phone size={18} color={catConfig.accent} />
-                                        </div>
+                                        <span style={{ fontSize: 22 }}>📞</span>
                                         <div>
                                             <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Phone</div>
                                             <div style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
                                                 {profile.phone || profile.hrPhone}
                                             </div>
                                         </div>
-                                        <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#ccc' }} />
                                     </a>
                                 )}
 
-                                {/* WhatsApp — uses phone number since no separate whatsapp field */}
+                                {/* WhatsApp */}
                                 {(profile.phone || profile.hrPhone) && (
                                     <a
                                         href={`https://wa.me/92${(profile.phone || profile.hrPhone).replace(/^0/, '').replace(/\D/g, '')}`}
                                         target="_blank" rel="noopener noreferrer"
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 10,
-                                            padding: '12px 14px',
-                                            background: '#F0FFF4', border: '1px solid #B2DFDB',
-                                            borderRadius: 10, textDecoration: 'none',
+                                            padding: '12px 14px', background: '#F0FFF4',
+                                            borderRadius: 10, border: '1px solid #B2DFDB', textDecoration: 'none',
                                         }}
                                     >
-                                        <div style={{ background: '#25D36615', padding: 8, borderRadius: 8 }}>
-                                            <MessageCircle size={18} color="#25D366" />
-                                        </div>
+                                        <span style={{ fontSize: 22 }}>💬</span>
                                         <div>
                                             <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>WhatsApp</div>
                                             <div style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
                                                 {profile.phone || profile.hrPhone}
                                             </div>
                                         </div>
-                                        <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#25D36655' }} />
                                     </a>
                                 )}
 
-                                {/* Email — reads top-level 'email' field */}
+                                {/* Email */}
                                 {profile.email && (
                                     <a href={`mailto:${profile.email}`} style={{
                                         display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '12px 14px',
-                                        background: '#F8F8F8', border: '1px solid #E5E5E5',
-                                        borderRadius: 10, textDecoration: 'none',
+                                        padding: '12px 14px', background: '#fff',
+                                        borderRadius: 10, border: '1px solid #E5E5E5', textDecoration: 'none',
                                     }}>
-                                        <div style={{ background: '#4A90D915', padding: 8, borderRadius: 8 }}>
-                                            <Mail size={18} color="#4A90D9" />
-                                        </div>
+                                        <span style={{ fontSize: 22 }}>✉️</span>
                                         <div>
                                             <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Email</div>
                                             <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
                                                 {profile.email}
                                             </div>
                                         </div>
-                                        <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#ccc' }} />
                                     </a>
                                 )}
 
-                                {/* Location — reads 'companyLocation' or 'city' */}
-                                {(profile.companyLocation || profile.city || profile.profile?.city) && (
+                                {/* Location */}
+                                {(profile.companyLocation || profile.city) && (
                                     <div style={{
                                         display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '12px 14px',
-                                        background: '#F8F8F8', border: '1px solid #E5E5E5',
-                                        borderRadius: 10,
+                                        padding: '12px 14px', background: '#fff',
+                                        borderRadius: 10, border: '1px solid #E5E5E5',
                                     }}>
-                                        <div style={{ background: '#7638FA15', padding: 8, borderRadius: 8 }}>
-                                            <Navigation size={18} color="#7638FA" />
-                                        </div>
+                                        <span style={{ fontSize: 22 }}>📍</span>
                                         <div>
                                             <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Location</div>
                                             <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
-                                                {profile.companyLocation || profile.city || profile.profile?.city}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Company name if employer */}
-                                {(profile.companyName || profile.displayName) && profile.role === 'employer' && (
-                                    <div style={{
-                                        display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '12px 14px', background: '#F8F8F8',
-                                        borderRadius: 10, border: '1px solid #E5E5E5',
-                                    }}>
-                                        <div style={{ background: `${catConfig.accent}15`, padding: 8, borderRadius: 8 }}>
-                                            <span style={{ fontSize: 18 }}>🏢</span>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Company</div>
-                                            <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
-                                                {profile.companyName || profile.displayName}
+                                                {profile.companyLocation || profile.city}
                                             </div>
                                         </div>
                                     </div>
@@ -802,47 +805,43 @@ export default function UserProfilePage() {
                                 {profile.website && (
                                     <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{
                                         display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '12px 14px', background: '#F8F8F8',
-                                        borderRadius: 10, border: '1px solid #E5E5E5',
-                                        textDecoration: 'none',
+                                        padding: '12px 14px', background: '#fff',
+                                        borderRadius: 10, border: '1px solid #E5E5E5', textDecoration: 'none',
                                     }}>
-                                        <div style={{ background: '#00E5FF15', padding: 8, borderRadius: 8 }}>
-                                            <ExternalLink size={18} color="#00E5FF" />
-                                        </div>
+                                        <span style={{ fontSize: 22 }}>🌐</span>
                                         <div>
                                             <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Website</div>
                                             <div style={{ fontSize: 14, fontWeight: 600, color: catConfig.accent, fontFamily: 'DM Sans' }}>
                                                 {profile.website}
                                             </div>
                                         </div>
-                                        <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#ccc' }} />
                                     </a>
                                 )}
-
-                                {/* Fallback if no specific fields found */}
-                                {!profile.phone && !profile.email && !profile.hrPhone && !profile.companyLocation && !profile.city && !profile.website && (
-                                    <div style={{
-                                        padding: '16px', textAlign: 'center',
-                                        background: '#FFF8E1', borderRadius: 10, border: '1px solid #FFE082',
-                                    }}>
-                                        <p style={{ color: '#F57F17', fontFamily: 'DM Sans', fontSize: 13, margin: 0 }}>
-                                            ⚠️ This user hasn't added contact info to their profile yet.
-                                        </p>
-                                    </div>
-                                )}
-
                             </div>
+
                         ) : (
+                            /* 🔒 LOCKED */
                             <div style={{ textAlign: 'center', padding: '12px 0' }}>
-                                <PendingPaymentChecker
-                                    buyerId={currentUser?.uid}
-                                    targetId={id as string}
-                                    accent={catConfig.accent}
-                                    onOpenSheet={() => setShowRevealSheet(true)}
-                                />
+                                <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
+                                <p style={{ color: '#666', fontFamily: 'DM Sans', fontSize: 13, margin: '0 0 14px' }}>
+                                    Pay Rs. 1,000 to unlock phone, email & location
+                                </p>
+                                <button
+                                    onClick={() => setShowRevealSheet(true)}
+                                    style={{
+                                        width: '100%', padding: '13px',
+                                        background: catConfig.accent, color: '#fff',
+                                        border: 'none', borderRadius: 10,
+                                        fontFamily: 'Syne', fontWeight: 700,
+                                        fontSize: 14, cursor: 'pointer',
+                                        boxShadow: `0 4px 16px ${catConfig.accent}44`,
+                                    }}
+                                >
+                                    🔓 Unlock Contact — Rs. 1,000
+                                </button>
                             </div>
                         )}
-                    </Section>
+                    </div>
 
                     {/* Empty state if no info at all */}
                     {!profile.skills?.length && !profile.experience?.length && !profile.education?.length && (
@@ -858,9 +857,9 @@ export default function UserProfilePage() {
             <RevealContactSheet
                 isOpen={showRevealSheet}
                 onClose={() => setShowRevealSheet(false)}
-                targetName={profile.name || 'User'}
-                userId={id as string}
-                category={profile.category}
+                targetUserId={id as string}
+                targetUserName={profile?.name || profile?.displayName || ''}
+                category={profile?.category}
             />
 
             {/* DP Zoom Modal */}

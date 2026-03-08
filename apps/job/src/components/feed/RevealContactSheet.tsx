@@ -7,8 +7,8 @@ import { useAuth } from '@/hooks/useAuth'
 interface RevealContactSheetProps {
     isOpen: boolean
     onClose: () => void
-    userId: string       // whose contact is being unlocked
-    targetName?: string
+    targetUserId: string       // whose contact is being unlocked
+    targetUserName?: string
     videoId?: string
     category?: string
 }
@@ -53,7 +53,7 @@ async function uploadWithTimeout(file: File, timeoutMs = 30000): Promise<string>
 }
 
 export function RevealContactSheet({
-    isOpen, onClose, userId: targetUserId, targetName: targetUserName, videoId, category
+    isOpen, onClose, targetUserId, targetUserName, videoId, category
 }: RevealContactSheetProps) {
     const { user } = useAuth()
 
