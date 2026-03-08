@@ -69,8 +69,12 @@ export default function UserProfilePage() {
                 if (currentUser && id) {
                     const unsubUnlock = onSnapshot(doc(db, 'users', currentUser.uid), (snap) => {
                         if (snap.exists()) {
-                            const unlocked = snap.data().unlockedContacts || {};
-                            setContactRevealed(!!unlocked[id as string]);
+                            const data = snap.data();
+                            const unlocked = data.unlockedContacts || {};
+                            const isUnlocked = !!unlocked[id as string];
+                            console.log('[LockDebug] unlockedContacts:', unlocked);
+                            console.log('[LockDebug] id:', id, 'isUnlocked:', isUnlocked);
+                            setContactRevealed(isUnlocked);
                         }
                         setCheckingPayment(false);
                     }, (err) => {
@@ -688,11 +692,11 @@ export default function UserProfilePage() {
                                     </span>
                                 </div>
 
-                                {/* Phone */}
-                                {profile.phone && (
-                                    <a href={`tel:${profile.phone}`} style={{
+                                {/* Phone — reads top-level 'phone' field */}
+                                {(profile.phone || profile.hrPhone) && (
+                                    <a href={`tel:${profile.phone || profile.hrPhone}`} style={{
                                         display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '10px 12px',
+                                        padding: '12px 14px',
                                         background: '#F8F8F8', border: '1px solid #E5E5E5',
                                         borderRadius: 10, textDecoration: 'none',
                                     }}>
@@ -702,21 +706,21 @@ export default function UserProfilePage() {
                                         <div>
                                             <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Phone</div>
                                             <div style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
-                                                {profile.phone}
+                                                {profile.phone || profile.hrPhone}
                                             </div>
                                         </div>
                                         <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#ccc' }} />
                                     </a>
                                 )}
 
-                                {/* WhatsApp */}
-                                {(profile.whatsapp || (profile.phone && profile.phone.length > 5)) && (
+                                {/* WhatsApp — uses phone number since no separate whatsapp field */}
+                                {(profile.phone || profile.hrPhone) && (
                                     <a
-                                        href={`https://wa.me/${(profile.whatsapp || profile.phone).replace(/\D/g, '')}`}
+                                        href={`https://wa.me/92${(profile.phone || profile.hrPhone).replace(/^0/, '').replace(/\D/g, '')}`}
                                         target="_blank" rel="noopener noreferrer"
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 10,
-                                            padding: '10px 12px',
+                                            padding: '12px 14px',
                                             background: '#F0FFF4', border: '1px solid #B2DFDB',
                                             borderRadius: 10, textDecoration: 'none',
                                         }}
@@ -727,18 +731,18 @@ export default function UserProfilePage() {
                                         <div>
                                             <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>WhatsApp</div>
                                             <div style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
-                                                {profile.whatsapp || profile.phone}
+                                                {profile.phone || profile.hrPhone}
                                             </div>
                                         </div>
                                         <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#25D36655' }} />
                                     </a>
                                 )}
 
-                                {/* Email */}
+                                {/* Email — reads top-level 'email' field */}
                                 {profile.email && (
                                     <a href={`mailto:${profile.email}`} style={{
                                         display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '10px 12px',
+                                        padding: '12px 14px',
                                         background: '#F8F8F8', border: '1px solid #E5E5E5',
                                         borderRadius: 10, textDecoration: 'none',
                                     }}>
@@ -755,11 +759,11 @@ export default function UserProfilePage() {
                                     </a>
                                 )}
 
-                                {/* Location */}
-                                {(profile.address || profile.location || profile.city) && (
+                                {/* Location — reads 'companyLocation' or 'city' */}
+                                {(profile.companyLocation || profile.city || profile.profile?.city) && (
                                     <div style={{
                                         display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '10px 12px',
+                                        padding: '12px 14px',
                                         background: '#F8F8F8', border: '1px solid #E5E5E5',
                                         borderRadius: 10,
                                     }}>
@@ -769,14 +773,54 @@ export default function UserProfilePage() {
                                         <div>
                                             <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Location</div>
                                             <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
-                                                {profile.address || profile.location || profile.city}
+                                                {profile.companyLocation || profile.city || profile.profile?.city}
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
+                                {/* Company name if employer */}
+                                {(profile.companyName || profile.displayName) && profile.role === 'employer' && (
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        padding: '12px 14px', background: '#F8F8F8',
+                                        borderRadius: 10, border: '1px solid #E5E5E5',
+                                    }}>
+                                        <div style={{ background: `${catConfig.accent}15`, padding: 8, borderRadius: 8 }}>
+                                            <span style={{ fontSize: 18 }}>🏢</span>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Company</div>
+                                            <div style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', fontFamily: 'DM Sans' }}>
+                                                {profile.companyName || profile.displayName}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Website */}
+                                {profile.website && (
+                                    <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        padding: '12px 14px', background: '#F8F8F8',
+                                        borderRadius: 10, border: '1px solid #E5E5E5',
+                                        textDecoration: 'none',
+                                    }}>
+                                        <div style={{ background: '#00E5FF15', padding: 8, borderRadius: 8 }}>
+                                            <ExternalLink size={18} color="#00E5FF" />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#888', fontFamily: 'DM Sans' }}>Website</div>
+                                            <div style={{ fontSize: 14, fontWeight: 600, color: catConfig.accent, fontFamily: 'DM Sans' }}>
+                                                {profile.website}
+                                            </div>
+                                        </div>
+                                        <ExternalLink size={14} style={{ marginLeft: 'auto', color: '#ccc' }} />
+                                    </a>
+                                )}
+
                                 {/* Fallback if no specific fields found */}
-                                {!profile.phone && !profile.email && !profile.whatsapp && !profile.location && !profile.address && !profile.city && (
+                                {!profile.phone && !profile.email && !profile.hrPhone && !profile.companyLocation && !profile.city && !profile.website && (
                                     <div style={{
                                         padding: '16px', textAlign: 'center',
                                         background: '#FFF8E1', borderRadius: 10, border: '1px solid #FFE082',
@@ -842,6 +886,7 @@ export default function UserProfilePage() {
                     />
                 </div>
             )}
+
         </div>
     );
 }
