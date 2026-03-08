@@ -57,6 +57,17 @@ export default function UserProfilePage() {
                     return; // No need to fetch videos if user doesn't exist
                 }
 
+                // CHECK IF UNLOCKED
+                if (currentUser && id) {
+                    const requesterSnap = await getDoc(doc(db, 'users', currentUser.uid));
+                    if (requesterSnap.exists()) {
+                        const unlocked = requesterSnap.data().unlockedContacts || {};
+                        if (unlocked[id as string]) {
+                            setContactRevealed(true);
+                        }
+                    }
+                }
+
                 // Fetch videos in a separate try-catch so it doesn't wipe profile if index is missing
                 try {
                     // Try 1: approved + is_live
@@ -656,6 +667,7 @@ export default function UserProfilePage() {
                 onClose={() => setShowRevealSheet(false)}
                 targetName={profile.name || 'User'}
                 userId={id as string}
+                category={profile.category}
             />
         </div>
     );

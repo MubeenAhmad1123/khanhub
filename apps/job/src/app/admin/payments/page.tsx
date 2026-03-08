@@ -1,293 +1,311 @@
-'use client';
+'use client'
+import { useEffect, useState } from 'react'
+import { collection, query, orderBy, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase/firebase-config'
 
-import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase/firebase-config';
-import {
-    collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, addDoc
-} from 'firebase/firestore';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/components/ui/toast';
-import { writeActivityLog } from '@/hooks/useActivityLog';
-import PaymentCard from '@/components/admin/PaymentCard';
-import { Payment } from '@/types/payment';
-import {
-    Loader2,
-    CreditCard,
-    CheckCircle,
-    Clock,
-    XCircle,
-    DollarSign,
-    TrendingUp,
-    Calendar
-} from 'lucide-react';
-import { startOfDay, startOfMonth, isAfter } from 'date-fns';
-import { toDate } from '@/lib/firebase/firestore';
+type PaymentStatus = 'pending' | 'approved' | 'rejected'
+
+interface PaymentRequest {
+    id: string
+    requestedBy: string
+    requestedByName: string
+    requestedByEmail: string
+    requestedByPhoto: string
+    targetUserId: string
+    targetUserName: string
+    transactionId: string | null
+    screenshotBase64: string | null
+    screenshotFileName: string | null
+    videoId: string | null
+    category: string | null
+    amount: number
+    currency: string
+    status: PaymentStatus
+    createdAt: any
+}
 
 export default function AdminPaymentsPage() {
-    const { user } = useAuth();
-    const { toast } = useToast();
-    const [payments, setPayments] = useState<Payment[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'second_video'>('pending');
+    const [payments, setPayments] = useState<PaymentRequest[]>([])
+    const [loading, setLoading] = useState(true)
+    const [filter, setFilter] = useState<'all' | PaymentStatus>('pending')
+    const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null)
+    const [processing, setProcessing] = useState<string | null>(null)
 
-    useEffect(() => {
-        const q = query(collection(db, 'payments'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
-            // Sort by createdAt desc
-            list.sort((a, b) => {
-                const timeA = (a as any).createdAt?.seconds || 0;
-                const timeB = (b as any).createdAt?.seconds || 0;
-                return timeB - timeA;
-            });
-            setPayments(list);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    const handleApprove = async (paymentId: string) => {
-        const payment = payments.find(p => p.id === paymentId);
-        if (!payment) return;
-
+    const fetchPayments = async () => {
+        setLoading(true)
         try {
-            // 1. Update payment doc
-            await updateDoc(doc(db, 'payments', paymentId), {
-                status: 'approved',
-                reviewedBy: user?.uid,
-                reviewedAt: serverTimestamp(),
-            });
-
-            // 2. Update user doc based on payment type
-            const userUpdate: any = {
-                paymentStatus: 'approved',
-                updatedAt: serverTimestamp(),
-            };
-
-            if (payment.type === 'premium') {
-                const now = new Date();
-                const end = new Date();
-                end.setDate(end.getDate() + 30);
-                userUpdate.isPremium = true;
-                userUpdate.premiumStartDate = now;
-                userUpdate.premiumEndDate = end;
-            } else if (payment.type === 'video_upload') {
-                userUpdate.video_upload_enabled = true;
-                userUpdate.profile_status = 'video_pending';
-            } else if (payment.type === 'second_video_slot') {
-                userUpdate.secondVideoSlotUnlocked = true;
-            } else if (payment.type === 'connection' && (payment as any).connectionId) {
-                // Connection Reveal Logic
-                await updateDoc(doc(db, 'connections', (payment as any).connectionId), {
-                    status: 'approved',
-                    approvedAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
-                });
-
-                // Also notify the seeker that someone connected
-                await addDoc(collection(db, 'notifications'), {
-                    user_id: (payment as any).seekerId,
-                    type: 'new_connection',
-                    title: 'New Connection Revealed!',
-                    message: `${payment.userEmail || 'An employer'} has revealed your contact info. Expect a call soon!`,
-                    is_read: false,
-                    created_at: serverTimestamp()
-                });
-            }
-
-            await updateDoc(doc(db, 'users', payment.userId), userUpdate);
-
-            // 3. Write notification
-            let notificationTitle = 'Payment Approved';
-            let notificationMessage = `Your payment of Rs. ${payment.amount} has been approved.`;
-
-            if (payment.type === 'second_video_slot') {
-                notificationTitle = 'Second Video Slot Unlocked!';
-                notificationMessage = 'Your payment was approved. You can now upload a second video to your profile!';
-            }
-
-            await addDoc(collection(db, 'notifications'), {
-                user_id: payment.userId,
-                type: 'payment_approved',
-                title: notificationTitle,
-                message: notificationMessage,
-                is_read: false,
-                created_at: serverTimestamp()
-            });
-
-            // 4. Write activity log
-            await writeActivityLog({
-                admin_id: user?.uid || 'system',
-                action_type: 'payment_approved',
-                target_id: paymentId,
-                target_type: 'payment',
-                note: `Approved Rs. ${payment.amount} ${payment.type} fee for ${payment.userEmail || payment.userId}`
-            });
-
-            toast('Payment approved', 'success');
+            const snap = await getDocs(query(
+                collection(db, 'paymentRequests'),
+                orderBy('createdAt', 'desc')
+            ))
+            setPayments(snap.docs.map(d => ({ id: d.id, ...d.data() } as PaymentRequest)))
         } catch (err) {
-            console.error(err);
-            toast('Failed to approve payment', 'error');
+            console.error('Error fetching payments:', err)
+        } finally {
+            setLoading(false)
         }
-    };
-
-    const handleReject = async (paymentId: string, reason: string) => {
-        const payment = payments.find(p => p.id === paymentId);
-        if (!payment) return;
-
-        try {
-            // 1. Update payment doc
-            await updateDoc(doc(db, 'payments', paymentId), {
-                status: 'rejected',
-                rejectionReason: reason,
-                reviewedBy: user?.uid,
-                reviewedAt: serverTimestamp(),
-            });
-
-            // 2. Update user doc (set paymentStatus back to something that lets them re-submit if needed)
-            await updateDoc(doc(db, 'users', payment.userId), {
-                paymentStatus: 'rejected', // UI should handle this to allow re-submission
-                profile_status: 'incomplete',
-                updatedAt: serverTimestamp(),
-            });
-
-            // 3. Write notification
-            await addDoc(collection(db, 'notifications'), {
-                user_id: payment.userId,
-                type: 'payment_rejected',
-                title: 'Payment Rejected',
-                message: `Your payment was rejected: ${reason}. Please try again.`,
-                is_read: false,
-                created_at: serverTimestamp()
-            });
-
-            // 4. Write activity log
-            await writeActivityLog({
-                admin_id: user?.uid || 'system',
-                action_type: 'payment_rejected',
-                target_id: paymentId,
-                target_type: 'payment',
-                note: `Rejected payment for ${payment.userEmail || payment.userId}: ${reason}`
-            });
-
-            toast('Payment rejected', 'info');
-        } catch (err) {
-            console.error(err);
-            toast('Failed to reject payment', 'error');
-        }
-    };
-
-    // Stats Calculation
-    const today = startOfDay(new Date());
-    const firstOfMonth = startOfMonth(new Date());
-
-    const stats = {
-        totalApproved: payments.filter(p => p.status === 'approved').reduce((sum, p) => sum + p.amount, 0),
-        todayRevenue: payments
-            .filter(p => p.status === 'approved' && p.reviewedAt && isAfter(toDate(p.reviewedAt), today))
-            .reduce((sum, p) => sum + p.amount, 0),
-        monthRevenue: payments
-            .filter(p => p.status === 'approved' && p.reviewedAt && isAfter(toDate(p.reviewedAt), firstOfMonth))
-            .reduce((sum, p) => sum + p.amount, 0),
-        pendingCount: payments.filter(p => p.status === 'pending').length,
-    };
-
-    const filteredPayments = payments.filter(p => {
-        if (filter === 'all') return true;
-        if (filter === 'second_video') return p.type === 'second_video_slot';
-        return p.status === filter;
-    });
-
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-3xl border border-slate-100 italic font-bold">
-                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
-                LOADING PAYMENTS...
-            </div>
-        );
     }
 
+    useEffect(() => { fetchPayments() }, [])
+
+    const handleApprove = async (payment: PaymentRequest) => {
+        setProcessing(payment.id)
+        try {
+            // 1. Update payment request status
+            await updateDoc(doc(db, 'paymentRequests', payment.id), {
+                status: 'approved',
+                approvedAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            })
+
+            // 2. Store in 'unlockedContacts' so user can see contact info
+            // Use current data to avoid overwriting other keys if needed, but simple update for now
+            const userRef = doc(db, 'users', payment.requestedBy)
+            const userSnap = await getDoc(userRef)
+            const currentUnlocked = userSnap.exists() ? (userSnap.data().unlockedContacts || {}) : {}
+
+            await updateDoc(userRef, {
+                unlockedContacts: {
+                    ...currentUnlocked,
+                    [payment.targetUserId]: {
+                        unlockedAt: new Date().toISOString(),
+                        paymentRequestId: payment.id,
+                    }
+                }
+            })
+
+            // 3. Refresh list
+            await fetchPayments()
+        } catch (err) {
+            console.error('Approval error:', err)
+        } finally {
+            setProcessing(null)
+        }
+    }
+
+    const handleReject = async (paymentId: string) => {
+        setProcessing(paymentId)
+        try {
+            await updateDoc(doc(db, 'paymentRequests', paymentId), {
+                status: 'rejected',
+                rejectedAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            })
+            await fetchPayments()
+        } catch (err) {
+            console.error('Rejection error:', err)
+        } finally {
+            setProcessing(null)
+        }
+    }
+
+    const filtered = payments.filter(p => filter === 'all' ? true : p.status === filter)
+    const pendingCount = payments.filter(p => p.status === 'pending').length
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div style={{ padding: '24px', fontFamily: 'DM Sans' }}>
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 italic uppercase tracking-tighter">
-                        <CreditCard className="w-8 h-8 text-blue-600" />
-                        Finances & Payments
-                    </h1>
-                    <p className="text-slate-500 font-bold">Verify bank transfers and activate memberships</p>
-                </div>
-            </div>
-
-            {/* Summary Bar */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[
-                    { label: 'Today Revenue', value: `Rs. ${stats.todayRevenue.toLocaleString()}`, icon: <TrendingUp className="w-5 h-5" />, color: 'bg-green-500' },
-                    { label: 'This Month', value: `Rs. ${stats.monthRevenue.toLocaleString()}`, icon: <Calendar className="w-5 h-5" />, color: 'bg-blue-500' },
-                    { label: 'Total Approved', value: `Rs. ${stats.totalApproved.toLocaleString()}`, icon: <DollarSign className="w-5 h-5" />, color: 'bg-teal-500' },
-                    { label: 'Pending Now', value: stats.pendingCount, icon: <Clock className="w-5 h-5" />, color: 'bg-orange-500' },
-                ].map((stat, idx) => (
-                    <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className={`${stat.color} p-2 rounded-lg text-white`}>
-                                {stat.icon}
-                            </div>
-                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                        </div>
-                        <p className="text-2xl font-black text-slate-900">{stat.value}</p>
-                    </div>
-                ))}
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex flex-wrap gap-2">
-                {[
-                    { id: 'all', label: 'All Payments', count: payments.length },
-                    { id: 'pending', label: 'Pending Queue', count: stats.pendingCount },
-                    { id: 'approved', label: 'Approved', count: payments.filter(p => p.status === 'approved').length },
-                    { id: 'rejected', label: 'Rejected', count: payments.filter(p => p.status === 'rejected').length },
-                    { id: 'second_video', label: 'Second Video', count: payments.filter(p => p.type === 'second_video_slot').length },
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setFilter(tab.id as any)}
-                        className={`px-5 py-2.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 border-2 ${filter === tab.id
-                            ? `bg-slate-900 border-slate-900 text-white shadow-lg`
-                            : `bg-white border-slate-100 text-slate-500 hover:border-slate-300`
-                            }`}
-                    >
-                        {tab.label}
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] ${filter === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                            }`}>
-                            {tab.count}
+            <div style={{ marginBottom: 24 }}>
+                <h1 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 24, margin: '0 0 4px', color: '#0A0A0A' }}>
+                    💳 Payment Requests
+                    {pendingCount > 0 && (
+                        <span style={{
+                            marginLeft: 10, background: '#FF0069',
+                            color: '#fff', borderRadius: 999,
+                            padding: '2px 10px', fontSize: 12,
+                            fontFamily: 'DM Sans', fontWeight: 700,
+                        }}>
+                            {pendingCount} pending
                         </span>
+                    )}
+                </h1>
+                <p style={{ color: '#888', fontSize: 14, margin: 0 }}>
+                    Review payment proofs and approve/reject contact unlocks
+                </p>
+            </div>
+
+            {/* Filter tabs */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
+                    <button
+                        key={f}
+                        onClick={() => setFilter(f)}
+                        style={{
+                            padding: '8px 16px', borderRadius: 999, border: 'none',
+                            cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13,
+                            background: filter === f ? '#FF0069' : '#F0F0F0',
+                            color: filter === f ? '#fff' : '#444',
+                            textTransform: 'capitalize',
+                        }}
+                    >
+                        {f}
                     </button>
                 ))}
             </div>
 
-            {/* Content Area */}
-            {filteredPayments.length === 0 ? (
-                <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-20 text-center">
-                    <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-500">
-                        <CheckCircle className="w-12 h-12" />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-900 mb-2">No payments found</h3>
-                    <p className="text-slate-500 font-bold">Nothing to show in this view.</p>
+            {/* List */}
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: 48 }}>
+                    <div style={{
+                        width: 36, height: 36, borderRadius: '50%',
+                        border: '3px solid #FF0069', borderTopColor: 'transparent',
+                        animation: 'spin 0.8s linear infinite', margin: '0 auto',
+                    }} />
+                </div>
+            ) : filtered.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 48, color: '#888' }}>
+                    No {filter === 'all' ? '' : filter} payment requests
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xL:grid-cols-3 gap-8">
-                    {filteredPayments.map(payment => (
-                        <PaymentCard
-                            key={payment.id}
-                            payment={payment}
-                            onApprove={handleApprove}
-                            onReject={handleReject}
-                        />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {filtered.map(payment => (
+                        <div key={payment.id} style={{
+                            background: '#fff',
+                            border: payment.status === 'pending' ? '2px solid #FF006922' : '1px solid #E5E5E5',
+                            borderRadius: 14, padding: '16px 20px',
+                            boxShadow: payment.status === 'pending' ? '0 2px 12px rgba(255,0,105,0.08)' : 'none',
+                        }}>
+                            <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+
+                                {/* Requester info */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 200 }}>
+                                    <img
+                                        src={payment.requestedByPhoto || `https://ui-avatars.com/api/?name=${payment.requestedByName}&background=eee`}
+                                        style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                                    />
+                                    <div>
+                                        <div style={{ fontWeight: 700, fontSize: 14, color: '#0A0A0A' }}>
+                                            {payment.requestedByName || payment.requestedByEmail}
+                                        </div>
+                                        <div style={{ fontSize: 12, color: '#888' }}>
+                                            wants to contact <strong>{payment.targetUserName || 'a user'}</strong>
+                                        </div>
+                                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                                            {payment.createdAt?.toDate?.().toLocaleString('en-PK') || ''}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Amount */}
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: 18, fontWeight: 800, color: '#FF0069', fontFamily: 'Syne' }}>
+                                        Rs. {payment.amount?.toLocaleString()}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#888' }}>{payment.currency}</div>
+                                </div>
+
+                                {/* Status badge */}
+                                <div style={{
+                                    padding: '4px 12px', borderRadius: 999,
+                                    fontSize: 12, fontWeight: 700,
+                                    background: payment.status === 'pending' ? '#FFF3E0' :
+                                        payment.status === 'approved' ? '#E8F5E9' : '#FFEBEE',
+                                    color: payment.status === 'pending' ? '#E65100' :
+                                        payment.status === 'approved' ? '#2E7D32' : '#C62828',
+                                    textTransform: 'capitalize',
+                                    alignSelf: 'center',
+                                }}>
+                                    {payment.status === 'pending' ? '⏳' : payment.status === 'approved' ? '✅' : '❌'} {payment.status}
+                                </div>
+                            </div>
+
+                            {/* Payment proof */}
+                            <div style={{
+                                marginTop: 14, padding: '12px 14px',
+                                background: '#F8F8F8', borderRadius: 10,
+                                display: 'flex', gap: 20, flexWrap: 'wrap',
+                                alignItems: 'center',
+                            }}>
+                                {payment.transactionId && (
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>TRANSACTION ID</div>
+                                        <div style={{
+                                            fontFamily: 'JetBrains Mono, monospace',
+                                            fontSize: 14, fontWeight: 700,
+                                            color: '#0A0A0A',
+                                            background: '#fff', padding: '4px 10px',
+                                            borderRadius: 6, border: '1px solid #E5E5E5',
+                                        }}>
+                                            {payment.transactionId}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {payment.screenshotBase64 && (
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>SCREENSHOT</div>
+                                        <img
+                                            src={payment.screenshotBase64}
+                                            alt="Payment screenshot"
+                                            onClick={() => setSelectedScreenshot(payment.screenshotBase64!)}
+                                            style={{
+                                                height: 64, width: 'auto', borderRadius: 6,
+                                                border: '1px solid #E5E5E5',
+                                                cursor: 'zoom-in', objectFit: 'cover',
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
+                                {!payment.transactionId && !payment.screenshotBase64 && (
+                                    <span style={{ color: '#aaa', fontSize: 13 }}>No proof submitted</span>
+                                )}
+                            </div>
+
+                            {/* Action buttons — only for pending */}
+                            {payment.status === 'pending' && (
+                                <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                                    <button
+                                        onClick={() => handleApprove(payment)}
+                                        disabled={processing === payment.id}
+                                        style={{
+                                            flex: 1, padding: '10px',
+                                            background: '#00C896', color: '#fff',
+                                            border: 'none', borderRadius: 10,
+                                            fontFamily: 'DM Sans', fontWeight: 700,
+                                            fontSize: 14, cursor: 'pointer',
+                                            opacity: processing === payment.id ? 0.6 : 1,
+                                        }}
+                                    >
+                                        {processing === payment.id ? '...' : '✅ Approve & Reveal'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleReject(payment.id)}
+                                        disabled={processing === payment.id}
+                                        style={{
+                                            flex: 1, padding: '10px',
+                                            background: '#fff', color: '#FF3B30',
+                                            border: '1.5px solid #FF3B30', borderRadius: 10,
+                                            fontFamily: 'DM Sans', fontWeight: 700,
+                                            fontSize: 14, cursor: 'pointer',
+                                            opacity: processing === payment.id ? 0.6 : 1,
+                                        }}
+                                    >
+                                        ❌ Reject
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </div>
             )}
+
+            {/* Screenshot lightbox */}
+            {selectedScreenshot && (
+                <div
+                    onClick={() => setSelectedScreenshot(null)}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)',
+                        zIndex: 200, display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'zoom-out', padding: 20,
+                    }}
+                >
+                    <img
+                        src={selectedScreenshot}
+                        style={{ maxWidth: '100%', maxHeight: '90dvh', borderRadius: 12 }}
+                    />
+                </div>
+            )}
         </div>
-    );
+    )
 }

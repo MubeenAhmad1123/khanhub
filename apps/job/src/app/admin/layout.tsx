@@ -97,7 +97,8 @@ export default function AdminLayout({
                         </button>
                         <h2 className="text-slate-800 font-bold hidden sm:block">
                             {pathname === '/admin/dashboard' ? 'Dashboard' :
-                                pathname.split('/').pop()?.replace(/-/g, ' ').toUpperCase() || 'Admin Panel'}
+                                pathname.includes('/admin/payments') ? 'Payment Requests' :
+                                    pathname.split('/').pop()?.replace(/-/g, ' ').toUpperCase() || 'Admin Panel'}
                         </h2>
                     </div>
 

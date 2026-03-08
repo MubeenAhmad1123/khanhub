@@ -1,175 +1,431 @@
-'use client';
-
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Copy, Check, ShieldCheck, X } from 'lucide-react';
-import { useState } from 'react';
+'use client'
+import { useState, useRef } from 'react'
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase/firebase-config'
+import { useAuth } from '@/hooks/useAuth'
 
 interface RevealContactSheetProps {
-    isOpen: boolean;
-    onClose: () => void;
-    targetName: string;
-    userId: string;
+    isOpen: boolean
+    onClose: () => void
+    userId: string       // whose contact is being unlocked
+    targetName?: string
+    videoId?: string
+    category?: string
 }
 
-export function RevealContactSheet({ isOpen, onClose, targetName, userId }: RevealContactSheetProps) {
-    const [copied, setCopied] = useState(false);
-    const [screenshot, setScreenshot] = useState<File | null>(null);
-    const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+export function RevealContactSheet({
+    isOpen, onClose, userId: targetUserId, targetName: targetUserName, videoId, category
+}: RevealContactSheetProps) {
+    const { user } = useAuth()
 
-    const jazzCashNumber = "0300-1234567";
-    const amount = "1,000";
-    const reference = `JOBREEL-${userId.slice(-6).toUpperCase()}`;
+    const [step, setStep] = useState<'info' | 'submit' | 'done'>('info')
+    const [transactionId, setTransactionId] = useState('')
+    const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
+    const [screenshotPreview, setScreenshotPreview] = useState<string>('')
+    const [uploading, setUploading] = useState(false)
+    const [error, setError] = useState('')
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const handleCopy = (text: string) => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
+    const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setScreenshotFile(file)
+        const reader = new FileReader()
+        reader.onload = () => setScreenshotPreview(reader.result as string)
+        reader.readAsDataURL(file)
+    }
 
-    const handleSubmit = () => {
-        if (!screenshot) return;
-        setStatus('submitting');
-        // Simulate submission
-        setTimeout(() => {
-            setStatus('success');
-        }, 2000);
-    };
+    // Validate: user must provide at least one of transactionId OR screenshot
+    const canSubmit = transactionId.trim().length > 0 || screenshotFile !== null
+
+    const handleSubmit = async () => {
+        if (!user) return
+        if (!canSubmit) {
+            setError('Please enter a Transaction ID or upload a payment screenshot.')
+            return
+        }
+
+        setUploading(true)
+        setError('')
+
+        try {
+            let screenshotBase64 = ''
+
+            // Convert screenshot to base64 if provided
+            if (screenshotFile) {
+                screenshotBase64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onload = () => resolve(reader.result as string)
+                    reader.onerror = reject
+                    reader.readAsDataURL(screenshotFile)
+                })
+            }
+
+            // Save to Firestore 'paymentRequests' collection
+            await addDoc(collection(db, 'paymentRequests'), {
+                // Who is paying
+                requestedBy: user.uid,
+                requestedByName: user.displayName || '',
+                requestedByEmail: user.email || '',
+                requestedByPhoto: user.photoURL || '',
+
+                // Whose contact they want
+                targetUserId,
+                targetUserName: targetUserName || '',
+
+                // Payment proof (at least one)
+                transactionId: transactionId.trim() || null,
+                screenshotBase64: screenshotBase64 || null,
+                screenshotFileName: screenshotFile?.name || null,
+
+                // Context
+                videoId: videoId || null,
+                category: category || null,
+                amount: 1000,
+                currency: 'PKR',
+
+                // Status
+                status: 'pending',      // pending → approved → rejected
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            })
+
+            setStep('done')
+        } catch (err) {
+            console.error('Payment submission error:', err)
+            setError('Something went wrong. Please try again.')
+        } finally {
+            setUploading(false)
+        }
+    }
+
+    if (!isOpen) return null
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-[#0A0A0A]/80 backdrop-blur-sm z-[60]"
-                    />
-                    <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        className="fixed bottom-0 left-0 right-0 bg-[#FFFFFF] border-t border-[#E5E5E5] rounded-t-[32px] p-8 z-[70] pb-12 overflow-y-auto max-h-[90vh] text-[#0A0A0A]"
-                    >
-                        <div className="w-12 h-1 bg-[--border] rounded-full mx-auto mb-6" />
+        <>
+            {/* Backdrop */}
+            <div
+                onClick={onClose}
+                style={{
+                    position: 'fixed', inset: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    zIndex: 95, backdropFilter: 'blur(4px)',
+                }}
+            />
 
-                        {status === 'success' ? (
-                            <div className="py-12 flex flex-col items-center text-center">
-                                <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-6">
-                                    <Check className="w-10 h-10 text-green-500" />
+            {/* Sheet */}
+            <div style={{
+                position: 'fixed', bottom: 0, left: 0, right: 0,
+                background: '#fff',
+                borderRadius: '20px 20px 0 0',
+                padding: '16px 20px 48px',
+                zIndex: 96,
+                maxWidth: 600, margin: '0 auto',
+                maxHeight: '90dvh',
+                overflowY: 'auto',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
+            }}>
+                {/* Drag handle */}
+                <div style={{
+                    width: 36, height: 4, borderRadius: 999,
+                    background: '#E5E5E5', margin: '0 auto 20px',
+                }} />
+
+                {/* ── STEP 1: INFO ── */}
+                {step === 'info' && (
+                    <>
+                        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                            <div style={{ fontSize: 40, marginBottom: 8 }}>🔒</div>
+                            <h2 style={{
+                                fontFamily: 'Syne', fontWeight: 800,
+                                fontSize: 20, color: '#0A0A0A', margin: '0 0 6px',
+                            }}>
+                                Unlock Contact
+                            </h2>
+                            <p style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 14, margin: 0 }}>
+                                Pay <strong style={{ color: '#0A0A0A' }}>Rs. 1,000</strong> to reveal {targetUserName ? `${targetUserName}'s` : "this user's"} contact info
+                            </p>
+                        </div>
+
+                        {/* Bank details */}
+                        <div style={{
+                            background: '#F8F8F8', border: '1px solid #E5E5E5',
+                            borderRadius: 14, padding: 16, marginBottom: 20,
+                        }}>
+                            <p style={{
+                                fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700,
+                                color: '#888', textTransform: 'uppercase',
+                                letterSpacing: '0.08em', margin: '0 0 12px',
+                            }}>
+                                Payment Details
+                            </p>
+                            {[
+                                { label: 'Bank', value: 'JazzCash / EasyPaisa' },
+                                { label: 'Account #', value: '0300-0000000' },
+                                { label: 'Account Name', value: 'KhanHub Pvt Ltd' },
+                                { label: 'Amount', value: 'Rs. 1,000' },
+                            ].map(row => (
+                                <div key={row.label} style={{
+                                    display: 'flex', justifyContent: 'space-between',
+                                    padding: '6px 0',
+                                    borderBottom: '1px solid #F0F0F0',
+                                }}>
+                                    <span style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 13 }}>
+                                        {row.label}
+                                    </span>
+                                    <span style={{
+                                        color: '#0A0A0A', fontFamily: 'DM Sans',
+                                        fontWeight: 600, fontSize: 13,
+                                    }}>
+                                        {row.value}
+                                    </span>
                                 </div>
-                                <h3 className="text-2xl font-bold font-syne mb-2">Payment Submitted!</h3>
-                                <p className="text-[#888888]">We are verifying your payment. {targetName}'s contact info will be revealed within 2-4 hours.</p>
-                                <button
-                                    onClick={onClose}
-                                    className="mt-8 px-8 py-3 bg-[#0A0A0A] text-[#FFFFFF] font-bold font-syne rounded-full uppercase tracking-widest text-xs"
-                                >
-                                    Back to Feed
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="flex justify-between items-start mb-6">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className="w-8 h-8 rounded-full bg-[--accent]/20 flex items-center justify-center">
-                                                <Phone className="w-4 h-4 text-[--accent]" />
-                                            </div>
-                                            <h3 className="text-[--accent] font-black font-syne uppercase tracking-wider text-sm">Contact Hidden</h3>
-                                        </div>
-                                        <h2 className="text-2xl font-bold font-syne leading-tight">
-                                            Unlock {targetName}'s contact info
-                                        </h2>
-                                    </div>
-                                    <button onClick={onClose} className="p-2 text-[#888888] hover:text-[#0A0A0A] transition-colors">
-                                        <X className="w-6 h-6" />
-                                    </button>
-                                </div>
+                            ))}
+                        </div>
 
-                                <div className="space-y-4 mb-8">
-                                    <div className="p-4 rounded-2xl bg-[#F8F8F8] border border-[#E5E5E5] space-y-3">
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-[#888888]">JazzCash Number</span>
-                                            <button
-                                                onClick={() => handleCopy(jazzCashNumber)}
-                                                className="flex items-center gap-2 font-bold text-[#0A0A0A] hover:text-[--accent] transition-colors"
-                                            >
-                                                {jazzCashNumber}
-                                                {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                                            </button>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-[#888888]">Amount</span>
-                                            <span className="font-bold text-[#0A0A0A] text-lg">Rs. {amount}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-[#888888]">Reference Nickname</span>
-                                            <button
-                                                onClick={() => handleCopy(reference)}
-                                                className="font-bold text-[--accent] hover:underline"
-                                            >
-                                                {reference}
-                                            </button>
-                                        </div>
-                                    </div>
+                        <button
+                            onClick={() => setStep('submit')}
+                            style={{
+                                width: '100%', padding: '14px',
+                                background: '#FF0069', color: '#fff',
+                                border: 'none', borderRadius: 12,
+                                fontFamily: 'Syne', fontWeight: 700,
+                                fontSize: 15, cursor: 'pointer',
+                            }}
+                        >
+                            I've Paid — Submit Proof →
+                        </button>
 
-                                    <div className="flex gap-2 text-[10px] text-[#888888] leading-relaxed">
-                                        <ShieldCheck className="w-6 h-6 text-[--accent] shrink-0" />
-                                        <p>Pay exactly <span className="text-[#0A0A0A] font-bold">Rs. {amount}</span>. Once verified, you'll receive a notification and the contact details will be shown on this profile.</p>
-                                    </div>
-                                </div>
+                        <button onClick={onClose} style={{
+                            width: '100%', marginTop: 10, padding: '12px',
+                            background: 'none', border: 'none',
+                            color: '#888', fontFamily: 'DM Sans',
+                            fontSize: 13, cursor: 'pointer',
+                        }}>
+                            Cancel
+                        </button>
+                    </>
+                )}
 
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-bold text-[#0A0A0A] mb-3">Upload Screenshot</label>
-                                        <div
-                                            className="border-2 border-dashed border-[#E5E5E5] bg-[#F8F8F8] rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:border-[--accent] transition-colors cursor-pointer"
-                                            onClick={() => document.getElementById('screenshot-upload')?.click()}
-                                        >
-                                            {screenshot ? (
-                                                <div className="flex items-center gap-2 text-[--accent]">
-                                                    <Check className="w-5 h-5" />
-                                                    <span className="text-sm font-bold text-[#0A0A0A]">{screenshot.name}</span>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="w-12 h-12 rounded-full bg-[#FFFFFF] border border-[#E5E5E5] flex items-center justify-center mb-3">
-                                                        <PlusSquare size={24} className="text-[#888888]" />
-                                                    </div>
-                                                    <span className="text-xs text-[#888888]">Tap to upload payment confirmation</span>
-                                                </>
-                                            )}
-                                        </div>
-                                        <input
-                                            id="screenshot-upload"
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
-                                        />
-                                    </div>
+                {/* ── STEP 2: SUBMIT PROOF ── */}
+                {step === 'submit' && (
+                    <>
+                        <h2 style={{
+                            fontFamily: 'Syne', fontWeight: 800,
+                            fontSize: 18, color: '#0A0A0A',
+                            margin: '0 0 6px', textAlign: 'center',
+                        }}>
+                            Submit Payment Proof
+                        </h2>
+                        <p style={{
+                            color: '#888', fontFamily: 'DM Sans',
+                            fontSize: 13, textAlign: 'center',
+                            margin: '0 0 24px',
+                        }}>
+                            Provide your Transaction ID, upload a screenshot, or both.
+                        </p>
 
+                        {/* Transaction ID input */}
+                        <div style={{ marginBottom: 16 }}>
+                            <label style={{
+                                display: 'block', fontFamily: 'DM Sans',
+                                fontWeight: 600, fontSize: 13, color: '#444',
+                                marginBottom: 6,
+                            }}>
+                                Transaction ID <span style={{ color: '#888', fontWeight: 400 }}>(optional if screenshot provided)</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={transactionId}
+                                onChange={(e) => setTransactionId(e.target.value)}
+                                placeholder="e.g. TXN123456789"
+                                style={{
+                                    width: '100%', padding: '12px 14px',
+                                    background: '#F8F8F8',
+                                    border: transactionId ? '1.5px solid #FF0069' : '1.5px solid #E5E5E5',
+                                    borderRadius: 10, fontFamily: 'DM Sans',
+                                    fontSize: 14, color: '#0A0A0A',
+                                    outline: 'none', boxSizing: 'border-box',
+                                    transition: 'border-color 0.2s',
+                                }}
+                            />
+                        </div>
+
+                        {/* Screenshot upload */}
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{
+                                display: 'block', fontFamily: 'DM Sans',
+                                fontWeight: 600, fontSize: 13, color: '#444',
+                                marginBottom: 6,
+                            }}>
+                                Payment Screenshot <span style={{ color: '#888', fontWeight: 400 }}>(optional if Transaction ID provided)</span>
+                            </label>
+
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleScreenshotChange}
+                                style={{ display: 'none' }}
+                            />
+
+                            {screenshotPreview ? (
+                                /* Preview */
+                                <div style={{ position: 'relative' }}>
+                                    <img
+                                        src={screenshotPreview}
+                                        alt="Payment screenshot"
+                                        style={{
+                                            width: '100%', maxHeight: 200,
+                                            objectFit: 'contain',
+                                            borderRadius: 10,
+                                            border: '1.5px solid #FF0069',
+                                        }}
+                                    />
                                     <button
-                                        disabled={!screenshot || status === 'submitting'}
-                                        onClick={handleSubmit}
-                                        className="w-full py-4 bg-[--accent] disabled:opacity-50 disabled:grayscale text-black font-black font-syne uppercase tracking-widest text-sm rounded-2xl shadow-[0_0_24px_var(--accent-glow)] transition-all active:scale-[0.98]"
+                                        onClick={() => {
+                                            setScreenshotFile(null)
+                                            setScreenshotPreview('')
+                                            if (fileInputRef.current) fileInputRef.current.value = ''
+                                        }}
+                                        style={{
+                                            position: 'absolute', top: 8, right: 8,
+                                            background: 'rgba(0,0,0,0.6)',
+                                            border: 'none', borderRadius: '50%',
+                                            width: 28, height: 28,
+                                            color: '#fff', cursor: 'pointer',
+                                            fontSize: 14, display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center',
+                                        }}
                                     >
-                                        {status === 'submitting' ? 'Verifying...' : 'Submit for Verification →'}
+                                        ✕
                                     </button>
-
-                                    <p className="text-center text-[10px] text-[--text-muted] uppercase tracking-[0.2em]">
-                                        Verified within 2-4 hours
+                                </div>
+                            ) : (
+                                /* Upload zone */
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    style={{
+                                        border: '2px dashed #D4D4D4',
+                                        borderRadius: 10, padding: '28px 20px',
+                                        textAlign: 'center', cursor: 'pointer',
+                                        background: '#F8F8F8',
+                                        transition: 'border-color 0.2s, background 0.2s',
+                                    }}
+                                    onMouseEnter={e => {
+                                        (e.currentTarget as HTMLElement).style.borderColor = '#FF0069'
+                                            ; (e.currentTarget as HTMLElement).style.background = '#FFF5F8'
+                                    }}
+                                    onMouseLeave={e => {
+                                        (e.currentTarget as HTMLElement).style.borderColor = '#D4D4D4'
+                                            ; (e.currentTarget as HTMLElement).style.background = '#F8F8F8'
+                                    }}
+                                >
+                                    <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
+                                    <p style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 13, margin: 0 }}>
+                                        Tap to upload screenshot
+                                    </p>
+                                    <p style={{ color: '#bbb', fontFamily: 'DM Sans', fontSize: 11, margin: '4px 0 0' }}>
+                                        JPG, PNG accepted
                                     </p>
                                 </div>
-                            </>
-                        )}
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
-    );
-}
+                            )}
+                        </div>
 
-import { PlusSquare } from 'lucide-react';
+                        {/* Error */}
+                        {error && (
+                            <div style={{
+                                background: '#FFF0F0', border: '1px solid #FFCDD2',
+                                borderRadius: 8, padding: '10px 14px',
+                                marginBottom: 16, color: '#C62828',
+                                fontFamily: 'DM Sans', fontSize: 13,
+                            }}>
+                                ⚠️ {error}
+                            </div>
+                        )}
+
+                        {/* Must provide at least one hint */}
+                        {!canSubmit && (
+                            <p style={{
+                                color: '#FF0069', fontFamily: 'DM Sans',
+                                fontSize: 12, textAlign: 'center',
+                                marginBottom: 12,
+                            }}>
+                                Please provide a Transaction ID or upload a screenshot
+                            </p>
+                        )}
+
+                        <button
+                            onClick={handleSubmit}
+                            disabled={!canSubmit || uploading}
+                            style={{
+                                width: '100%', padding: '14px',
+                                background: canSubmit ? '#FF0069' : '#E5E5E5',
+                                color: canSubmit ? '#fff' : '#aaa',
+                                border: 'none', borderRadius: 12,
+                                fontFamily: 'Syne', fontWeight: 700,
+                                fontSize: 15, cursor: canSubmit ? 'pointer' : 'not-allowed',
+                                display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', gap: 8,
+                                transition: 'background 0.2s',
+                            }}
+                        >
+                            {uploading ? (
+                                <>
+                                    <div style={{
+                                        width: 18, height: 18, borderRadius: '50%',
+                                        border: '2px solid rgba(255,255,255,0.4)',
+                                        borderTopColor: '#fff',
+                                        animation: 'spin 0.7s linear infinite',
+                                    }} />
+                                    Submitting...
+                                </>
+                            ) : (
+                                '✅ Submit for Approval'
+                            )}
+                        </button>
+
+                        <button onClick={() => setStep('info')} style={{
+                            width: '100%', marginTop: 10, padding: '12px',
+                            background: 'none', border: 'none',
+                            color: '#888', fontFamily: 'DM Sans',
+                            fontSize: 13, cursor: 'pointer',
+                        }}>
+                            ← Back
+                        </button>
+                    </>
+                )}
+
+                {/* ── STEP 3: DONE ── */}
+                {step === 'done' && (
+                    <div style={{ textAlign: 'center', padding: '20px 0 10px' }}>
+                        <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
+                        <h2 style={{
+                            fontFamily: 'Syne', fontWeight: 800,
+                            fontSize: 20, color: '#0A0A0A', margin: '0 0 10px',
+                        }}>
+                            Submitted!
+                        </h2>
+                        <p style={{
+                            color: '#666', fontFamily: 'DM Sans',
+                            fontSize: 14, lineHeight: 1.6,
+                            margin: '0 0 28px',
+                        }}>
+                            Your payment proof has been sent to the admin for review.
+                            Contact info will be revealed within <strong>24 hours</strong> of approval.
+                        </p>
+                        <button onClick={onClose} style={{
+                            background: '#FF0069', color: '#fff',
+                            border: 'none', borderRadius: 12,
+                            padding: '12px 32px',
+                            fontFamily: 'Syne', fontWeight: 700,
+                            fontSize: 14, cursor: 'pointer',
+                        }}>
+                            Done
+                        </button>
+                    </div>
+                )}
+            </div>
+        </>
+    )
+}

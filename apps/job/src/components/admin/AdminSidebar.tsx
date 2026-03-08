@@ -69,7 +69,7 @@ export default function AdminSidebar({ isOpen, onClose }: SidebarProps) {
             (snap) => setBadges(prev => ({ ...prev, pendingVideos: snap.size }))
         );
         const paymentsUnsub = onSnapshot(
-            query(collection(db, 'payments'), where('status', '==', 'pending')),
+            query(collection(db, 'paymentRequests'), where('status', '==', 'pending')),
             (snap) => setBadges(prev => ({ ...prev, pendingPayments: snap.size }))
         );
         return () => { videosUnsub(); paymentsUnsub(); };
