@@ -449,16 +449,31 @@ export default function UserProfilePage() {
                     </span>
 
                     <span style={{
-                        background: profile.role?.toLowerCase() === 'employer' ? '#00C85315' : '#f5f5f5',
-                        color: profile.role?.toLowerCase() === 'employer' ? '#00C853' : '#666',
-                        border: profile.role?.toLowerCase() === 'employer' ? '1px solid #00C853' : '1px solid #e0e0e0',
+                        background: profile.role?.toLowerCase() === 'employer' ? '#00C85315' : `${catConfig.accent}15`,
+                        color: profile.role?.toLowerCase() === 'employer' ? '#00C853' : catConfig.accent,
+                        border: profile.role?.toLowerCase() === 'employer' ? '1px solid #00C853' : `1px solid ${catConfig.accent}`,
                         borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(12px, 3vw, 16px)',
-                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'Poppins', fontWeight: profile.role?.toLowerCase() === 'employer' ? 700 : 500,
+                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'Poppins', fontWeight: 700,
                     }}>
-                        {profile.role === 'provider'
-                            ? (profile.jobTitle || profile.specialization || profile.roleTitle || 'Provider')
-                            : (profile.role === 'seeker' ? 'Seeker' : (profile.role === 'employer' ? 'Employer' : profile.role))
-                        }
+                        {(() => {
+                            const r = profile.role?.toLowerCase();
+                            const uiR = profile.uiRole; // We added this in onboarding
+                            const roles = {
+                                jobs: { provider: 'Job Seeker', seeker: 'Employer' },
+                                healthcare: { provider: 'Doctor', seeker: 'Patient' },
+                                education: { provider: 'Teacher', seeker: 'Student' },
+                                marriage: { provider: 'Presentation', seeker: 'Looking' },
+                                domestic: { provider: 'Helper', seeker: 'Household' },
+                                legal: { provider: 'Lawyer', seeker: 'Client' },
+                                realestate: { provider: 'Agent', seeker: 'Buyer' },
+                                it: { provider: 'Freelancer', seeker: 'Client' },
+                            }[profile.category as string] || { provider: 'Provider', seeker: 'Seeker' };
+
+                            if (uiR === 'provider') return roles.provider;
+                            if (uiR === 'seeker') return roles.seeker;
+                            // Fallback
+                            return r === 'employer' ? roles.seeker : roles.provider;
+                        })()}
                     </span>
 
                     {profile.city && (

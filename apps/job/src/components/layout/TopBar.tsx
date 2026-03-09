@@ -51,14 +51,17 @@ export function TopBar() {
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
                                         onClick={() => setShowSwitcher(false)}
-                                        className="fixed inset-0 z-40"
+                                        className="fixed inset-0 z-[60] bg-black/5 backdrop-blur-[2px]"
                                     />
                                     <motion.div
                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute top-full left-0 mt-2 w-64 bg-white border border-[#E5E5E5] rounded-2xl shadow-2xl p-2 grid grid-cols-1 gap-1 z-50"
+                                        className="absolute top-full left-0 mt-2 w-72 bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 z-[70] overflow-hidden"
                                     >
+                                        <div className="px-4 py-2 mb-2">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Select Industry</span>
+                                        </div>
                                         {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
                                             <button
                                                 key={key}

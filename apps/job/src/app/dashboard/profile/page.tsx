@@ -90,11 +90,20 @@ export default function ProfilePage() {
                         {categoryConfig?.emoji} {categoryConfig?.label}
                     </span>
                     <span style={{
-                        background: '#F0F0F0', color: '#666666', border: '1px solid #E5E5E5',
+                        background: profile.role?.toLowerCase() === 'employer' ? '#00C85315' : `${accentColor}22`,
+                        color: profile.role?.toLowerCase() === 'employer' ? '#00C853' : accentColor,
+                        border: profile.role?.toLowerCase() === 'employer' ? '1px solid #00C853' : `1px solid ${accentColor}`,
                         borderRadius: 999, padding: '3px 12px',
-                        fontSize: 11, fontFamily: 'DM Sans',
+                        fontSize: 11, fontFamily: 'DM Sans', fontWeight: 700,
                     }}>
-                        {profile.role === 'provider' ? categoryConfig?.providerLabel : categoryConfig?.seekerLabel}
+                        {(() => {
+                            const r = profile.role || user.role;
+                            const uiR = profile.uiRole;
+                            if (uiR === 'provider') return categoryConfig?.providerLabel;
+                            if (uiR === 'seeker') return categoryConfig?.seekerLabel;
+                            // Fallback to role check
+                            return r === 'employer' ? categoryConfig?.seekerLabel : categoryConfig?.providerLabel;
+                        })()}
                     </span>
                 </div>
 

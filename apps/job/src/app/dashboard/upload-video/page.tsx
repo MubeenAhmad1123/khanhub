@@ -79,6 +79,10 @@ const getCloudinaryThumb = (videoUrl: string): string => {
 
 /* ─── buildOverlayData ─────────────────────────────────────────── */
 function buildOverlayData(formData: Record<string, any>, category: string, role: string) {
+    // Normalize role to provider/seeker for the map keys
+    // if role is 'job_seeker' or 'doctor' etc, we need to know if it's a provider or seeker context
+    // However, the map below is already specific to provider/seeker.
+    // Let's make the map handle the specific keys too for robustness.
     const map: Record<string, Record<string, any>> = {
         jobs: {
             provider: {
@@ -87,12 +91,14 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
                 field1: Array.isArray(formData.skills) ? formData.skills.join(' • ') : '',
                 field2: formData.experienceLevel || '',
             },
+            job_seeker: { title: formData.jobTitle || '', badge: 'Job Seeker', field1: Array.isArray(formData.skills) ? formData.skills.join(' • ') : '', field2: formData.experienceLevel || '' },
             seeker: {
                 title: formData.hiringFor || '',
                 badge: 'Hiring',
                 field1: Array.isArray(formData.requiredSkills) ? formData.requiredSkills.join(' • ') : '',
                 field2: formData.salary ? `Salary: Rs. ${Number(formData.salary).toLocaleString()}/mo` : '',
             },
+            employer: { title: formData.hiringFor || '', badge: 'Hiring', field1: Array.isArray(formData.requiredSkills) ? formData.requiredSkills.join(' • ') : '', field2: formData.salary ? `Salary: Rs. ${Number(formData.salary).toLocaleString()}/mo` : '' },
         },
         healthcare: {
             provider: {
@@ -101,12 +107,14 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
                 field1: formData.specialization || '',
                 field2: formData.experienceLevel || '',
             },
+            doctor: { title: formData.specialization || '', badge: 'Doctor', field1: formData.specialization || '', field2: formData.experienceLevel || '' },
             seeker: {
                 title: formData.doctorNeeded || '',
                 badge: 'Seeking Doctor',
                 field1: formData.doctorNeeded || '',
                 field2: formData.locationPref || '',
             },
+            patient: { title: formData.doctorNeeded || '', badge: 'Seeking Doctor', field1: formData.doctorNeeded || '', field2: formData.locationPref || '' },
         },
         education: {
             provider: {
@@ -115,12 +123,14 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
                 field1: formData.subject || '',
                 field2: formData.gradeLevel || '',
             },
+            teacher: { title: formData.subject || '', badge: 'Teacher', field1: formData.subject || '', field2: formData.gradeLevel || '' },
             seeker: {
                 title: formData.subjectNeeded || '',
                 badge: 'Student',
                 field1: formData.subjectNeeded || '',
                 field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}/mo` : '',
             },
+            student: { title: formData.subjectNeeded || '', badge: 'Student', field1: formData.subjectNeeded || '', field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}/mo` : '' },
         },
         marriage: {
             provider: {
@@ -129,12 +139,14 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
                 field1: formData.ageRange || '',
                 field2: formData.city || '',
             },
+            presenting: { title: formData.profession || '', badge: 'Profile', field1: formData.ageRange || '', field2: formData.city || '' },
             seeker: {
                 title: formData.lookingForProfession || '',
                 badge: 'Looking',
                 field1: formData.preferredAge || '',
                 field2: formData.preferredCity || '',
             },
+            looking: { title: formData.lookingForProfession || '', badge: 'Looking', field1: formData.preferredAge || '', field2: formData.preferredCity || '' },
         },
         domestic: {
             provider: {
@@ -143,12 +155,14 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
                 field1: formData.experienceLevel || '',
                 field2: formData.expectedSalary ? `Rs. ${Number(formData.expectedSalary).toLocaleString()}/mo` : '',
             },
+            helper: { title: formData.workType || '', badge: 'Helper', field1: formData.experienceLevel || '', field2: formData.expectedSalary ? `Rs. ${Number(formData.expectedSalary).toLocaleString()}/mo` : '' },
             seeker: {
                 title: formData.helpNeeded || '',
                 badge: 'Household',
                 field1: formData.workHours || '',
                 field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}/mo` : '',
             },
+            household: { title: formData.helpNeeded || '', badge: 'Household', field1: formData.workHours || '', field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}/mo` : '' },
         },
         legal: {
             provider: {
@@ -157,12 +171,14 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
                 field1: formData.court || '',
                 field2: formData.experienceLevel || '',
             },
+            lawyer: { title: formData.specialization || '', badge: 'Lawyer', field1: formData.court || '', field2: formData.experienceLevel || '' },
             seeker: {
                 title: formData.issueType || '',
                 badge: 'Client',
                 field1: formData.issueType || '',
                 field2: '',
             },
+            client: { title: formData.issueType || '', badge: 'Client', field1: formData.issueType || '', field2: '' },
         },
         realestate: {
             provider: {
@@ -171,12 +187,14 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
                 field1: formData.areaCity || '',
                 field2: formData.experienceLevel || '',
             },
+            agent: { title: formData.propSpecialization || '', badge: 'Agent', field1: formData.areaCity || '', field2: formData.experienceLevel || '' },
             seeker: {
                 title: formData.lookingFor || '',
                 badge: 'Buyer / Renter',
                 field1: formData.budgetRange || '',
                 field2: formData.preferredCity || '',
             },
+            buyer: { title: formData.lookingFor || '', badge: 'Buyer / Renter', field1: formData.budgetRange || '', field2: formData.preferredCity || '' },
         },
         it: {
             provider: {
@@ -185,12 +203,14 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
                 field1: Array.isArray(formData.skills) ? formData.skills.join(' • ') : '',
                 field2: formData.experienceLevel || '',
             },
+            freelancer: { title: formData.roleTitle || '', badge: 'Freelancer', field1: Array.isArray(formData.skills) ? formData.skills.join(' • ') : '', field2: formData.experienceLevel || '' },
             seeker: {
                 title: formData.lookingFor || '',
                 badge: 'Hiring',
                 field1: Array.isArray(formData.requiredSkills) ? formData.requiredSkills.join(' • ') : '',
                 field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}` : '',
             },
+            client: { title: formData.lookingFor || '', badge: 'Hiring', field1: Array.isArray(formData.requiredSkills) ? formData.requiredSkills.join(' • ') : '', field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}` : '' },
         },
     };
     return map[category]?.[role] || { title: '', badge: '', field1: '', field2: '' };
@@ -485,7 +505,19 @@ export default function UploadVideoPage() {
     }
 
     const userCategory = (user as any).category || 'jobs';
-    const userRole = (user as any).role || 'provider';
+
+    // Determine UI role (provider/seeker)
+    let userRole: 'provider' | 'seeker' = (user as any).uiRole;
+    if (!userRole) {
+        // Fallback mapping if uiRole is missing
+        if (userCategory === 'jobs') {
+            userRole = (user as any).role === 'employer' ? 'seeker' : 'provider';
+        } else {
+            // For other categories, professionals (doctors/teachers) are providers
+            // This is a default, might need more refinement
+            userRole = (user as any).role === 'employer' ? 'provider' : 'seeker';
+        }
+    }
 
     /* ─── File selection ──────────────────────────────────────── */
     const handleFileSelect = async (file: File) => {
@@ -581,7 +613,7 @@ export default function UploadVideoPage() {
                     badge: overlayData.badge,
                     field1: overlayData.field1,
                     field2: overlayData.field2,
-                    location: (user as any).city || '',
+                    location: (user as any).city || formData.city || formData.companyLocation || '',
                     userPhoto: (user as any).photoURL || '',
                     userName: (user as any).displayName || (user as any).name || '',
                 },

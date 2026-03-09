@@ -38,24 +38,30 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                     )}
                 </div>
             )}
-            {/* Badge — smaller */}
-            <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                background: data.badge?.toLowerCase() === 'employer' ? '#00C853' : 'var(--accent)',
-                padding: '2px 8px', borderRadius: 999,
-                marginBottom: 6,
-            }}>
-                <span style={{
-                    fontSize: 9,
-                    fontWeight: 800,
-                    color: data.badge?.toLowerCase() === 'employer' ? '#fff' : '#000',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    fontFamily: 'Poppins'
-                }}>
-                    {data.badge}
-                </span>
-            </div>
+            {/* Badge — color based on role intent */}
+            {(() => {
+                const b = data.badge?.toLowerCase() || '';
+                const isProf = b === 'employer' || b === 'hiring' || b === 'doctor' || b === 'teacher' || b === 'lawyer' || b === 'agent' || b === 'freelancer';
+                return (
+                    <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        background: isProf ? '#00C853' : 'var(--accent)',
+                        padding: '2px 8px', borderRadius: 999,
+                        marginBottom: 6,
+                    }}>
+                        <span style={{
+                            fontSize: 9,
+                            fontWeight: 800,
+                            color: isProf ? '#fff' : '#000',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            fontFamily: 'Poppins'
+                        }}>
+                            {data.badge}
+                        </span>
+                    </div>
+                );
+            })()}
 
 
             {/* Title — REDUCED from 24px to 17px */}

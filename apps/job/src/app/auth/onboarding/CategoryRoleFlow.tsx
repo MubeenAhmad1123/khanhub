@@ -21,7 +21,7 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_ROLES: Record<string, { providerLabel: string; seekerLabel: string; providerKey: string; seekerKey: string; providerDesc: string; seekerDesc: string }> = {
-    jobs: { providerKey: 'employer', providerLabel: 'Employer / HR', seekerKey: 'jobseeker', seekerLabel: 'Job Seeker', providerDesc: 'I am looking to hire talent', seekerDesc: 'I am looking for a job' },
+    jobs: { providerKey: 'job_seeker', providerLabel: 'Job Seeker', seekerKey: 'employer', seekerLabel: 'Employer / HR', seekerDesc: 'I am looking to hire talent', providerDesc: 'I am looking for a job' },
     healthcare: { providerKey: 'doctor', providerLabel: 'Doctor / Specialist', seekerKey: 'patient', seekerLabel: 'Patient', providerDesc: 'I provide medical services', seekerDesc: 'I am looking for medical help' },
     education: { providerKey: 'teacher', providerLabel: 'Teacher / Tutor', seekerKey: 'student', seekerLabel: 'Student / Parent', providerDesc: 'I want to teach students', seekerDesc: 'I am looking for a tutor' },
     marriage: { providerKey: 'presenting', providerLabel: 'Presenting Profile', seekerKey: 'looking', seekerLabel: 'Looking to Marry', providerDesc: 'I am introducing someone', seekerDesc: 'I am looking for a partner' },
@@ -131,14 +131,46 @@ export default function CategoryRoleFlow() {
     const [formFields, setFormFields] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
 
+    // Effect to handle role locking
+    useEffect(() => {
+        if (user && user.role) {
+            // Map Firestore role to UI role
+            const mappedRole: 'provider' | 'seeker' | null =
+                user.role === 'job_seeker' ? 'provider' :
+                    user.role === 'employer' ? 'seeker' : null;
+
+            if (mappedRole) {
+                setSelectedRole(mappedRole);
+                // If we're on step 2 and the role is already chosen, skip to step 3
+                if (step === 2) {
+                    setStep(3);
+                }
+            }
+        }
+    }, [user, step]);
+
     const accent = selectedCategory ? CATEGORY_CONFIG[selectedCategory].accent : '#FF0069';
 
     const handleCategorySelect = (cat: CategoryKey) => {
         setSelectedCategory(cat);
-        setStep(2);
+        // If user has a role already, go straight to Step 3, otherwise Step 2
+        if (user && user.role) {
+            // Ensure Employers are 'seeker' and Job Seekers are 'provider'
+            const mappedRole = user.role === 'job_seeker' ? 'provider' : 'seeker';
+            const roles = CATEGORY_ROLES[cat];
+            const roleKey = mappedRole === 'provider' ? roles.providerKey : roles.seekerKey;
+            const fields = ROLE_FIELDS[cat][roleKey];
+            const initialFields: Record<string, string> = {};
+            fields.forEach(f => initialFields[f.key] = '');
+            setFormFields(initialFields);
+            setStep(3);
+        } else {
+            setStep(2);
+        }
     };
 
     const handleRoleSelect = (role: 'provider' | 'seeker') => {
+        if (user && user.role) return; // Prevent changing if already set
         setSelectedRole(role);
         // Initialize form fields for the role
         const fields = ROLE_FIELDS[selectedCategory!][CATEGORY_ROLES[selectedCategory!][role === 'provider' ? 'providerKey' : 'seekerKey']];
@@ -168,14 +200,21 @@ export default function CategoryRoleFlow() {
                 const roles = CATEGORY_ROLES[selectedCategory!];
                 const roleKey = selectedRole === 'provider' ? roles.providerKey : roles.seekerKey;
 
-                const updates = {
+                const updates: any = {
                     category: selectedCategory,
-                    role: selectedRole, // context-friendly role
-                    roleKey: roleKey,   // industry-specific role key
-                    ...formFields,
-                    updatedAt: new Date(),
+                    role: roleKey,      // System role ('job_seeker' / 'employer')
+                    uiRole: selectedRole, // UI context ('provider' / 'seeker')
+                    roleKey: roleKey,     // Specific key
                     onboardingCompleted: true,
+                    updatedAt: new Date(),
                 };
+
+                // Add form fields to updates, but only if they are not empty
+                Object.entries(formFields).forEach(([key, value]) => {
+                    if (value) {
+                        updates[key] = value;
+                    }
+                });
 
                 await updateDoc(doc(db, 'users', user.uid), updates);
             } catch (err) {
@@ -221,7 +260,8 @@ export default function CategoryRoleFlow() {
                 <div className="flex flex-col gap-4">
                     <button
                         onClick={() => handleRoleSelect('provider')}
-                        className={`p-6 rounded-3xl text-left border-2 transition-all ${selectedRole === 'provider' ? 'bg-white shadow-xl' : 'bg-slate-50 border-transparent'}`}
+                        disabled={!!(user && user.role && user.role !== 'job_seeker')}
+                        className={`p-6 rounded-3xl text-left border-2 transition-all ${selectedRole === 'provider' ? 'bg-white shadow-xl' : 'bg-slate-50 border-transparent'} ${(user && user.role && user.role !== 'job_seeker') ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
                         style={{ borderColor: selectedRole === 'provider' ? accent : 'transparent' }}
                     >
                         <div className="flex items-center justify-between mb-2">
@@ -233,7 +273,8 @@ export default function CategoryRoleFlow() {
 
                     <button
                         onClick={() => handleRoleSelect('seeker')}
-                        className={`p-6 rounded-3xl text-left border-2 transition-all ${selectedRole === 'seeker' ? 'bg-white shadow-xl' : 'bg-slate-50 border-transparent'}`}
+                        disabled={!!(user && user.role && user.role !== 'employer')}
+                        className={`p-6 rounded-3xl text-left border-2 transition-all ${selectedRole === 'seeker' ? 'bg-white shadow-xl' : 'bg-slate-50 border-transparent'} ${(user && user.role && user.role !== 'employer') ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
                         style={{ borderColor: selectedRole === 'seeker' ? accent : 'transparent' }}
                     >
                         <div className="flex items-center justify-between mb-2">

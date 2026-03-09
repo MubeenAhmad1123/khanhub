@@ -65,9 +65,14 @@ export function VideoFeed() {
 
         const getTabFilter = (tabIndex: number) => {
             if (tabIndex === 0) return null;           // no filter
-            if (tabIndex === 1) return 'seeker';       // companies hiring, doctors, agents
-            if (tabIndex === 2) return 'provider';     // job seekers, patients looking
-            return null;
+
+            // For jobs: Tab 1 = Companies (seekers), Tab 2 = Job Seekers (providers)
+            if (activeCategory === 'jobs') {
+                return tabIndex === 1 ? 'seeker' : 'provider';
+            }
+
+            // For others: Tab 1 = Professionals (providers: Doctors/Teachers), Tab 2 = Clients (seekers: Patients/Students)
+            return tabIndex === 1 ? 'provider' : 'seeker';
         };
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -75,12 +80,12 @@ export function VideoFeed() {
 
             const videos = snapshot.docs
                 .map(d => ({ id: d.id, ...d.data() } as any))
-                // Filter client-side: must be approved + matching category + role tab
-                .filter(d =>
-                    d.admin_status === 'approved' &&
-                    (d.category === activeCategory || !d.category) &&
-                    (!roleFilter || d.userRole === roleFilter)
-                )
+                // Filter client-side: must be approved + matching category + strict role tab
+                .filter(d => {
+                    const matchesCategory = d.category === activeCategory || (activeCategory === 'jobs' && !d.category);
+                    const matchesRole = !roleFilter || d.userRole === roleFilter;
+                    return d.admin_status === 'approved' && matchesCategory && matchesRole;
+                })
                 // Sort newest first
                 .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
                 .map(d => ({
@@ -112,19 +117,31 @@ export function VideoFeed() {
     }, [activeCategory, activeTab]);
 
     // ── Build video list: real first, then placeholders ───────────
-    const placeholderList = CATEGORY_PLACEHOLDERS[activeCategory].map((id, i) => ({
-        id: `placeholder-${i}`,
-        isPlaceholder: true,
-        videoId: id,
-        userId: null,
-        userPhoto: null,
-        userRole: null,
-        cloudinaryUrl: undefined,
-        category: activeCategory,
-        ...(PLACEHOLDER_OVERLAY_DATA[activeCategory][i % PLACEHOLDER_OVERLAY_DATA[activeCategory].length] || {}),
-    }));
+    const roleFilter = activeTab === 0 ? null : (activeCategory === 'jobs' ? (activeTab === 1 ? 'seeker' : 'provider') : (activeTab === 1 ? 'provider' : 'seeker'));
 
-    const videos = firestoreVideos.length > 0 ? firestoreVideos : placeholderList;
+    // Map placeholder badge to role for filtering
+    const getPlaceholderRole = (badge: string): 'provider' | 'seeker' => {
+        const b = badge.toLowerCase();
+        if (b.includes('hiring') || b.includes('patient') || b.includes('client') || b.includes('looking') || b.includes('household') || b.includes('buyer')) return 'seeker';
+        return 'provider';
+    };
+
+    const placeholderList = CATEGORY_PLACEHOLDERS[activeCategory].map((id, i) => {
+        const overlay = PLACEHOLDER_OVERLAY_DATA[activeCategory][i % PLACEHOLDER_OVERLAY_DATA[activeCategory].length] || {};
+        return {
+            id: `placeholder-${i}`,
+            isPlaceholder: true,
+            videoId: id,
+            userId: null,
+            userPhoto: null,
+            userRole: getPlaceholderRole(overlay.badge || ''),
+            cloudinaryUrl: undefined,
+            category: activeCategory,
+            ...overlay,
+        };
+    }).filter(p => !roleFilter || p.userRole === roleFilter);
+
+    const videos = [...firestoreVideos, ...placeholderList];
 
     // ── View counting ─────────────────────────────────────────────
     const countView = async (videoId: string) => {
