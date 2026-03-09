@@ -279,7 +279,7 @@ export default function UserProfilePage() {
                 </div>
 
                 <div>
-                    <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 8px' }}>
+                    <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 8px' }}>
                         Demo Video
                     </h2>
                     <p style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 14, lineHeight: 1.6, margin: 0 }}>
@@ -294,7 +294,7 @@ export default function UserProfilePage() {
                         background: '#FF0069', color: '#fff',
                         border: 'none', borderRadius: 10,
                         padding: '12px 28px',
-                        fontFamily: 'Syne', fontWeight: 700,
+                        fontFamily: 'Poppins', fontWeight: 700,
                         fontSize: 14, cursor: 'pointer',
                         marginTop: 8,
                     }}
@@ -323,7 +323,7 @@ export default function UserProfilePage() {
                     <ArrowLeft size={16} /> Back
                 </button>
                 <div style={{ fontSize: 48 }}>👤</div>
-                <h3 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 18, color: '#0A0A0A', margin: 0 }}>
+                <h3 style={{ fontFamily: 'Poppins', fontWeight: 700, fontSize: 18, color: '#0A0A0A', margin: 0 }}>
                     Profile not found
                 </h3>
                 <p style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 13, margin: 0 }}>
@@ -332,7 +332,7 @@ export default function UserProfilePage() {
                 <button onClick={() => router.push('/feed')} style={{
                     background: '#FF0069', color: '#fff', border: 'none',
                     borderRadius: 10, padding: '10px 24px',
-                    fontFamily: 'Syne', fontWeight: 700, cursor: 'pointer',
+                    fontFamily: 'Poppins', fontWeight: 700, cursor: 'pointer',
                 }}>
                     Back to Feed
                 </button>
@@ -380,7 +380,7 @@ export default function UserProfilePage() {
                 }}>
                     <ArrowLeft size={20} /> Back
                 </button>
-                <h1 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 'clamp(14px, 3.5vw, 16px)', color: '#0A0A0A', margin: 0 }}>
+                <h1 style={{ fontFamily: 'Poppins', fontWeight: 700, fontSize: 'clamp(14px, 3.5vw, 16px)', color: '#0A0A0A', margin: 0 }}>
                     {profile.name?.split(' ')[0] || 'Profile'}
                 </h1>
                 <div style={{ width: 60 }} />
@@ -429,7 +429,7 @@ export default function UserProfilePage() {
 
                 {/* Name */}
                 <h2 style={{
-                    fontFamily: 'Syne', fontWeight: 900, fontSize: 'clamp(20px, 6vw, 28px)',
+                    fontFamily: 'Poppins', fontWeight: 900, fontSize: 'clamp(20px, 6vw, 28px)',
                     color: '#0A0A0A', margin: '0 0 8px',
                     lineHeight: 1.1,
                 }}>
@@ -512,7 +512,7 @@ export default function UserProfilePage() {
                         { label: 'Following', value: profile.following?.length || 0 },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
-                            <div style={{ fontFamily: 'Syne', fontWeight: 900, fontSize: 'clamp(18px, 5vw, 24px)', color: '#0A0A0A' }}>
+                            <div style={{ fontFamily: 'Poppins', fontWeight: 900, fontSize: 'clamp(18px, 5vw, 24px)', color: '#0A0A0A' }}>
                                 {formatCount(stat.value)}
                             </div>
                             <div style={{ fontSize: 'clamp(10px, 2.5vw, 12px)', color: '#888', fontFamily: 'DM Sans', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -552,7 +552,7 @@ export default function UserProfilePage() {
                             background: isFollowing ? '#f0f0f0' : catConfig.accent,
                             border: 'none',
                             color: isFollowing ? '#666' : '#fff',
-                            fontFamily: 'Syne', fontWeight: 700,
+                            fontFamily: 'Poppins', fontWeight: 700,
                             fontSize: 'clamp(13px, 3.5vw, 15px)', cursor: 'pointer',
                             boxShadow: isFollowing ? 'none' : `0 8px 24px ${catConfig.accent}33`,
                             transition: 'all 0.2s',
@@ -567,7 +567,7 @@ export default function UserProfilePage() {
                             background: contactRevealed ? catConfig.accent : 'transparent',
                             border: `2px solid ${catConfig.accent}`,
                             color: contactRevealed ? '#fff' : catConfig.accent,
-                            fontFamily: 'Syne', fontWeight: 700,
+                            fontFamily: 'Poppins', fontWeight: 700,
                             fontSize: 'clamp(13px, 3.5vw, 15px)', cursor: 'pointer',
                             boxShadow: contactRevealed ? `0 8px 24px ${catConfig.accent}33` : 'none',
                             transition: 'all 0.2s',
@@ -760,7 +760,7 @@ export default function UserProfilePage() {
                         }}>
                             <div style={{ width: 3, height: 14, background: catConfig.accent, borderRadius: 999 }} />
                             <h3 style={{
-                                fontFamily: 'Syne', fontWeight: 700, fontSize: 13,
+                                fontFamily: 'Poppins', fontWeight: 700, fontSize: 13,
                                 color: '#0A0A0A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em',
                             }}>
                                 Contact
@@ -896,7 +896,7 @@ export default function UserProfilePage() {
                                         width: '100%', padding: '13px',
                                         background: catConfig.accent, color: '#fff',
                                         border: 'none', borderRadius: 10,
-                                        fontFamily: 'Syne', fontWeight: 700,
+                                        fontFamily: 'Poppins', fontWeight: 700,
                                         fontSize: 14, cursor: 'pointer',
                                         boxShadow: `0 4px 16px ${catConfig.accent}44`,
                                     }}
@@ -955,7 +955,7 @@ export default function UserProfilePage() {
                                 style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }}
                             />
                             <div>
-                                <div style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 15, color: '#0A0A0A' }}>
+                                <div style={{ fontFamily: 'Poppins', fontWeight: 700, fontSize: 15, color: '#0A0A0A' }}>
                                     {profile.name || profile.displayName}
                                 </div>
                                 <div style={{
@@ -1203,7 +1203,7 @@ function PendingPaymentChecker({
                         width: '100%', padding: '12px',
                         background: accent, color: '#fff',
                         border: 'none', borderRadius: 10,
-                        fontFamily: 'Syne', fontWeight: 700,
+                        fontFamily: 'Poppins', fontWeight: 700,
                         fontSize: 14, cursor: 'pointer',
                     }}
                 >
@@ -1226,7 +1226,7 @@ function PendingPaymentChecker({
                     width: '100%', padding: '13px',
                     background: accent, color: '#fff',
                     border: 'none', borderRadius: 10,
-                    fontFamily: 'Syne', fontWeight: 700,
+                    fontFamily: 'Poppins', fontWeight: 700,
                     fontSize: 14, cursor: 'pointer',
                     boxShadow: `0 4px 16px ${accent}44`,
                 }}
@@ -1254,7 +1254,7 @@ function Section({ title, accent, children }: { title: string; accent: string; c
             }}>
                 <div style={{ width: 4, height: 16, background: accent, borderRadius: 99 }} />
                 <h3 style={{
-                    fontFamily: 'Syne', fontWeight: 800, fontSize: 'clamp(12px, 2.5vw, 14px)',
+                    fontFamily: 'Poppins', fontWeight: 800, fontSize: 'clamp(12px, 2.5vw, 14px)',
                     color: '#0A0A0A', margin: 0, textTransform: 'uppercase',
                     letterSpacing: '0.1em',
                 }}>

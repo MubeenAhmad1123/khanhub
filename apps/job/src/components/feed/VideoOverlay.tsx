@@ -66,7 +66,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
 
             {/* Title — REDUCED from 24px to 17px */}
             <h3 style={{
-                fontFamily: 'Syne',
+                fontFamily: 'Poppins',
                 fontWeight: 700,
                 fontSize: 17,
                 color: '#fff',

@@ -722,7 +722,7 @@ export default function UploadVideoPage() {
         color: '#fff',
         border: 'none',
         borderRadius: 14,
-        fontFamily: 'Syne, sans-serif',
+        fontFamily: 'Poppins, sans-serif',
         fontWeight: 700,
         fontSize: 16,
         cursor: 'pointer',
@@ -735,11 +735,11 @@ export default function UploadVideoPage() {
         return (
             <div style={pageStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#0A0A0A' }}>Upload Complete</span>
+                    <span style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 16, color: '#0A0A0A' }}>Upload Complete</span>
                 </div>
                 <div style={{ textAlign: 'center', padding: '64px 24px' }}>
                     <div style={{ fontSize: 72, marginBottom: 20 }}>🎉</div>
-                    <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 26, color: '#0A0A0A', marginBottom: 10 }}>
+                    <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 26, color: '#0A0A0A', marginBottom: 10 }}>
                         Video Uploaded!
                     </h2>
                     <p style={{ color: '#888', fontFamily: 'DM Sans', fontSize: 14, marginBottom: 40, lineHeight: 1.7, maxWidth: 320, margin: '0 auto 40px' }}>
@@ -775,7 +775,7 @@ export default function UploadVideoPage() {
                     <button onClick={() => router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
                         <ArrowLeft size={20} color="#0A0A0A" />
                     </button>
-                    <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 15, color: '#0A0A0A' }}>Upload Video</span>
+                    <span style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 15, color: '#0A0A0A' }}>Upload Video</span>
                     <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#888888' }}>1 of 2</span>
                 </div>
 
@@ -809,7 +809,7 @@ export default function UploadVideoPage() {
                         {!videoFile ? (
                             <div style={{ textAlign: 'center', padding: '40px 24px' }}>
                                 <div style={{ fontSize: 48, marginBottom: 12 }}>📹</div>
-                                <p style={{ color: '#0A0A0A', fontFamily: 'Syne', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                                <p style={{ color: '#0A0A0A', fontFamily: 'Poppins', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
                                     Tap to select your video
                                 </p>
                                 <p style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 12 }}>
@@ -931,7 +931,7 @@ export default function UploadVideoPage() {
                 <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
                     <ArrowLeft size={20} color="#0A0A0A" />
                 </button>
-                <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 15, color: '#0A0A0A' }}>Video Details</span>
+                <span style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 15, color: '#0A0A0A' }}>Video Details</span>
                 <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#888888' }}>2 of 2</span>
             </div>
 

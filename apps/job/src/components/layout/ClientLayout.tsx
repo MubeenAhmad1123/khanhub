@@ -64,7 +64,7 @@ export default function ClientLayout({
                             zIndex: 40,
                         }}>
                             {/* Logo */}
-                            <div style={{ fontFamily: 'Syne', fontWeight: 900, fontSize: 14, color: '#0A0A0A', marginBottom: 16 }}>
+                            <div style={{ fontFamily: 'Poppins', fontWeight: 900, fontSize: 14, color: '#0A0A0A', marginBottom: 16 }}>
                                 <span style={{ color: 'var(--accent)' }}>J</span>R
                             </div>
 

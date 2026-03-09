@@ -94,7 +94,7 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
                 }}>
                     <Video size={32} color="#444" />
                 </div>
-                <p style={{ color: '#444', fontFamily: 'Syne', fontWeight: 700, fontSize: 14, marginBottom: 6 }}>
+                <p style={{ color: '#444', fontFamily: 'Poppins', fontWeight: 700, fontSize: 14, marginBottom: 6 }}>
                     No videos yet
                 </p>
                 <p style={{ color: '#333', fontFamily: 'DM Sans', fontSize: 12 }}>

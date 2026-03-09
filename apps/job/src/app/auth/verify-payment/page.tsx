@@ -38,7 +38,7 @@ export default function VerifyPaymentPage() {
 
                 {/* Text Content */}
                 <div className="space-y-4">
-                    <h1 className="text-4xl font-black font-syne tracking-tighter uppercase italic">
+                    <h1 className="text-4xl font-black font-poppins tracking-tighter uppercase italic">
                         Account <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF0069] to-[#7638FA]">Unlocked</span>
                     </h1>
                     <p className="text-[#888888] font-dm-sans leading-relaxed">
@@ -62,7 +62,7 @@ export default function VerifyPaymentPage() {
                 {/* Action Button */}
                 <button
                     onClick={() => router.push('/feed')}
-                    className="w-full py-6 rounded-[24px] font-black font-syne uppercase italic tracking-[0.2em] text-lg bg-gradient-to-r from-[#FF0069] to-[#7638FA] hover:shadow-[0_0_40px_rgba(255,0,105,0.4)] transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-4 group"
+                    className="w-full py-6 rounded-[24px] font-black font-poppins uppercase italic tracking-[0.2em] text-lg bg-gradient-to-r from-[#FF0069] to-[#7638FA] hover:shadow-[0_0_40px_rgba(255,0,105,0.4)] transition-all duration-300 transform active:scale-[0.98] flex items-center justify-center gap-4 group"
                 >
                     Start Exploring
                     <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />

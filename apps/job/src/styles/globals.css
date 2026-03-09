@@ -11,7 +11,7 @@
   --color-text-muted: #666666;
   --color-border-primary: #E5E5E5;
 
-  --font-syne: "Syne", sans-serif;
+  --font-poppins: "Poppins", sans-serif;
   --font-dm-sans: "DM Sans", sans-serif;
   --font-jetbrains: "JetBrains Mono", monospace;
 
@@ -81,7 +81,7 @@
   h5,
   h6 {
     @apply font-bold;
-    font-family: var(--font-syne);
+    font-family: var(--font-poppins);
   }
 
   code,

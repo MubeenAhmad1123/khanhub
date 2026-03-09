@@ -189,7 +189,7 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
                     background: 'rgba(0,0,0,0.6)',
                     backdropFilter: 'blur(8px)',
                     color: '#fff',
-                    fontFamily: 'Syne', fontWeight: 800,
+                    fontFamily: 'Poppins', fontWeight: 800,
                     fontSize: 18, padding: '8px 16px',
                     borderRadius: 999, zIndex: 50,
                     pointerEvents: 'none',

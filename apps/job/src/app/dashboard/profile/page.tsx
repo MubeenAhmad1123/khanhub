@@ -76,7 +76,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Name */}
-                <h1 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 4px' }}>
+                <h1 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 4px' }}>
                     {profile.name || user.displayName}
                 </h1>
 
@@ -116,7 +116,7 @@ export default function ProfilePage() {
                         { label: 'Likes', value: profile.totalLikes || 0 },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
-                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, color: '#0A0A0A' }}>
+                            <div style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 18, color: '#0A0A0A' }}>
                                 {formatCount(stat.value)}
                             </div>
                             <div style={{ fontSize: 11, color: '#888888', fontFamily: 'DM Sans' }}>

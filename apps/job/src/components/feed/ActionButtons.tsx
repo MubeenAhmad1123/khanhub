@@ -315,7 +315,7 @@ export function ActionButtons({
                     }}>
                         <div style={{ width: 36, height: 4, borderRadius: 999, background: '#E5E5E5', margin: '0 auto 16px' }} />
 
-                        <h3 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, textAlign: 'center', marginBottom: 20 }}>Share Profile</h3>
+                        <h3 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 18, textAlign: 'center', marginBottom: 20 }}>Share Profile</h3>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
                             {[

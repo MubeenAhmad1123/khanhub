@@ -72,7 +72,7 @@ export default function ProfileHeader({ user, accentColor }: ProfileHeaderProps)
                             </div>
                         ) : (
                             <>
-                                <h2 className="text-2xl font-black font-syne tracking-tighter">{user?.name}</h2>
+                                <h2 className="text-2xl font-black font-poppins tracking-tighter">{user?.name}</h2>
                                 <button onClick={() => setIsEditing(true)} className="text-[--text-muted] hover:text-white transition-colors">
                                     <Edit2 size={16} />
                                 </button>

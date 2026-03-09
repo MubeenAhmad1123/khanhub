@@ -1,14 +1,15 @@
 import type { Metadata } from 'next';
-import { Syne, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { Poppins, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
 import StructuredData from '@/components/seo/StructuredData';
 import ClientLayout from '@/components/layout/ClientLayout';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const syne = Syne({
+const poppins = Poppins({
     subsets: ['latin'],
-    variable: '--font-syne',
+    weight: ['600', '700', '800'],
+    variable: '--font-poppins',
     display: 'swap',
 });
 
@@ -34,7 +35,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en" className={`${syne.variable} ${dmSans.variable} ${jetbrains.variable}`}>
+        <html lang="en" className={`${poppins.variable} ${dmSans.variable} ${jetbrains.variable}`}>
             <body style={{ background: '#fff', color: '#0A0A0A' }} className="antialiased">
                 <StructuredData />
                 <ClientLayout>{children}</ClientLayout>

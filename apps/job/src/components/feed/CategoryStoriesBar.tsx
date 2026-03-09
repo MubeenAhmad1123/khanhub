@@ -234,7 +234,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                             <div style={{ textAlign: 'center', marginBottom: 24 }}>
                                 <div style={{ fontSize: 36, marginBottom: 6 }}>{pending.emoji}</div>
                                 <h3 style={{
-                                    fontFamily: 'Syne', fontWeight: 800,
+                                    fontFamily: 'Poppins', fontWeight: 800,
                                     fontSize: 20, color: '#000', margin: '0 0 4px',
                                 }}>
                                     {pending.label}
@@ -281,7 +281,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     </div>
                                     <div>
                                         <div style={{
-                                            color: '#000', fontFamily: 'Syne',
+                                            color: '#000', fontFamily: 'Poppins',
                                             fontWeight: 700, fontSize: 15,
                                         }}>
                                             {ROLE_OPTIONS[pending.key]?.provider}
@@ -333,7 +333,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                     </div>
                                     <div>
                                         <div style={{
-                                            color: '#000', fontFamily: 'Syne',
+                                            color: '#000', fontFamily: 'Poppins',
                                             fontWeight: 700, fontSize: 15,
                                         }}>
                                             {ROLE_OPTIONS[pending.key]?.seeker}

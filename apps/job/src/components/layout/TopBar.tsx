@@ -20,7 +20,7 @@ export function TopBar() {
             <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 text-[#0A0A0A]">
                 {/* Logo & Category Switcher */}
                 <div className="flex items-center gap-4">
-                    <Link href="/" className="text-xl font-bold font-syne tracking-tighter italic whitespace-nowrap" aria-label="JobReel Home">
+                    <Link href="/" className="text-xl font-bold font-poppins tracking-tighter italic whitespace-nowrap" aria-label="JobReel Home">
                         <span className="text-[--accent]">JR</span>
                     </Link>
 
@@ -37,7 +37,7 @@ export function TopBar() {
                                     <span className="text-xs">{categoryConfig.emoji}</span>
                                 )}
                             </div>
-                            <span className="text-[10px] font-black font-syne uppercase tracking-wider hidden sm:inline text-[#0A0A0A]">
+                            <span className="text-[10px] font-black font-poppins uppercase tracking-wider hidden sm:inline text-[#0A0A0A]">
                                 {categoryConfig.label}
                             </span>
                             <ChevronDown className={`w-3 h-3 text-[#333333] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
@@ -81,7 +81,7 @@ export function TopBar() {
                                                         <span className="text-sm">{config.emoji}</span>
                                                     )}
                                                 </div>
-                                                <span className="text-[10px] font-black font-syne uppercase tracking-wider text-[#0A0A0A]">{config.label}</span>
+                                                <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">{config.label}</span>
                                                 {activeCategory === key && (
                                                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" />
                                                 )}

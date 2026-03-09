@@ -238,7 +238,7 @@ export default function CategoryRoleFlow() {
     // ── STEP 1: Category Grid ──────────────────────────────────────────
     const renderStep1 = () => (
         <div>
-            <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 24 }}>
+            <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 24 }}>
                 Choose Your Industry
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
@@ -291,7 +291,7 @@ export default function CategoryRoleFlow() {
                 >
                     <ArrowLeft size={16} /> Back
                 </button>
-                <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 6 }}>
+                <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 6 }}>
                     Who are you?
                 </h2>
                 <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#888', textAlign: 'center', marginBottom: 24 }}>
@@ -317,7 +317,7 @@ export default function CategoryRoleFlow() {
                     >
                         <span style={{ fontSize: 32, lineHeight: 1 }}>{roles.providerIcon}</span>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#0A0A0A', marginBottom: 3 }}>
+                            <div style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 16, color: '#0A0A0A', marginBottom: 3 }}>
                                 {roles.providerLabel}
                             </div>
                             <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#666' }}>
@@ -353,7 +353,7 @@ export default function CategoryRoleFlow() {
                     >
                         <span style={{ fontSize: 32, lineHeight: 1 }}>{roles.seekerIcon}</span>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#0A0A0A', marginBottom: 3 }}>
+                            <div style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 16, color: '#0A0A0A', marginBottom: 3 }}>
                                 {roles.seekerLabel}
                             </div>
                             <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#666' }}>
@@ -380,7 +380,7 @@ export default function CategoryRoleFlow() {
                         background: selectedRole ? accent : '#E5E5E5',
                         color: selectedRole ? '#fff' : '#aaa',
                         border: 'none', borderRadius: 14,
-                        fontFamily: 'Syne', fontWeight: 800,
+                        fontFamily: 'Poppins', fontWeight: 800,
                         fontSize: 15, cursor: selectedRole ? 'pointer' : 'not-allowed',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                         transition: 'all 0.2s',
@@ -408,7 +408,7 @@ export default function CategoryRoleFlow() {
                 >
                     <ArrowLeft size={16} /> Back
                 </button>
-                <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: '#0A0A0A', marginBottom: 4 }}>
+                <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 22, color: '#0A0A0A', marginBottom: 4 }}>
                     A bit about you
                 </h2>
                 <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#888', marginBottom: 24 }}>
@@ -476,7 +476,7 @@ export default function CategoryRoleFlow() {
                         padding: '15px',
                         background: accent,
                         color: '#fff', border: 'none', borderRadius: 14,
-                        fontFamily: 'Syne', fontWeight: 800,
+                        fontFamily: 'Poppins', fontWeight: 800,
                         fontSize: 15, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                         boxShadow: `0 6px 20px ${accent}44`,

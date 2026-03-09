@@ -70,7 +70,7 @@ export default function LoginPage() {
 
             <div className="w-full max-w-sm text-center relative z-10 bg-[#F8F8F8] p-8 rounded-2xl border border-[#E5E5E5]">
                 <Link href="/" className="inline-block mb-12">
-                    <span className="font-syne font-black text-3xl tracking-tighter italic">
+                    <span className="font-poppins font-black text-3xl tracking-tighter italic">
                         <span className="text-[#FF0069]">JOB</span><span className="text-[#0A0A0A]">REEL</span>
                     </span>
                 </Link>
@@ -80,7 +80,7 @@ export default function LoginPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-12"
                 >
-                    <h1 className="text-4xl font-syne font-bold mb-3 tracking-tight text-[#0A0A0A]">Welcome back</h1>
+                    <h1 className="text-4xl font-poppins font-bold mb-3 tracking-tight text-[#0A0A0A]">Welcome back</h1>
                     <p className="text-[#666666] font-medium tracking-wide">Sign in to continue your journey</p>
                 </motion.div>
 
@@ -99,7 +99,7 @@ export default function LoginPage() {
                         </div>
                         <Link
                             href="/auth/register"
-                            className="inline-block font-syne font-bold text-[#FF0069] tracking-widest text-sm uppercase hover:underline underline-offset-8"
+                            className="inline-block font-poppins font-bold text-[#FF0069] tracking-widest text-sm uppercase hover:underline underline-offset-8"
                         >
                             Create Account →
                         </Link>
@@ -117,14 +117,14 @@ export default function LoginPage() {
             </div>
 
             <style jsx global>{`
-                @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap');
                 
                 body {
                     background: #FFFFFF;
                     font-family: 'DM Sans', sans-serif;
                 }
-                .font-syne {
-                    font-family: 'Syne', sans-serif;
+                .font-poppins {
+                    font-family: 'Poppins', sans-serif;
                 }
             `}</style>
         </div>

@@ -171,7 +171,7 @@ export function RevealContactSheet({
                         <div style={{ textAlign: 'center', marginBottom: 24 }}>
                             <div style={{ fontSize: 40, marginBottom: 8 }}>🔒</div>
                             <h2 style={{
-                                fontFamily: 'Syne', fontWeight: 800,
+                                fontFamily: 'Poppins', fontWeight: 800,
                                 fontSize: 20, color: '#0A0A0A', margin: '0 0 6px',
                             }}>
                                 Unlock Contact
@@ -223,7 +223,7 @@ export function RevealContactSheet({
                                 width: '100%', padding: '14px',
                                 background: '#FF0069', color: '#fff',
                                 border: 'none', borderRadius: 12,
-                                fontFamily: 'Syne', fontWeight: 700,
+                                fontFamily: 'Poppins', fontWeight: 700,
                                 fontSize: 15, cursor: 'pointer',
                             }}
                         >
@@ -245,7 +245,7 @@ export function RevealContactSheet({
                 {step === 'submit' && (
                     <>
                         <h2 style={{
-                            fontFamily: 'Syne', fontWeight: 800,
+                            fontFamily: 'Poppins', fontWeight: 800,
                             fontSize: 18, color: '#0A0A0A',
                             margin: '0 0 6px', textAlign: 'center',
                         }}>
@@ -397,7 +397,7 @@ export function RevealContactSheet({
                                 background: canSubmit ? '#FF0069' : '#E5E5E5',
                                 color: canSubmit ? '#fff' : '#aaa',
                                 border: 'none', borderRadius: 12,
-                                fontFamily: 'Syne', fontWeight: 700,
+                                fontFamily: 'Poppins', fontWeight: 700,
                                 fontSize: 15, cursor: canSubmit ? 'pointer' : 'not-allowed',
                                 display: 'flex', alignItems: 'center',
                                 justifyContent: 'center', gap: 8,
@@ -435,7 +435,7 @@ export function RevealContactSheet({
                     <div style={{ textAlign: 'center', padding: '20px 0 10px' }}>
                         <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
                         <h2 style={{
-                            fontFamily: 'Syne', fontWeight: 800,
+                            fontFamily: 'Poppins', fontWeight: 800,
                             fontSize: 20, color: '#0A0A0A', margin: '0 0 10px',
                         }}>
                             Submitted!
@@ -452,7 +452,7 @@ export function RevealContactSheet({
                             background: '#FF0069', color: '#fff',
                             border: 'none', borderRadius: 12,
                             padding: '12px 32px',
-                            fontFamily: 'Syne', fontWeight: 700,
+                            fontFamily: 'Poppins', fontWeight: 700,
                             fontSize: 14, cursor: 'pointer',
                         }}>
                             Done

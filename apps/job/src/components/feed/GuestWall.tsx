@@ -99,7 +99,7 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                         <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[--accent] shadow-[0_0_10px_var(--accent-glow)]" />
                     </div>
 
-                    <h2 className="text-3xl font-bold font-syne mb-3">
+                    <h2 className="text-3xl font-bold font-poppins mb-3">
                         {isHardWall ? "That's your limit!" : "You've seen 3 reels"}
                     </h2>
                     <p className="text-[--text-muted] mb-12 max-w-xs leading-relaxed text-sm">
