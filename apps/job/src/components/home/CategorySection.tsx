@@ -40,7 +40,7 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
                     color: '#FF0069',
-                    fontFamily: 'DM Sans',
+                    fontFamily: 'Poppins',
                     display: 'block',
                     marginBottom: 12,
                 }}>
@@ -48,7 +48,7 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                 </span>
 
                 <h2 style={{
-                    fontFamily: 'Syne',
+                    fontFamily: 'Poppins',
                     fontWeight: 900,
                     fontSize: 'clamp(20px, 5vw, 32px)',
                     color: '#0A0A0A',
@@ -58,7 +58,7 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                 </h2>
 
                 <p style={{
-                    fontFamily: 'DM Sans',
+                    fontFamily: 'Poppins',
                     fontSize: 'clamp(12px, 2.8vw, 15px)',
                     color: '#666',
                     maxWidth: '90%',
@@ -111,7 +111,7 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
 
                             {/* Label */}
                             <span style={{
-                                fontFamily: 'DM Sans',
+                                fontFamily: 'Poppins',
                                 fontWeight: 600,
                                 fontSize: 'clamp(10px, 2.5vw, 13px)',
                                 color: '#0A0A0A',
@@ -123,6 +123,7 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                         </div>
                     ))}
                 </div>
+
             </div>
         </section>
     );

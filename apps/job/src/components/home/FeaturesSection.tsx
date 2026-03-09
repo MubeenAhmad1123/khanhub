@@ -64,7 +64,7 @@ export default function FeaturesSection() {
                                 {feature.emoji}
                             </div>
                             <h3 style={{
-                                fontFamily: 'Syne',
+                                fontFamily: 'Poppins',
                                 fontWeight: 700,
                                 fontSize: 'clamp(13px, 3vw, 16px)',
                                 color: '#0A0A0A',
@@ -73,12 +73,13 @@ export default function FeaturesSection() {
                                 {feature.title}
                             </h3>
                             <p style={{
-                                fontFamily: 'DM Sans',
+                                fontFamily: 'Poppins',
                                 fontSize: 'clamp(11px, 2.5vw, 13px)',
                                 color: '#555',
                                 lineHeight: 1.6,
                                 margin: 0,
                             }}>
+
                                 {feature.description.split('FREE').map((part, index, array) => (
                                     <React.Fragment key={index}>
                                         {part}

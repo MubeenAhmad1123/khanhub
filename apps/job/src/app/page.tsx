@@ -67,12 +67,12 @@ export default function HomePage() {
     };
 
     return (
-        <div style={{ overflowX: 'hidden', width: '100%' }} className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans">
+        <div style={{ overflowX: 'hidden', width: '100%' }} className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-poppins">
 
             {/* Navbar */}
             <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full relative z-50">
                 <div className="flex items-center gap-2">
-                    <span className="font-syne font-black text-2xl tracking-tighter italic">
+                    <span className="font-poppins font-black text-2xl tracking-tighter italic">
                         <span className="text-[#FF0069]">JOB</span><span className="text-[#0A0A0A]">REEL</span>
                     </span>
                 </div>
@@ -80,7 +80,7 @@ export default function HomePage() {
                     <Link href="/auth/login" className="text-sm font-bold uppercase tracking-widest text-[#333333] hover:text-[#FF0069] transition-colors">
                         Login
                     </Link>
-                    <Link href="/auth/register" className="bg-[#FF0069] text-white px-6 py-2.5 rounded-full text-sm font-black uppercase tracking-widest hover:bg-[#D00055] transition-all">
+                    <Link href="/auth/register" className="bg-[#FF0069] text-white px-6 py-2.5 rounded-full text-sm font-bold uppercase tracking-widest hover:bg-[#D00055] transition-all">
                         Start →
                     </Link>
                 </div>
@@ -121,13 +121,13 @@ export default function HomePage() {
                                 <span className="text-3xl" style={{ textShadow: `0 0 20px ${selectedCat.accent}66` }}>
                                     {selectedCat.emoji}
                                 </span>
-                                <span className="text-sm font-black uppercase tracking-[0.2em]" style={{ color: selectedCat.accent }}>
+                                <span className="text-sm font-bold uppercase tracking-[0.2em]" style={{ color: selectedCat.accent }}>
                                     You selected {selectedCat.label}
                                 </span>
                             </div>
                             <div className="w-full h-[1px] bg-[#E5E5E5] mb-8" />
 
-                            <h3 className="text-3xl font-syne font-bold mb-8">I am a...</h3>
+                            <h3 className="text-3xl font-poppins font-bold mb-8">I am a...</h3>
 
                             <div className="space-y-4">
                                 <RoleOption
@@ -162,16 +162,17 @@ export default function HomePage() {
                 )}
             </AnimatePresence>
 
+
             <style jsx global>{`
-                @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
                 
                 body {
                     background: #FFFFFF;
-                    font-family: 'DM Sans', sans-serif;
+                    font-family: 'Poppins', sans-serif;
                 }
 
-                .font-syne {
-                    font-family: 'Syne', sans-serif;
+                .font-poppins {
+                    font-family: 'Poppins', sans-serif;
                 }
 
                 .category-card:hover img {
@@ -179,8 +180,6 @@ export default function HomePage() {
                     transform: scale(1.05);
                 }
 
-                }
-                
                 @media (max-width: 480px) {
                     .category-grid {
                         grid-template-columns: repeat(4, 1fr) !important;
@@ -212,6 +211,7 @@ export default function HomePage() {
                     border-width: 0;
                 }
             `}</style>
+
         </div>
     );
 }

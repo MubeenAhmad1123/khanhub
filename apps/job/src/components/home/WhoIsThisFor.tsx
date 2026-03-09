@@ -30,7 +30,7 @@ export default function WhoIsThisFor() {
                 width: '100%',
             }}>
                 <h2 style={{
-                    fontFamily: 'Syne',
+                    fontFamily: 'Poppins',
                     fontWeight: 900,
                     fontSize: 'clamp(18px, 4.5vw, 32px)',
                     color: '#0A0A0A',
@@ -40,7 +40,7 @@ export default function WhoIsThisFor() {
                 </h2>
 
                 <p style={{
-                    fontFamily: 'DM Sans',
+                    fontFamily: 'Poppins',
                     fontSize: 'clamp(12px, 2.8vw, 15px)',
                     color: '#666',
                     marginBottom: 32,
@@ -69,7 +69,7 @@ export default function WhoIsThisFor() {
                                 color: '#0A0A0A',
                                 flex: 1,
                                 textAlign: 'right',
-                                fontFamily: 'Syne',
+                                fontFamily: 'Poppins',
                                 fontWeight: 700,
                                 fontSize: 'clamp(11px, 2.5vw, 13px)',
                                 padding: '4px clamp(8px, 2vw, 12px)',
@@ -81,7 +81,7 @@ export default function WhoIsThisFor() {
                                 color: '#666',
                                 flex: 1,
                                 textAlign: 'left',
-                                fontFamily: 'Syne',
+                                fontFamily: 'Poppins',
                                 fontWeight: 700,
                                 fontSize: 'clamp(11px, 2.5vw, 13px)',
                                 padding: '4px clamp(8px, 2vw, 12px)',
@@ -93,7 +93,7 @@ export default function WhoIsThisFor() {
                 </div>
 
                 <p style={{
-                    fontFamily: 'Syne',
+                    fontFamily: 'Poppins',
                     fontWeight: 800,
                     fontSize: 'clamp(14px, 3.5vw, 18px)',
                     color: '#0A0A0A',
@@ -101,6 +101,7 @@ export default function WhoIsThisFor() {
                 }}>
                     Upload your video <span style={freeStyle}>FREE</span> and let the right people find you.
                 </p>
+
             </div>
         </section>
     );

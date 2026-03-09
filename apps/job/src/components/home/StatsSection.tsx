@@ -39,7 +39,7 @@ export default function StatsSection() {
                             textAlign: 'center',
                         }}>
                             <div style={{
-                                fontFamily: 'Syne',
+                                fontFamily: 'Poppins',
                                 fontWeight: 900,
                                 fontSize: 'clamp(18px, 5vw, 32px)',
                                 color: '#FF0069',
@@ -47,7 +47,7 @@ export default function StatsSection() {
                                 {stat.value}
                             </div>
                             <div style={{
-                                fontFamily: 'DM Sans',
+                                fontFamily: 'Poppins',
                                 fontSize: 'clamp(10px, 2.2vw, 12px)',
                                 color: '#666',
                                 marginTop: 4,
@@ -56,6 +56,7 @@ export default function StatsSection() {
                             </div>
                         </div>
                     ))}
+
                 </div>
             </div>
         </section>

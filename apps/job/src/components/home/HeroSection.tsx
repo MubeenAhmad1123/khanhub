@@ -20,7 +20,7 @@ export default function HeroSection() {
                 width: '100%',
             }}>
                 <h1 style={{
-                    fontFamily: 'Syne',
+                    fontFamily: 'Poppins',
                     fontWeight: 800,
                     fontSize: 'clamp(22px, 5vw, 44px)',
                     color: '#0A0A0A',
@@ -32,7 +32,7 @@ export default function HeroSection() {
                 </h1>
 
                 <h2 style={{
-                    fontFamily: 'Syne',
+                    fontFamily: 'Poppins',
                     fontWeight: 700,
                     fontSize: 'clamp(14px, 3vw, 20px)',
                     color: '#FF0069',
@@ -43,7 +43,7 @@ export default function HeroSection() {
                 </h2>
 
                 <p style={{
-                    fontFamily: 'DM Sans',
+                    fontFamily: 'Poppins',
                     fontSize: 'clamp(12px, 2.8vw, 15px)',
                     color: '#666',
                     lineHeight: 1.6,
@@ -68,7 +68,7 @@ export default function HeroSection() {
                         background: '#FF0069',
                         color: '#fff',
                         borderRadius: 12,
-                        fontFamily: 'Syne',
+                        fontFamily: 'Poppins',
                         fontWeight: 700,
                         fontSize: 'clamp(13px, 3vw, 15px)',
                         textDecoration: 'none',
@@ -84,7 +84,7 @@ export default function HeroSection() {
                         color: '#0A0A0A',
                         border: '2px solid #0A0A0A',
                         borderRadius: 12,
-                        fontFamily: 'Syne',
+                        fontFamily: 'Poppins',
                         fontWeight: 700,
                         fontSize: 'clamp(13px, 3vw, 15px)',
                         textDecoration: 'none',
@@ -98,13 +98,14 @@ export default function HeroSection() {
                     marginTop: 10,
                     fontSize: 'clamp(10px, 2.2vw, 12px)',
                     color: '#888',
-                    fontFamily: 'DM Sans',
+                    fontFamily: 'Poppins',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 16,
                     flexWrap: 'wrap',
                 }}>
+
                     <span>✓ Registration <span style={freeStyle}>FREE</span></span>
                     <span>✓ Video Upload <span style={freeStyle}>FREE</span></span>
                     <span>✓ 8 Industries</span>

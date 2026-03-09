@@ -416,13 +416,14 @@ export default function UserProfilePage() {
                         <div style={{
                             position: 'absolute', bottom: 4, right: 4,
                             width: 'clamp(20px, 5vw, 24px)', height: 'clamp(20px, 5vw, 24px)', borderRadius: '50%',
-                            background: catConfig.accent,
+                            background: '#00C853',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: '2px solid #fff',
                             zIndex: 2,
                         }}>
                             <ShieldCheck size={14} color="#fff" strokeWidth={2.5} />
                         </div>
+
                     )}
                 </div>
 
@@ -442,20 +443,24 @@ export default function UserProfilePage() {
                         color: catConfig.accent,
                         border: `1px solid ${catConfig.accent}`,
                         borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(12px, 3vw, 16px)',
-                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'DM Sans', fontWeight: 700,
+                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'Poppins', fontWeight: 700,
                     }}>
                         {catConfig.emoji} {catConfig.label}
                     </span>
+
                     <span style={{
-                        background: '#f5f5f5', color: '#666', border: '1px solid #e0e0e0',
+                        background: profile.role?.toLowerCase() === 'employer' ? '#00C85315' : '#f5f5f5',
+                        color: profile.role?.toLowerCase() === 'employer' ? '#00C853' : '#666',
+                        border: profile.role?.toLowerCase() === 'employer' ? '1px solid #00C853' : '1px solid #e0e0e0',
                         borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(12px, 3vw, 16px)',
-                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'DM Sans', fontWeight: 500,
+                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'Poppins', fontWeight: profile.role?.toLowerCase() === 'employer' ? 700 : 500,
                     }}>
                         {profile.role === 'provider'
                             ? (profile.jobTitle || profile.specialization || profile.roleTitle || 'Provider')
-                            : (profile.role === 'seeker' ? 'Seeker' : profile.role)
+                            : (profile.role === 'seeker' ? 'Seeker' : (profile.role === 'employer' ? 'Employer' : profile.role))
                         }
                     </span>
+
                     {profile.city && (
                         <span style={{
                             background: '#f5f5f5', color: '#666', border: '1px solid #e0e0e0',

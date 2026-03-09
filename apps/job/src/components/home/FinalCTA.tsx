@@ -21,7 +21,7 @@ export default function FinalCTA() {
                 width: '100%',
             }}>
                 <h2 style={{
-                    fontFamily: 'Syne',
+                    fontFamily: 'Poppins',
                     fontWeight: 900,
                     fontSize: 'clamp(22px, 5.5vw, 36px)',
                     lineHeight: 1.1,
@@ -31,7 +31,7 @@ export default function FinalCTA() {
                 </h2>
 
                 <p style={{
-                    fontFamily: 'DM Sans',
+                    fontFamily: 'Poppins',
                     fontSize: 'clamp(12px, 2.8vw, 15px)',
                     color: '#aaa',
                     maxWidth: '90%',
@@ -49,7 +49,7 @@ export default function FinalCTA() {
                     background: '#fff',
                     color: '#0A0A0A',
                     borderRadius: 16,
-                    fontFamily: 'Syne',
+                    fontFamily: 'Poppins',
                     fontWeight: 800,
                     fontSize: 'clamp(14px, 3vw, 16px)',
                     textDecoration: 'none',
@@ -62,11 +62,12 @@ export default function FinalCTA() {
                 <p style={{
                     fontSize: 12,
                     color: '#666',
-                    fontFamily: 'DM Sans',
+                    fontFamily: 'Poppins',
                     margin: 0,
                 }}>
                     No credit card. No subscription. Just upload and go.
                 </p>
+
             </div>
         </section>
     );

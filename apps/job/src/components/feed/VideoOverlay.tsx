@@ -41,14 +41,22 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             {/* Badge — smaller */}
             <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                background: 'var(--accent)',
+                background: data.badge?.toLowerCase() === 'employer' ? '#00C853' : 'var(--accent)',
                 padding: '2px 8px', borderRadius: 999,
                 marginBottom: 6,
             }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: '#000', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'DM Sans' }}>
+                <span style={{
+                    fontSize: 9,
+                    fontWeight: 800,
+                    color: data.badge?.toLowerCase() === 'employer' ? '#fff' : '#000',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    fontFamily: 'Poppins'
+                }}>
                     {data.badge}
                 </span>
             </div>
+
 
             {/* Title — REDUCED from 24px to 17px */}
             <h3 style={{
@@ -101,12 +109,13 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                         </span>
                     </div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--accent)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#00C853' }}>
                     <span style={{ fontSize: 11 }}>✓</span>
-                    <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <span style={{ fontSize: 10, fontFamily: 'Poppins', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         Verified
                     </span>
                 </div>
+
             </div>
         </div>
     );
