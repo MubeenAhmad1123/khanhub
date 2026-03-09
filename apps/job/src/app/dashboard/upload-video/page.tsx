@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { ArrowLeft, Video, CheckCircle, AlertCircle, X } from 'lucide-react';
 import TagInput from '@/components/ui/TagInput';
 
@@ -471,6 +471,7 @@ export default function UploadVideoPage() {
     const { user, loading: authLoading } = useAuth();
 
     const [step, setStep] = useState<1 | 2 | 'success'>(1);
+    const [firestoreProfile, setFirestoreProfile] = useState<any>(null);
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [videoDuration, setVideoDuration] = useState<number>(0);
@@ -496,7 +497,16 @@ export default function UploadVideoPage() {
         }
     }, [authLoading, user, router]);
 
-    if (authLoading || !user) {
+    /* Load Firestore profile — Firebase Auth object does NOT have role/category/uiRole */
+    useEffect(() => {
+        if (!user) return;
+        const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+            if (snap.exists()) setFirestoreProfile(snap.data());
+        });
+        return () => unsub();
+    }, [user]);
+
+    if (authLoading || !user || !firestoreProfile) {
         return (
             <div style={{ minHeight: '100dvh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: 40, height: 40, border: '3px solid #222', borderTop: '3px solid var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -504,18 +514,23 @@ export default function UploadVideoPage() {
         );
     }
 
-    const userCategory = (user as any).category || 'jobs';
+    const userCategory = firestoreProfile.category || 'jobs';
 
-    // Determine UI role (provider/seeker)
-    let userRole: 'provider' | 'seeker' = (user as any).uiRole;
+    // Read uiRole from Firestore profile (NOT from Firebase Auth user object)
+    // uiRole is 'provider' or 'seeker' — saved during onboarding
+    let userRole: 'provider' | 'seeker' = firestoreProfile.uiRole;
+
     if (!userRole) {
-        // Fallback mapping if uiRole is missing
-        if (userCategory === 'jobs') {
-            userRole = (user as any).role === 'employer' ? 'seeker' : 'provider';
+        // Fallback: derive from specific role key saved in Firestore
+        const roleKey = firestoreProfile.role || '';
+        const providerKeys = ['job_seeker', 'doctor', 'teacher', 'presenting', 'helper', 'lawyer', 'agent', 'freelancer'];
+        const seekerKeys = ['employer', 'patient', 'student', 'looking', 'household', 'client', 'buyer'];
+        if (providerKeys.includes(roleKey)) {
+            userRole = 'provider';
+        } else if (seekerKeys.includes(roleKey)) {
+            userRole = 'seeker';
         } else {
-            // For other categories, professionals (doctors/teachers) are providers
-            // This is a default, might need more refinement
-            userRole = (user as any).role === 'employer' ? 'provider' : 'seeker';
+            userRole = 'provider'; // safe default
         }
     }
 

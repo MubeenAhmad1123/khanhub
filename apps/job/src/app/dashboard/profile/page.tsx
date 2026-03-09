@@ -97,12 +97,13 @@ export default function ProfilePage() {
                         fontSize: 11, fontFamily: 'DM Sans', fontWeight: 700,
                     }}>
                         {(() => {
-                            const r = profile.role || user.role;
                             const uiR = profile.uiRole;
                             if (uiR === 'provider') return categoryConfig?.providerLabel;
                             if (uiR === 'seeker') return categoryConfig?.seekerLabel;
-                            // Fallback to role check
-                            return r === 'employer' ? categoryConfig?.seekerLabel : categoryConfig?.providerLabel;
+                            // Fallback: use roleKey from Firestore
+                            const roleKey = profile.role || '';
+                            const providerKeys = ['job_seeker', 'doctor', 'teacher', 'presenting', 'helper', 'lawyer', 'agent', 'freelancer'];
+                            return providerKeys.includes(roleKey) ? categoryConfig?.providerLabel : categoryConfig?.seekerLabel;
                         })()}
                     </span>
                 </div>

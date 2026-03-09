@@ -456,8 +456,7 @@ export default function UserProfilePage() {
                         fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'Poppins', fontWeight: 700,
                     }}>
                         {(() => {
-                            const r = profile.role?.toLowerCase();
-                            const uiR = profile.uiRole; // We added this in onboarding
+                            const uiR = profile.uiRole;
                             const roles = {
                                 jobs: { provider: 'Job Seeker', seeker: 'Employer' },
                                 healthcare: { provider: 'Doctor', seeker: 'Patient' },
@@ -471,8 +470,11 @@ export default function UserProfilePage() {
 
                             if (uiR === 'provider') return roles.provider;
                             if (uiR === 'seeker') return roles.seeker;
-                            // Fallback
-                            return r === 'employer' ? roles.seeker : roles.provider;
+
+                            // Fallback: use roleKey from Firestore
+                            const roleKey = profile.role || '';
+                            const providerKeys = ['job_seeker', 'doctor', 'teacher', 'presenting', 'helper', 'lawyer', 'agent', 'freelancer'];
+                            return providerKeys.includes(roleKey) ? roles.provider : roles.seeker;
                         })()}
                     </span>
 
