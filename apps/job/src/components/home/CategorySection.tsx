@@ -5,14 +5,14 @@ import { useCategory } from '@/context/CategoryContext';
 import { CategoryKey } from '@/lib/categories';
 
 const CATEGORIES = [
-    { key: 'jobs', label: 'Jobs', emoji: '💼', image: '/jobs.webp', accent: '#FF0069' },
-    { key: 'healthcare', label: 'Healthcare', emoji: '🏥', image: '/healthcare.webp', accent: '#00C896' },
-    { key: 'it', label: 'IT & Tech', emoji: '💻', image: '/tech.webp', accent: '#00E5FF' },
-    { key: 'education', label: 'Education', emoji: '🎓', image: '/education (2).webp', accent: '#FFD600' },
-    { key: 'marriage', label: 'Marriage', emoji: '💍', image: '/marraige.webp', accent: '#FF6B9D' },
-    { key: 'domestic', label: 'Domestic', emoji: '🏠', image: '/domestic help.webp', accent: '#FF8C42' },
-    { key: 'legal', label: 'Legal', emoji: '⚖️', image: '/lawyer.webp', accent: '#4A90D9' },
-    { key: 'realestate', label: 'Real Estate', emoji: '🏗️', image: '/real-estate.webp', accent: '#7638FA' },
+    { key: 'jobs', label: 'Jobs', image: '/jobs.webp', accent: '#FF0069' },
+    { key: 'healthcare', label: 'Healthcare', image: '/healthcare.webp', accent: '#00C896' },
+    { key: 'it', label: 'IT & Tech', image: '/tech.webp', accent: '#00E5FF' },
+    { key: 'education', label: 'Education', image: '/education (2).webp', accent: '#FFD600' },
+    { key: 'marriage', label: 'Marriage', image: '/marraige.webp', accent: '#FF6B9D' },
+    { key: 'domestic', label: 'Domestic Help', image: '/domestic help.webp', accent: '#FF8C42' },
+    { key: 'legal', label: 'Legal', image: '/lawyer.webp', accent: '#4A90D9' },
+    { key: 'realestate', label: 'Real Estate', image: '/real-estate.webp', accent: '#7638FA' },
 ];
 
 interface CategorySectionProps {
@@ -23,11 +23,17 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
 
     return (
         <section style={{
-            padding: 'clamp(40px, 8vw, 96px) clamp(16px, 4vw, 48px)',
+            width: '100%',
+            overflowX: 'hidden',
+            padding: 'clamp(32px, 6vw, 80px) clamp(16px, 4vw, 32px)',
             background: '#f8fafc',
             textAlign: 'center',
         }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{
+                maxWidth: 480,
+                margin: '0 auto',
+                width: '100%',
+            }}>
                 <span style={{
                     fontSize: 12,
                     fontWeight: 700,
@@ -44,7 +50,7 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                 <h2 style={{
                     fontFamily: 'Syne',
                     fontWeight: 900,
-                    fontSize: 'clamp(20px, 5vw, 40px)',
+                    fontSize: 'clamp(20px, 5vw, 32px)',
                     color: '#0A0A0A',
                     margin: '0 0 16px',
                 }}>
@@ -53,10 +59,10 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
 
                 <p style={{
                     fontFamily: 'DM Sans',
-                    fontSize: 'clamp(14px, 3vw, 16px)',
+                    fontSize: 'clamp(12px, 2.8vw, 15px)',
                     color: '#666',
-                    maxWidth: 700,
-                    margin: '0 auto 48px',
+                    maxWidth: '90%',
+                    margin: '0 auto 40px',
                     lineHeight: 1.6,
                 }}>
                     Whether you're hiring, healing, teaching, or building — JobReel connects the right people through real videos. No middlemen. No guesswork.
@@ -64,53 +70,55 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
 
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                    gridTemplateColumns: 'repeat(4, 1fr)',  // 4 columns = 2 rows of 4
                     gap: 'clamp(12px, 3vw, 24px)',
+                    maxWidth: 480,
+                    margin: '0 auto',
+                    padding: '0 16px',
                 }}>
                     {CATEGORIES.map((cat) => (
                         <div
                             key={cat.key}
                             onClick={() => onSelect?.(cat)}
                             style={{
-                                background: '#fff',
-                                padding: 'clamp(12px, 3vw, 24px)',
-                                borderRadius: 20,
-                                border: '1px solid #e2e8f0',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: 12,
-                                transition: 'transform 0.2s, border-color 0.2s',
+                                gap: 8,
                                 cursor: 'pointer',
                             }}
                         >
+                            {/* Circular image */}
                             <div style={{
-                                width: 'clamp(60px, 8vw, 80px)',
-                                height: 'clamp(60px, 8vw, 80px)',
+                                width: 'clamp(64px, 16vw, 88px)',
+                                height: 'clamp(64px, 16vw, 88px)',
                                 borderRadius: '50%',
-                                background: `${cat.accent}10`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 'clamp(28px, 6vw, 48px)',
+                                overflow: 'hidden',
+                                border: `2.5px solid ${cat.accent}`,
+                                boxShadow: `0 0 0 3px ${cat.accent}22`,
+                                flexShrink: 0,
                             }}>
-                                {cat.emoji}
+                                <img
+                                    src={cat.image}
+                                    alt={cat.label}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                    }}
+                                />
                             </div>
+
+                            {/* Label */}
                             <span style={{
-                                fontFamily: 'Syne',
-                                fontWeight: 700,
-                                fontSize: 'clamp(11px, 2.5vw, 15px)',
+                                fontFamily: 'DM Sans',
+                                fontWeight: 600,
+                                fontSize: 'clamp(10px, 2.5vw, 13px)',
                                 color: '#0A0A0A',
+                                textAlign: 'center',
+                                lineHeight: 1.2,
                             }}>
                                 {cat.label}
-                            </span>
-                            <span style={{
-                                color: cat.accent,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                fontFamily: 'DM Sans',
-                            }}>
-                                Watch Videos →
                             </span>
                         </div>
                     ))}

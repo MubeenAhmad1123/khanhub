@@ -8,18 +8,23 @@ export default function HeroSection() {
 
     return (
         <section style={{
-            padding: 'clamp(40px, 8vw, 100px) clamp(16px, 4vw, 48px)',
-            textAlign: 'center',
+            width: '100%',
             overflowX: 'hidden',
+            padding: 'clamp(32px, 6vw, 80px) clamp(16px, 4vw, 32px)',
+            textAlign: 'center',
             background: '#fff',
         }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{
+                maxWidth: 480,
+                margin: '0 auto',
+                width: '100%',
+            }}>
                 <h1 style={{
                     fontFamily: 'Syne',
-                    fontWeight: 900,
-                    fontSize: 'clamp(24px, 6vw, 52px)',
+                    fontWeight: 800,
+                    fontSize: 'clamp(22px, 5vw, 44px)',
                     color: '#0A0A0A',
-                    lineHeight: 1.1,
+                    lineHeight: 1.15,
                     letterSpacing: '-0.02em',
                     margin: '0 0 16px',
                 }}>
@@ -29,19 +34,20 @@ export default function HeroSection() {
                 <h2 style={{
                     fontFamily: 'Syne',
                     fontWeight: 700,
-                    fontSize: 'clamp(14px, 3.5vw, 20px)',
+                    fontSize: 'clamp(14px, 3vw, 20px)',
                     color: '#FF0069',
                     margin: '0 0 24px',
+                    letterSpacing: '0.05em',
                 }}>
                     Scroll. Watch. Connect.
                 </h2>
 
                 <p style={{
                     fontFamily: 'DM Sans',
-                    fontSize: 'clamp(13px, 3vw, 16px)',
+                    fontSize: 'clamp(12px, 2.8vw, 15px)',
                     color: '#666',
                     lineHeight: 1.6,
-                    maxWidth: 700,
+                    maxWidth: '90%',
                     margin: '0 auto 40px',
                 }}>
                     JobReel bridges job seekers with employers, doctors with patients, teachers with students, lawyers with clients — and more. Show who you are in 60 seconds. No CVs. No forms. Just you.
@@ -49,21 +55,22 @@ export default function HeroSection() {
 
                 <div style={{
                     display: 'flex',
-                    flexDirection: 'column',
+                    flexDirection: 'column',   // ALWAYS column
                     alignItems: 'center',
-                    gap: 12,
-                    maxWidth: 400,
-                    margin: '0 auto',
+                    gap: 10,
+                    width: '100%',
+                    maxWidth: 360,
+                    margin: '20px auto 0',
                 }}>
                     <Link href="/auth/register" style={{
                         width: '100%',
-                        padding: 'clamp(12px, 3vw, 16px) clamp(20px, 4vw, 32px)',
+                        padding: '14px 20px',
                         background: '#FF0069',
                         color: '#fff',
                         borderRadius: 12,
                         fontFamily: 'Syne',
                         fontWeight: 700,
-                        fontSize: 'clamp(13px, 3vw, 16px)',
+                        fontSize: 'clamp(13px, 3vw, 15px)',
                         textDecoration: 'none',
                         transition: 'transform 0.2s',
                     }}>
@@ -72,14 +79,14 @@ export default function HeroSection() {
 
                     <Link href="/dashboard/upload-video" style={{
                         width: '100%',
-                        padding: 'clamp(12px, 3vw, 16px) clamp(20px, 4vw, 32px)',
+                        padding: '13px 20px',
                         background: '#fff',
                         color: '#0A0A0A',
                         border: '2px solid #0A0A0A',
                         borderRadius: 12,
                         fontFamily: 'Syne',
                         fontWeight: 700,
-                        fontSize: 'clamp(13px, 3vw, 16px)',
+                        fontSize: 'clamp(13px, 3vw, 15px)',
                         textDecoration: 'none',
                         transition: 'transform 0.2s',
                     }}>
@@ -88,8 +95,8 @@ export default function HeroSection() {
                 </div>
 
                 <p style={{
-                    marginTop: 20,
-                    fontSize: 12,
+                    marginTop: 10,
+                    fontSize: 'clamp(10px, 2.2vw, 12px)',
                     color: '#888',
                     fontFamily: 'DM Sans',
                     display: 'flex',
@@ -106,3 +113,4 @@ export default function HeroSection() {
         </section>
     );
 }
+

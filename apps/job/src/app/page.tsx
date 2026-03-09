@@ -86,12 +86,15 @@ export default function HomePage() {
                 </div>
             </nav>
 
-            <HeroSection />
-            <StatsSection />
-            <CategorySection onSelect={handleCategorySelect} />
-            <FeaturesSection />
-            <WhoIsThisFor />
-            <FinalCTA />
+            <main style={{ overflowX: 'hidden', width: '100%', background: '#fff' }}>
+                <HeroSection />
+                <StatsSection />
+                <CategorySection onSelect={handleCategorySelect} />
+                <FeaturesSection />
+                <WhoIsThisFor />
+                <FinalCTA />
+            </main>
+
 
 
             {/* Role Picker Sheet */}

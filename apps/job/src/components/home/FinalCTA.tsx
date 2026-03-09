@@ -8,16 +8,22 @@ export default function FinalCTA() {
 
     return (
         <section style={{
-            padding: 'clamp(48px, 10vw, 120px) clamp(16px, 4vw, 48px)',
+            width: '100%',
+            overflowX: 'hidden',
+            padding: 'clamp(32px, 6vw, 80px) clamp(16px, 4vw, 32px)',
             background: '#0A0A0A',
             textAlign: 'center',
             color: '#fff',
         }}>
-            <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            <div style={{
+                maxWidth: 480,
+                margin: '0 auto',
+                width: '100%',
+            }}>
                 <h2 style={{
                     fontFamily: 'Syne',
                     fontWeight: 900,
-                    fontSize: 'clamp(22px, 5.5vw, 48px)',
+                    fontSize: 'clamp(22px, 5.5vw, 36px)',
                     lineHeight: 1.1,
                     marginBottom: 20,
                 }}>
@@ -26,9 +32,9 @@ export default function FinalCTA() {
 
                 <p style={{
                     fontFamily: 'DM Sans',
-                    fontSize: 'clamp(14px, 3vw, 18px)',
+                    fontSize: 'clamp(12px, 2.8vw, 15px)',
                     color: '#aaa',
-                    maxWidth: 600,
+                    maxWidth: '90%',
                     margin: '0 auto 40px',
                     lineHeight: 1.6,
                 }}>
@@ -45,7 +51,7 @@ export default function FinalCTA() {
                     borderRadius: 16,
                     fontFamily: 'Syne',
                     fontWeight: 800,
-                    fontSize: 'clamp(14px, 3vw, 18px)',
+                    fontSize: 'clamp(14px, 3vw, 16px)',
                     textDecoration: 'none',
                     marginBottom: 20,
                     transition: 'transform 0.2s',
@@ -54,7 +60,7 @@ export default function FinalCTA() {
                 </Link>
 
                 <p style={{
-                    fontSize: 13,
+                    fontSize: 12,
                     color: '#666',
                     fontFamily: 'DM Sans',
                     margin: 0,
@@ -65,3 +71,4 @@ export default function FinalCTA() {
         </section>
     );
 }
+

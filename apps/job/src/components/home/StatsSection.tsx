@@ -12,55 +12,53 @@ const stats = [
 export default function StatsSection() {
     return (
         <section style={{
-            padding: 'clamp(40px, 8vw, 60px) clamp(16px, 4vw, 48px)',
+            width: '100%',
+            overflowX: 'hidden',
+            padding: 'clamp(32px, 6vw, 80px) clamp(16px, 4vw, 32px)',
             background: '#fff',
             borderBottom: '1px solid #f1f5f9',
         }}>
             <div style={{
-                maxWidth: 1000,
+                maxWidth: 480,
                 margin: '0 auto',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: 16,
-            }} className="md:grid-cols-4 lg:flex lg:justify-between lg:gap-32">
-                {stats.map((stat, i) => (
-                    <div key={i} style={{ textAlign: 'center' }}>
-                        <div style={{
-                            fontFamily: 'Syne',
-                            fontWeight: 900,
-                            fontSize: 'clamp(22px, 6vw, 48px)',
-                            color: '#FF0069',
-                            lineHeight: 1,
-                            marginBottom: 4,
+                width: '100%',
+            }}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 12,
+                    maxWidth: 340,
+                    margin: '0 auto',
+                }}>
+                    {stats.map((stat, i) => (
+                        <div key={i} style={{
+                            background: '#F8F8F8',
+                            border: '1px solid #E5E5E5',
+                            borderRadius: 12,
+                            padding: 'clamp(12px, 3vw, 20px)',
+                            textAlign: 'center',
                         }}>
-                            {stat.value}
+                            <div style={{
+                                fontFamily: 'Syne',
+                                fontWeight: 900,
+                                fontSize: 'clamp(18px, 5vw, 32px)',
+                                color: '#FF0069',
+                            }}>
+                                {stat.value}
+                            </div>
+                            <div style={{
+                                fontFamily: 'DM Sans',
+                                fontSize: 'clamp(10px, 2.2vw, 12px)',
+                                color: '#666',
+                                marginTop: 4,
+                            }}>
+                                {stat.label}
+                            </div>
                         </div>
-                        <div style={{
-                            fontFamily: 'DM Sans',
-                            fontWeight: 700,
-                            fontSize: 'clamp(11px, 2.5vw, 14px)',
-                            color: '#666',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                        }}>
-                            {stat.label.includes('FREE') ? (
-                                <>
-                                    {stat.label.split('FREE')[0]}
-                                    <span style={{ fontWeight: 900, fontStyle: 'italic', color: '#FF0069' }}>FREE</span>
-                                    {stat.label.split('FREE')[1]}
-                                </>
-                            ) : stat.label}
-                        </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
-            <style jsx>{`
-                @media (min-width: 768px) {
-                    div {
-                        grid-template-columns: repeat(4, 1fr);
-                    }
-                }
-            `}</style>
         </section>
     );
 }
+

@@ -30,41 +30,52 @@ export default function FeaturesSection() {
 
     return (
         <section style={{
-            padding: 'clamp(40px, 8vw, 96px) clamp(16px, 4vw, 48px)',
+            width: '100%',
+            overflowX: 'hidden',
+            padding: 'clamp(32px, 6vw, 80px) clamp(16px, 4vw, 32px)',
             background: '#fff',
         }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{
+                maxWidth: 560,
+                margin: '0 auto',
+                width: '100%',
+            }}>
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                    gap: 32,
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                    gap: 12,
+                    maxWidth: 560,
+                    margin: '0 auto',
                 }}>
                     {features.map((feature, i) => (
                         <div key={i} style={{
-                            padding: 32,
-                            borderRadius: 24,
-                            background: '#f8fafc',
-                            border: '1px solid #f1f5f9',
+                            background: '#F8F8F8',
+                            border: '1px solid #E5E5E5',
+                            borderRadius: 16,
+                            padding: 'clamp(14px, 3vw, 24px)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 8,
                         }}>
                             <div style={{
-                                fontSize: 40,
-                                marginBottom: 20,
+                                fontSize: 32,
+                                marginBottom: 16,
                             }}>
                                 {feature.emoji}
                             </div>
                             <h3 style={{
                                 fontFamily: 'Syne',
-                                fontWeight: 800,
-                                fontSize: 'clamp(15px, 3.5vw, 20px)',
+                                fontWeight: 700,
+                                fontSize: 'clamp(13px, 3vw, 16px)',
                                 color: '#0A0A0A',
-                                marginBottom: 12,
+                                marginBottom: 0,
                             }}>
                                 {feature.title}
                             </h3>
                             <p style={{
                                 fontFamily: 'DM Sans',
-                                fontSize: 'clamp(12px, 2.5vw, 15px)',
-                                color: '#666',
+                                fontSize: 'clamp(11px, 2.5vw, 13px)',
+                                color: '#555',
                                 lineHeight: 1.6,
                                 margin: 0,
                             }}>
@@ -82,3 +93,4 @@ export default function FeaturesSection() {
         </section>
     );
 }
+
