@@ -79,6 +79,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
         setActiveRole(role);
         setSheetOpen(false);
         setPendingCategory(null);
+        sessionStorage.removeItem('feed_last_index');
         onCategoryChange(); // signal VideoFeed to re-query and scroll to top
     };
 

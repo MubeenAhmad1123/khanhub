@@ -67,15 +67,6 @@ export default function UserProfilePage() {
                     return; // No need to fetch videos if user doesn't exist
                 }
 
-                // REAL-TIME FOLLOW STATUS
-                if (currentUser && id) {
-                    const followDocId = `${currentUser.uid}_${id}`;
-                    const unsubFollow = onSnapshot(doc(db, 'follows', followDocId), (snap) => {
-                        setIsFollowing(snap.exists());
-                    });
-                    return () => unsubFollow();
-                }
-
                 // Fetch videos in a separate try-catch so it doesn't wipe profile if index is missing
                 try {
                     // Try 1: approved + is_live
@@ -141,6 +132,7 @@ export default function UserProfilePage() {
         // currentUser from useAuth() is null during hydration.
         const auth = getAuth();
         let unsubscribeSnapshot: (() => void) | null = null;
+        let unsubFollow: (() => void) | null = null;
 
         const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
             // Clean up any previous snapshot listener
@@ -160,7 +152,13 @@ export default function UserProfilePage() {
             console.log('[Unlock Check] Auth ready. Buyer UID:', firebaseUser.uid);
             console.log('[Unlock Check] Target profile ID:', id);
 
-            // Now set up real-time listener on buyer's user doc
+            // 1. Follow Status Listener
+            const followDocId = `${firebaseUser.uid}_${id}`;
+            unsubFollow = onSnapshot(doc(db, 'follows', followDocId), (snap) => {
+                setIsFollowing(snap.exists());
+            });
+
+            // 2. Contact Unlock Listener
             unsubscribeSnapshot = onSnapshot(
                 doc(db, 'users', firebaseUser.uid),
                 (snap) => {
@@ -187,6 +185,7 @@ export default function UserProfilePage() {
         return () => {
             unsubscribeAuth();
             if (unsubscribeSnapshot) unsubscribeSnapshot();
+            if (unsubFollow) unsubFollow();
         };
     }, [id]);
 

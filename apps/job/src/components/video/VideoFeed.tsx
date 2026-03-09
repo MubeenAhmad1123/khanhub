@@ -19,7 +19,15 @@ export function VideoFeed() {
     const { activeCategory, activeRole } = useCategory();
     const { user, loading } = useAuth();
     const router = useRouter();
-    const [activeIndex, setActiveIndex] = useState(0);
+    const [activeIndex, setActiveIndex] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = sessionStorage.getItem('feed_last_index');
+            if (saved !== null && !isNaN(Number(saved))) {
+                return Number(saved);
+            }
+        }
+        return 0;
+    });
     const [activeTab, setActiveTab] = useState(0);
     const [showGuestWall, setShowGuestWall] = useState(false);
     const [showStoriesBar, setShowStoriesBar] = useState(true);
@@ -29,6 +37,16 @@ export function VideoFeed() {
     const watchedIndices = useRef<Set<number>>(new Set());
     const touchStartX = useRef<number>(0);
     const touchStartY = useRef<number>(0);
+    const restoredIndexRef = useRef<number | null>(null);
+
+    // Initial restore from sessionStorage
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const saved = sessionStorage.getItem('feed_last_index');
+        if (saved !== null && !isNaN(Number(saved))) {
+            restoredIndexRef.current = Number(saved);
+        }
+    }, []);
 
     // ── Real Firestore videos ─────────────────────────────────────
     const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
@@ -133,6 +151,7 @@ export function VideoFeed() {
                         if (index !== -1 && !watchedIndices.current.has(index)) {
                             watchedIndices.current.add(index);
                             setActiveIndex(index);
+                            sessionStorage.setItem('feed_last_index', String(index));
 
                             const current = parseInt(localStorage.getItem('jobreel_videos_watched') || '0');
                             const newCount = current + 1;
@@ -169,6 +188,7 @@ export function VideoFeed() {
                         const index = reelRefs.current.findIndex(ref => ref === entry.target);
                         if (index !== -1) {
                             setActiveIndex(index);
+                            sessionStorage.setItem('feed_last_index', String(index));
                             const targetVideo = videos[index];
                             if (targetVideo) countView(targetVideo.id);
                         }
@@ -201,11 +221,29 @@ export function VideoFeed() {
         watchedIndices.current = new Set();
     }, [videos.length]);
 
+    // ── Restore scroll position on mount ──────────────────────────
+    useEffect(() => {
+        if (!videos.length) return;
+        if (restoredIndexRef.current === null || restoredIndexRef.current === 0) return;
+
+        const index = Math.min(restoredIndexRef.current, videos.length - 1);
+        restoredIndexRef.current = null; // only restore once
+
+        // Small delay to ensure DOM is rendered
+        setTimeout(() => {
+            if (containerRef.current) {
+                containerRef.current.scrollTop = index * window.innerHeight;
+                setActiveIndex(index);
+            }
+        }, 50);
+    }, [videos]);
+
     // Scroll to specific index programmatically
     const scrollToIndex = (index: number) => {
         if (index < 0 || index >= videos.length) return;
         reelRefs.current[index]?.scrollIntoView({ behavior: 'smooth' });
         setActiveIndex(index);
+        sessionStorage.setItem('feed_last_index', String(index));
     };
 
     // Keyboard arrow keys — desktop navigation
@@ -328,6 +366,7 @@ export function VideoFeed() {
                     {videos.map((video, index) => (
                         <div
                             key={video.id}
+                            data-index={index}
                             ref={(el) => { reelRefs.current[index] = el; }}
                             onTouchStart={handleTouchStart}
                             onTouchEnd={(e) => handleTouchEnd(e, video)}

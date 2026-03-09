@@ -27,7 +27,10 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
             {tabs.map((tab, i) => (
                 <button
                     key={tab}
-                    onClick={() => onChange(i)}
+                    onClick={() => {
+                        sessionStorage.removeItem('feed_last_index');
+                        onChange(i);
+                    }}
                     style={{
                         background: 'none',
                         border: 'none',

@@ -118,10 +118,8 @@ service cloud.firestore {
     // ✅ NEW — follows (followerId_followingId)
     match /follows/{followId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (
-        (request.method == 'create' && request.auth.uid == request.resource.data.followerId) ||
-        (request.method == 'delete' && request.auth.uid == resource.data.followerId)
-      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.followerId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.followerId;
     }
   }
 }
