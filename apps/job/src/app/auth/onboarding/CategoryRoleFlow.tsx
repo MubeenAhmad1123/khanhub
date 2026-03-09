@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
@@ -20,15 +20,44 @@ const CATEGORIES = [
     { key: 'it', label: 'IT & Tech', image: '/tech.webp', accent: '#00E5FF' },
 ];
 
-const CATEGORY_ROLES: Record<string, { providerLabel: string; seekerLabel: string; providerKey: string; seekerKey: string; providerDesc: string; seekerDesc: string }> = {
-    jobs: { providerKey: 'job_seeker', providerLabel: 'Job Seeker', seekerKey: 'employer', seekerLabel: 'Employer / HR', seekerDesc: 'I am looking to hire talent', providerDesc: 'I am looking for a job' },
-    healthcare: { providerKey: 'doctor', providerLabel: 'Doctor / Specialist', seekerKey: 'patient', seekerLabel: 'Patient', providerDesc: 'I provide medical services', seekerDesc: 'I am looking for medical help' },
-    education: { providerKey: 'teacher', providerLabel: 'Teacher / Tutor', seekerKey: 'student', seekerLabel: 'Student / Parent', providerDesc: 'I want to teach students', seekerDesc: 'I am looking for a tutor' },
-    marriage: { providerKey: 'presenting', providerLabel: 'Presenting Profile', seekerKey: 'looking', seekerLabel: 'Looking to Marry', providerDesc: 'I am introducing someone', seekerDesc: 'I am looking for a partner' },
-    domestic: { providerKey: 'helper', providerLabel: 'Domestic Helper', seekerKey: 'household', seekerLabel: 'Household / Family', providerDesc: 'I provide domestic services', seekerDesc: 'I need help at home' },
-    legal: { providerKey: 'lawyer', providerLabel: 'Lawyer / Advocate', seekerKey: 'client', seekerLabel: 'Looking for Legal Help', providerDesc: 'I provide legal counsel', seekerDesc: 'I need legal advice' },
-    realestate: { providerKey: 'agent', providerLabel: 'Real Estate Agent', seekerKey: 'buyer', seekerLabel: 'Buyer / Renter', providerDesc: 'I help people find property', seekerDesc: 'I am looking to buy or rent' },
-    it: { providerKey: 'freelancer', providerLabel: 'IT Freelancer', seekerKey: 'client', seekerLabel: 'Looking to Hire', providerDesc: 'I provide tech services', seekerDesc: 'I need a tech expert' },
+const CATEGORY_ROLES: Record<string, {
+    providerLabel: string; seekerLabel: string;
+    providerKey: string; seekerKey: string;
+    providerDesc: string; seekerDesc: string;
+    providerIcon: string; seekerIcon: string;
+}> = {
+    jobs: {
+        providerKey: 'job_seeker', providerLabel: 'Job Seeker', providerDesc: 'I am looking for a job', providerIcon: '👤',
+        seekerKey: 'employer', seekerLabel: 'Employer / HR', seekerDesc: 'I want to hire talent', seekerIcon: '🏢'
+    },
+    healthcare: {
+        providerKey: 'doctor', providerLabel: 'Doctor / Specialist', providerDesc: 'I provide medical services', providerIcon: '👨‍⚕️',
+        seekerKey: 'patient', seekerLabel: 'Patient', seekerDesc: 'I am looking for a doctor', seekerIcon: '🙋'
+    },
+    education: {
+        providerKey: 'teacher', providerLabel: 'Teacher / Tutor', providerDesc: 'I want to teach students', providerIcon: '👨‍🏫',
+        seekerKey: 'student', seekerLabel: 'Student / Parent', seekerDesc: 'I am looking for a tutor', seekerIcon: '📚'
+    },
+    marriage: {
+        providerKey: 'presenting', providerLabel: 'Presenting Profile', providerDesc: 'I am introducing someone', providerIcon: '💐',
+        seekerKey: 'looking', seekerLabel: 'Looking to Marry', seekerDesc: 'I am looking for a partner', seekerIcon: '🔍'
+    },
+    domestic: {
+        providerKey: 'helper', providerLabel: 'Domestic Helper', providerDesc: 'I provide domestic services', providerIcon: '🧹',
+        seekerKey: 'household', seekerLabel: 'Household / Family', seekerDesc: 'I need help at home', seekerIcon: '🏡'
+    },
+    legal: {
+        providerKey: 'lawyer', providerLabel: 'Lawyer / Advocate', providerDesc: 'I provide legal counsel', providerIcon: '👨‍⚖️',
+        seekerKey: 'client', seekerLabel: 'Looking for Legal Help', seekerDesc: 'I need legal advice', seekerIcon: '🙋'
+    },
+    realestate: {
+        providerKey: 'agent', providerLabel: 'Real Estate Agent', providerDesc: 'I help people find property', providerIcon: '🏢',
+        seekerKey: 'buyer', seekerLabel: 'Buyer / Renter', seekerDesc: 'I am looking to buy or rent', seekerIcon: '🔍'
+    },
+    it: {
+        providerKey: 'freelancer', providerLabel: 'IT Freelancer', providerDesc: 'I provide tech services', providerIcon: '💻',
+        seekerKey: 'client', seekerLabel: 'Looking to Hire', seekerDesc: 'I need a tech expert', seekerIcon: '🏢'
+    },
 };
 
 const ROLE_FIELDS: Record<string, Record<string, { label: string; placeholder: string; key: string; type?: string; icon: any }[]>> = {
@@ -38,7 +67,7 @@ const ROLE_FIELDS: Record<string, Record<string, { label: string; placeholder: s
             { key: 'companyLocation', label: 'City / Location', placeholder: 'e.g. Lahore', icon: MapPin },
             { key: 'hrPhone', label: 'HR Phone Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
         ],
-        jobseeker: [
+        job_seeker: [
             { key: 'desiredJobTitle', label: 'Desired Job Title', placeholder: 'e.g. Software Engineer', icon: User },
             { key: 'city', label: 'Your City', placeholder: 'e.g. Karachi', icon: MapPin },
             { key: 'totalExperience', label: 'Years of Experience', placeholder: 'e.g. 3', type: 'number', icon: Building2 },
@@ -122,60 +151,31 @@ export default function CategoryRoleFlow() {
     const { user } = useAuth();
     const { setCategory, setRole: setContextRole } = useCategory();
 
-    const mode = searchParams.get('mode');
     const initialCat = searchParams.get('cat') as CategoryKey | null;
 
     const [step, setStep] = useState(initialCat ? 2 : 1);
     const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(initialCat);
     const [selectedRole, setSelectedRole] = useState<'provider' | 'seeker' | null>(null);
     const [formFields, setFormFields] = useState<Record<string, string>>({});
-    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-    // Effect to handle role locking
-    useEffect(() => {
-        if (user && user.role) {
-            // Map Firestore role to UI role
-            const mappedRole: 'provider' | 'seeker' | null =
-                user.role === 'job_seeker' ? 'provider' :
-                    user.role === 'employer' ? 'seeker' : null;
-
-            if (mappedRole) {
-                setSelectedRole(mappedRole);
-                // If we're on step 2 and the role is already chosen, skip to step 3
-                if (step === 2) {
-                    setStep(3);
-                }
-            }
-        }
-    }, [user, step]);
-
-    const accent = selectedCategory ? CATEGORY_CONFIG[selectedCategory].accent : '#FF0069';
+    const accent = selectedCategory ? (CATEGORY_CONFIG[selectedCategory]?.accent || '#FF0069') : '#FF0069';
 
     const handleCategorySelect = (cat: CategoryKey) => {
         setSelectedCategory(cat);
-        // If user has a role already, go straight to Step 3, otherwise Step 2
-        if (user && user.role) {
-            // Ensure Employers are 'seeker' and Job Seekers are 'provider'
-            const mappedRole = user.role === 'job_seeker' ? 'provider' : 'seeker';
-            const roles = CATEGORY_ROLES[cat];
-            const roleKey = mappedRole === 'provider' ? roles.providerKey : roles.seekerKey;
-            const fields = ROLE_FIELDS[cat][roleKey];
-            const initialFields: Record<string, string> = {};
-            fields.forEach(f => initialFields[f.key] = '');
-            setFormFields(initialFields);
-            setStep(3);
-        } else {
-            setStep(2);
-        }
+        setSelectedRole(null); // ← reset role when category changes
+        setFormFields({});
+        setStep(2);
     };
 
+    // ── FIXED: No role locking. User can always freely select any role. ──
     const handleRoleSelect = (role: 'provider' | 'seeker') => {
-        if (user && user.role) return; // Prevent changing if already set
         setSelectedRole(role);
-        // Initialize form fields for the role
-        const fields = ROLE_FIELDS[selectedCategory!][CATEGORY_ROLES[selectedCategory!][role === 'provider' ? 'providerKey' : 'seekerKey']];
+        const roles = CATEGORY_ROLES[selectedCategory!];
+        const roleKey = role === 'provider' ? roles.providerKey : roles.seekerKey;
+        const fields = ROLE_FIELDS[selectedCategory!]?.[roleKey] || [];
         const initialFields: Record<string, string> = {};
-        fields.forEach(f => initialFields[f.key] = '');
+        fields.forEach(f => { initialFields[f.key] = ''; });
         setFormFields(initialFields);
     };
 
@@ -184,7 +184,6 @@ export default function CategoryRoleFlow() {
     };
 
     const handleSave = async () => {
-        // Save to LocalStorage first (works for both guest and logged-in)
         if (selectedCategory) {
             localStorage.setItem('jobreel_active_category', selectedCategory);
             setCategory(selectedCategory);
@@ -195,141 +194,273 @@ export default function CategoryRoleFlow() {
         }
 
         if (user) {
-            setLoading(true);
+            setSaving(true);
             try {
                 const roles = CATEGORY_ROLES[selectedCategory!];
                 const roleKey = selectedRole === 'provider' ? roles.providerKey : roles.seekerKey;
 
                 const updates: any = {
                     category: selectedCategory,
-                    role: roleKey,      // System role ('job_seeker' / 'employer')
-                    uiRole: selectedRole, // UI context ('provider' / 'seeker')
-                    roleKey: roleKey,     // Specific key
+                    role: roleKey,
+                    uiRole: selectedRole,
+                    roleKey: roleKey,
                     onboardingCompleted: true,
                     updatedAt: new Date(),
                 };
 
-                // Add form fields to updates, but only if they are not empty
                 Object.entries(formFields).forEach(([key, value]) => {
-                    if (value) {
-                        updates[key] = value;
-                    }
+                    if (value) updates[key] = value;
                 });
 
                 await updateDoc(doc(db, 'users', user.uid), updates);
+
+                // Update localStorage for feed filtering
+                localStorage.setItem('jobreel_guest_prefs', JSON.stringify({
+                    category: selectedCategory,
+                    role: roleKey,
+                    uiRole: selectedRole,
+                    selectedAt: Date.now(),
+                }));
+
+                sessionStorage.removeItem('feed_last_index');
             } catch (err) {
                 console.error('Error updating profile:', err);
-                setLoading(false);
-                return; // Don't redirect on error
+                setSaving(false);
+                return;
             } finally {
-                setLoading(false); // Ensure loading state is reset after Firestore operation
+                setSaving(false);
             }
         }
 
         router.push('/feed');
     };
 
+    // ── STEP 1: Category Grid ──────────────────────────────────────────
     const renderStep1 = () => (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-2xl font-black text-slate-900 text-center mb-8 uppercase italic">Choose Your Industry</h2>
-            <div className="grid grid-cols-2 gap-4">
+        <div>
+            <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 24 }}>
+                Choose Your Industry
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {CATEGORIES.map((cat) => (
                     <button
                         key={cat.key}
                         onClick={() => handleCategorySelect(cat.key as CategoryKey)}
-                        className="flex flex-col items-center gap-3 p-4 bg-white border border-slate-100 rounded-3xl hover:border-slate-300 transition-all shadow-sm"
+                        style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center',
+                            gap: 10, padding: 16,
+                            background: '#fff',
+                            border: `1.5px solid #E5E5E5`,
+                            borderRadius: 20, cursor: 'pointer',
+                            transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = cat.accent)}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
                     >
-                        <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md">
-                            <img src={cat.image} alt={cat.label} className="w-full h-full object-cover" />
+                        <div style={{
+                            width: 72, height: 72, borderRadius: '50%', overflow: 'hidden',
+                            border: `2.5px solid ${cat.accent}`,
+                            boxShadow: `0 0 0 3px ${cat.accent}22`,
+                            flexShrink: 0,
+                        }}>
+                            <img src={cat.image} alt={cat.label}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
-                        <span className="font-bold text-slate-800 text-sm uppercase tracking-tight">{cat.label}</span>
+                        <span style={{
+                            fontFamily: 'DM Sans', fontWeight: 700,
+                            fontSize: 13, color: '#0A0A0A', textAlign: 'center',
+                        }}>
+                            {cat.label}
+                        </span>
                     </button>
                 ))}
             </div>
         </div>
     );
 
+    // ── STEP 2: Role Selection ─────────────────────────────────────────
     const renderStep2 = () => {
         const roles = CATEGORY_ROLES[selectedCategory!];
+        if (!roles) return null;
+
         return (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <button onClick={() => setStep(1)} className="mb-6 flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors">
-                    <ArrowLeft size={18} /> Back to Industries
+            <div>
+                <button
+                    onClick={() => { setStep(1); setSelectedRole(null); }}
+                    style={{ background: 'none', border: 'none', color: '#888', fontFamily: 'DM Sans', fontSize: 13, cursor: 'pointer', marginBottom: 16, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                    <ArrowLeft size={16} /> Back
                 </button>
-                <h2 className="text-2xl font-black text-slate-900 text-center mb-8 uppercase italic">Who are you?</h2>
-                <div className="flex flex-col gap-4">
+                <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 6 }}>
+                    Who are you?
+                </h2>
+                <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#888', textAlign: 'center', marginBottom: 24 }}>
+                    Select your role in {CATEGORIES.find(c => c.key === selectedCategory)?.label}
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* Provider role */}
                     <button
                         onClick={() => handleRoleSelect('provider')}
-                        disabled={!!(user && user.role && user.role !== 'job_seeker')}
-                        className={`p-6 rounded-3xl text-left border-2 transition-all ${selectedRole === 'provider' ? 'bg-white shadow-xl' : 'bg-slate-50 border-transparent'} ${(user && user.role && user.role !== 'job_seeker') ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
-                        style={{ borderColor: selectedRole === 'provider' ? accent : 'transparent' }}
+                        style={{
+                            padding: '20px 20px',
+                            borderRadius: 16,
+                            textAlign: 'left',
+                            border: selectedRole === 'provider'
+                                ? `2px solid ${accent}`
+                                : '2px solid #E5E5E5',
+                            background: selectedRole === 'provider' ? `${accent}08` : '#fff',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', gap: 14,
+                        }}
                     >
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="font-black text-lg uppercase italic text-slate-900">{roles.providerLabel}</span>
-                            {selectedRole === 'provider' && <div className="w-6 h-6 rounded-full flex items-center justify-center text-white" style={{ background: accent }}><Check size={14} /></div>}
+                        <span style={{ fontSize: 32, lineHeight: 1 }}>{roles.providerIcon}</span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#0A0A0A', marginBottom: 3 }}>
+                                {roles.providerLabel}
+                            </div>
+                            <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#666' }}>
+                                {roles.providerDesc}
+                            </div>
                         </div>
-                        <p className="text-slate-500 text-sm font-medium">{roles.providerDesc}</p>
+                        {selectedRole === 'provider' && (
+                            <div style={{
+                                width: 24, height: 24, borderRadius: '50%',
+                                background: accent, display: 'flex',
+                                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                            }}>
+                                <Check size={14} color="#fff" />
+                            </div>
+                        )}
                     </button>
 
+                    {/* Seeker role */}
                     <button
                         onClick={() => handleRoleSelect('seeker')}
-                        disabled={!!(user && user.role && user.role !== 'employer')}
-                        className={`p-6 rounded-3xl text-left border-2 transition-all ${selectedRole === 'seeker' ? 'bg-white shadow-xl' : 'bg-slate-50 border-transparent'} ${(user && user.role && user.role !== 'employer') ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
-                        style={{ borderColor: selectedRole === 'seeker' ? accent : 'transparent' }}
+                        style={{
+                            padding: '20px 20px',
+                            borderRadius: 16,
+                            textAlign: 'left',
+                            border: selectedRole === 'seeker'
+                                ? `2px solid ${accent}`
+                                : '2px solid #E5E5E5',
+                            background: selectedRole === 'seeker' ? `${accent}08` : '#fff',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', gap: 14,
+                        }}
                     >
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="font-black text-lg uppercase italic text-slate-900">{roles.seekerLabel}</span>
-                            {selectedRole === 'seeker' && <div className="w-6 h-6 rounded-full flex items-center justify-center text-white" style={{ background: accent }}><Check size={14} /></div>}
+                        <span style={{ fontSize: 32, lineHeight: 1 }}>{roles.seekerIcon}</span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#0A0A0A', marginBottom: 3 }}>
+                                {roles.seekerLabel}
+                            </div>
+                            <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#666' }}>
+                                {roles.seekerDesc}
+                            </div>
                         </div>
-                        <p className="text-slate-500 text-sm font-medium">{roles.seekerDesc}</p>
+                        {selectedRole === 'seeker' && (
+                            <div style={{
+                                width: 24, height: 24, borderRadius: '50%',
+                                background: accent, display: 'flex',
+                                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                            }}>
+                                <Check size={14} color="#fff" />
+                            </div>
+                        )}
                     </button>
                 </div>
 
                 <button
-                    onClick={() => setStep(3)}
+                    onClick={() => selectedRole && setStep(3)}
                     disabled={!selectedRole}
-                    className="w-full mt-8 py-5 rounded-[2rem] font-black uppercase italic tracking-wider text-white shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                    style={{ background: accent, boxShadow: `0 8px 24px ${accent}44` }}
+                    style={{
+                        width: '100%', marginTop: 24, padding: '15px',
+                        background: selectedRole ? accent : '#E5E5E5',
+                        color: selectedRole ? '#fff' : '#aaa',
+                        border: 'none', borderRadius: 14,
+                        fontFamily: 'Syne', fontWeight: 800,
+                        fontSize: 15, cursor: selectedRole ? 'pointer' : 'not-allowed',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        transition: 'all 0.2s',
+                        boxShadow: selectedRole ? `0 6px 20px ${accent}44` : 'none',
+                    }}
                 >
-                    <span>Continue</span>
-                    <ArrowRight size={20} />
+                    Continue <ArrowRight size={18} />
                 </button>
             </div>
         );
     };
 
+    // ── STEP 3: Quick Info Fields ──────────────────────────────────────
     const renderStep3 = () => {
         const roles = CATEGORY_ROLES[selectedCategory!];
+        if (!roles) return null;
         const roleKey = selectedRole === 'provider' ? roles.providerKey : roles.seekerKey;
-        const fields = ROLE_FIELDS[selectedCategory!][roleKey];
+        const fields = ROLE_FIELDS[selectedCategory!]?.[roleKey] || [];
 
         return (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <button onClick={() => setStep(2)} className="mb-6 flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors">
-                    <ArrowLeft size={18} /> Back to Roles
+            <div>
+                <button
+                    onClick={() => setStep(2)}
+                    style={{ background: 'none', border: 'none', color: '#888', fontFamily: 'DM Sans', fontSize: 13, cursor: 'pointer', marginBottom: 16, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                    <ArrowLeft size={16} /> Back
                 </button>
-                <h2 className="text-2xl font-black text-slate-900 text-center mb-2 uppercase italic">A bit about you</h2>
-                <p className="text-slate-500 text-center mb-8 font-medium">This helps people connect with you</p>
+                <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: '#0A0A0A', marginBottom: 4 }}>
+                    A bit about you
+                </h2>
+                <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#888', marginBottom: 24 }}>
+                    This helps people connect with you
+                </p>
 
-                <div className="space-y-4">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {fields.map((f) => {
                         const Icon = f.icon;
                         return (
-                            <div key={f.key} className="space-y-1.5">
-                                <label className="text-[10px] uppercase font-black tracking-widest text-slate-400 ml-4">{f.label}</label>
-                                <div className="relative group">
-                                    <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors">
-                                        <Icon size={18} />
+                            <div key={f.key}>
+                                {/* Bold visible label */}
+                                <label style={{
+                                    display: 'block',
+                                    fontFamily: 'DM Sans',
+                                    fontWeight: 700,
+                                    fontSize: 13,
+                                    color: '#0A0A0A',
+                                    marginBottom: 8,
+                                }}>
+                                    {f.label}
+                                </label>
+                                {/* Input with black border, white bg, black text */}
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{
+                                        position: 'absolute', left: 14, top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        color: '#999', pointerEvents: 'none',
+                                    }}>
+                                        <Icon size={16} />
                                     </div>
                                     <input
                                         type={f.type || 'text'}
                                         placeholder={f.placeholder}
                                         value={formFields[f.key] || ''}
                                         onChange={(e) => handleFieldChange(f.key, e.target.value)}
-                                        className="w-full bg-slate-50 border-2 border-transparent rounded-[1.5rem] py-4 pl-14 pr-6 font-bold text-slate-900 focus:bg-white focus:outline-none transition-all placeholder:text-slate-300"
-                                        style={{ borderColor: 'transparent' }}
-                                        onFocus={(e) => e.target.style.borderColor = accent}
-                                        onBlur={(e) => e.target.style.borderColor = 'transparent'}
+                                        style={{
+                                            width: '100%',
+                                            padding: '13px 14px 13px 40px',
+                                            background: '#fff',
+                                            border: '2px solid #0A0A0A',
+                                            borderRadius: 12,
+                                            fontFamily: 'DM Sans',
+                                            fontWeight: 500,
+                                            fontSize: 15,
+                                            color: '#0A0A0A',
+                                            outline: 'none',
+                                            boxSizing: 'border-box',
+                                            transition: 'border-color 0.15s',
+                                        }}
+                                        onFocus={(e) => { e.target.style.borderColor = accent; e.target.style.boxShadow = `0 0 0 3px ${accent}22`; }}
+                                        onBlur={(e) => { e.target.style.borderColor = '#0A0A0A'; e.target.style.boxShadow = 'none'; }}
                                     />
                                 </div>
                             </div>
@@ -339,32 +470,45 @@ export default function CategoryRoleFlow() {
 
                 <button
                     onClick={handleSave}
-                    disabled={loading || Object.values(formFields).some(v => !v)}
-                    className="w-full mt-10 py-5 rounded-[2rem] font-black uppercase italic tracking-wider text-white shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                    style={{ background: accent, boxShadow: `0 8px 24px ${accent}44` }}
+                    disabled={saving}
+                    style={{
+                        width: '100%', marginTop: 28,
+                        padding: '15px',
+                        background: accent,
+                        color: '#fff', border: 'none', borderRadius: 14,
+                        fontFamily: 'Syne', fontWeight: 800,
+                        fontSize: 15, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        boxShadow: `0 6px 20px ${accent}44`,
+                        opacity: saving ? 0.7 : 1,
+                    }}
                 >
-                    <span>{loading ? 'Saving...' : 'Save & Continue'}</span>
-                    {!loading && <Check size={20} />}
+                    {saving ? (
+                        <>
+                            <div style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                            Saving...
+                        </>
+                    ) : (
+                        <>Save & Go to Feed <Check size={18} /></>
+                    )}
                 </button>
+
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
     };
 
     return (
-        <div className="w-full max-w-md mx-auto">
-            {/* Progress Bar */}
-            <div className="flex gap-2 justify-center mb-10">
+        <div style={{ width: '100%', maxWidth: 440, margin: '0 auto' }}>
+            {/* Progress dots */}
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 28 }}>
                 {[1, 2, 3].map((s) => (
-                    <div
-                        key={s}
-                        style={{
-                            width: step === s ? 32 : 10,
-                            height: 10,
-                            borderRadius: 99,
-                            background: step >= s ? accent : '#F1F5F9',
-                            transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                        }}
-                    />
+                    <div key={s} style={{
+                        width: step === s ? 28 : 8,
+                        height: 8, borderRadius: 99,
+                        background: step >= s ? accent : '#E5E5E5',
+                        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    }} />
                 ))}
             </div>
 
