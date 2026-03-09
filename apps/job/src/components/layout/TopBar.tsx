@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Search, Bell, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCategory } from '@/context/CategoryContext';
 import { CATEGORY_CONFIG, CategoryKey, CategoryConfig } from '@/lib/categories';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +12,7 @@ import Image from 'next/image';
 
 export function TopBar() {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
+    const router = useRouter();
     const [showSwitcher, setShowSwitcher] = useState(false);
 
     return (
@@ -55,14 +57,14 @@ export function TopBar() {
                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute top-full left-0 mt-2 w-64 bg-[--bg-secondary] border border-[--border] rounded-2xl shadow-2xl p-2 grid grid-cols-1 gap-1 z-50"
+                                        className="absolute top-full left-0 mt-2 w-64 bg-white border border-[#E5E5E5] rounded-2xl shadow-2xl p-2 grid grid-cols-1 gap-1 z-50"
                                     >
                                         {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
                                             <button
                                                 key={key}
                                                 onClick={() => {
-                                                    setCategory(key);
                                                     setShowSwitcher(false);
+                                                    router.push(`/auth/onboarding?mode=change&cat=${key}`);
                                                 }}
                                                 className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all ${activeCategory === key
                                                     ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'

@@ -125,7 +125,7 @@ export function useAuth() {
                 isActive: true,
                 isFeatured: false,
                 isBanned: false,
-                onboardingCompleted: true, // Email path collects everything, so it's completed immediately
+                onboardingCompleted: false, // New users must go through the Category/Role flow
                 registrationMethod: 'email',
                 createdAt: new Date(),
                 updatedAt: new Date(),

@@ -25,15 +25,13 @@ export default function RegisterPage() {
             const userDoc = await getDoc(userRef);
 
             if (!userDoc.exists()) {
-                // New user - create profile with guest prefs
-                const guestPrefs = JSON.parse(localStorage.getItem('jobreel_guest_prefs') || '{}');
+                // New user - create profile, onboarding will handle the rest
                 await setDoc(userRef, {
                     uid: user.uid,
                     name: user.displayName,
                     email: user.email,
                     photoURL: user.photoURL,
-                    category: guestPrefs.category || 'jobs',
-                    role: guestPrefs.role || 'provider',
+                    onboardingCompleted: false,
                     createdAt: serverTimestamp(),
                     savedVideos: [],
                     bio: '',
@@ -41,12 +39,8 @@ export default function RegisterPage() {
                     experience: [],
                     education: [],
                 });
-
-                if (guestPrefs.category) {
-                    localStorage.setItem('jobreel_active_category', guestPrefs.category);
-                }
             } else {
-                // Already registered, just update local storage and redirect
+                // Already registered
                 const data = userDoc.data();
                 if (data.category) {
                     localStorage.setItem('jobreel_active_category', data.category);
@@ -56,7 +50,12 @@ export default function RegisterPage() {
             localStorage.removeItem('jobreel_videos_watched');
             localStorage.setItem('jobreel_registered', 'true');
 
-            router.push('/feed');
+            // Redirect based on onboarding status
+            if (!userDoc.exists()) {
+                router.push('/auth/onboarding');
+            } else {
+                router.push('/feed');
+            }
         } catch (error) {
             console.error('Registration error:', error);
         } finally {

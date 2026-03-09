@@ -137,10 +137,7 @@ export default function ProfilePage() {
                     Edit Profile
                 </button>
                 <button
-                    onClick={() => {
-                        localStorage.removeItem('jobreel_guest_prefs')
-                        router.push('/')
-                    }}
+                    onClick={() => router.push('/auth/onboarding?mode=change')}
                     style={{
                         background: 'none', border: 'none',
                         color: '#888', fontSize: 12,
