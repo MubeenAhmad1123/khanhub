@@ -20,6 +20,13 @@ const HOMEPAGE_CATEGORIES = [
     { key: 'realestate', label: 'Real Estate', emoji: '🏗️', image: 'real-estate.webp', tagline: 'Agents & buyers', accent: '#7638FA' },
 ];
 
+import HeroSection from '@/components/home/HeroSection';
+import StatsSection from '@/components/home/StatsSection';
+import CategorySection from '@/components/home/CategorySection';
+import FeaturesSection from '@/components/home/FeaturesSection';
+import WhoIsThisFor from '@/components/home/WhoIsThisFor';
+import FinalCTA from '@/components/home/FinalCTA';
+
 export default function HomePage() {
     const { setCategory, setRole } = useCategory();
     const [selectedCat, setSelectedCat] = useState<any>(null);
@@ -52,7 +59,7 @@ export default function HomePage() {
                 category: selectedCat.key,
                 role: role,
                 updatedAt: serverTimestamp(),
-            }).catch(() => {});
+            }).catch(() => { });
         }
 
         setShowRolePicker(false);
@@ -60,9 +67,10 @@ export default function HomePage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans overflow-x-hidden">
+        <div style={{ overflowX: 'hidden', width: '100%' }} className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans">
+
             {/* Navbar */}
-            <nav className="flex items-center justify-between px-6 py-6 max-w-7xl mx-auto w-full">
+            <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full relative z-50">
                 <div className="flex items-center gap-2">
                     <span className="font-syne font-black text-2xl tracking-tighter italic">
                         <span className="text-[#FF0069]">JOB</span><span className="text-[#0A0A0A]">REEL</span>
@@ -78,77 +86,13 @@ export default function HomePage() {
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <header className="px-6 pt-12 pb-16 max-w-7xl mx-auto w-full flex flex-col items-center text-center">
-                <div style={{ textAlign: 'center', maxWidth: 480, margin: '0 auto 40px' }}>
-                    <h1 style={{
-                        fontFamily: 'Syne',
-                        fontWeight: 900,
-                        fontSize: 'clamp(28px, 5vw, 48px)',
-                        color: '#0A0A0A',
-                        lineHeight: 1.15,
-                        letterSpacing: '-0.02em',
-                        margin: '0 0 12px',
-                    }}>
-                        Find Your<br />
-                        <span style={{ color: '#FF0069', fontStyle: 'italic' }}>Perfect Match.</span>
-                    </h1>
-                    <p style={{
-                        color: '#888',
-                        fontFamily: 'DM Sans',
-                        fontSize: 15,
-                        margin: 0,
-                        lineHeight: 1.6,
-                    }}>
-                        Select your industry to get started
-                    </p>
-                </div>
-            </header>
+            <HeroSection />
+            <StatsSection />
+            <CategorySection onSelect={handleCategorySelect} />
+            <FeaturesSection />
+            <WhoIsThisFor />
+            <FinalCTA />
 
-            {/* Category Grid */}
-            <main className="px-6 pb-24 max-w-7xl mx-auto w-full flex flex-col items-center">
-                <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24,
-                    width: '100%', maxWidth: 800,
-                }} className="category-grid">
-                    {HOMEPAGE_CATEGORIES.map((cat) => (
-                        <div
-                            key={cat.key}
-                            onClick={() => handleCategorySelect(cat)}
-                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-                        >
-                            <div style={{
-                                width: 'clamp(70px, 10vw, 100px)', height: 'clamp(70px, 10vw, 100px)',
-                                borderRadius: '50%', overflow: 'hidden',
-                                border: `2px solid #E5E5E5`,
-                                transition: 'border-color 0.3s, box-shadow 0.3s, transform 0.2s',
-                                position: 'relative', flexShrink: 0,
-                            }}
-                                className={`cat-circle ${selectedCat?.key === cat.key ? 'selected' : ''}`}
-                            >
-                                <img
-                                    src={`/${cat.image}`} alt={cat.label}
-                                    style={{
-                                        width: '100%', height: '100%', objectFit: 'cover',
-                                        filter: selectedCat?.key === cat.key ? 'brightness(0.7)' : 'brightness(0.8)',
-                                        transition: 'filter 0.3s, transform 0.4s',
-                                    }}
-                                />
-                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
-                                    {cat.emoji}
-                                </div>
-                            </div>
-                            <span style={{
-                                fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12,
-                                color: selectedCat?.key === cat.key ? cat.accent : '#888',
-                                textAlign: 'center', transition: 'color 0.3s', lineHeight: 1.2,
-                            }}>
-                                {cat.label}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </main>
 
             {/* Role Picker Sheet */}
             <AnimatePresence>
@@ -251,6 +195,18 @@ export default function HomePage() {
                 }
                 .cat-circle:hover img {
                     filter: brightness(0.8) !important;
+                }
+
+                .sr-only {
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    padding: 0;
+                    margin: -1px;
+                    overflow: hidden;
+                    clip: rect(0, 0, 0, 0);
+                    white-space: nowrap;
+                    border-width: 0;
                 }
             `}</style>
         </div>

@@ -9,8 +9,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
 import { ArrowLeft, MapPin, ShieldCheck, Lock, Phone, Mail, MessageCircle, Navigation, ExternalLink, X } from 'lucide-react';
 import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
+import Image from 'next/image';
 
 export default function UserProfilePage() {
+
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { user: currentUser } = useAuth();
@@ -347,21 +349,26 @@ export default function UserProfilePage() {
         return null;
     }
 
+
+    // ... (inside UserProfilePage)
+
     return (
         <div style={{
             background: '#fff',
             minHeight: '100dvh',
             paddingBottom: 80,
+            width: '100%',
             maxWidth: 600,
             margin: '0 auto',
             borderLeft: '1px solid #eee',
-            borderRight: '1px solid #eee'
+            borderRight: '1px solid #eee',
+            overflowX: 'hidden',
         }}>
 
             {/* ── TOP BAR ── */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 16px',
+                padding: 'clamp(10px, 2vw, 16px) 16px',
                 position: 'sticky', top: 0, background: 'rgba(255,255,255,0.95)',
                 backdropFilter: 'blur(10px)', zIndex: 10,
                 borderBottom: '1px solid #eee',
@@ -369,29 +376,32 @@ export default function UserProfilePage() {
                 <button onClick={() => router.back()} style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: '#0A0A0A', display: 'flex', alignItems: 'center', gap: 6,
-                    fontFamily: 'DM Sans', fontSize: 14,
+                    fontFamily: 'DM Sans', fontSize: 'clamp(12px, 3vw, 14px)',
                 }}>
                     <ArrowLeft size={20} /> Back
                 </button>
-                <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 15, color: '#0A0A0A' }}>
+                <h1 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 'clamp(14px, 3.5vw, 16px)', color: '#0A0A0A', margin: 0 }}>
                     {profile.name?.split(' ')[0] || 'Profile'}
-                </span>
-                <div style={{ width: 60 }} /> {/* spacer */}
+                </h1>
+                <div style={{ width: 60 }} />
             </div>
 
             {/* ── HEADER SECTION ── */}
-            <div style={{ padding: '24px 16px 0', textAlign: 'center' }}>
+            <div style={{ padding: 'clamp(20px, 5vw, 40px) 16px 0', textAlign: 'center' }}>
 
                 {/* Avatar */}
-                <div style={{ position: 'relative', width: 90, height: 90, margin: '0 auto 12px' }}>
+                <div style={{ position: 'relative', width: 'clamp(80px, 20vw, 100px)', height: 'clamp(80px, 20vw, 100px)', margin: '0 auto 16px' }}>
                     <div style={{
-                        width: 90, height: 90, borderRadius: '50%',
+                        width: '100%', height: '100%', borderRadius: '50%',
                         padding: 3,
                         background: `linear-gradient(135deg, ${catConfig.accent}, #7638FA)`,
+                        position: 'relative',
                     }}>
-                        <img
-                            src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000&size=90`}
+                        <Image
+                            src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000&size=200`}
                             alt={profile.name}
+                            width={100}
+                            height={100}
                             onClick={() => setShowDPZoom(true)}
                             style={{
                                 width: '100%', height: '100%',
@@ -404,40 +414,42 @@ export default function UserProfilePage() {
                     {/* Verified badge */}
                     {profile.isVerified && (
                         <div style={{
-                            position: 'absolute', bottom: 2, right: 2,
-                            width: 22, height: 22, borderRadius: '50%',
+                            position: 'absolute', bottom: 4, right: 4,
+                            width: 'clamp(20px, 5vw, 24px)', height: 'clamp(20px, 5vw, 24px)', borderRadius: '50%',
                             background: catConfig.accent,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: '2px solid #fff',
+                            zIndex: 2,
                         }}>
-                            <ShieldCheck size={12} color="#fff" strokeWidth={2.5} />
+                            <ShieldCheck size={14} color="#fff" strokeWidth={2.5} />
                         </div>
                     )}
                 </div>
 
                 {/* Name */}
-                <h1 style={{
-                    fontFamily: 'Syne', fontWeight: 800, fontSize: 20,
-                    color: '#0A0A0A', margin: '0 0 6px',
+                <h2 style={{
+                    fontFamily: 'Syne', fontWeight: 900, fontSize: 'clamp(20px, 6vw, 28px)',
+                    color: '#0A0A0A', margin: '0 0 8px',
+                    lineHeight: 1.1,
                 }}>
                     {profile.name}
-                </h1>
+                </h2>
 
                 {/* Category + Role badges */}
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
                     <span style={{
                         background: `${catConfig.accent}15`,
                         color: catConfig.accent,
                         border: `1px solid ${catConfig.accent}`,
-                        borderRadius: 999, padding: '3px 12px',
-                        fontSize: 11, fontFamily: 'DM Sans', fontWeight: 700,
+                        borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(12px, 3vw, 16px)',
+                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'DM Sans', fontWeight: 700,
                     }}>
                         {catConfig.emoji} {catConfig.label}
                     </span>
                     <span style={{
                         background: '#f5f5f5', color: '#666', border: '1px solid #e0e0e0',
-                        borderRadius: 999, padding: '3px 12px',
-                        fontSize: 11, fontFamily: 'DM Sans', fontWeight: 500,
+                        borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(12px, 3vw, 16px)',
+                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'DM Sans', fontWeight: 500,
                     }}>
                         {profile.role === 'provider'
                             ? (profile.jobTitle || profile.specialization || profile.roleTitle || 'Provider')
@@ -447,11 +459,11 @@ export default function UserProfilePage() {
                     {profile.city && (
                         <span style={{
                             background: '#f5f5f5', color: '#666', border: '1px solid #e0e0e0',
-                            borderRadius: 999, padding: '3px 10px',
-                            fontSize: 11, fontFamily: 'DM Sans', fontWeight: 500,
-                            display: 'flex', alignItems: 'center', gap: 3,
+                            borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(10px, 2.5vw, 14px)',
+                            fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'DM Sans', fontWeight: 500,
+                            display: 'flex', alignItems: 'center', gap: 4,
                         }}>
-                            <MapPin size={10} /> {profile.city}
+                            <MapPin size={12} /> {profile.city}
                         </span>
                     )}
                 </div>
@@ -459,9 +471,9 @@ export default function UserProfilePage() {
                 {/* Bio */}
                 {profile.bio && (
                     <p style={{
-                        color: '#aaa', fontSize: 13, fontFamily: 'DM Sans',
-                        lineHeight: 1.5, margin: '0 auto 12px',
-                        maxWidth: 280,
+                        color: '#666', fontSize: 'clamp(13px, 3vw, 15px)', fontFamily: 'DM Sans',
+                        lineHeight: 1.6, margin: '0 auto 20px',
+                        maxWidth: 320,
                     }}>
                         {profile.bio}
                     </p>
@@ -470,7 +482,7 @@ export default function UserProfilePage() {
                 {/* Stats row */}
                 <div style={{
                     display: 'flex', justifyContent: 'center',
-                    gap: 32, margin: '12px 0 16px',
+                    gap: 'clamp(20px, 8vw, 48px)', margin: '16px 0 24px',
                 }}>
                     {[
                         { label: 'Videos', value: videos.length },
@@ -478,10 +490,10 @@ export default function UserProfilePage() {
                         { label: 'Following', value: profile.following?.length || 0 },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
-                            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18, color: '#0A0A0A' }}>
+                            <div style={{ fontFamily: 'Syne', fontWeight: 900, fontSize: 'clamp(18px, 5vw, 24px)', color: '#0A0A0A' }}>
                                 {formatCount(stat.value)}
                             </div>
-                            <div style={{ fontSize: 11, color: '#888888', fontFamily: 'DM Sans' }}>
+                            <div style={{ fontSize: 'clamp(10px, 2.5vw, 12px)', color: '#888', fontFamily: 'DM Sans', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 {stat.label}
                             </div>
                         </div>
@@ -489,7 +501,7 @@ export default function UserProfilePage() {
                 </div>
 
                 {/* Action buttons: Follow + Connect */}
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24, padding: '0 16px' }}>
                     <button
                         onClick={async () => {
                             if (!currentUser) { router.push('/auth/login'); return; }
@@ -514,14 +526,14 @@ export default function UserProfilePage() {
                         }}
                         disabled={followingLoading}
                         style={{
-                            padding: '10px 28px', borderRadius: 8,
+                            flex: 1, padding: '12px', borderRadius: 12,
                             background: isFollowing ? '#f0f0f0' : catConfig.accent,
                             border: 'none',
                             color: isFollowing ? '#666' : '#fff',
                             fontFamily: 'Syne', fontWeight: 700,
-                            fontSize: 14, cursor: 'pointer',
-                            boxShadow: isFollowing ? 'none' : `0 0 20px ${catConfig.accent}44`,
-                            minWidth: 120,
+                            fontSize: 'clamp(13px, 3.5vw, 15px)', cursor: 'pointer',
+                            boxShadow: isFollowing ? 'none' : `0 8px 24px ${catConfig.accent}33`,
+                            transition: 'all 0.2s',
                         }}
                     >
                         {followingLoading ? '...' : (isFollowing ? 'Following' : 'Follow')}
@@ -529,20 +541,21 @@ export default function UserProfilePage() {
                     <button
                         onClick={() => contactRevealed ? setShowContactModal(true) : setShowRevealSheet(true)}
                         style={{
-                            padding: '10px 28px', borderRadius: 8,
+                            flex: 1, padding: '12px', borderRadius: 12,
                             background: contactRevealed ? catConfig.accent : 'transparent',
-                            border: `1px solid ${catConfig.accent}`,
+                            border: `2px solid ${catConfig.accent}`,
                             color: contactRevealed ? '#fff' : catConfig.accent,
                             fontFamily: 'Syne', fontWeight: 700,
-                            fontSize: 14, cursor: 'pointer',
-                            boxShadow: contactRevealed ? `0 0 20px ${catConfig.accent}44` : 'none',
+                            fontSize: 'clamp(13px, 3.5vw, 15px)', cursor: 'pointer',
+                            boxShadow: contactRevealed ? `0 8px 24px ${catConfig.accent}33` : 'none',
                             transition: 'all 0.2s',
                         }}
                     >
-                        {checkingUnlock ? '...' : contactRevealed ? '📞 View Contact' : '🔓 Connect'}
+                        {checkingUnlock ? '...' : contactRevealed ? '📞 Contact' : '🔓 Connect'}
                     </button>
                 </div>
             </div>
+
 
             {/* ── TAB BAR ── */}
             <div style={{
@@ -586,24 +599,28 @@ export default function UserProfilePage() {
                             gridTemplateColumns: 'repeat(3, 1fr)',
                             gap: 2,
                         }}>
-                            {videos.map((video, i) => (
+                            {videos.map((video, index) => (
                                 <div
                                     key={video.id}
-                                    onClick={() => openVideo(i)}
+                                    onClick={() => openVideo(index)}
+
                                     style={{
                                         aspectRatio: '9/16',
                                         overflow: 'hidden',
                                         cursor: 'pointer',
                                         position: 'relative',
-                                        background: '#eee',
+                                        background: '#111',
+                                        borderRadius: 8,
                                     }}
                                 >
                                     {getThumbnail(video) ? (
-                                        <img
-                                            src={getThumbnail(video)}
-                                            loading="lazy"
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            onError={(e) => { e.currentTarget.style.display = 'none' }}
+                                        <Image
+                                            src={getThumbnail(video).replace('mqdefault.jpg', 'hqdefault.jpg')}
+                                            alt=""
+                                            fill
+                                            sizes="(max-width: 600px) 33vw, 200px"
+                                            style={{ objectFit: 'cover' }}
+                                            priority={index < 6}
                                         />
                                     ) : (
                                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', fontSize: 24 }}>
@@ -612,15 +629,18 @@ export default function UserProfilePage() {
                                     )}
                                     {/* View count */}
                                     <div style={{
-                                        position: 'absolute', bottom: 4, left: 4,
-                                        background: 'rgba(0,0,0,0.7)',
+                                        position: 'absolute', bottom: 6, left: 6,
+                                        background: 'rgba(0,0,0,0.6)',
+                                        backdropFilter: 'blur(4px)',
                                         color: '#fff', fontSize: 10,
-                                        padding: '1px 5px', borderRadius: 3,
-                                        fontFamily: 'DM Sans', fontWeight: 600,
+                                        padding: '2px 6px', borderRadius: 4,
+                                        fontFamily: 'DM Sans', fontWeight: 700,
+                                        display: 'flex', alignItems: 'center', gap: 3,
                                     }}>
-                                        ▶ {formatCount(video.views || 0)}
+                                        <span style={{ fontSize: 8 }}>▶</span> {formatCount(video.views || 0)}
                                     </div>
                                 </div>
+
                             ))}
                         </div>
                     )}
@@ -1200,20 +1220,21 @@ function Section({ title, accent, children }: { title: string; accent: string; c
         <div style={{
             background: '#F8F8F8',
             border: '1px solid #E5E5E5',
-            borderRadius: 14,
-            padding: '14px 16px',
+            borderRadius: 16,
+            padding: 'clamp(12px, 3vw, 20px)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
         }}>
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                marginBottom: 12,
+                marginBottom: 16,
                 borderBottom: '1px solid #eee',
-                paddingBottom: 10,
+                paddingBottom: 12,
             }}>
-                <div style={{ width: 3, height: 14, background: accent, borderRadius: 999 }} />
+                <div style={{ width: 4, height: 16, background: accent, borderRadius: 99 }} />
                 <h3 style={{
-                    fontFamily: 'Syne', fontWeight: 700, fontSize: 13,
+                    fontFamily: 'Syne', fontWeight: 800, fontSize: 'clamp(12px, 2.5vw, 14px)',
                     color: '#0A0A0A', margin: 0, textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
+                    letterSpacing: '0.1em',
                 }}>
                     {title}
                 </h3>

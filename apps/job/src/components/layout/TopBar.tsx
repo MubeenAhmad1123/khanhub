@@ -18,9 +18,10 @@ export function TopBar() {
             <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 text-[#0A0A0A]">
                 {/* Logo & Category Switcher */}
                 <div className="flex items-center gap-4">
-                    <Link href="/" className="text-xl font-bold font-syne tracking-tighter italic whitespace-nowrap">
+                    <Link href="/" className="text-xl font-bold font-syne tracking-tighter italic whitespace-nowrap" aria-label="JobReel Home">
                         <span className="text-[--accent]">JR</span>
                     </Link>
+
 
                     <div className="relative">
                         <button

@@ -211,9 +211,10 @@ export function VideoFeed() {
         if (startIndex && containerRef.current) {
             const idx = Number(startIndex);
             setTimeout(() => {
-                containerRef.current!.scrollTop = idx * window.innerHeight;
+                reelRefs.current[idx]?.scrollIntoView({ behavior: 'auto' });
                 setActiveIndex(idx);
-            }, 100);
+            }, 150);
+
             sessionStorage.removeItem('feed_start_index');
             sessionStorage.removeItem('feed_video_id');
             sessionStorage.removeItem('feed_source');
@@ -231,12 +232,13 @@ export function VideoFeed() {
 
         // Small delay to ensure DOM is rendered
         setTimeout(() => {
-            if (containerRef.current) {
-                containerRef.current.scrollTop = index * window.innerHeight;
+            if (containerRef.current && reelRefs.current[index]) {
+                reelRefs.current[index]?.scrollIntoView({ behavior: 'auto' });
                 setActiveIndex(index);
             }
-        }, 50);
+        }, 150);
     }, [videos]);
+
 
     // Scroll to specific index programmatically
     const scrollToIndex = (index: number) => {

@@ -15,10 +15,12 @@ export default function ExplorePage() {
     const filters = ['All', 'Provider', 'Seeker', 'Nearby'];
 
     return (
-        <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] pb-24">
+        <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] pb-24 overflow-x-hidden">
             <TopBar />
 
-            <div className="pt-24 px-4 space-y-6">
+            <div className="pt-20 px-4 space-y-6 max-w-lg mx-auto">
+                <h1 className="sr-only">{categoryConfig.label} Videos & Profiles in Pakistan | JobReel</h1>
+
                 {/* Search Bar */}
                 <div className="relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#BBBBBB] group-focus-within:text-[--accent] transition-colors" />

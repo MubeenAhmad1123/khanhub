@@ -17,11 +17,11 @@ export function constructMetadata({
     noIndex = false,
     canonicalUrlRelative = '',
 }: SEOProps = {}): Metadata {
-    const baseTitle = 'KhanHub Jobs | Pakistan\'s #1 Job Portal';
-    const finalTitle = title ? `${title} | KhanHub Jobs` : baseTitle;
-    const baseDescription = 'Find your dream job in Pakistan. AI-powered job matching, verified employers, and instant applications.';
+    const baseTitle = 'JobReel | Pakistan\'s Video-First Connection Platform';
+    const finalTitle = title ? `${title} | JobReel` : baseTitle;
+    const baseDescription = 'Pakistan\'s first video-first connection platform. Bridging Jobs, Healthcare, Education, Marriage, Domestic Help, Legal, Real Estate, and IT & Tech. Scroll. Watch. Connect.';
     const finalDescription = description || baseDescription;
-    const baseKeywords = ['jobs', 'pakistan', 'careers', 'hiring', 'employment', 'khanhub'];
+    const baseKeywords = ['jobreel', 'video jobs', 'pakistan hiring', 'doctors pakistan', 'teachers pakistan', 'rishta pakistan', 'real estate pakistan', 'it freelancers'];
     const finalKeywords = keywords ? [...baseKeywords, ...keywords] : baseKeywords;
 
     return {
