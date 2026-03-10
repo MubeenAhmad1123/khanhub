@@ -222,6 +222,7 @@ export default function CategoryRoleFlow() {
                 }));
 
                 sessionStorage.removeItem('feed_last_index');
+                sessionStorage.setItem('authRedirect', 'true');
             } catch (err) {
                 console.error('Error updating profile:', err);
                 setSaving(false);
@@ -229,6 +230,9 @@ export default function CategoryRoleFlow() {
             } finally {
                 setSaving(false);
             }
+        } else {
+            // Guest mode - also reset feed if they just converted or changed prefs
+            sessionStorage.setItem('authRedirect', 'true');
         }
 
         router.push('/feed');

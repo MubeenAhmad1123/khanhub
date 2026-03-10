@@ -16,7 +16,7 @@ import { CategoryDropdown } from '@/components/feed/CategoryDropdown';
 
 
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, increment, limit, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
 export function VideoFeed() {
@@ -46,6 +46,17 @@ export function VideoFeed() {
     // Initial restore from sessionStorage
     useEffect(() => {
         if (typeof window === 'undefined') return;
+
+        // Commit 5: Handle auth redirect reset
+        const isAuthRedirect = sessionStorage.getItem('authRedirect');
+        if (isAuthRedirect) {
+            sessionStorage.removeItem('authRedirect');
+            sessionStorage.removeItem('feed_last_index');
+            restoredIndexRef.current = 0;
+            setActiveIndex(0);
+            return;
+        }
+
         const saved = sessionStorage.getItem('feed_last_index');
         if (saved !== null && !isNaN(Number(saved))) {
             restoredIndexRef.current = Number(saved);
@@ -56,6 +67,8 @@ export function VideoFeed() {
     const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
     const [firestoreLoading, setFirestoreLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [watchedIds, setWatchedIds] = useState<string[]>([]);
+    const [displayVideos, setDisplayVideos] = useState<any[]>([]);
 
     useEffect(() => {
         setFirestoreLoading(true);
@@ -63,7 +76,10 @@ export function VideoFeed() {
 
         const q = query(
             collection(db, 'videos'),
-            where('is_live', '==', true)
+            where('is_live', '==', true),
+            where('admin_status', '==', 'approved'),
+            orderBy('createdAt', 'desc'),
+            limit(30)
         );
 
         const getTabFilter = (tabIndex: number) => {
@@ -153,17 +169,7 @@ export function VideoFeed() {
 
     const videos = [...firestoreVideos, ...placeholderList];
 
-    // ── View counting ─────────────────────────────────────────────
-    const countView = async (videoId: string) => {
-        if (!videoId || videoId.startsWith('placeholder-')) return;
-        try {
-            await updateDoc(doc(db, 'videos', videoId), {
-                views: increment(1),
-            });
-        } catch {
-            // Silent fail — view counting is non-critical
-        }
-    };
+
 
     // ── Guest wall via IntersectionObserver ───────────────────────
     useEffect(() => {
@@ -188,8 +194,8 @@ export function VideoFeed() {
                                 setShowGuestWall(true);
                             }
 
-                            const targetVideo = videos[index];
-                            if (targetVideo) countView(targetVideo.id);
+                            const targetVideo = displayVideos[index];
+                            // if (targetVideo) countView(targetVideo.id); // Tracked in ReelPlayer now
                         }
                     }
                 });
@@ -216,8 +222,8 @@ export function VideoFeed() {
                         if (index !== -1) {
                             setActiveIndex(index);
                             sessionStorage.setItem('feed_last_index', String(index));
-                            const targetVideo = videos[index];
-                            if (targetVideo) countView(targetVideo.id);
+                            const targetVideo = displayVideos[index];
+                            // if (targetVideo) countView(targetVideo.id); // Tracked in ReelPlayer now
                         }
                     }
                 });
@@ -228,46 +234,114 @@ export function VideoFeed() {
             reelRefs.current.forEach((ref) => { if (ref) observer.observe(ref); });
         }, 100);
         return () => { observer.disconnect(); clearTimeout(timeout); };
-    }, [user, activeCategory, videos]);
+    }, [user, activeCategory, displayVideos, loading]);
+
+    // ── Smart Feed Logic (Commit 3) ───────────────────────────────
+    useEffect(() => {
+        if (!user) {
+            setWatchedIds([]);
+            return;
+        }
+        const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+            if (snap.exists()) {
+                setWatchedIds(snap.data().watchedVideos || []);
+            }
+        });
+        return () => unsub();
+    }, [user]);
+
+    useEffect(() => {
+        const baseVideos = [...firestoreVideos, ...placeholderList];
+        if (!baseVideos.length) {
+            setDisplayVideos([]);
+            return;
+        }
+
+        if (!user) {
+            setDisplayVideos(baseVideos);
+            return;
+        }
+
+        // Split into unwatched and watched
+        const unwatched = baseVideos.filter(v => !watchedIds.includes(v.id));
+        const watched = baseVideos.filter(v => watchedIds.includes(v.id));
+
+        if (unwatched.length > 0) {
+            setDisplayVideos(unwatched);
+        } else if (watched.length > 0) {
+            // Seen everything - recycle, oldest watched first
+            // Approximation: reverse order of original newest-first feed
+            setDisplayVideos([...watched].reverse());
+        } else {
+            setDisplayVideos(baseVideos);
+        }
+    }, [firestoreVideos, placeholderList, watchedIds, user]);
+
 
     // ── Jump to index or videoId from URL or Session ──────────────────────────
     const searchParams = useSearchParams();
 
     useEffect(() => {
-        const urlVideoId = searchParams.get('v');
-        const sessionVideoId = sessionStorage.getItem('feed_start_video_id');
-        const sessionIndex = sessionStorage.getItem('feed_start_index');
+        const targetVideoId = searchParams.get('v');
+        if (!targetVideoId || displayVideos.length === 0) return;
 
-        const targetVideoId = urlVideoId || sessionVideoId;
-
-        if (targetVideoId && videos.length > 0 && containerRef.current) {
-            const idx = videos.findIndex(v => v.id === targetVideoId);
-            if (idx !== -1) {
-                setTimeout(() => {
-                    reelRefs.current[idx]?.scrollIntoView({ behavior: 'auto' });
-                    setActiveIndex(idx);
-                }, 200);
-            }
-            sessionStorage.removeItem('feed_start_video_id');
-            sessionStorage.removeItem('feed_source');
-        } else if (sessionIndex && videos.length > 0 && containerRef.current) {
-            const idx = Number(sessionIndex);
+        const idx = displayVideos.findIndex(v => v.id === targetVideoId);
+        if (idx !== -1) {
+            // Video is already in our smart feed
             setTimeout(() => {
                 reelRefs.current[idx]?.scrollIntoView({ behavior: 'auto' });
                 setActiveIndex(idx);
-            }, 200);
-            sessionStorage.removeItem('feed_start_index');
-            sessionStorage.removeItem('feed_source');
+            }, 100);
+        } else {
+            // Video not in current feed (maybe already watched)
+            const fetchAndPrepend = async () => {
+                try {
+                    const videoDoc = await getDoc(doc(db, 'videos', targetVideoId));
+                    if (videoDoc.exists()) {
+                        const d = videoDoc.data();
+                        const targetVideo = {
+                            id: videoDoc.id,
+                            isPlaceholder: false,
+                            videoId: undefined,
+                            cloudinaryUrl: d.cloudinaryUrl,
+                            category: d.category,
+                            title: d.overlayData?.title || d.title || '',
+                            badge: d.overlayData?.badge || d.role || '',
+                            field1: d.overlayData?.field1 || '',
+                            field2: d.overlayData?.field2 || '',
+                            location: d.overlayData?.location || d.city || '',
+                            views: d.views || 0,
+                            likes: d.likes || 0,
+                            saves: d.saves || 0,
+                            shares: d.shares || 0,
+                            userId: d.userId,
+                            userPhoto: d.userPhoto || '',
+                            userRole: d.userRole || '',
+                        };
+                        setDisplayVideos(prev => [targetVideo, ...prev.filter(v => v.id !== targetVideoId)]);
+                        setActiveIndex(0);
+                        setTimeout(() => {
+                            reelRefs.current[0]?.scrollIntoView({ behavior: 'auto' });
+                        }, 100);
+                    }
+                } catch (err) {
+                    console.error("Error fetching deep link video:", err);
+                }
+            };
+            fetchAndPrepend();
         }
+
+        // Clean URL after setting index (no reload):
+        window.history.replaceState(null, '', '/feed');
         watchedIndices.current = new Set();
-    }, [videos.length, searchParams]);
+    }, [displayVideos.length, searchParams]);
 
     // ── Restore scroll position on mount ──────────────────────────
     useEffect(() => {
-        if (!videos.length) return;
+        if (!displayVideos.length) return;
         if (restoredIndexRef.current === null || restoredIndexRef.current === 0) return;
 
-        const index = Math.min(restoredIndexRef.current, videos.length - 1);
+        const index = Math.min(restoredIndexRef.current, displayVideos.length - 1);
         restoredIndexRef.current = null; // only restore once
 
         // Small delay to ensure DOM is rendered
@@ -277,12 +351,12 @@ export function VideoFeed() {
                 setActiveIndex(index);
             }
         }, 150);
-    }, [videos]);
+    }, [displayVideos]);
 
 
     // Scroll to specific index programmatically
     const scrollToIndex = (index: number) => {
-        if (index < 0 || index >= videos.length) return;
+        if (index < 0 || index >= displayVideos.length) return;
         reelRefs.current[index]?.scrollIntoView({ behavior: 'smooth' });
         setActiveIndex(index);
         sessionStorage.setItem('feed_last_index', String(index));
@@ -302,7 +376,7 @@ export function VideoFeed() {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeIndex, videos.length]);
+    }, [activeIndex, displayVideos.length]);
 
     // Hide stories bar when user scrolls past first video
     useEffect(() => {
@@ -409,7 +483,7 @@ export function VideoFeed() {
                         WebkitOverflowScrolling: 'touch',
                     }}
                 >
-                    {videos.map((video, index) => (
+                    {displayVideos.map((video, index) => (
                         <div
                             key={video.id}
                             data-index={index}

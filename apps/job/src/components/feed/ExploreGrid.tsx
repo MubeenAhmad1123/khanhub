@@ -129,10 +129,8 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
         return matchesFilter;
     });
 
-    const openFeedAtIndex = (index: number) => {
-        sessionStorage.setItem('feed_start_index', String(index));
-        sessionStorage.setItem('feed_source', 'explore');
-        router.push('/feed');
+    const openFeedAtVideo = (videoId: string) => {
+        router.push(`/feed?v=${videoId}`);
     };
 
     const formatCount = (n: number) => {
@@ -153,7 +151,7 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
                 <div
                     key={item.id}
                     className="relative aspect-square overflow-hidden cursor-pointer bg-slate-100 group"
-                    onClick={() => openFeedAtIndex(i)}
+                    onClick={() => openFeedAtVideo(item.id)}
                 >
                     <img
                         src={getThumbnail(item)}

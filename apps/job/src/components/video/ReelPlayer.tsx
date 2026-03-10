@@ -2,6 +2,9 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Volume2, VolumeX, Play, Pause } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { doc, updateDoc, arrayUnion, increment } from 'firebase/firestore';
+import { db } from '@/lib/firebase/firebase-config';
 
 interface ReelPlayerProps {
     videoId?: string;         // YouTube ID (placeholder)
@@ -48,6 +51,35 @@ export function ReelPlayer({ videoId, cloudinaryUrl, thumbnailUrl, isPlaceholder
             }
         }
     }, [isActive, isPlaceholder, isPlaying, ready]);
+
+    const { user: currentUser } = useAuth();
+
+    // Track watched videos (Commit 2)
+    useEffect(() => {
+        if (!isActive || isPlaceholder || !videoId) return;
+
+        const timer = setTimeout(async () => {
+            try {
+                // If logged in: mark as watched and increment views
+                if (currentUser) {
+                    const userRef = doc(db, 'users', currentUser.uid);
+                    await updateDoc(userRef, {
+                        watchedVideos: arrayUnion(videoId)
+                    });
+                }
+
+                // Global view increment (for both guests and logged in)
+                const videoRef = doc(db, 'videos', videoId);
+                await updateDoc(videoRef, {
+                    views: increment(1)
+                });
+            } catch (err) {
+                console.error("Error tracking view:", err);
+            }
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [isActive, videoId, isPlaceholder, currentUser]);
 
     // YouTube embed URL
     const embedUrl = isPlaceholder && videoId

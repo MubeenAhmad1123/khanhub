@@ -55,6 +55,7 @@ export default function LoginPage() {
 
             localStorage.removeItem('jobreel_videos_watched');
             localStorage.setItem('jobreel_registered', 'true');
+            sessionStorage.setItem('authRedirect', 'true');
 
             router.push('/feed');
         } catch (error) {

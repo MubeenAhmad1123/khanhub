@@ -49,6 +49,7 @@ export default function RegisterPage() {
 
             localStorage.removeItem('jobreel_videos_watched');
             localStorage.setItem('jobreel_registered', 'true');
+            sessionStorage.setItem('authRedirect', 'true');
 
             // Redirect based on onboarding status
             if (!userDoc.exists()) {

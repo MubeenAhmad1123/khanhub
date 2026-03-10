@@ -83,6 +83,24 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "is_live",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "admin_status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "videos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "admin_status",
           "order": "ASCENDING"
         },
