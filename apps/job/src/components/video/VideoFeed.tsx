@@ -133,8 +133,10 @@ export function VideoFeed() {
         return 'provider';
     };
 
-    const placeholderList = CATEGORY_PLACEHOLDERS[activeCategory].map((id, i) => {
-        const overlay = PLACEHOLDER_OVERLAY_DATA[activeCategory][i % PLACEHOLDER_OVERLAY_DATA[activeCategory].length] || {};
+    const safeCategories = CATEGORY_PLACEHOLDERS[activeCategory] ? activeCategory : 'dailywages';
+    const placeholderList = CATEGORY_PLACEHOLDERS[safeCategories].map((id, i) => {
+        const overlayDataGroup = PLACEHOLDER_OVERLAY_DATA[safeCategories] || PLACEHOLDER_OVERLAY_DATA['dailywages'];
+        const overlay = overlayDataGroup[i % overlayDataGroup.length] || {};
         return {
             id: `placeholder-${i}`,
             isPlaceholder: true,

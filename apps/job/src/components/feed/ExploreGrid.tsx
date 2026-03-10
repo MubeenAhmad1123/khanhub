@@ -62,9 +62,10 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
                 setVideos(real);
             } else {
                 // Fallback: placeholders
-                const overlays = PLACEHOLDER_OVERLAY_DATA[category] || [];
+                const safeCat = CATEGORY_PLACEHOLDERS[category] ? category : 'dailywages';
+                const overlays = PLACEHOLDER_OVERLAY_DATA[safeCat] || [];
                 setVideos(
-                    CATEGORY_PLACEHOLDERS[category].map((id, i): VideoItem => ({
+                    CATEGORY_PLACEHOLDERS[safeCat].map((id, i): VideoItem => ({
                         id: `ph-${i}`,
                         isPlaceholder: true,
                         cloudinaryUrl: undefined,
@@ -79,9 +80,10 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
             }
         }, () => {
             // Index error or permission error → show placeholders
-            const overlays = PLACEHOLDER_OVERLAY_DATA[category] || [];
+            const safeCat = CATEGORY_PLACEHOLDERS[category] ? category : 'dailywages';
+            const overlays = PLACEHOLDER_OVERLAY_DATA[safeCat] || [];
             setVideos(
-                CATEGORY_PLACEHOLDERS[category].map((id, i): VideoItem => ({
+                CATEGORY_PLACEHOLDERS[safeCat].map((id, i): VideoItem => ({
                     id: `ph-${i}`,
                     isPlaceholder: true,
                     cloudinaryUrl: undefined,

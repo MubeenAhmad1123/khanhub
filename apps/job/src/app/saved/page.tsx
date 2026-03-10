@@ -129,7 +129,7 @@ export default function SavedVideosPage() {
                     <div className="p-2 bg-[--accent]/10 rounded-xl">
                         <Bookmark className="w-5 h-5 text-[--accent]" />
                     </div>
-                    <h1 className="text-2xl font-black italic uppercase tracking-tighter">Saved Videos</h1>
+                    <h1 className="text-2xl font-black italic uppercase tracking-tighter">KHAN HUB <span className="text-[--accent] opacity-50">/</span> SAVED</h1>
                 </div>
 
                 {videos.length === 0 ? (

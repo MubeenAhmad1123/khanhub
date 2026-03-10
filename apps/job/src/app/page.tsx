@@ -10,14 +10,12 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/firebase-config';
 
 const HOMEPAGE_CATEGORIES = [
-    { key: 'jobs', label: 'Jobs', emoji: '💼', image: 'jobs.webp', tagline: 'Find work & hire talent', accent: '#FF0069' },
-    { key: 'healthcare', label: 'Healthcare', emoji: '🏥', image: 'healthcare.webp', tagline: 'Connect doctors & patients', accent: '#00C896' },
-    { key: 'it', label: 'IT & Tech', emoji: '💻', image: 'tech.webp', tagline: 'Freelancers & tech clients', accent: '#00E5FF' },
+    { key: 'dailywages', label: 'Daily Wages', emoji: '⛏️', image: 'jobs.webp', tagline: 'Workers & hiring companies', accent: '#FF0069' },
+    { key: 'marriage', label: 'Marriage Bureau', emoji: '💍', image: 'marraige.webp', tagline: 'Rishta connections', accent: '#FF6B9D' },
+    { key: 'property', label: 'Property', emoji: '🏗️', image: 'real-estate.webp', tagline: 'Agents & buyers', accent: '#7638FA' },
+    { key: 'automobiles', label: 'Automobiles', emoji: '🚗', image: 'tech.webp', tagline: 'Sellers & buyers', accent: '#00C896' },
+    { key: 'buysell', label: 'Buy/Sell', emoji: '🛍️', image: 'healthcare.webp', tagline: 'Local buying & selling', accent: '#00E5FF' },
     { key: 'education', label: 'Education', emoji: '🎓', image: 'education (2).webp', tagline: 'Teachers & students', accent: '#FFD600' },
-    { key: 'marriage', label: 'Marriage', emoji: '💍', image: 'marraige.webp', tagline: 'Rishta connections', accent: '#FF6B9D' },
-    { key: 'domestic', label: 'Domestic Help', emoji: '🏠', image: 'domestic help.webp', tagline: 'Helpers & households', accent: '#FF8C42' },
-    { key: 'legal', label: 'Legal', emoji: '⚖️', image: 'lawyer.webp', tagline: 'Lawyers & clients', accent: '#4A90D9' },
-    { key: 'realestate', label: 'Real Estate', emoji: '🏗️', image: 'real-estate.webp', tagline: 'Agents & buyers', accent: '#7638FA' },
 ];
 
 import HeroSection from '@/components/home/HeroSection';
@@ -73,7 +71,7 @@ export default function HomePage() {
             <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full relative z-50">
                 <div className="flex items-center gap-2">
                     <span className="font-poppins font-black text-2xl tracking-tighter italic">
-                        <span className="text-[#FF0069]">JOB</span><span className="text-[#0A0A0A]">REEL</span>
+                        <span className="text-[#FF0069]">KHAN</span> <span className="text-[#0A0A0A]">HUB</span>
                     </span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -131,7 +129,7 @@ export default function HomePage() {
 
                             <div className="space-y-4">
                                 <RoleOption
-                                    title={CATEGORY_CONFIG[selectedCat.key as CategoryKey].providerLabel}
+                                    title={CATEGORY_CONFIG[selectedCat.key as CategoryKey]?.providerLabel || 'Provider'}
                                     tagline="Showcase my services/profile"
                                     icon="👤"
                                     accent={selectedCat.accent}
@@ -139,7 +137,7 @@ export default function HomePage() {
                                 />
 
                                 <RoleOption
-                                    title={CATEGORY_CONFIG[selectedCat.key as CategoryKey].seekerLabel}
+                                    title={CATEGORY_CONFIG[selectedCat.key as CategoryKey]?.seekerLabel || 'Seeker'}
                                     tagline="Find and connect with others"
                                     icon="🏢"
                                     accent={selectedCat.accent}

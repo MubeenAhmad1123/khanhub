@@ -61,13 +61,19 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists()) {
                     const data = userDoc.data();
-                    if (data.category) setActiveCategory(data.category as CategoryKey);
+                    if (data.category && Object.keys(CATEGORY_CONFIG).includes(data.category)) {
+                        setActiveCategory(data.category as CategoryKey);
+                    }
                     if (data.role) setActiveRole(data.role as 'provider' | 'seeker');
                 }
             } else {
                 // Return to localStorage prefs if logged out
                 const saved = localStorage.getItem('jobreel_active_category');
-                if (saved) setActiveCategory(saved as CategoryKey);
+                if (saved && Object.keys(CATEGORY_CONFIG).includes(saved)) {
+                    setActiveCategory(saved as CategoryKey);
+                } else {
+                    setActiveCategory('dailywages');
+                }
             }
         });
         return () => unsubscribe();
@@ -78,18 +84,20 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('jobreel_active_role', activeRole);
 
         // Update CSS Variable
-        const config = CATEGORY_CONFIG[activeCategory];
-        document.documentElement.style.setProperty('--accent', config.accent);
+        const config = CATEGORY_CONFIG[activeCategory] || CATEGORY_CONFIG['dailywages'];
+        if (config) {
+            document.documentElement.style.setProperty('--accent', config.accent);
 
-        // Create accent glow (30% opacity)
-        const glowColor = hexToRgba(config.accent, 0.3);
-        document.documentElement.style.setProperty('--accent-glow', glowColor);
+            // Create accent glow (30% opacity)
+            const glowColor = hexToRgba(config.accent, 0.3);
+            document.documentElement.style.setProperty('--accent-glow', glowColor);
+        }
     }, [activeCategory, activeRole]);
 
     const setCategory = (cat: CategoryKey) => setActiveCategory(cat);
     const setRole = (role: 'provider' | 'seeker') => setActiveRole(role);
 
-    const categoryConfig = CATEGORY_CONFIG[activeCategory];
+    const categoryConfig = CATEGORY_CONFIG[activeCategory] || CATEGORY_CONFIG['dailywages'];
 
     return (
         <CategoryContext.Provider

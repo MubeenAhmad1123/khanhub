@@ -193,14 +193,12 @@ export default function UserProfilePage() {
 
     const getCategoryConfig = (cat: string) => {
         const configs: Record<string, { label: string; emoji: string; accent: string }> = {
-            jobs: { label: 'Jobs', emoji: '💼', accent: '#FF0069' },
-            healthcare: { label: 'Healthcare', emoji: '🏥', accent: '#00C896' },
-            education: { label: 'Education', emoji: '🎓', accent: '#FFD600' },
+            dailywages: { label: 'Daily Wages', emoji: '⛏️', accent: '#FF0069' },
             marriage: { label: 'Marriage', emoji: '💍', accent: '#FF6B9D' },
-            domestic: { label: 'Domestic', emoji: '🏠', accent: '#FF8C42' },
-            legal: { label: 'Legal', emoji: '⚖️', accent: '#4A90D9' },
-            realestate: { label: 'Real Estate', emoji: '🏗️', accent: '#7638FA' },
-            it: { label: 'IT & Tech', emoji: '💻', accent: '#00E5FF' },
+            property: { label: 'Property', emoji: '🏗️', accent: '#7638FA' },
+            automobiles: { label: 'Automobiles', emoji: '🚗', accent: '#00C896' },
+            buysell: { label: 'Buy/Sell', emoji: '🛍️', accent: '#00E5FF' },
+            education: { label: 'Education', emoji: '🎓', accent: '#FFD600' },
         };
         return configs[cat] || { label: cat, emoji: '👤', accent: '#FF0069' };
     };
@@ -458,14 +456,13 @@ export default function UserProfilePage() {
                         {(() => {
                             const uiR = profile.uiRole;
                             const roles = {
-                                jobs: { provider: 'Job Seeker', seeker: 'Employer' },
+                                dailywages: { provider: 'Worker', seeker: 'Hiring' },
                                 healthcare: { provider: 'Doctor', seeker: 'Patient' },
                                 education: { provider: 'Teacher', seeker: 'Student' },
-                                marriage: { provider: 'Presentation', seeker: 'Looking' },
-                                domestic: { provider: 'Helper', seeker: 'Household' },
-                                legal: { provider: 'Lawyer', seeker: 'Client' },
-                                realestate: { provider: 'Agent', seeker: 'Buyer' },
-                                it: { provider: 'Freelancer', seeker: 'Client' },
+                                marriage: { provider: 'Groom', seeker: 'Bride' },
+                                property: { provider: 'Agent', seeker: 'Buyer' },
+                                automobiles: { provider: 'Seller', seeker: 'Buyer' },
+                                buysell: { provider: 'Seller', seeker: 'Buyer' },
                             }[profile.category as string] || { provider: 'Provider', seeker: 'Seeker' };
 
                             if (uiR === 'provider') return roles.provider;
@@ -473,7 +470,7 @@ export default function UserProfilePage() {
 
                             // Fallback: use roleKey from Firestore
                             const roleKey = profile.role || '';
-                            const providerKeys = ['job_seeker', 'doctor', 'teacher', 'presenting', 'helper', 'lawyer', 'agent', 'freelancer'];
+                            const providerKeys = ['worker', 'groom', 'agent', 'seller', 'teacher', 'doctor', 'freelancer'];
                             return providerKeys.includes(roleKey) ? roles.provider : roles.seeker;
                         })()}
                     </span>

@@ -19,14 +19,14 @@ export default function ExplorePage() {
             <TopBar />
 
             <div className="pt-20 px-4 space-y-6 max-w-lg mx-auto">
-                <h1 className="sr-only">{categoryConfig.label} Videos & Profiles in Pakistan | KHAN HUB</h1>
+                <h1 className="sr-only">{categoryConfig?.label || 'All'} Videos & Profiles in Pakistan | KHAN HUB</h1>
 
                 {/* Search Bar */}
                 <div className="relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#BBBBBB] group-focus-within:text-[--accent] transition-colors" />
                     <input
                         type="text"
-                        placeholder={`Search ${categoryConfig.label} roles...`}
+                        placeholder={`Search ${categoryConfig?.label || 'Category'} roles...`}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-[#F0F0F0] border border-[#E5E5E5] rounded-2xl pl-12 pr-4 py-4 text-sm text-[#0A0A0A] focus:border-[--accent] outline-none transition-all placeholder-[#BBBBBB]"
