@@ -42,7 +42,7 @@ export default function VerifyPaymentPage() {
                         Account <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF0069] to-[#7638FA]">Unlocked</span>
                     </h1>
                     <p className="text-[#888888] font-dm-sans leading-relaxed">
-                        Welcome, {user?.displayName || 'User'}! Your JobReel account is ready.
+                        Welcome, {user?.displayName || 'User'}! Your KHAN HUB account is ready.
                         Start browsing video opportunities or post your own reel now.
                     </p>
                 </div>
@@ -55,7 +55,7 @@ export default function VerifyPaymentPage() {
                     </div>
                     <div className="bg-[#111111] border border-[#1F1F1F] p-4 rounded-[20px] text-center">
                         <p className="text-[#888888] text-[10px] uppercase font-black tracking-widest mb-1">Plan</p>
-                        <p className="text-[#FFD600] font-bold uppercase">JobReel Pro</p>
+                        <p className="text-[#FFD600] font-bold uppercase">KHAN HUB Pro</p>
                     </div>
                 </div>
 

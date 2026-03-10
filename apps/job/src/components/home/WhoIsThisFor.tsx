@@ -3,14 +3,12 @@
 import React from 'react';
 
 const ITEMS = [
-    { provider: "Job Seekers", seeker: "Companies Hiring" },
-    { provider: "Doctors", seeker: "Patients" },
+    { provider: "Daily Workers", seeker: "People Hiring" },
+    { provider: "Marriage Proposals (Grooms)", seeker: "Looking to Marry (Brides)" },
+    { provider: "Property Agents / Sellers", seeker: "Buyers & Renters" },
+    { provider: "Vehicle Sellers", seeker: "Car/Bike Buyers" },
+    { provider: "Buy / Sell Items", seeker: "Local Buyers" },
     { provider: "Teachers & Tutors", seeker: "Students & Parents" },
-    { provider: "Lawyers", seeker: "Clients" },
-    { provider: "Domestic Helpers", seeker: "Households" },
-    { provider: "Real Estate Agents", seeker: "Property Buyers" },
-    { provider: "IT Freelancers", seeker: "Business Clients" },
-    { provider: "Marriage Proposals", seeker: "Looking to Marry" },
 ];
 
 export default function WhoIsThisFor() {
@@ -36,7 +34,7 @@ export default function WhoIsThisFor() {
                     color: '#0A0A0A',
                     margin: '0 0 12px',
                 }}>
-                    Who Is JobReel For?
+                    Who Is KHAN HUB For?
                 </h2>
 
                 <p style={{

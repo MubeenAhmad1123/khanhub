@@ -144,13 +144,11 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
         return String(n);
     };
 
-    const isFeatured = (index: number) => index % 7 === 3;
-
     return (
         <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-            gap: 2,
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '1px',
             maxWidth: 935,
             margin: '0 auto',
             padding: '0 0 80px',
@@ -158,37 +156,29 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
             {filteredItems.map((item, i) => (
                 <div
                     key={item.id}
-                    className={`relative aspect-square overflow-hidden cursor-pointer bg-white border border-gray-200 group ${isFeatured(i) ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'}`}
+                    className="relative aspect-square overflow-hidden cursor-pointer bg-slate-100 group"
                     onClick={() => openFeedAtIndex(i)}
                 >
                     <img
                         src={getThumbnail(item)}
                         alt={item.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-full object-cover"
                         onError={(e) => {
                             (e.target as HTMLImageElement).src = `https://via.placeholder.com/400x600/ffffff/000000?text=Video`;
                         }}
                     />
 
-                    {/* View count badge */}
+                    {/* View count bottom left */}
                     <div style={{
-                        position: 'absolute', bottom: 6, left: 6,
-                        background: 'rgba(255,255,255,0.8)', color: '#000',
-                        fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                        position: 'absolute', bottom: 4, left: 4,
+                        color: '#fff',
+                        fontSize: '10px', padding: '2px 4px',
                         fontFamily: 'DM Sans', fontWeight: 600,
-                        display: 'flex', alignItems: 'center', gap: '3px', zIndex: 10,
+                        display: 'flex', alignItems: 'center', gap: '2px', zIndex: 10,
+                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                     }}>
-                        ▶ {formatCount(item.views)}
-                    </div>
-
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-white/70 opacity-0 group-active:opacity-100 md:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 md:p-4">
-                        <span className="text-[10px] md:text-xs font-bold text-black leading-tight">{item.title}</span>
-                        <span className="text-[8px] md:text-[10px] text-[--accent] font-black uppercase tracking-wider">{item.badge}</span>
-                    </div>
-
-                    <div className="absolute top-2 right-2 text-black/80">
-                        <Play className="w-3 h-3 md:w-4 md:h-4 fill-current" />
+                        <Play className="w-2.5 h-2.5 fill-white" />
+                        {formatCount(item.views)}
                     </div>
                 </div>
             ))}

@@ -71,7 +71,7 @@ export default function LoginPage() {
             <div className="w-full max-w-sm text-center relative z-10 bg-[#F8F8F8] p-8 rounded-2xl border border-[#E5E5E5]">
                 <Link href="/" className="inline-block mb-12">
                     <span className="font-poppins font-black text-3xl tracking-tighter italic">
-                        <span className="text-[#FF0069]">JOB</span><span className="text-[#0A0A0A]">REEL</span>
+                        <span className="text-[#FF0069]">KHAN</span> <span className="text-[#0A0A0A]">HUB</span>
                     </span>
                 </Link>
 

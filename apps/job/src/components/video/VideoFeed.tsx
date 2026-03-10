@@ -10,7 +10,10 @@ import { FeedTabs } from '@/components/feed/FeedTabs';
 import { CategoryStoriesBar } from '@/components/feed/CategoryStoriesBar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Search } from 'lucide-react';
+
+
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
@@ -51,27 +54,22 @@ export function VideoFeed() {
     // ── Real Firestore videos ─────────────────────────────────────
     const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
     const [firestoreLoading, setFirestoreLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         setFirestoreLoading(true);
         setFirestoreVideos([]);
 
-        // Simple query on a single field — no composite index required
-        // Category filtering happens client-side to avoid Firestore index deployment
         const q = query(
             collection(db, 'videos'),
             where('is_live', '==', true)
         );
 
         const getTabFilter = (tabIndex: number) => {
-            if (tabIndex === 0) return null;           // no filter
-
-            // For jobs: Tab 1 = Companies (seekers), Tab 2 = Job Seekers (providers)
-            if (activeCategory === 'jobs') {
+            if (tabIndex === 0) return null;
+            if (activeCategory === 'dailywages') {
                 return tabIndex === 1 ? 'seeker' : 'provider';
             }
-
-            // For others: Tab 1 = Professionals (providers: Doctors/Teachers), Tab 2 = Clients (seekers: Patients/Students)
             return tabIndex === 1 ? 'provider' : 'seeker';
         };
 
@@ -80,13 +78,22 @@ export function VideoFeed() {
 
             const videos = snapshot.docs
                 .map(d => ({ id: d.id, ...d.data() } as any))
-                // Filter client-side: must be approved + matching category + strict role tab
                 .filter(d => {
-                    const matchesCategory = d.category === activeCategory || (activeCategory === 'jobs' && !d.category);
+                    const matchesCategory = d.category === activeCategory || (activeCategory === 'dailywages' && !d.category);
                     const matchesRole = !roleFilter || d.userRole === roleFilter;
-                    return d.admin_status === 'approved' && matchesCategory && matchesRole;
+
+                    // Search filter
+                    const title = (d.overlayData?.title || d.title || '').toLowerCase();
+                    const role = (d.overlayData?.badge || d.role || '').toLowerCase();
+                    const catName = (d.category || '').toLowerCase();
+                    const searchLower = searchQuery.toLowerCase();
+                    const matchesSearch = !searchQuery ||
+                        title.includes(searchLower) ||
+                        role.includes(searchLower) ||
+                        catName.includes(searchLower);
+
+                    return d.admin_status === 'approved' && matchesCategory && matchesRole && matchesSearch;
                 })
-                // Sort newest first
                 .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
                 .map(d => ({
                     id: d.id,
@@ -114,10 +121,10 @@ export function VideoFeed() {
         });
 
         return () => unsubscribe();
-    }, [activeCategory, activeTab]);
+    }, [activeCategory, activeTab, searchQuery]);
 
     // ── Build video list: real first, then placeholders ───────────
-    const roleFilter = activeTab === 0 ? null : (activeCategory === 'jobs' ? (activeTab === 1 ? 'seeker' : 'provider') : (activeTab === 1 ? 'provider' : 'seeker'));
+    const roleFilter = activeTab === 0 ? null : (activeCategory === 'dailywages' ? (activeTab === 1 ? 'seeker' : 'provider') : (activeTab === 1 ? 'provider' : 'seeker'));
 
     // Map placeholder badge to role for filtering
     const getPlaceholderRole = (badge: string): 'provider' | 'seeker' => {
@@ -220,24 +227,37 @@ export function VideoFeed() {
         return () => { observer.disconnect(); clearTimeout(timeout); };
     }, [user, activeCategory, videos]);
 
-    // ── Jump to index from Explore page ──────────────────────────
-    useEffect(() => {
-        const startIndex = sessionStorage.getItem('feed_start_index');
-        const videoId = sessionStorage.getItem('feed_video_id');
+    // ── Jump to index or videoId from URL or Session ──────────────────────────
+    const searchParams = useSearchParams();
 
-        if (startIndex && containerRef.current) {
-            const idx = Number(startIndex);
+    useEffect(() => {
+        const urlVideoId = searchParams.get('v');
+        const sessionVideoId = sessionStorage.getItem('feed_start_video_id');
+        const sessionIndex = sessionStorage.getItem('feed_start_index');
+
+        const targetVideoId = urlVideoId || sessionVideoId;
+
+        if (targetVideoId && videos.length > 0 && containerRef.current) {
+            const idx = videos.findIndex(v => v.id === targetVideoId);
+            if (idx !== -1) {
+                setTimeout(() => {
+                    reelRefs.current[idx]?.scrollIntoView({ behavior: 'auto' });
+                    setActiveIndex(idx);
+                }, 200);
+            }
+            sessionStorage.removeItem('feed_start_video_id');
+            sessionStorage.removeItem('feed_source');
+        } else if (sessionIndex && videos.length > 0 && containerRef.current) {
+            const idx = Number(sessionIndex);
             setTimeout(() => {
                 reelRefs.current[idx]?.scrollIntoView({ behavior: 'auto' });
                 setActiveIndex(idx);
-            }, 150);
-
+            }, 200);
             sessionStorage.removeItem('feed_start_index');
-            sessionStorage.removeItem('feed_video_id');
             sessionStorage.removeItem('feed_source');
         }
         watchedIndices.current = new Set();
-    }, [videos.length]);
+    }, [videos.length, searchParams]);
 
     // ── Restore scroll position on mount ──────────────────────────
     useEffect(() => {
@@ -349,7 +369,21 @@ export function VideoFeed() {
             }}>
                 {/* FeedTabs floats over */}
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30, pointerEvents: 'none', paddingTop: 'env(safe-area-inset-top, 12px)' }}>
-                    <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
+                    <div className="flex flex-col gap-2 p-4 pointer-events-auto">
+                        <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
+
+                        {/* Inline Search Bar */}
+                        <div className="relative group mt-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/70 group-focus-within:text-white transition-colors" />
+                            <input
+                                type="text"
+                                placeholder={`Search in ${activeCategory}...`}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-black/20 backdrop-blur-md border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white outline-none focus:bg-black/40 transition-all placeholder:text-white/40"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 {/* STORIES BAR — only visible on first video */}
@@ -440,7 +474,7 @@ export function VideoFeed() {
                                         }
                                     }}
                                     connectLabel={
-                                        activeCategory === 'jobs'
+                                        activeCategory === 'dailywages'
                                             ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋')
                                             : activeCategory === 'marriage'
                                                 ? 'Interest 💍'

@@ -19,7 +19,7 @@ export default function ExplorePage() {
             <TopBar />
 
             <div className="pt-20 px-4 space-y-6 max-w-lg mx-auto">
-                <h1 className="sr-only">{categoryConfig.label} Videos & Profiles in Pakistan | JobReel</h1>
+                <h1 className="sr-only">{categoryConfig.label} Videos & Profiles in Pakistan | KHAN HUB</h1>
 
                 {/* Search Bar */}
                 <div className="relative group">

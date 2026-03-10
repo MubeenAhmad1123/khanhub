@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, PlusSquare, MessageCircle, User } from 'lucide-react';
+import { Home, Compass, Plus, Bookmark, UserCircle2 } from 'lucide-react';
 import { useCategory } from '@/context/CategoryContext';
 import { auth } from '@/lib/firebase/firebase-config';
 import { useRouter } from 'next/navigation';
@@ -13,29 +13,24 @@ export function BottomNav() {
     const { activeCategory } = useCategory();
 
     const navItems = [
-        { icon: Home, label: 'Feed', href: '/feed' },
-        { icon: Search, label: 'Explore', href: '/explore' },
-        { icon: PlusSquare, label: 'Post', href: '/dashboard/upload-video' },
-        { icon: User, label: 'Profile', href: '/dashboard/profile', requiresAuth: true },
+        { icon: Home, label: 'Home', href: '/feed' },
+        { icon: Compass, label: 'Explore', href: '/explore' },
+        { icon: Plus, label: 'Post', href: '/dashboard/upload-video', isSpecial: true },
+        { icon: Bookmark, label: 'Saved', href: '/saved', requiresAuth: true },
+        { icon: UserCircle2, label: 'Profile', href: '/dashboard/profile', requiresAuth: true },
     ];
-
-    const handleProfileClick = (e: React.MouseEvent, href: string) => {
-        if (href === '/dashboard/profile' && !auth.currentUser) {
-            e.preventDefault();
-            router.push('/auth/register?from=profile');
-        }
-    };
 
     return (
         <nav
-            className="flex md:hidden"
+            className="flex md:hidden items-center"
             style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0,
                 background: 'rgba(255,255,255,0.95)',
                 backdropFilter: 'blur(20px)',
                 borderTop: '1px solid #E5E5E5',
                 zIndex: 50,
-                paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+                paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+                height: '70px'
             }}
         >
             {navItems.map((item) => {
@@ -45,9 +40,37 @@ export function BottomNav() {
                 const handleClick = (e: React.MouseEvent) => {
                     if (item.requiresAuth && !auth.currentUser) {
                         e.preventDefault();
-                        router.push('/auth/register?from=profile');
+                        router.push('/auth/register?from=' + item.label.toLowerCase());
                     }
                 };
+
+                if (item.isSpecial) {
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={handleClick}
+                            className="flex-1 flex flex-col items-center justify-center -mt-4"
+                        >
+                            <div style={{
+                                background: 'var(--accent)',
+                                borderRadius: '16px',
+                                width: '52px',
+                                height: '36px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginBottom: '8px',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                            }}>
+                                <Plus size={24} color="#fff" strokeWidth={3} />
+                            </div>
+                            <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 700, color: '#0A0A0A' }}>
+                                {item.label}
+                            </span>
+                        </Link>
+                    );
+                }
 
                 return (
                     <Link
@@ -55,24 +78,20 @@ export function BottomNav() {
                         href={item.href}
                         onClick={handleClick}
                         style={{
-                            flex: 1, padding: '10px 0',
-                            background: 'none', border: 'none',
+                            flex: 1, height: '100%',
                             display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', gap: 4,
+                            alignItems: 'center', justifyContent: 'center',
+                            gap: 4,
                             cursor: 'pointer',
                             color: isActive ? 'var(--accent)' : '#AAAAAA',
                             transition: 'color 0.2s',
                         }}
                     >
-                        <Icon size={item.label === 'Post' ? 28 : 22}
-                            strokeWidth={item.label === 'Post' ? 2.5 : 1.5}
-                            style={item.label === 'Post' ? {
-                                background: 'linear-gradient(135deg, var(--accent), #7638FA)',
-                                borderRadius: 8, padding: 2,
-                                color: '#fff',
-                            } : {}}
+                        <Icon size={22}
+                            strokeWidth={isActive ? 2.5 : 2}
+                            fill={isActive && item.label === 'Home' ? 'var(--accent)' : 'none'}
                         />
-                        <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 600 }}>
+                        <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: isActive ? 700 : 500 }}>
                             {item.label}
                         </span>
                     </Link>

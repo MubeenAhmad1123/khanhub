@@ -79,7 +79,7 @@ export default function RegisterPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-12"
                 >
-                    <h1 className="text-4xl font-poppins font-bold mb-3 tracking-tight text-[#0A0A0A]">Join JobReel</h1>
+                    <h1 className="text-4xl font-poppins font-bold mb-3 tracking-tight text-[#0A0A0A]">Join KHAN HUB</h1>
                     <p className="text-[#666666] font-medium tracking-wide">Free forever. No credit card.</p>
                 </motion.div>
 

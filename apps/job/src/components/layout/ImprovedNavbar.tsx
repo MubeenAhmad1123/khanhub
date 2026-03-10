@@ -88,7 +88,7 @@ export default function ImprovedNavbar() {
             return [
                 { name: 'Browse Videos', path: '/browse', icon: <Search className="w-4 h-4" /> },
                 { name: 'How It Works', path: '#how-it-works', icon: <PlusCircle className="w-4 h-4" /> },
-                { name: 'Industries', path: '#industries', icon: <Briefcase className="w-4 h-4" /> },
+                { name: 'Categories', path: '#categories', icon: <Briefcase className="w-4 h-4" /> },
             ];
         }
 
@@ -132,7 +132,7 @@ export default function ImprovedNavbar() {
                     <div className="flex items-center gap-4">
                         <Link href={user?.role === 'admin' ? '/admin' : '/'} className="flex items-center gap-2">
                             <h1 className="text-xl lg:text-2xl font-black text-blue-600 tracking-tight italic">
-                                KhanHub<span className="text-slate-900">Jobs</span>
+                                KHAN HUB
                             </h1>
                         </Link>
 
@@ -252,7 +252,7 @@ export default function ImprovedNavbar() {
                     <div className="fixed top-0 bottom-0 right-0 w-[280px] h-[100dvh] bg-white z-[160] lg:hidden shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
                         {/* Drawer Header */}
                         <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-                            <h2 className="text-xl font-black text-blue-600 italic">KhanHub</h2>
+                            <h2 className="text-xl font-black text-blue-600 italic">KHAN HUB</h2>
                             <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-xl bg-slate-50 text-slate-500">
                                 <X className="w-5 h-5" />
                             </button>

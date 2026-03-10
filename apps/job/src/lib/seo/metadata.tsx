@@ -17,11 +17,11 @@ export function constructMetadata({
     noIndex = false,
     canonicalUrlRelative = '',
 }: SEOProps = {}): Metadata {
-    const baseTitle = 'JobReel | Pakistan\'s Video-First Connection Platform';
-    const finalTitle = title ? `${title} | JobReel` : baseTitle;
+    const baseTitle = 'KHAN HUB | Pakistan\'s Video-First Connection Platform';
+    const finalTitle = title ? `${title} | KHAN HUB` : baseTitle;
     const baseDescription = 'Pakistan\'s first video-first connection platform. Bridging Jobs, Healthcare, Education, Marriage, Domestic Help, Legal, Real Estate, and IT & Tech. Scroll. Watch. Connect.';
     const finalDescription = description || baseDescription;
-    const baseKeywords = ['jobreel', 'video jobs', 'pakistan hiring', 'doctors pakistan', 'teachers pakistan', 'rishta pakistan', 'real estate pakistan', 'it freelancers'];
+    const baseKeywords = ['khan hub', 'video jobs', 'pakistan hiring', 'doctors pakistan', 'teachers pakistan', 'rishta pakistan', 'real estate pakistan', 'it freelancers'];
     const finalKeywords = keywords ? [...baseKeywords, ...keywords] : baseKeywords;
 
     return {
@@ -39,7 +39,7 @@ export function constructMetadata({
             title: finalTitle,
             description: finalDescription,
             url: `https://jobs.khanhub.com${canonicalUrlRelative}`,
-            siteName: 'KhanHub Jobs',
+            siteName: 'KHAN HUB',
             images: [
                 {
                     url: image,

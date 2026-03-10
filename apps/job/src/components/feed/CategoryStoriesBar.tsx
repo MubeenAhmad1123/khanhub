@@ -6,26 +6,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { CategoryKey } from '@/lib/categories';
 
 const CATEGORIES = [
-    { key: 'jobs', label: 'Jobs', emoji: '💼', image: '/jobs.webp', accent: '#FF0069' },
-    { key: 'healthcare', label: 'Healthcare', emoji: '🏥', image: '/healthcare.webp', accent: '#00C896' },
-    { key: 'it', label: 'IT & Tech', emoji: '💻', image: '/tech.webp', accent: '#00E5FF' },
+    { key: 'dailywages', label: 'Daily Wages', emoji: '⛏️', image: '/jobs.webp', accent: '#FF0069' },
+    { key: 'marriage', label: 'Marriage Bureau', emoji: '💍', image: '/marraige.webp', accent: '#FF6B9D' },
+    { key: 'property', label: 'Property', emoji: '🏗️', image: '/real-estate.webp', accent: '#7638FA' },
+    { key: 'automobiles', label: 'Automobiles', emoji: '🚗', image: '/tech.webp', accent: '#00C896' },
+    { key: 'buysell', label: 'Buy/Sell', emoji: '🛍️', image: '/healthcare.webp', accent: '#00E5FF' },
     { key: 'education', label: 'Education', emoji: '🎓', image: '/education (2).webp', accent: '#FFD600' },
-    { key: 'marriage', label: 'Marriage', emoji: '💍', image: '/marraige.webp', accent: '#FF6B9D' },
-    { key: 'domestic', label: 'Domestic', emoji: '🏠', image: '/domestic help.webp', accent: '#FF8C42' },
-    { key: 'legal', label: 'Legal', emoji: '⚖️', image: '/lawyer.webp', accent: '#4A90D9' },
-    { key: 'realestate', label: 'Real Estate', emoji: '🏗️', image: '/real-estate.webp', accent: '#7638FA' },
 ];
 
 // Role labels per category
 const ROLE_OPTIONS: Record<string, { provider: string; seeker: string }> = {
-    jobs: { provider: 'Job Seeker', seeker: 'Company / Hiring' },
-    healthcare: { provider: 'Doctor', seeker: 'Patient' },
-    it: { provider: 'Freelancer', seeker: 'Client' },
+    dailywages: { provider: 'Worker', seeker: 'Hiring' },
+    marriage: { provider: 'Groom', seeker: 'Bride' },
+    property: { provider: 'Agent / Seller', seeker: 'Buyer / Renter' },
+    automobiles: { provider: 'Seller', seeker: 'Buyer' },
+    buysell: { provider: 'Seller', seeker: 'Buyer' },
     education: { provider: 'Teacher', seeker: 'Student' },
-    marriage: { provider: 'Presenting', seeker: 'Looking' },
-    domestic: { provider: 'Helper', seeker: 'Household' },
-    legal: { provider: 'Lawyer', seeker: 'Client' },
-    realestate: { provider: 'Agent', seeker: 'Buyer / Renter' },
 };
 
 interface CategoryStoriesBarProps {
@@ -273,11 +269,10 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                         display: 'flex', alignItems: 'center',
                                         justifyContent: 'center', fontSize: 20, flexShrink: 0,
                                     }}>
-                                        {pending.key === 'jobs' ? '👤' :
-                                            pending.key === 'healthcare' ? '🩺' :
-                                                pending.key === 'education' ? '📚' :
-                                                    pending.key === 'legal' ? '⚖️' :
-                                                        pending.key === 'it' ? '💻' : '🙋'}
+                                        {pending.key === 'dailywages' ? '👷' :
+                                            pending.key === 'marriage' ? '💍' :
+                                                pending.key === 'property' ? '🏠' :
+                                                    pending.key === 'automobiles' ? '🚗' : '🙋'}
                                     </div>
                                     <div>
                                         <div style={{
@@ -289,12 +284,11 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                         <div style={{
                                             color: '#666', fontFamily: 'DM Sans', fontSize: 12, marginTop: 2,
                                         }}>
-                                            {pending.key === 'jobs' ? 'Looking for work opportunities' :
-                                                pending.key === 'healthcare' ? 'Offering medical services' :
-                                                    pending.key === 'education' ? 'Teaching & training others' :
-                                                        pending.key === 'legal' ? 'Providing legal services' :
-                                                            pending.key === 'it' ? 'Offering tech services' :
-                                                                'I provide the service'}
+                                            {pending.key === 'dailywages' ? 'I am looking for daily work' :
+                                                pending.key === 'marriage' ? 'I am looking for a partner' :
+                                                    pending.key === 'property' ? 'I am selling or renting property' :
+                                                        pending.key === 'automobiles' ? 'I am selling a vehicle' :
+                                                            'I provide the service'}
                                         </div>
                                     </div>
                                     <div style={{ marginLeft: 'auto', color: pending.accent, fontSize: 18 }}>›</div>
@@ -325,11 +319,10 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                         display: 'flex', alignItems: 'center',
                                         justifyContent: 'center', fontSize: 20, flexShrink: 0,
                                     }}>
-                                        {pending.key === 'jobs' ? '🏢' :
-                                            pending.key === 'healthcare' ? '🤒' :
-                                                pending.key === 'education' ? '🎒' :
-                                                    pending.key === 'legal' ? '📋' :
-                                                        pending.key === 'it' ? '🧑💼' : '🔍'}
+                                        {pending.key === 'dailywages' ? '🏢' :
+                                            pending.key === 'marriage' ? '🤵' :
+                                                pending.key === 'property' ? '🔑' :
+                                                    pending.key === 'automobiles' ? '💰' : '🔍'}
                                     </div>
                                     <div>
                                         <div style={{
@@ -341,12 +334,11 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                                         <div style={{
                                             color: '#666', fontFamily: 'DM Sans', fontSize: 12, marginTop: 2,
                                         }}>
-                                            {pending.key === 'jobs' ? 'Hiring talent for my team' :
-                                                pending.key === 'healthcare' ? 'Looking for medical help' :
-                                                    pending.key === 'education' ? 'Looking for a tutor' :
-                                                        pending.key === 'legal' ? 'Need legal representation' :
-                                                            pending.key === 'it' ? 'Looking for a developer' :
-                                                                'I need the service'}
+                                            {pending.key === 'dailywages' ? 'I want to hire workers' :
+                                                pending.key === 'marriage' ? 'I am looking for a proposal' :
+                                                    pending.key === 'property' ? 'I am looking to buy or rent' :
+                                                        pending.key === 'automobiles' ? 'I am looking for a vehicle' :
+                                                            'I need the service'}
                                         </div>
                                     </div>
                                     <div style={{ marginLeft: 'auto', color: '#888', fontSize: 18 }}>›</div>

@@ -79,138 +79,90 @@ const getCloudinaryThumb = (videoUrl: string): string => {
 
 /* ─── buildOverlayData ─────────────────────────────────────────── */
 function buildOverlayData(formData: Record<string, any>, category: string, role: string) {
-    // Normalize role to provider/seeker for the map keys
-    // if role is 'job_seeker' or 'doctor' etc, we need to know if it's a provider or seeker context
-    // However, the map below is already specific to provider/seeker.
-    // Let's make the map handle the specific keys too for robustness.
     const map: Record<string, Record<string, any>> = {
-        jobs: {
-            provider: {
-                title: formData.jobTitle || '',
-                badge: 'Job Seeker',
-                field1: Array.isArray(formData.skills) ? formData.skills.join(' • ') : '',
-                field2: formData.experienceLevel || '',
-            },
-            job_seeker: { title: formData.jobTitle || '', badge: 'Job Seeker', field1: Array.isArray(formData.skills) ? formData.skills.join(' • ') : '', field2: formData.experienceLevel || '' },
-            seeker: {
-                title: formData.hiringFor || '',
-                badge: 'Hiring',
-                field1: Array.isArray(formData.requiredSkills) ? formData.requiredSkills.join(' • ') : '',
-                field2: formData.salary ? `Salary: Rs. ${Number(formData.salary).toLocaleString()}/mo` : '',
-            },
-            employer: { title: formData.hiringFor || '', badge: 'Hiring', field1: Array.isArray(formData.requiredSkills) ? formData.requiredSkills.join(' • ') : '', field2: formData.salary ? `Salary: Rs. ${Number(formData.salary).toLocaleString()}/mo` : '' },
-        },
-        healthcare: {
-            provider: {
+        dailywages: {
+            worker: {
                 title: formData.specialization || '',
-                badge: 'Doctor',
+                badge: 'Worker',
                 field1: formData.specialization || '',
                 field2: formData.experienceLevel || '',
             },
-            doctor: { title: formData.specialization || '', badge: 'Doctor', field1: formData.specialization || '', field2: formData.experienceLevel || '' },
-            seeker: {
-                title: formData.doctorNeeded || '',
-                badge: 'Seeking Doctor',
-                field1: formData.doctorNeeded || '',
-                field2: formData.locationPref || '',
+            hiring: {
+                title: formData.companyName || '',
+                badge: 'Hiring',
+                field1: formData.city || '',
+                field2: formData.phone || '',
             },
-            patient: { title: formData.doctorNeeded || '', badge: 'Seeking Doctor', field1: formData.doctorNeeded || '', field2: formData.locationPref || '' },
+        },
+        marriage: {
+            groom: {
+                title: `Groom Profile`,
+                badge: 'Groom',
+                field1: `${formData.age || ''} Years`,
+                field2: formData.city || '',
+            },
+            bride: {
+                title: `Bride Profile`,
+                badge: 'Bride',
+                field1: `${formData.age || ''} Years`,
+                field2: formData.city || '',
+            },
+        },
+        property: {
+            agent: {
+                title: formData.companyName || '',
+                badge: 'Agent',
+                field1: formData.city || '',
+                field2: 'Property Expert',
+            },
+            buyer: {
+                title: 'Looking for Property',
+                badge: 'Buyer',
+                field1: formData.city || '',
+                field2: '',
+            },
+        },
+        automobiles: {
+            seller: {
+                title: 'Vehicle for Sale',
+                badge: 'Seller',
+                field1: formData.city || '',
+                field2: '',
+            },
+            buyer: {
+                title: 'Looking for Vehicle',
+                badge: 'Buyer',
+                field1: formData.city || '',
+                field2: '',
+            },
+        },
+        buysell: {
+            seller: {
+                title: 'Item for Sale',
+                badge: 'Seller',
+                field1: formData.city || '',
+                field2: '',
+            },
+            buyer: {
+                title: 'Looking to Buy',
+                badge: 'Buyer',
+                field1: formData.city || '',
+                field2: '',
+            },
         },
         education: {
-            provider: {
+            teacher: {
                 title: formData.subject || '',
                 badge: 'Teacher',
                 field1: formData.subject || '',
-                field2: formData.gradeLevel || '',
-            },
-            teacher: { title: formData.subject || '', badge: 'Teacher', field1: formData.subject || '', field2: formData.gradeLevel || '' },
-            seeker: {
-                title: formData.subjectNeeded || '',
-                badge: 'Student',
-                field1: formData.subjectNeeded || '',
-                field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}/mo` : '',
-            },
-            student: { title: formData.subjectNeeded || '', badge: 'Student', field1: formData.subjectNeeded || '', field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}/mo` : '' },
-        },
-        marriage: {
-            provider: {
-                title: formData.profession || '',
-                badge: 'Profile',
-                field1: formData.ageRange || '',
-                field2: formData.city || '',
-            },
-            presenting: { title: formData.profession || '', badge: 'Profile', field1: formData.ageRange || '', field2: formData.city || '' },
-            seeker: {
-                title: formData.lookingForProfession || '',
-                badge: 'Looking',
-                field1: formData.preferredAge || '',
-                field2: formData.preferredCity || '',
-            },
-            looking: { title: formData.lookingForProfession || '', badge: 'Looking', field1: formData.preferredAge || '', field2: formData.preferredCity || '' },
-        },
-        domestic: {
-            provider: {
-                title: formData.workType || '',
-                badge: 'Helper',
-                field1: formData.experienceLevel || '',
-                field2: formData.expectedSalary ? `Rs. ${Number(formData.expectedSalary).toLocaleString()}/mo` : '',
-            },
-            helper: { title: formData.workType || '', badge: 'Helper', field1: formData.experienceLevel || '', field2: formData.expectedSalary ? `Rs. ${Number(formData.expectedSalary).toLocaleString()}/mo` : '' },
-            seeker: {
-                title: formData.helpNeeded || '',
-                badge: 'Household',
-                field1: formData.workHours || '',
-                field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}/mo` : '',
-            },
-            household: { title: formData.helpNeeded || '', badge: 'Household', field1: formData.workHours || '', field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}/mo` : '' },
-        },
-        legal: {
-            provider: {
-                title: formData.specialization || '',
-                badge: 'Lawyer',
-                field1: formData.court || '',
                 field2: formData.experienceLevel || '',
             },
-            lawyer: { title: formData.specialization || '', badge: 'Lawyer', field1: formData.court || '', field2: formData.experienceLevel || '' },
-            seeker: {
-                title: formData.issueType || '',
-                badge: 'Client',
-                field1: formData.issueType || '',
+            student: {
+                title: 'Student Profile',
+                badge: 'Student',
+                field1: formData.city || '',
                 field2: '',
             },
-            client: { title: formData.issueType || '', badge: 'Client', field1: formData.issueType || '', field2: '' },
-        },
-        realestate: {
-            provider: {
-                title: formData.propSpecialization || '',
-                badge: 'Agent',
-                field1: formData.areaCity || '',
-                field2: formData.experienceLevel || '',
-            },
-            agent: { title: formData.propSpecialization || '', badge: 'Agent', field1: formData.areaCity || '', field2: formData.experienceLevel || '' },
-            seeker: {
-                title: formData.lookingFor || '',
-                badge: 'Buyer / Renter',
-                field1: formData.budgetRange || '',
-                field2: formData.preferredCity || '',
-            },
-            buyer: { title: formData.lookingFor || '', badge: 'Buyer / Renter', field1: formData.budgetRange || '', field2: formData.preferredCity || '' },
-        },
-        it: {
-            provider: {
-                title: formData.roleTitle || '',
-                badge: 'Freelancer',
-                field1: Array.isArray(formData.skills) ? formData.skills.join(' • ') : '',
-                field2: formData.experienceLevel || '',
-            },
-            freelancer: { title: formData.roleTitle || '', badge: 'Freelancer', field1: Array.isArray(formData.skills) ? formData.skills.join(' • ') : '', field2: formData.experienceLevel || '' },
-            seeker: {
-                title: formData.lookingFor || '',
-                badge: 'Hiring',
-                field1: Array.isArray(formData.requiredSkills) ? formData.requiredSkills.join(' • ') : '',
-                field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}` : '',
-            },
-            client: { title: formData.lookingFor || '', badge: 'Hiring', field1: Array.isArray(formData.requiredSkills) ? formData.requiredSkills.join(' • ') : '', field2: formData.budget ? `Budget: Rs. ${Number(formData.budget).toLocaleString()}` : '' },
         },
     };
     return map[category]?.[role] || { title: '', badge: '', field1: '', field2: '' };
@@ -282,180 +234,69 @@ function ConditionalFields({
 }) {
     const set = (key: string) => (val: any) => onChange(key, val);
 
-    if (category === 'jobs' && role === 'provider') {
+    if (category === 'dailywages' && role === 'provider') {
         return (
             <>
-                <TextInput label="Job Title" placeholder='e.g. "Senior UI Designer"' value={formData.jobTitle || ''} onChange={set('jobTitle')} required />
+                <TextInput label="Skill / Type of Work" placeholder='e.g. "Electrician"' value={formData.specialization || ''} onChange={set('specialization')} required />
                 <PillSelector label="Experience Level" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
-                        Top 3 Skills <span style={{ color: 'var(--accent)' }}>*</span>
-                    </label>
-                    <TagInput
-                        tags={formData.skills || []}
-                        onChange={(tags) => set('skills')(tags.slice(0, 3))}
-                        placeholder="Add a skill..."
-                    />
-                </div>
             </>
         );
     }
-    if (category === 'jobs' && role === 'seeker') {
+    if (category === 'dailywages' && role === 'seeker') {
         return (
             <>
-                <TextInput label="Job Role You're Hiring For" placeholder='e.g. "Full Stack Developer"' value={formData.hiringFor || ''} onChange={set('hiringFor')} required />
-                <PillSelector label="Required Experience" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
-                        Top 3 Required Skills <span style={{ color: 'var(--accent)' }}>*</span>
-                    </label>
-                    <TagInput
-                        tags={formData.requiredSkills || []}
-                        onChange={(tags) => set('requiredSkills')(tags.slice(0, 3))}
-                        placeholder="Add a skill..."
-                    />
-                </div>
-                <TextInput label="Salary Offered (PKR/month)" placeholder='e.g. "150000"' value={formData.salary || ''} onChange={set('salary')} required type="number" />
-                <PillSelector label="Your Title at Company" options={['HR Manager', 'Founder/CEO', 'Department Head', 'Recruiter']} value={formData.companyTitle || ''} onChange={set('companyTitle')} required />
-            </>
-        );
-    }
-    if (category === 'healthcare' && role === 'provider') {
-        return (
-            <>
-                <TextInput label="Specialization" placeholder='e.g. "Cardiologist"' value={formData.specialization || ''} onChange={set('specialization')} required />
-                <PillSelector label="Years of Experience" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
-                <TextInput label="PMDC Number (optional)" placeholder="PMDC-XXXXX" value={formData.pmdcNumber || ''} onChange={set('pmdcNumber')} />
-            </>
-        );
-    }
-    if (category === 'healthcare' && role === 'seeker') {
-        return (
-            <>
-                <TextInput label="Type of Doctor Needed" placeholder='e.g. "Cardiologist"' value={formData.doctorNeeded || ''} onChange={set('doctorNeeded')} required />
-                <TextInput label="Location Preference" placeholder='e.g. "Karachi"' value={formData.locationPref || ''} onChange={set('locationPref')} required />
-            </>
-        );
-    }
-    if (category === 'education' && role === 'provider') {
-        return (
-            <>
-                <TextInput label="Subject / Course" placeholder='e.g. "Mathematics"' value={formData.subject || ''} onChange={set('subject')} required />
-                <PillSelector label="Grade Level / Audience" options={['School', 'College', 'University', 'Professional']} value={formData.gradeLevel || ''} onChange={set('gradeLevel')} required />
-                <PillSelector label="Mode" options={['Online', 'In-Person', 'Both']} value={formData.mode || ''} onChange={set('mode')} required />
-            </>
-        );
-    }
-    if (category === 'education' && role === 'seeker') {
-        return (
-            <>
-                <TextInput label="Subject Looking For" placeholder='e.g. "Physics"' value={formData.subjectNeeded || ''} onChange={set('subjectNeeded')} required />
-                <TextInput label="Budget (PKR/month, optional)" placeholder='e.g. "5000"' value={formData.budget || ''} onChange={set('budget')} type="number" />
+                <TextInput label="Hiring For" placeholder='e.g. "Plumber"' value={formData.companyName || ''} onChange={set('companyName')} required />
+                <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />
             </>
         );
     }
     if (category === 'marriage' && role === 'provider') {
         return (
             <>
-                <TextInput label="Candidate's Profession" placeholder='e.g. "Doctor"' value={formData.profession || ''} onChange={set('profession')} required />
-                <TextInput label="Age Range" placeholder='e.g. "25-30"' value={formData.ageRange || ''} onChange={set('ageRange')} required />
-                <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />
+                <TextInput label="Groom's Profession" placeholder='e.g. "Engineer"' value={formData.specialization || ''} onChange={set('specialization')} required />
+                <TextInput label="Age" placeholder='e.g. "28"' value={formData.age || ''} onChange={set('age')} required type="number" />
+                <TextInput label="City" placeholder='e.g. "Lahore"' value={formData.city || ''} onChange={set('city')} required />
             </>
         );
     }
     if (category === 'marriage' && role === 'seeker') {
         return (
             <>
-                <TextInput label="Looking for (Profession)" placeholder='e.g. "Engineer"' value={formData.lookingForProfession || ''} onChange={set('lookingForProfession')} required />
-                <TextInput label="Preferred Age Range" placeholder='e.g. "25-30"' value={formData.preferredAge || ''} onChange={set('preferredAge')} required />
-                <TextInput label="Preferred City" placeholder='e.g. "Lahore"' value={formData.preferredCity || ''} onChange={set('preferredCity')} required />
+                <TextInput label="Bride's Profession" placeholder='e.g. "Doctor"' value={formData.specialization || ''} onChange={set('specialization')} required />
+                <TextInput label="Age" placeholder='e.g. "24"' value={formData.age || ''} onChange={set('age')} required type="number" />
+                <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />
             </>
         );
     }
-    if (category === 'domestic' && role === 'provider') {
+    if (category === 'property') {
         return (
             <>
-                <PillSelector label="Type of Work" options={['Cook', 'Driver', 'Cleaner', 'Gardener', 'Nanny', 'Guard']} value={formData.workType || ''} onChange={set('workType')} required />
-                <PillSelector label="Experience" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
-                <TextInput label="Expected Salary (PKR/month)" placeholder='e.g. "15000"' value={formData.expectedSalary || ''} onChange={set('expectedSalary')} required type="number" />
+                <TextInput label="Area / City" placeholder='e.g. "DHA Phase 6"' value={formData.city || ''} onChange={set('city')} required />
+                <TextInput label="Description" placeholder='e.g. "Beautiful 500yd House"' value={formData.companyName || ''} onChange={set('companyName')} required />
             </>
         );
     }
-    if (category === 'domestic' && role === 'seeker') {
+    if (category === 'automobiles') {
         return (
             <>
-                <PillSelector label="Help Needed" options={['Cook', 'Driver', 'Cleaner', 'Gardener', 'Nanny', 'Guard']} value={formData.helpNeeded || ''} onChange={set('helpNeeded')} required />
-                <PillSelector label="Work Hours" options={['Full Time', 'Part Time', 'Live-In']} value={formData.workHours || ''} onChange={set('workHours')} required />
-                <TextInput label="Budget (PKR/month)" placeholder='e.g. "20000"' value={formData.budget || ''} onChange={set('budget')} required type="number" />
+                <TextInput label="Vehicle Name & Year" placeholder='e.g. "Honda Civic 2022"' value={formData.companyName || ''} onChange={set('companyName')} required />
+                <TextInput label="City" placeholder='e.g. "Rawalpindi"' value={formData.city || ''} onChange={set('city')} required />
             </>
         );
     }
-    if (category === 'legal' && role === 'provider') {
+    if (category === 'buysell') {
         return (
             <>
-                <TextInput label="Specialization" placeholder='e.g. "Criminal Law"' value={formData.specialization || ''} onChange={set('specialization')} required />
-                <PillSelector label="Court" options={['District Court', 'High Court', 'Supreme Court']} value={formData.court || ''} onChange={set('court')} required />
-                <PillSelector label="Years of Experience" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
+                <TextInput label="Item Name" placeholder='e.g. "iPhone 15 Pro Max"' value={formData.companyName || ''} onChange={set('companyName')} required />
+                <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />
             </>
         );
     }
-    if (category === 'legal' && role === 'seeker') {
-        return (
-            <TextInput label="Legal Issue Type" placeholder='e.g. "Property Dispute"' value={formData.issueType || ''} onChange={set('issueType')} required />
-        );
-    }
-    if (category === 'realestate' && role === 'provider') {
+    if (category === 'education') {
         return (
             <>
-                <PillSelector label="Specialization" options={['Buy/Sell', 'Rental', 'Commercial', 'Land']} value={formData.propSpecialization || ''} onChange={set('propSpecialization')} required />
-                <TextInput label="Area / City" placeholder='e.g. "DHA Karachi"' value={formData.areaCity || ''} onChange={set('areaCity')} required />
-                <PillSelector label="Experience" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
-            </>
-        );
-    }
-    if (category === 'realestate' && role === 'seeker') {
-        return (
-            <>
-                <PillSelector label="Looking For" options={['House', 'Apartment', 'Commercial', 'Land']} value={formData.lookingFor || ''} onChange={set('lookingFor')} required />
-                <TextInput label="Budget Range" placeholder='e.g. "1-2 Crore"' value={formData.budgetRange || ''} onChange={set('budgetRange')} required />
-                <TextInput label="Preferred City" placeholder='e.g. "Lahore"' value={formData.preferredCity || ''} onChange={set('preferredCity')} required />
-            </>
-        );
-    }
-    if (category === 'it' && role === 'provider') {
-        return (
-            <>
-                <TextInput label="Role / Title" placeholder='e.g. "React Developer"' value={formData.roleTitle || ''} onChange={set('roleTitle')} required />
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
-                        Top 3 Skills <span style={{ color: 'var(--accent)' }}>*</span>
-                    </label>
-                    <TagInput
-                        tags={formData.skills || []}
-                        onChange={(tags) => set('skills')(tags.slice(0, 3))}
-                        placeholder="Add a skill..."
-                    />
-                </div>
-                <PillSelector label="Experience" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
-                <TextInput label="Hourly / Project Rate (PKR, optional)" placeholder='e.g. "5000"' value={formData.rate || ''} onChange={set('rate')} type="number" />
-            </>
-        );
-    }
-    if (category === 'it' && role === 'seeker') {
-        return (
-            <>
-                <TextInput label="Looking For" placeholder='e.g. "Mobile App Developer"' value={formData.lookingFor || ''} onChange={set('lookingFor')} required />
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 8, fontFamily: 'DM Sans' }}>
-                        Top 3 Required Skills <span style={{ color: 'var(--accent)' }}>*</span>
-                    </label>
-                    <TagInput
-                        tags={formData.requiredSkills || []}
-                        onChange={(tags) => set('requiredSkills')(tags.slice(0, 3))}
-                        placeholder="Add a skill..."
-                    />
-                </div>
-                <TextInput label="Budget (PKR, optional)" placeholder='e.g. "50000"' value={formData.budget || ''} onChange={set('budget')} type="number" />
+                <TextInput label="Subject / Field" placeholder='e.g. "Physics"' value={formData.subject || ''} onChange={set('subject')} required />
+                <TextInput label="City" placeholder='e.g. "Multan"' value={formData.city || ''} onChange={set('city')} required />
             </>
         );
     }
@@ -514,7 +355,7 @@ export default function UploadVideoPage() {
         );
     }
 
-    const userCategory = firestoreProfile.category || 'jobs';
+    const userCategory = firestoreProfile.category || 'dailywages';
 
     // Read uiRole from Firestore profile (NOT from Firebase Auth user object)
     // uiRole is 'provider' or 'seeker' — saved during onboarding
@@ -523,8 +364,8 @@ export default function UploadVideoPage() {
     if (!userRole) {
         // Fallback: derive from specific role key saved in Firestore
         const roleKey = firestoreProfile.role || '';
-        const providerKeys = ['job_seeker', 'doctor', 'teacher', 'presenting', 'helper', 'lawyer', 'agent', 'freelancer'];
-        const seekerKeys = ['employer', 'patient', 'student', 'looking', 'household', 'client', 'buyer'];
+        const providerKeys = ['worker', 'groom', 'agent', 'seller', 'teacher'];
+        const seekerKeys = ['hiring', 'bride', 'buyer', 'student'];
         if (providerKeys.includes(roleKey)) {
             userRole = 'provider';
         } else if (seekerKeys.includes(roleKey)) {

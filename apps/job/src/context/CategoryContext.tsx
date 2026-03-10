@@ -29,7 +29,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
                 return saved as CategoryKey;
             }
         }
-        return 'jobs';
+        return 'dailywages';
     });
 
     const [activeRole, setActiveRole] = useState<'provider' | 'seeker'>(() => {

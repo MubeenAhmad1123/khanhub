@@ -5,14 +5,12 @@ import { useCategory } from '@/context/CategoryContext';
 import { CategoryKey } from '@/lib/categories';
 
 const CATEGORIES = [
-    { key: 'jobs', label: 'Jobs', image: '/jobs.webp', accent: '#FF0069' },
-    { key: 'healthcare', label: 'Healthcare', image: '/healthcare.webp', accent: '#00C896' },
-    { key: 'it', label: 'IT & Tech', image: '/tech.webp', accent: '#00E5FF' },
+    { key: 'dailywages', label: 'Daily Wages', image: '/jobs.webp', accent: '#FF0069' },
+    { key: 'marriage', label: 'Marriage Bureau', image: '/marraige.webp', accent: '#FF6B9D' },
+    { key: 'property', label: 'Property', image: '/real-estate.webp', accent: '#7638FA' },
+    { key: 'automobiles', label: 'Automobiles', image: '/tech.webp', accent: '#00C896' },
+    { key: 'buysell', label: 'Buy/Sell', image: '/healthcare.webp', accent: '#00E5FF' },
     { key: 'education', label: 'Education', image: '/education (2).webp', accent: '#FFD600' },
-    { key: 'marriage', label: 'Marriage', image: '/marraige.webp', accent: '#FF6B9D' },
-    { key: 'domestic', label: 'Domestic Help', image: '/domestic help.webp', accent: '#FF8C42' },
-    { key: 'legal', label: 'Legal', image: '/lawyer.webp', accent: '#4A90D9' },
-    { key: 'realestate', label: 'Real Estate', image: '/real-estate.webp', accent: '#7638FA' },
 ];
 
 interface CategorySectionProps {
@@ -44,7 +42,7 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                     display: 'block',
                     marginBottom: 12,
                 }}>
-                    8 Industries. One Platform.
+                    6 Categories. One Platform.
                 </span>
 
                 <h2 style={{
@@ -65,12 +63,12 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                     margin: '0 auto 40px',
                     lineHeight: 1.6,
                 }}>
-                    Whether you're hiring, healing, teaching, or building — JobReel connects the right people through real videos. No middlemen. No guesswork.
+                    Whether you're hiring, healing, teaching, or building — KHAN HUB connects the right people through real videos. No middlemen. No guesswork.
                 </p>
 
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',  // 4 columns = 2 rows of 4
+                    gridTemplateColumns: 'repeat(3, 1fr)',  // 3 columns = 2 rows of 3
                     gap: 'clamp(12px, 3vw, 24px)',
                     maxWidth: 480,
                     margin: '0 auto',

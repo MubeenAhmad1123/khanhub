@@ -123,7 +123,7 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
                     )}
 
                     <div className="absolute bottom-12 text-[10px] text-[--text-muted] uppercase tracking-[0.3em] font-black italic">
-                        <span className="text-[--accent]">JOB</span>REEL
+                        <span className="text-[--accent]">KHAN</span> HUB
                     </div>
                 </motion.div>
             )}

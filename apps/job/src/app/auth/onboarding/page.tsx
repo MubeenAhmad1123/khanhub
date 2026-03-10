@@ -16,7 +16,7 @@ export default function OnboardingPage() {
                             <ShieldCheck className="w-7 h-7 text-white" />
                         </div>
                         <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
-                            JobReel<span className="text-blue-600">Setup</span>
+                            KHAN HUB<span className="text-blue-600">Setup</span>
                         </h1>
                     </div>
                     <p className="mt-2 text-blue-600 font-black italic text-lg" dir="rtl">اپنا پروفائل مکمل کریں</p>
