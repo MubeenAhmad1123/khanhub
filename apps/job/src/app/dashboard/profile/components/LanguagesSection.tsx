@@ -107,7 +107,16 @@ export default function LanguagesSection({ profile, onSave }: LanguagesSectionPr
                                     type="text"
                                     value={newLang.name}
                                     onChange={(e) => setNewLang({ ...newLang, name: e.target.value })}
-                                    className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="زبان (Language)"
                                 />
                             </div>
@@ -115,7 +124,16 @@ export default function LanguagesSection({ profile, onSave }: LanguagesSectionPr
                                 <select
                                     value={newLang.proficiency}
                                     onChange={(e) => setNewLang({ ...newLang, proficiency: e.target.value as any })}
-                                    className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                 >
                                     <option value="Beginner">Beginner</option>
                                     <option value="Intermediate">Intermediate</option>

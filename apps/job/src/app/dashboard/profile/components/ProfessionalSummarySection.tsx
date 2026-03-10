@@ -71,7 +71,18 @@ export default function ProfessionalSummarySection({ profile, onSave, isEmployer
                         <textarea
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
-                            className="w-full h-40 px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-medium text-slate-700 resize-none"
+                            style={{
+                                background: '#FFFFFF',
+                                color: '#0A0A0A',
+                                border: '1.5px solid #E5E5E5',
+                                borderRadius: '8px',
+                                padding: '10px 14px',
+                                fontSize: '14px',
+                                width: '100%',
+                                outline: 'none',
+                                height: '160px',
+                                resize: 'none',
+                            }}
                             placeholder={isEmployer ? "Write a compelling description of your company..." : "Write a compelling summary of your professional journey..."}
                         />
                         <div className="flex justify-end gap-3">

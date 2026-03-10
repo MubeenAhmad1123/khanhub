@@ -4,12 +4,11 @@ import React, { useState } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { ExploreGrid } from '@/components/feed/ExploreGrid';
-import { Search, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useCategory } from '@/context/CategoryContext';
 
 export default function ExplorePage() {
     const { activeCategory, categoryConfig } = useCategory();
-    const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
 
     const filters = ['All', 'Provider', 'Seeker', 'Nearby'];

@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { Search, Bell, ChevronDown, Menu } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useCategory } from '@/context/CategoryContext';
 
@@ -13,6 +14,11 @@ import Image from 'next/image';
 export function TopBar() {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const isShowSearch = searchParams.get('search') === 'true';
+    const [searchQuery, setSearchQuery] = useState('');
+
     const [showSwitcher, setShowSwitcher] = useState(false);
 
     return (
@@ -88,13 +94,55 @@ export function TopBar() {
                 </div>
 
                 {/* Right: Icons & Menu */}
-                <div className="flex items-center gap-1.5">
-                    <button
-                        onClick={() => router.push('/explore')}
-                        className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors"
-                    >
-                        <Search className="w-4.5 h-4.5" />
-                    </button>
+                <div className="flex items-center gap-1.5 flex-1 justify-end">
+                    {pathname === '/explore' && (
+                        <>
+                            {isShowSearch ? (
+                                <motion.div
+                                    initial={{ width: 40, opacity: 0 }}
+                                    animate={{ width: '100%', opacity: 1 }}
+                                    className="relative flex-1 max-w-[200px]"
+                                >
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        onBlur={() => {
+                                            if (!searchQuery) {
+                                                const params = new URLSearchParams(searchParams.toString());
+                                                params.delete('search');
+                                                router.push(`${pathname}?${params.toString()}`);
+                                            }
+                                        }}
+                                        placeholder="Search..."
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-full px-4 py-1.5 text-xs font-bold focus:outline-none focus:border-[--accent]"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const params = new URLSearchParams(searchParams.toString());
+                                            params.delete('search');
+                                            router.push(`${pathname}?${params.toString()}`);
+                                        }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                                    >
+                                        <Search className="w-3.5 h-3.5" />
+                                    </button>
+                                </motion.div>
+                            ) : (
+                                <button
+                                    onClick={() => {
+                                        const params = new URLSearchParams(searchParams.toString());
+                                        params.set('search', 'true');
+                                        router.push(`${pathname}?${params.toString()}`);
+                                    }}
+                                    className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors"
+                                >
+                                    <Search className="w-4.5 h-4.5" />
+                                </button>
+                            )}
+                        </>
+                    )}
                     <button className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors relative">
                         <Bell className="w-4.5 h-4.5" />
                         <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-[--accent] rounded-full border border-white" />

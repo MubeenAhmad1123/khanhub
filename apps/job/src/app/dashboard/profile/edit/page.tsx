@@ -198,7 +198,16 @@ export default function EditProfilePage() {
                                     required
                                     value={formData.fullName}
                                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder={isEmployer ? "Your company name" : "Your full name"}
                                 />
                             </div>
@@ -211,7 +220,16 @@ export default function EditProfilePage() {
                                     required
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="e.g. 0300-1234567"
                                 />
                             </div>
@@ -223,7 +241,16 @@ export default function EditProfilePage() {
                                     type="tel"
                                     value={formData.whatsapp}
                                     onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="If different from phone"
                                 />
                             </div>
@@ -236,7 +263,16 @@ export default function EditProfilePage() {
                                     required
                                     value={formData.location}
                                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="City, Country"
                                 />
                             </div>
@@ -275,7 +311,16 @@ export default function EditProfilePage() {
                                             min="0"
                                             value={formData.experience}
                                             onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            style={{
+                                                background: '#FFFFFF',
+                                                color: '#0A0A0A',
+                                                border: '1.5px solid #E5E5E5',
+                                                borderRadius: '8px',
+                                                padding: '10px 14px',
+                                                fontSize: '14px',
+                                                width: '100%',
+                                                outline: 'none',
+                                            }}
                                         />
                                     </div>
 
@@ -287,7 +332,16 @@ export default function EditProfilePage() {
                                             required
                                             value={formData.education}
                                             onChange={(e) => setFormData({ ...formData, education: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            style={{
+                                                background: '#FFFFFF',
+                                                color: '#0A0A0A',
+                                                border: '1.5px solid #E5E5E5',
+                                                borderRadius: '8px',
+                                                padding: '10px 14px',
+                                                fontSize: '14px',
+                                                width: '100%',
+                                                outline: 'none',
+                                            }}
                                             placeholder="e.g. BS Computer Science"
                                         />
                                     </div>
@@ -305,7 +359,16 @@ export default function EditProfilePage() {
                                             required
                                             value={formData.companySize}
                                             onChange={(e) => setFormData({ ...formData, companySize: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            style={{
+                                                background: '#FFFFFF',
+                                                color: '#0A0A0A',
+                                                border: '1.5px solid #E5E5E5',
+                                                borderRadius: '8px',
+                                                padding: '10px 14px',
+                                                fontSize: '14px',
+                                                width: '100%',
+                                                outline: 'none',
+                                            }}
                                             placeholder="e.g. 1-10, 50-100 employees"
                                         />
                                     </div>
@@ -317,7 +380,16 @@ export default function EditProfilePage() {
                                             type="url"
                                             value={formData.companyWebsite}
                                             onChange={(e) => setFormData({ ...formData, companyWebsite: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            style={{
+                                                background: '#FFFFFF',
+                                                color: '#0A0A0A',
+                                                border: '1.5px solid #E5E5E5',
+                                                borderRadius: '8px',
+                                                padding: '10px 14px',
+                                                fontSize: '14px',
+                                                width: '100%',
+                                                outline: 'none',
+                                            }}
                                             placeholder="https://"
                                         />
                                     </div>
@@ -341,7 +413,16 @@ export default function EditProfilePage() {
                                             required
                                             value={formData.role}
                                             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                            style={{
+                                                background: '#FFFFFF',
+                                                color: '#0A0A0A',
+                                                border: '1.5px solid #E5E5E5',
+                                                borderRadius: '8px',
+                                                padding: '10px 14px',
+                                                fontSize: '14px',
+                                                width: '100%',
+                                                outline: 'none',
+                                            }}
                                             placeholder="e.g. Senior Doctor, Lead Developer"
                                         />
                                     )}
@@ -358,7 +439,16 @@ export default function EditProfilePage() {
                                     required
                                     value={formData.skills}
                                     onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="React, Node.js, UI/UX, Sales..."
                                 />
                             </div>
@@ -372,7 +462,17 @@ export default function EditProfilePage() {
                                 value={formData.bio}
                                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                                 rows={4}
-                                className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all font-medium resize-none"
+                                style={{
+                                    background: '#FFFFFF',
+                                    color: '#0A0A0A',
+                                    border: '1.5px solid #E5E5E5',
+                                    borderRadius: '8px',
+                                    padding: '10px 14px',
+                                    fontSize: '14px',
+                                    width: '100%',
+                                    outline: 'none',
+                                    resize: 'none',
+                                }}
                                 placeholder={isEmployer ? "Tell us what your company does..." : "Tell us about yourself..."}
                             />
                         </div>

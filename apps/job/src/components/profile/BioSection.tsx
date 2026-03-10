@@ -30,9 +30,9 @@ export default function BioSection({ user }: BioSectionProps) {
     };
 
     return (
-        <section className="px-6 py-6 border-b border-[#1A1A1A]">
+        <section className="px-6 py-6 border-b border-[#E5E5E5]" style={{ background: '#FFFFFF' }}>
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[--text-muted]">About Me</h3>
+                <h3 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#0A0A0A' }}>About Me</h3>
                 {!isEditing && (
                     <button onClick={() => setIsEditing(true)} className="text-[--text-muted] hover:text-white transition-colors">
                         <Edit2 size={14} />
@@ -46,7 +46,18 @@ export default function BioSection({ user }: BioSectionProps) {
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         placeholder="Tell us about yourself..."
-                        className="w-full bg-[#141414] border border-[#1A1A1A] rounded-xl p-4 text-sm font-medium outline-none focus:border-white min-h-[100px] resize-none"
+                        style={{
+                            background: '#FFFFFF',
+                            color: '#0A0A0A',
+                            border: '1.5px solid #E5E5E5',
+                            borderRadius: '8px',
+                            padding: '10px 14px',
+                            fontSize: '14px',
+                            width: '100%',
+                            outline: 'none',
+                            minHeight: '100px',
+                            resize: 'none',
+                        }}
                         autoFocus
                     />
                     <div className="flex justify-end gap-2">
@@ -59,14 +70,14 @@ export default function BioSection({ user }: BioSectionProps) {
                         <button
                             onClick={handleSave}
                             disabled={loading}
-                            className="px-6 py-2 bg-white text-black text-xs font-black uppercase tracking-widest rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                            className="px-6 py-2 bg-[#0A0A0A] text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-[#333333] transition-colors disabled:opacity-50"
                         >
                             {loading ? 'Saving...' : 'Save'}
                         </button>
                     </div>
                 </div>
             ) : (
-                <p className="text-sm text-gray-300 leading-relaxed font-medium">
+                <p className="text-sm text-[#444444] leading-relaxed font-medium">
                     {user?.bio || 'No bio yet. Tap edit to add one.'}
                 </p>
             )}

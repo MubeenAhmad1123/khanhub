@@ -140,7 +140,16 @@ export default function JobPreferencesSection({ profile, onSave }: JobPreference
                                     required
                                     value={formData.preferredJobTitle}
                                     onChange={(e) => setFormData({ ...formData, preferredJobTitle: e.target.value })}
-                                    className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="e.g. Graphic Designer"
                                 />
                             </div>
@@ -154,7 +163,16 @@ export default function JobPreferencesSection({ profile, onSave }: JobPreference
                                         type="number"
                                         value={formData.desiredSalaryMin || ''}
                                         onChange={(e) => setFormData({ ...formData, desiredSalaryMin: parseInt(e.target.value) || 0 })}
-                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold text-sm"
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: '1.5px solid #E5E5E5',
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            width: '100%',
+                                            outline: 'none',
+                                        }}
                                         placeholder="Min"
                                     />
                                     <span className="text-slate-300">—</span>
@@ -162,7 +180,16 @@ export default function JobPreferencesSection({ profile, onSave }: JobPreference
                                         type="number"
                                         value={formData.desiredSalaryMax || ''}
                                         onChange={(e) => setFormData({ ...formData, desiredSalaryMax: parseInt(e.target.value) || 0 })}
-                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold text-sm"
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: '1.5px solid #E5E5E5',
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            width: '100%',
+                                            outline: 'none',
+                                        }}
                                         placeholder="Max"
                                     />
                                 </div>
@@ -178,7 +205,16 @@ export default function JobPreferencesSection({ profile, onSave }: JobPreference
                                         value={newLocation}
                                         onChange={(e) => setNewLocation(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLocation())}
-                                        className="flex-1 px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold text-sm"
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: '1.5px solid #E5E5E5',
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            flex: 1,
+                                            outline: 'none',
+                                        }}
                                         placeholder="Add City"
                                     />
                                     <button

@@ -189,7 +189,16 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                         name="name"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className={cn("w-full px-5 py-3 bg-slate-50 border-2 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold", (profile as any).flags?.some((f: any) => f.field === 'name' && !f.resolved) ? "border-red-400" : "border-slate-100")}
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: `1.5px solid ${(profile as any).flags?.some((f: any) => f.field === 'name' && !f.resolved) ? '#F87171' : '#E5E5E5'}`,
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            width: '100%',
+                                            outline: 'none',
+                                        }}
                                         placeholder="e.g. John Doe"
                                     />
                                     {(profile as any).flags?.find((f: any) => f.field === 'name' && !f.resolved) && (
@@ -209,7 +218,16 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                         name="desiredJobTitle"
                                         value={formData.desiredJobTitle}
                                         onChange={(e) => setFormData({ ...formData, desiredJobTitle: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: '1.5px solid #E5E5E5',
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            width: '100%',
+                                            outline: 'none',
+                                        }}
                                         placeholder="e.g. Senior Frontend Developer"
                                     />
                                 </div>
@@ -224,7 +242,16 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                         name="city"
                                         value={formData.city}
                                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                        className={cn("w-full px-5 py-3 bg-slate-50 border-2 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold", (profile as any).flags?.some((f: any) => f.field === 'location' && !f.resolved) ? "border-red-400" : "border-slate-100")}
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: `1.5px solid ${(profile as any).flags?.some((f: any) => f.field === 'location' && !f.resolved) ? '#F87171' : '#E5E5E5'}`,
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            width: '100%',
+                                            outline: 'none',
+                                        }}
                                         placeholder="e.g. Lahore, Pakistan"
                                     />
                                     {(profile as any).flags?.find((f: any) => f.field === 'location' && !f.resolved) && (
@@ -244,7 +271,16 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
                                         name="phone"
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        className={cn("w-full px-5 py-3 bg-slate-50 border-2 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold", (profile as any).flags?.some((f: any) => f.field === 'phone' && !f.resolved) ? "border-red-400" : "border-slate-100")}
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: `1.5px solid ${(profile as any).flags?.some((f: any) => f.field === 'phone' && !f.resolved) ? '#F87171' : '#E5E5E5'}`,
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            width: '100%',
+                                            outline: 'none',
+                                        }}
                                         placeholder="03XXXXXXXXX"
                                     />
                                     {(profile as any).flags?.find((f: any) => f.field === 'phone' && !f.resolved) && (

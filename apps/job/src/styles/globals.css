@@ -129,4 +129,9 @@
     position: relative;
     width: 100%;
   }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #999999;
+  }
 }

@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
+import { CategoryDropdown } from '@/components/feed/CategoryDropdown';
 
 
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
@@ -369,9 +370,11 @@ export function VideoFeed() {
                 overflow: 'hidden',
                 flexShrink: 0,
             }}>
-                {/* FeedTabs floats over */}
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30, pointerEvents: 'none', paddingTop: 'env(safe-area-inset-top, 12px)' }}>
-                    <div className="flex flex-col gap-2 p-4 pointer-events-auto">
+                    <div className="relative flex items-center justify-center p-4 pointer-events-auto">
+                        <div className="absolute left-4">
+                            <CategoryDropdown />
+                        </div>
                         <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
                     </div>
                 </div>

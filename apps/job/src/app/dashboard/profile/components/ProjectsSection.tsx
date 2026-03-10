@@ -119,7 +119,16 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                     required
                                     value={editingEntry.title}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, title: e.target.value })}
-                                    className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-orange-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="e.g. KhanHub Landing Page"
                                 />
                             </div>
@@ -132,7 +141,16 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                     type="url"
                                     value={editingEntry.url}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, url: e.target.value })}
-                                    className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-orange-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="https://github.com/..."
                                 />
                             </div>
@@ -145,7 +163,16 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                     type="month"
                                     value={editingEntry.startDate}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, startDate: e.target.value })}
-                                    className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-orange-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -159,7 +186,16 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                         disabled={editingEntry.current}
                                         value={editingEntry.endDate || ''}
                                         onChange={(e) => setEditingEntry({ ...editingEntry, endDate: e.target.value })}
-                                        className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-orange-500 focus:outline-none transition-all font-bold disabled:opacity-50"
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: '1.5px solid #E5E5E5',
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            width: '100%',
+                                            outline: 'none',
+                                        }}
                                     />
                                     <label className="flex items-center gap-2 cursor-pointer pt-1">
                                         <input
@@ -181,7 +217,18 @@ export default function ProjectsSection({ profile, onSave, isEmployer }: Project
                                     required
                                     value={editingEntry.description}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}
-                                    className="w-full h-32 px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-orange-500 focus:outline-none transition-all font-medium resize-none"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                        height: '128px',
+                                        resize: 'none',
+                                    }}
                                     placeholder="What did you build and which technologies did you use?"
                                 />
                             </div>

@@ -130,7 +130,16 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                     required
                                     value={editingEntry.title}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, title: e.target.value })}
-                                    className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="e.g. Senior Product Designer"
                                 />
                             </div>
@@ -144,7 +153,16 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                     required
                                     value={editingEntry.company}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, company: e.target.value })}
-                                    className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                     placeholder="e.g. Digital Pulse"
                                 />
                             </div>
@@ -158,7 +176,16 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                     required
                                     value={editingEntry.startDate}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, startDate: e.target.value })}
-                                    className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                    }}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -172,7 +199,16 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                         disabled={editingEntry.current}
                                         value={editingEntry.endDate || ''}
                                         onChange={(e) => setEditingEntry({ ...editingEntry, endDate: e.target.value })}
-                                        className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-bold disabled:opacity-50"
+                                        style={{
+                                            background: '#FFFFFF',
+                                            color: '#0A0A0A',
+                                            border: '1.5px solid #E5E5E5',
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            fontSize: '14px',
+                                            width: '100%',
+                                            outline: 'none',
+                                        }}
                                     />
                                     <label className="flex items-center gap-2 cursor-pointer pt-1">
                                         <input
@@ -193,7 +229,18 @@ export default function WorkHistorySection({ profile, onSave }: WorkHistorySecti
                                 <textarea
                                     value={editingEntry.description}
                                     onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}
-                                    className="w-full h-32 px-5 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-medium resize-none"
+                                    style={{
+                                        background: '#FFFFFF',
+                                        color: '#0A0A0A',
+                                        border: '1.5px solid #E5E5E5',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        fontSize: '14px',
+                                        width: '100%',
+                                        outline: 'none',
+                                        height: '128px',
+                                        resize: 'none',
+                                    }}
                                     placeholder="What were your key responsibilities and achievements?"
                                 />
                             </div>

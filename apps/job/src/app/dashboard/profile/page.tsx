@@ -80,8 +80,15 @@ export default function ProfilePage() {
                     {profile.name || user.displayName}
                 </h1>
 
-                {/* Category + Role badges */}
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                {/* Category + Role badges - Clickable to change */}
+                <div
+                    onClick={() => router.push('/auth/onboarding?mode=change')}
+                    style={{
+                        display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap',
+                        cursor: 'pointer'
+                    }}
+                    title="Change Category"
+                >
                     <span style={{
                         background: `${accentColor}22`, color: accentColor,
                         border: `1px solid ${accentColor}`, borderRadius: 999,
@@ -146,18 +153,7 @@ export default function ProfilePage() {
                 >
                     Edit Profile
                 </button>
-                <button
-                    onClick={() => router.push('/auth/onboarding?mode=change')}
-                    style={{
-                        background: 'none', border: 'none',
-                        color: '#888', fontSize: 12,
-                        fontFamily: 'DM Sans', cursor: 'pointer',
-                        marginTop: 8,
-                        marginBottom: 16,
-                    }}
-                >
-                    🔄 Change Category
-                </button>
+
             </div>
 
             {/* ── TAB BAR (TikTok style) ── */}
