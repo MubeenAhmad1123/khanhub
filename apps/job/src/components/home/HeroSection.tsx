@@ -50,7 +50,7 @@ export default function HeroSection() {
                     maxWidth: '90%',
                     margin: '0 auto 40px',
                 }}>
-                    KHAN HUB bridges workers with hiring companies, grooms with brides, property agents with buyers, and sellers with buyers. Show who you are in 60 seconds. No CVs. No forms. Just you.
+                    KHAN HUB bridges you with the right people — whether it's jobs, healthcare, education, marriage, legal help, or trade. Show who you are in 60 seconds. No CVs. No forms. Just you.
                 </p>
 
                 <div style={{
@@ -108,7 +108,7 @@ export default function HeroSection() {
 
                     <span>✓ Registration <span style={freeStyle}>FREE</span></span>
                     <span>✓ Video Upload <span style={freeStyle}>FREE</span></span>
-                    <span>✓ 6 Categories</span>
+                    <span>✓ 10 Categories</span>
                 </p>
             </div>
         </section>

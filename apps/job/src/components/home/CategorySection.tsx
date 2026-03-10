@@ -5,12 +5,16 @@ import { useCategory } from '@/context/CategoryContext';
 import { CategoryKey } from '@/lib/categories';
 
 const CATEGORIES = [
-    { key: 'dailywages', label: 'Daily Wages', image: '/jobs.webp', accent: '#FF0069' },
-    { key: 'marriage', label: 'Marriage Bureau', image: '/marraige.webp', accent: '#FF6B9D' },
-    { key: 'property', label: 'Property', image: '/real-estate.webp', accent: '#7638FA' },
-    { key: 'automobiles', label: 'Automobiles', image: '/tech.webp', accent: '#00C896' },
-    { key: 'buysell', label: 'Buy/Sell', image: '/healthcare.webp', accent: '#00E5FF' },
+    { key: 'jobs', label: 'Jobs', image: '/jobs.webp', accent: '#FF0069' },
+    { key: 'healthcare', label: 'Healthcare', image: '/healthcare.webp', accent: '#00C896' },
     { key: 'education', label: 'Education', image: '/education (2).webp', accent: '#FFD600' },
+    { key: 'marriage', label: 'Marriage', image: '/marraige.webp', accent: '#FF6B9D' },
+    { key: 'legal', label: 'Legal', image: '/translation.webp', accent: '#4A90D9' },
+    { key: 'realestate', label: 'Real Estate', image: '/real-estate.webp', accent: '#7638FA' },
+    { key: 'transport', label: 'Transport', image: '/jobs.webp', accent: '#FF8C00' },
+    { key: 'travel', label: 'Travel & Tour', image: '/jobs.webp', accent: '#00BFFF' },
+    { key: 'agriculture', label: 'Agriculture', image: '/jobs.webp', accent: '#4CAF50' },
+    { key: 'sellbuy', label: 'Sell & Buy', image: '/healthcare.webp', accent: '#FF5722' },
 ];
 
 interface CategorySectionProps {
@@ -42,7 +46,7 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                     display: 'block',
                     marginBottom: 12,
                 }}>
-                    6 Categories. One Platform.
+                    10 Categories. One Platform.
                 </span>
 
                 <h2 style={{

@@ -81,88 +81,44 @@ const getCloudinaryThumb = (videoUrl: string): string => {
 function buildOverlayData(formData: Record<string, any>, category: string, role: string) {
     const map: Record<string, Record<string, any>> = {
         jobs: {
-            worker: {
-                title: formData.specialization || '',
-                badge: 'Worker',
-                field1: formData.specialization || '',
-                field2: formData.experienceLevel || '',
-            },
-            hiring: {
-                title: formData.companyName || '',
-                badge: 'Hiring',
-                field1: formData.city || '',
-                field2: formData.phone || '',
-            },
+            worker: { title: formData.specialization || '', badge: 'Job Seeker', field1: formData.specialization || '', field2: formData.experienceLevel || '' },
+            hiring: { title: formData.companyName || '', badge: 'Employer', field1: formData.city || '', field2: formData.phone || '' },
         },
-        marriage: {
-            groom: {
-                title: `Groom Profile`,
-                badge: 'Groom',
-                field1: `${formData.age || ''} Years`,
-                field2: formData.city || '',
-            },
-            bride: {
-                title: `Bride Profile`,
-                badge: 'Bride',
-                field1: `${formData.age || ''} Years`,
-                field2: formData.city || '',
-            },
-        },
-        property: {
-            agent: {
-                title: formData.companyName || '',
-                badge: 'Agent',
-                field1: formData.city || '',
-                field2: 'Property Expert',
-            },
-            buyer: {
-                title: 'Looking for Property',
-                badge: 'Buyer',
-                field1: formData.city || '',
-                field2: '',
-            },
-        },
-        automobiles: {
-            seller: {
-                title: 'Vehicle for Sale',
-                badge: 'Seller',
-                field1: formData.city || '',
-                field2: '',
-            },
-            buyer: {
-                title: 'Looking for Vehicle',
-                badge: 'Buyer',
-                field1: formData.city || '',
-                field2: '',
-            },
-        },
-        buysell: {
-            seller: {
-                title: 'Item for Sale',
-                badge: 'Seller',
-                field1: formData.city || '',
-                field2: '',
-            },
-            buyer: {
-                title: 'Looking to Buy',
-                badge: 'Buyer',
-                field1: formData.city || '',
-                field2: '',
-            },
+        healthcare: {
+            doctor: { title: formData.specialization || '', badge: 'Healthcare', field1: formData.specialization || '', field2: formData.city || '' },
+            patient: { title: 'Seeking Care', badge: 'Patient', field1: formData.city || '', field2: '' },
         },
         education: {
-            teacher: {
-                title: formData.subject || '',
-                badge: 'Teacher',
-                field1: formData.subject || '',
-                field2: formData.experienceLevel || '',
-            },
-            student: {
-                title: 'Student Profile',
-                badge: 'Student',
-                field1: formData.city || '',
-                field2: '',
-            },
+            teacher: { title: formData.subject || '', badge: 'Teacher', field1: formData.subject || '', field2: formData.experienceLevel || '' },
+            student: { title: 'Student Profile', badge: 'Student', field1: formData.city || '', field2: '' },
+        },
+        marriage: {
+            groom: { title: `Groom Profile`, badge: 'Groom', field1: `${formData.age || ''} Years`, field2: formData.city || '' },
+            bride: { title: `Bride Profile`, badge: 'Bride', field1: `${formData.age || ''} Years`, field2: formData.city || '' },
+        },
+        legal: {
+            lawyer: { title: 'Legal Professional', badge: 'Lawyer', field1: formData.specialization || '', field2: formData.city || '' },
+            client: { title: 'Seeking Advice', badge: 'Client', field1: formData.city || '', field2: '' },
+        },
+        realestate: {
+            agent: { title: formData.companyName || '', badge: 'Agent', field1: formData.city || '', field2: 'Property Expert' },
+            buyer: { title: 'Looking for Property', badge: 'Buyer', field1: formData.city || '', field2: '' },
+        },
+        transport: {
+            seller: { title: 'Transport Service', badge: 'Driver', field1: formData.city || '', field2: '' },
+            buyer: { title: 'Passenger / Seeker', badge: 'Passenger', field1: formData.city || '', field2: '' },
+        },
+        travel: {
+            agency: { title: formData.companyName || '', badge: 'Travel Agency', field1: formData.city || '', field2: '' },
+            traveler: { title: 'Looking for Tour', badge: 'Traveler', field1: formData.city || '', field2: '' },
+        },
+        agriculture: {
+            farmer: { title: 'Agri Supplier', badge: 'Farmer', field1: formData.city || '', field2: '' },
+            buyer: { title: 'Looking for Agri Products', badge: 'Buyer', field1: formData.city || '', field2: '' },
+        },
+        sellbuy: {
+            seller: { title: 'Item for Sale', badge: 'Seller', field1: formData.city || '', field2: '' },
+            buyer: { title: 'Looking to Buy', badge: 'Buyer', field1: formData.city || '', field2: '' },
         },
     };
     return map[category]?.[role] || { title: '', badge: '', field1: '', field2: '' };
@@ -242,33 +198,31 @@ function ConditionalFields({
             </>
         );
     }
-    if (category === 'jobs' && role === 'seeker') {
+    if (category === 'healthcare' && role === 'provider') {
+        return <TextInput label="Specialization" placeholder='e.g. "Dentist"' value={formData.specialization || ''} onChange={set('specialization')} required />;
+    }
+    if (category === 'education' && role === 'provider') {
         return (
             <>
-                <TextInput label="Hiring For" placeholder='e.g. "Plumber"' value={formData.companyName || ''} onChange={set('companyName')} required />
-                <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />
+                <TextInput label="Subject / Field" placeholder='e.g. "Physics"' value={formData.subject || ''} onChange={set('subject')} required />
+                <PillSelector label="Experience Level" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
             </>
         );
     }
-    if (category === 'marriage' && role === 'provider') {
+    if (category === 'marriage') {
+        const label = role === 'provider' ? "Groom's Profession" : "Bride's Profession";
         return (
             <>
-                <TextInput label="Groom's Profession" placeholder='e.g. "Engineer"' value={formData.specialization || ''} onChange={set('specialization')} required />
+                <TextInput label={label} placeholder='e.g. "Engineer"' value={formData.specialization || ''} onChange={set('specialization')} required />
                 <TextInput label="Age" placeholder='e.g. "28"' value={formData.age || ''} onChange={set('age')} required type="number" />
                 <TextInput label="City" placeholder='e.g. "Lahore"' value={formData.city || ''} onChange={set('city')} required />
             </>
         );
     }
-    if (category === 'marriage' && role === 'seeker') {
-        return (
-            <>
-                <TextInput label="Bride's Profession" placeholder='e.g. "Doctor"' value={formData.specialization || ''} onChange={set('specialization')} required />
-                <TextInput label="Age" placeholder='e.g. "24"' value={formData.age || ''} onChange={set('age')} required type="number" />
-                <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />
-            </>
-        );
+    if (category === 'legal' && role === 'provider') {
+        return <TextInput label="Legal Specialization" placeholder='e.g. "Criminal Lawyer"' value={formData.specialization || ''} onChange={set('specialization')} required />;
     }
-    if (category === 'property') {
+    if (category === 'realestate' || category === 'property') {
         return (
             <>
                 <TextInput label="Area / City" placeholder='e.g. "DHA Phase 6"' value={formData.city || ''} onChange={set('city')} required />
@@ -276,15 +230,21 @@ function ConditionalFields({
             </>
         );
     }
-    if (category === 'automobiles') {
+    if (category === 'transport' || category === 'automobiles') {
         return (
             <>
-                <TextInput label="Vehicle Name & Year" placeholder='e.g. "Honda Civic 2022"' value={formData.companyName || ''} onChange={set('companyName')} required />
+                <TextInput label="Vehicle / Service Name" placeholder='e.g. "Honda Civic 2022"' value={formData.companyName || ''} onChange={set('companyName')} required />
                 <TextInput label="City" placeholder='e.g. "Rawalpindi"' value={formData.city || ''} onChange={set('city')} required />
             </>
         );
     }
-    if (category === 'buysell') {
+    if (category === 'travel' && role === 'provider') {
+        return <TextInput label="Travel Service / Package" placeholder='e.g. "Dubai Tour Package"' value={formData.companyName || ''} onChange={set('companyName')} required />;
+    }
+    if (category === 'agriculture' && role === 'provider') {
+        return <TextInput label="Products Offered" placeholder='e.g. "Organic Wheat"' value={formData.companyName || ''} onChange={set('companyName')} required />;
+    }
+    if (category === 'sellbuy' || category === 'buysell') {
         return (
             <>
                 <TextInput label="Item Name" placeholder='e.g. "iPhone 15 Pro Max"' value={formData.companyName || ''} onChange={set('companyName')} required />
@@ -292,13 +252,8 @@ function ConditionalFields({
             </>
         );
     }
-    if (category === 'education') {
-        return (
-            <>
-                <TextInput label="Subject / Field" placeholder='e.g. "Physics"' value={formData.subject || ''} onChange={set('subject')} required />
-                <TextInput label="City" placeholder='e.g. "Multan"' value={formData.city || ''} onChange={set('city')} required />
-            </>
-        );
+    if (role === 'seeker') {
+        return <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />;
     }
     // Fallback
     return (

@@ -10,12 +10,16 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/firebase-config';
 
 const HOMEPAGE_CATEGORIES = [
-    { key: 'dailywages', label: 'Daily Wages', emoji: '⛏️', image: 'jobs.webp', tagline: 'Workers & hiring companies', accent: '#FF0069' },
-    { key: 'marriage', label: 'Marriage Bureau', emoji: '💍', image: 'marraige.webp', tagline: 'Rishta connections', accent: '#FF6B9D' },
-    { key: 'property', label: 'Property', emoji: '🏗️', image: 'real-estate.webp', tagline: 'Agents & buyers', accent: '#7638FA' },
-    { key: 'automobiles', label: 'Automobiles', emoji: '🚗', image: 'tech.webp', tagline: 'Sellers & buyers', accent: '#00C896' },
-    { key: 'buysell', label: 'Buy/Sell', emoji: '🛍️', image: 'healthcare.webp', tagline: 'Local buying & selling', accent: '#00E5FF' },
+    { key: 'jobs', label: 'Jobs', emoji: '💼', image: 'jobs.webp', tagline: 'Workers & employers', accent: '#FF0069' },
+    { key: 'healthcare', label: 'Healthcare', emoji: '🏥', image: 'healthcare.webp', tagline: 'Doctors & patients', accent: '#00C896' },
     { key: 'education', label: 'Education', emoji: '🎓', image: 'education (2).webp', tagline: 'Teachers & students', accent: '#FFD600' },
+    { key: 'marriage', label: 'Marriage', emoji: '💍', image: 'marraige.webp', tagline: 'Rishta connections', accent: '#FF6B9D' },
+    { key: 'legal', label: 'Legal', emoji: '⚖️', image: 'translation.webp', tagline: 'Lawyers & clients', accent: '#4A90D9' },
+    { key: 'realestate', label: 'Real Estate', emoji: '🏠', image: 'real-estate.webp', tagline: 'Agents & buyers', accent: '#7638FA' },
+    { key: 'transport', label: 'Transport', emoji: '🚛', image: 'jobs.webp', tagline: 'Drivers & passengers', accent: '#FF8C00' },
+    { key: 'travel', label: 'Travel', emoji: '✈️', image: 'jobs.webp', tagline: 'Agency & traveler', accent: '#00BFFF' },
+    { key: 'agriculture', label: 'Agriculture', emoji: '🌾', image: 'jobs.webp', tagline: 'Farmer & buyers', accent: '#4CAF50' },
+    { key: 'sellbuy', label: 'Sell & Buy', emoji: '🛍️', image: 'healthcare.webp', tagline: 'Seller & buyers', accent: '#FF5722' },
 ];
 
 import HeroSection from '@/components/home/HeroSection';

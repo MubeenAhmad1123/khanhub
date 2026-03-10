@@ -3,12 +3,16 @@
 import React from 'react';
 
 const ITEMS = [
-    { provider: "Daily Workers", seeker: "People Hiring" },
-    { provider: "Marriage Proposals (Grooms)", seeker: "Looking to Marry (Brides)" },
-    { provider: "Property Agents / Sellers", seeker: "Buyers & Renters" },
-    { provider: "Vehicle Sellers", seeker: "Car/Bike Buyers" },
-    { provider: "Buy / Sell Items", seeker: "Local Buyers" },
+    { provider: "Job Seekers", seeker: "Employers" },
+    { provider: "Doctors & Clinics", seeker: "Patients" },
     { provider: "Teachers & Tutors", seeker: "Students & Parents" },
+    { provider: "Marriage Proposals", seeker: "Looking to Marry" },
+    { provider: "Legal Services", seeker: "People seeking advice" },
+    { provider: "Property Agents", seeker: "Buyers & Renters" },
+    { provider: "Drivers / Transport", seeker: "Passengers" },
+    { provider: "Travel Agencies", seeker: "Travelers" },
+    { provider: "Farmers / Suppliers", seeker: "Agriculture Buyers" },
+    { provider: "Sellers", seeker: "Local Buyers" },
 ];
 
 export default function WhoIsThisFor() {

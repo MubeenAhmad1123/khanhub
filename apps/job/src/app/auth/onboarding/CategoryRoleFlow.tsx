@@ -10,12 +10,16 @@ import { ArrowLeft, ArrowRight, Check, MapPin, Phone, Building2, User } from 'lu
 import { CATEGORY_CONFIG, CategoryKey } from '@/lib/categories';
 
 const CATEGORIES = [
-    { key: 'dailywages', label: 'Daily Wages', image: '/jobs.webp', accent: '#FF0069' },
-    { key: 'marriage', label: 'Marriage Bureau', image: '/marraige.webp', accent: '#FF6B9D' },
-    { key: 'property', label: 'Property', image: '/real-estate.webp', accent: '#7638FA' },
-    { key: 'automobiles', label: 'Automobiles', image: '/tech.webp', accent: '#00C896' },
-    { key: 'buysell', label: 'Buy/Sell', image: '/healthcare.webp', accent: '#00E5FF' },
+    { key: 'jobs', label: 'Jobs', image: '/jobs.webp', accent: '#FF0069' },
+    { key: 'healthcare', label: 'Healthcare', image: '/healthcare.webp', accent: '#00C896' },
     { key: 'education', label: 'Education', image: '/education (2).webp', accent: '#FFD600' },
+    { key: 'marriage', label: 'Marriage Bureau', image: '/marraige.webp', accent: '#FF6B9D' },
+    { key: 'legal', label: 'Legal', image: '/translation.webp', accent: '#4A90D9' },
+    { key: 'realestate', label: 'Real Estate', image: '/real-estate.webp', accent: '#7638FA' },
+    { key: 'transport', label: 'Transport', image: '/jobs.webp', accent: '#FF8C00' },
+    { key: 'travel', label: 'Travel & Tour', image: '/jobs.webp', accent: '#00BFFF' },
+    { key: 'agriculture', label: 'Agriculture', image: '/jobs.webp', accent: '#4CAF50' },
+    { key: 'sellbuy', label: 'Sell & Buy', image: '/healthcare.webp', accent: '#FF5722' },
 ];
 
 const CATEGORY_ROLES: Record<string, {
@@ -24,34 +28,50 @@ const CATEGORY_ROLES: Record<string, {
     providerDesc: string; seekerDesc: string;
     providerIcon: string; seekerIcon: string;
 }> = {
-    dailywages: {
-        providerKey: 'worker', providerLabel: 'Daily Worker', providerDesc: 'I am looking for daily work', providerIcon: '👷',
-        seekerKey: 'hiring', seekerLabel: 'Hiring', seekerDesc: 'I want to hire workers', seekerIcon: '🏢'
+    jobs: {
+        providerKey: 'worker', providerLabel: 'Job Seeker', providerDesc: 'I am looking for a job', providerIcon: '👨‍💼',
+        seekerKey: 'hiring', seekerLabel: 'Employer', seekerDesc: 'I want to hire people', seekerIcon: '🏢'
     },
-    marriage: {
-        providerKey: 'groom', providerLabel: 'Groom/Male Side', providerDesc: 'I am looking for a partner', providerIcon: '🤵',
-        seekerKey: 'bride', seekerLabel: 'Bride/Female Side', seekerDesc: 'I am looking for a proposal', seekerIcon: '👰'
-    },
-    property: {
-        providerKey: 'agent', providerLabel: 'Agent / Seller', providerDesc: 'I am selling or renting property', providerIcon: '🏠',
-        seekerKey: 'buyer', seekerLabel: 'Buyer / Renter', seekerDesc: 'I am looking to buy or rent', seekerIcon: '🔑'
-    },
-    automobiles: {
-        providerKey: 'seller', providerLabel: 'Seller', providerDesc: 'I am selling a vehicle', providerIcon: '🚗',
-        seekerKey: 'buyer', seekerLabel: 'Buyer', seekerDesc: 'I am looking for a vehicle', seekerIcon: '💰'
-    },
-    buysell: {
-        providerKey: 'seller', providerLabel: 'Seller', providerDesc: 'I am selling an item', providerIcon: '🛍️',
-        seekerKey: 'buyer', seekerLabel: 'Buyer', seekerDesc: 'I am looking for an item', seekerIcon: '💵'
+    healthcare: {
+        providerKey: 'doctor', providerLabel: 'Healthcare Provider', providerDesc: 'I am a doctor or clinic', providerIcon: '🏥',
+        seekerKey: 'patient', seekerLabel: 'Patient / Seeker', seekerDesc: 'I am looking for medical help', seekerIcon: '🤒'
     },
     education: {
         providerKey: 'teacher', providerLabel: 'Teacher / Tutor', providerDesc: 'I want to teach students', providerIcon: '👨‍🏫',
         seekerKey: 'student', seekerLabel: 'Student / Parent', seekerDesc: 'I am looking for a tutor', seekerIcon: '📚'
     },
+    marriage: {
+        providerKey: 'groom', providerLabel: 'Groom/Male Side', providerDesc: 'I am looking for a partner', providerIcon: '🤵',
+        seekerKey: 'bride', seekerLabel: 'Bride/Female Side', seekerDesc: 'I am looking for a proposal', seekerIcon: '👰'
+    },
+    legal: {
+        providerKey: 'lawyer', providerLabel: 'Legal Professional', providerDesc: 'I am a lawyer or firm', providerIcon: '⚖️',
+        seekerKey: 'client', seekerLabel: 'Client', seekerDesc: 'I need legal advice', seekerIcon: '🤝'
+    },
+    realestate: {
+        providerKey: 'agent', providerLabel: 'Agent / Seller', providerDesc: 'I am selling or renting property', providerIcon: '🏠',
+        seekerKey: 'buyer', seekerLabel: 'Buyer / Renter', seekerDesc: 'I am looking to buy or rent', seekerIcon: '🔑'
+    },
+    transport: {
+        providerKey: 'seller', providerLabel: 'Driver / Seller', providerDesc: 'I provide transport services', providerIcon: '🚛',
+        seekerKey: 'buyer', seekerLabel: 'Passenger / Buyer', seekerDesc: 'I need transport', seekerIcon: '💰'
+    },
+    travel: {
+        providerKey: 'agency', providerLabel: 'Travel agency', providerDesc: 'I provide travel services', providerIcon: '✈️',
+        seekerKey: 'traveler', seekerLabel: 'Traveler', seekerDesc: 'I am looking for a tour', seekerIcon: '🎒'
+    },
+    agriculture: {
+        providerKey: 'farmer', providerLabel: 'Farmer / Supplier', providerDesc: 'I provide agri products', providerIcon: '🌾',
+        seekerKey: 'buyer', seekerLabel: 'Buyer', seekerDesc: 'I want to buy agri goods', seekerIcon: '🛒'
+    },
+    sellbuy: {
+        providerKey: 'seller', providerLabel: 'Seller', providerDesc: 'I am selling an item', providerIcon: '🛍️',
+        seekerKey: 'buyer', seekerLabel: 'Buyer', seekerDesc: 'I am looking for an item', seekerIcon: '💵'
+    },
 };
 
 const ROLE_FIELDS: Record<string, Record<string, { label: string; placeholder: string; key: string; type?: string; icon: any }[]>> = {
-    dailywages: {
+    jobs: {
         hiring: [
             { key: 'companyName', label: 'Company / Name', placeholder: 'e.g. Khan Construction', icon: Building2 },
             { key: 'city', label: 'Work Location', placeholder: 'e.g. Lahore', icon: MapPin },
@@ -61,6 +81,15 @@ const ROLE_FIELDS: Record<string, Record<string, { label: string; placeholder: s
             { key: 'specialization', label: 'Your Work / Skill', placeholder: 'e.g. Electrician, Plumber', icon: User },
             { key: 'city', label: 'Your City', placeholder: 'e.g. Karachi', icon: MapPin },
             { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
+        ],
+    },
+    healthcare: {
+        doctor: [
+            { key: 'specialization', label: 'Specialization', placeholder: 'e.g. Cardiologist', icon: User },
+            { key: 'city', label: 'City', placeholder: 'e.g. Lahore', icon: MapPin },
+        ],
+        patient: [
+            { key: 'city', label: 'City', placeholder: 'e.g. Karachi', icon: MapPin },
         ],
     },
     marriage: {
@@ -75,7 +104,7 @@ const ROLE_FIELDS: Record<string, Record<string, { label: string; placeholder: s
             { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
         ],
     },
-    property: {
+    realestate: {
         agent: [
             { key: 'companyName', label: 'Agency Name', placeholder: 'e.g. Zameen Experts', icon: Building2 },
             { key: 'city', label: 'Operating City', placeholder: 'e.g. Islamabad', icon: MapPin },
@@ -85,7 +114,7 @@ const ROLE_FIELDS: Record<string, Record<string, { label: string; placeholder: s
             { key: 'city', label: 'Looking in City', placeholder: 'e.g. Lahore', icon: MapPin },
         ],
     },
-    automobiles: {
+    transport: {
         seller: [
             { key: 'city', label: 'City', placeholder: 'e.g. Karachi', icon: MapPin },
             { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },
@@ -94,7 +123,7 @@ const ROLE_FIELDS: Record<string, Record<string, { label: string; placeholder: s
             { key: 'city', label: 'Your City', placeholder: 'e.g. Lahore', icon: MapPin },
         ],
     },
-    buysell: {
+    sellbuy: {
         seller: [
             { key: 'city', label: 'City', placeholder: 'e.g. Karachi', icon: MapPin },
             { key: 'phone', label: 'Contact Number', placeholder: '03xxxxxxxxx', type: 'tel', icon: Phone },

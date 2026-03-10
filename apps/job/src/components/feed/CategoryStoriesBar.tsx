@@ -6,22 +6,30 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { CategoryKey } from '@/lib/categories';
 
 const CATEGORIES = [
-    { key: 'dailywages', label: 'Daily Wages', emoji: '⛏️', image: '/jobs.webp', accent: '#FF0069' },
-    { key: 'marriage', label: 'Marriage Bureau', emoji: '💍', image: '/marraige.webp', accent: '#FF6B9D' },
-    { key: 'property', label: 'Property', emoji: '🏗️', image: '/real-estate.webp', accent: '#7638FA' },
-    { key: 'automobiles', label: 'Automobiles', emoji: '🚗', image: '/tech.webp', accent: '#00C896' },
-    { key: 'buysell', label: 'Buy/Sell', emoji: '🛍️', image: '/healthcare.webp', accent: '#00E5FF' },
+    { key: 'jobs', label: 'Jobs', emoji: '💼', image: '/jobs.webp', accent: '#FF0069' },
+    { key: 'healthcare', label: 'Healthcare', emoji: '🏥', image: '/healthcare.webp', accent: '#00C896' },
     { key: 'education', label: 'Education', emoji: '🎓', image: '/education (2).webp', accent: '#FFD600' },
+    { key: 'marriage', label: 'Marriage', emoji: '💍', image: '/marraige.webp', accent: '#FF6B9D' },
+    { key: 'legal', label: 'Legal', emoji: '⚖️', image: '/translation.webp', accent: '#4A90D9' },
+    { key: 'realestate', label: 'Real Estate', emoji: '🏠', image: '/real-estate.webp', accent: '#7638FA' },
+    { key: 'transport', label: 'Transport', emoji: '🚛', image: '/jobs.webp', accent: '#FF8C00' },
+    { key: 'travel', label: 'Travel', emoji: '✈️', image: '/jobs.webp', accent: '#00BFFF' },
+    { key: 'agriculture', label: 'Agriculture', emoji: '🌾', image: '/jobs.webp', accent: '#4CAF50' },
+    { key: 'sellbuy', label: 'Sell & Buy', emoji: '🛍️', image: '/healthcare.webp', accent: '#FF5722' },
 ];
 
 // Role labels per category
 const ROLE_OPTIONS: Record<string, { provider: string; seeker: string }> = {
-    dailywages: { provider: 'Worker', seeker: 'Hiring' },
-    marriage: { provider: 'Groom', seeker: 'Bride' },
-    property: { provider: 'Agent / Seller', seeker: 'Buyer / Renter' },
-    automobiles: { provider: 'Seller', seeker: 'Buyer' },
-    buysell: { provider: 'Seller', seeker: 'Buyer' },
+    jobs: { provider: 'Job Seeker', seeker: 'Employer' },
+    healthcare: { provider: 'Doctor', seeker: 'Patient' },
     education: { provider: 'Teacher', seeker: 'Student' },
+    marriage: { provider: 'Presenting', seeker: 'Looking' },
+    legal: { provider: 'Lawyer', seeker: 'Client' },
+    realestate: { provider: 'Agent', seeker: 'Buyer' },
+    transport: { provider: 'Driver', seeker: 'Passenger' },
+    travel: { provider: 'Agency', seeker: 'Traveler' },
+    agriculture: { provider: 'Farmer', seeker: 'Buyer' },
+    sellbuy: { provider: 'Seller', seeker: 'Buyer' },
 };
 
 interface CategoryStoriesBarProps {
