@@ -9,7 +9,6 @@ import { db } from '@/lib/firebase/firebase-config';
 
 interface ExploreGridProps {
     category: string;
-    searchQuery: string;
     filter: string;
 }
 
@@ -25,7 +24,7 @@ interface VideoItem {
     views: number;
 }
 
-export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps) {
+export function ExploreGrid({ category, filter }: ExploreGridProps) {
     const router = useRouter();
     const [videos, setVideos] = useState<VideoItem[]>([]);
 
@@ -52,7 +51,7 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
                     cloudinaryUrl: d.cloudinaryUrl,
                     youtubeId: undefined,
                     title: d.overlayData?.title || d.title || '',
-                    badge: d.overlayData?.badge || d.role || '',
+                    badge: d.overlayData?.badge || d.role || d.userRole || '',
                     field1: d.overlayData?.field1,
                     field2: d.overlayData?.field2,
                     views: d.views || 0,
@@ -62,7 +61,7 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
                 setVideos(real);
             } else {
                 // Fallback: placeholders
-                const safeCat = CATEGORY_PLACEHOLDERS[category] ? category : 'dailywages';
+                const safeCat = CATEGORY_PLACEHOLDERS[category] ? category : 'jobs';
                 const overlays = PLACEHOLDER_OVERLAY_DATA[safeCat] || [];
                 setVideos(
                     CATEGORY_PLACEHOLDERS[safeCat].map((id, i): VideoItem => ({
@@ -80,7 +79,7 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
             }
         }, () => {
             // Index error or permission error → show placeholders
-            const safeCat = CATEGORY_PLACEHOLDERS[category] ? category : 'dailywages';
+            const safeCat = CATEGORY_PLACEHOLDERS[category] ? category : 'jobs';
             const overlays = PLACEHOLDER_OVERLAY_DATA[safeCat] || [];
             setVideos(
                 CATEGORY_PLACEHOLDERS[safeCat].map((id, i): VideoItem => ({
@@ -119,19 +118,15 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
     };
 
     // ── Filter ────────────────────────────────────────────────────
-    const providerBadges = ['Doctor', 'Teacher', 'Agent', 'Freelancer', 'Job Seeker', 'Helper', 'Lawyer', 'Profile'];
-    const seekerBadges = ['Patient', 'Student', 'Buyer / Renter', 'Client', 'Company', 'Household', 'Hiring', 'Seeking', 'Looking'];
+    const providerBadges = ['Doctor', 'Teacher', 'Agent', 'Freelancer', 'Job Seeker', 'Helper', 'Lawyer', 'Profile', 'Worker', 'Agency', 'Farmer', 'Seller', 'Driver', 'Presenting'];
+    const seekerBadges = ['Patient', 'Student', 'Buyer / Renter', 'Client', 'Company', 'Household', 'Hiring', 'Seeking', 'Looking', 'Employer', 'Buyer', 'Passenger', 'Traveler'];
 
     const filteredItems = videos.filter(item => {
-        const matchesSearch =
-            item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.badge.toLowerCase().includes(searchQuery.toLowerCase());
-
         let matchesFilter = true;
         if (filter === 'Provider') matchesFilter = providerBadges.includes(item.badge);
         else if (filter === 'Seeker') matchesFilter = seekerBadges.includes(item.badge);
 
-        return matchesSearch && matchesFilter;
+        return matchesFilter;
     });
 
     const openFeedAtIndex = (index: number) => {
@@ -150,9 +145,8 @@ export function ExploreGrid({ category, searchQuery, filter }: ExploreGridProps)
         <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '1px',
-            maxWidth: 935,
-            margin: '0 auto',
+            gap: '2px',
+            width: '100%',
             padding: '0 0 80px',
         }}>
             {filteredItems.map((item, i) => (

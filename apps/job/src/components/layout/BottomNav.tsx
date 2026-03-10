@@ -83,15 +83,14 @@ export function BottomNav() {
                             alignItems: 'center', justifyContent: 'center',
                             gap: 4,
                             cursor: 'pointer',
-                            color: isActive ? 'var(--accent)' : '#AAAAAA',
+                            color: isActive ? 'var(--accent)' : '#888888',
                             transition: 'color 0.2s',
                         }}
                     >
                         <Icon size={22}
                             strokeWidth={isActive ? 2.5 : 2}
-                            fill={isActive && item.label === 'Home' ? 'var(--accent)' : 'none'}
                         />
-                        <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: isActive ? 700 : 500 }}>
+                        <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--accent)' : '#888888' }}>
                             {item.label}
                         </span>
                     </Link>

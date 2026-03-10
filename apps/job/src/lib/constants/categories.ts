@@ -14,124 +14,105 @@ export interface Industry {
 
 export const INDUSTRIES: Industry[] = [
     {
-        id: 'healthcare',
-        label: 'Healthcare / Medical',
-        icon: '🏥',
-        imageUrl: '/healthcare.webp',
+        id: 'jobs',
+        label: 'Jobs',
+        icon: '💼',
+        imageUrl: '/jobs.webp',
         subcategories: [
-            { id: 'doctors', label: 'Doctors & Specialists', roles: ['General Physician', 'Surgeon', 'Pediatrician', 'Cardiologist', 'Dermatologist'] },
-            { id: 'nursing', label: 'Nursing', roles: ['Registered Nurse', 'Nurse Practitioner', 'Head Nurse'] },
-            { id: 'pharmacy', label: 'Pharmacy', roles: ['Pharmacist', 'Pharmacy Assistant'] },
-            { id: 'lab_tech', label: 'Laboratory & Diagnostics', roles: ['Lab Technician', 'Radiologist'] },
-            { id: 'hosp_admin', label: 'Hospital Administration' },
-            { id: 'other_medical', label: 'Other Medical Staff' }
+            { id: 'software', label: 'Software & IT', roles: ['Developer', 'Designer', 'Manager'] },
+            { id: 'admin', label: 'Administration', roles: ['Receptionist', 'Office Assistant'] },
+            { id: 'sales', label: 'Sales & Marketing', roles: ['Sales Executive', 'Digital Marketer'] }
         ]
     },
     {
-        id: 'technology',
-        label: 'Technology / IT',
-        icon: '💻',
-        imageUrl: '/tech.webp',
+        id: 'healthcare',
+        label: 'Healthcare',
+        icon: '🏥',
+        imageUrl: '/healthcare.webp',
         subcategories: [
-            { id: 'software_dev', label: 'Software Development', roles: ['Frontend Developer', 'Backend Developer', 'Fullstack Developer', 'Mobile Developer'] },
-            { id: 'design', label: 'Design & UI/UX', roles: ['UI/UX Designer', 'Graphic Designer', 'Product Designer'] },
-            { id: 'data_ai', label: 'Data & AI', roles: ['Data Scientist', 'Data Analyst', 'AI Engineer'] },
-            { id: 'cybersecurity', label: 'Cybersecurity' },
-            { id: 'it_support', label: 'IT Support & Network' },
-            { id: 'other_tech', label: 'Other Tech Roles' }
+            { id: 'doctors', label: 'Doctors', roles: ['Physician', 'Surgeon', 'Specialist'] },
+            { id: 'nursing', label: 'Nursing', roles: ['Nurse', 'Medical Assistant'] },
+            { id: 'pharmacy', label: 'Pharmacy', roles: ['Pharmacist'] }
         ]
     },
     {
         id: 'education',
-        label: 'Education / Teaching',
-        icon: '📚',
+        label: 'Education',
+        icon: '🎓',
         imageUrl: '/education (2).webp',
         subcategories: [
-            { id: 'school_teaching', label: 'School Teaching', roles: ['Primary Teacher', 'High School Teacher', 'Subject Specialist'] },
-            { id: 'higher_edu', label: 'Higher Education', roles: ['Lecturer', 'Professor', 'Researcher'] },
-            { id: 'skill_training', label: 'Skill Training / Vocational' },
-            { id: 'admin_edu', label: 'Education Administration' }
+            { id: 'school', label: 'School Teaching', roles: ['Primary Teacher', 'High School Teacher'] },
+            { id: 'higher', label: 'Higher Education', roles: ['Lecturer', 'Professor'] }
         ]
     },
     {
-        id: 'finance',
-        label: 'Finance / Banking',
-        icon: '💰',
-        imageUrl: '/jobs.webp',
+        id: 'marriage',
+        label: 'Marriage Bureau',
+        icon: '💍',
+        imageUrl: '/marraige.webp',
         subcategories: [
-            { id: 'accounting', label: 'Accounting & Audit', roles: ['Accountant', 'Auditor', 'Tax Consultant'] },
-            { id: 'banking', label: 'Banking Operations', roles: ['Bank Manager', 'Cashier', 'Loan Officer'] },
-            { id: 'investment', label: 'Investment & Insurance' },
-            { id: 'other_finance', label: 'Other Finance Roles' }
+            { id: 'presenting', label: 'Presenting Profile' },
+            { id: 'looking', label: 'Looking for Partner' }
         ]
     },
     {
-        id: 'engineering',
-        label: 'Engineering',
-        icon: '⚙️',
-        imageUrl: '/jobs.webp',
+        id: 'legal',
+        label: 'Legal',
+        icon: '⚖️',
+        imageUrl: '/translation.webp',
         subcategories: [
-            { id: 'civil_eng', label: 'Civil Engineering' },
-            { id: 'mech_eng', label: 'Mechanical Engineering' },
-            { id: 'elec_eng', label: 'Electrical Engineering' },
-            { id: 'architecture', label: 'Architecture' }
+            { id: 'lawyer', label: 'Lawyers', roles: ['Advocate', 'Consultant'] },
+            { id: 'client', label: 'Client Services' }
         ]
     },
     {
-        id: 'transportation',
-        label: 'Transportation / Logistics',
+        id: 'realestate',
+        label: 'Real Estate',
+        icon: '🏠',
+        imageUrl: '/real-estate.webp',
+        subcategories: [
+            { id: 'agent', label: 'Agents', roles: ['Property Dealer', 'Consultant'] },
+            { id: 'buyer', label: 'Buyers & Renters' }
+        ]
+    },
+    {
+        id: 'transport',
+        label: 'Transport',
         icon: '🚛',
         imageUrl: '/jobs.webp',
         subcategories: [
-            { id: 'driving', label: 'Driving', roles: ['Truck Driver', 'Delivery Rider', 'Personal Driver'] },
-            { id: 'logistics', label: 'Logistics & Warehouse', roles: ['Warehouse Manager', 'Dispatcher'] },
-            { id: 'aviation_maritime', label: 'Aviation & Maritime' }
+            { id: 'driver', label: 'Drivers', roles: ['Truck Driver', 'Car Driver'] },
+            { id: 'passenger', label: 'Passengers' }
         ]
     },
     {
-        id: 'hospitality',
-        label: 'Hospitality / Food',
-        icon: '🍽️',
+        id: 'travel',
+        label: 'Travel & Tour',
+        icon: '✈️',
         imageUrl: '/jobs.webp',
         subcategories: [
-            { id: 'kitchen', label: 'Kitchen & Cooking', roles: ['Head Chef', 'Cook', 'Kitchen Helper'] },
-            { id: 'serving', label: 'Serving & Front Desk', roles: ['Waiter/Waitress', 'Receptionist'] },
-            { id: 'hosp_mgmt', label: 'Hotel Management' }
+            { id: 'agency', label: 'Agencies', roles: ['Travel Agent', 'Tour Guide'] },
+            { id: 'traveler', label: 'Travelers' }
         ]
     },
     {
-        id: 'retail',
-        label: 'Retail / Sales',
-        icon: '🛒',
+        id: 'agriculture',
+        label: 'Agriculture',
+        icon: '🌾',
         imageUrl: '/jobs.webp',
         subcategories: [
-            { id: 'sales', label: 'Sales & Marketing', roles: ['Sales Executive', 'Digital Marketer', 'Field Sales'] },
-            { id: 'store_mgmt', label: 'Store Management' },
-            { id: 'customer_service', label: 'Customer Service' }
+            { id: 'farmer', label: 'Farmers' },
+            { id: 'buyer', label: 'Produce Buyers' }
         ]
     },
     {
-        id: 'skilled_trades',
-        label: 'Skilled Trades / Labor',
-        icon: '🔧',
-        imageUrl: '/domestic help.webp',
+        id: 'sellbuy',
+        label: 'Sell & Buy',
+        icon: '🛍️',
+        imageUrl: '/healthcare.webp',
         subcategories: [
-            { id: 'electrical_work', label: 'Electrical Work' },
-            { id: 'plumbing', label: 'Plumbing' },
-            { id: 'construction', label: 'Construction' },
-            { id: 'maintenance', label: 'Maintenance & Repair' }
-        ]
-    },
-    {
-        id: 'other',
-        label: 'Other',
-        icon: '✨',
-        imageUrl: '/translation.webp',
-        subcategories: [
-            { id: 'general_admin', label: 'General Administration' },
-            { id: 'human_resources', label: 'Human Resources' },
-            { id: 'legal', label: 'Legal' },
-            { id: 'misc', label: 'Miscellaneous' }
+            { id: 'seller', label: 'Sellers' },
+            { id: 'buyer', label: 'Buyers' }
         ]
     }
 ];

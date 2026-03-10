@@ -29,7 +29,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
                 return saved as CategoryKey;
             }
         }
-        return 'dailywages';
+        return 'jobs';
     });
 
     const [activeRole, setActiveRole] = useState<'provider' | 'seeker'>(() => {
@@ -72,7 +72,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
                 if (saved && Object.keys(CATEGORY_CONFIG).includes(saved)) {
                     setActiveCategory(saved as CategoryKey);
                 } else {
-                    setActiveCategory('dailywages');
+                    setActiveCategory('jobs');
                 }
             }
         });
@@ -84,7 +84,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('jobreel_active_role', activeRole);
 
         // Update CSS Variable
-        const config = CATEGORY_CONFIG[activeCategory] || CATEGORY_CONFIG['dailywages'];
+        const config = CATEGORY_CONFIG[activeCategory] || CATEGORY_CONFIG['jobs'];
         if (config) {
             document.documentElement.style.setProperty('--accent', config.accent);
 
@@ -97,7 +97,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
     const setCategory = (cat: CategoryKey) => setActiveCategory(cat);
     const setRole = (role: 'provider' | 'seeker') => setActiveRole(role);
 
-    const categoryConfig = CATEGORY_CONFIG[activeCategory] || CATEGORY_CONFIG['dailywages'];
+    const categoryConfig = CATEGORY_CONFIG[activeCategory] || CATEGORY_CONFIG['jobs'];
 
     return (
         <CategoryContext.Provider

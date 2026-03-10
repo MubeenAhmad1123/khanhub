@@ -67,7 +67,7 @@ export function VideoFeed() {
 
         const getTabFilter = (tabIndex: number) => {
             if (tabIndex === 0) return null;
-            if (activeCategory === 'dailywages') {
+            if (activeCategory === 'jobs') {
                 return tabIndex === 1 ? 'seeker' : 'provider';
             }
             return tabIndex === 1 ? 'provider' : 'seeker';
@@ -79,7 +79,7 @@ export function VideoFeed() {
             const videos = snapshot.docs
                 .map(d => ({ id: d.id, ...d.data() } as any))
                 .filter(d => {
-                    const matchesCategory = d.category === activeCategory || (activeCategory === 'dailywages' && !d.category);
+                    const matchesCategory = d.category === activeCategory || (activeCategory === 'jobs' && !d.category);
                     const matchesRole = !roleFilter || d.userRole === roleFilter;
 
                     // Search filter
@@ -124,7 +124,7 @@ export function VideoFeed() {
     }, [activeCategory, activeTab, searchQuery]);
 
     // ── Build video list: real first, then placeholders ───────────
-    const roleFilter = activeTab === 0 ? null : (activeCategory === 'dailywages' ? (activeTab === 1 ? 'seeker' : 'provider') : (activeTab === 1 ? 'provider' : 'seeker'));
+    const roleFilter = activeTab === 0 ? null : (activeCategory === 'jobs' ? (activeTab === 1 ? 'seeker' : 'provider') : (activeTab === 1 ? 'provider' : 'seeker'));
 
     // Map placeholder badge to role for filtering
     const getPlaceholderRole = (badge: string): 'provider' | 'seeker' => {
@@ -133,9 +133,9 @@ export function VideoFeed() {
         return 'provider';
     };
 
-    const safeCategories = CATEGORY_PLACEHOLDERS[activeCategory] ? activeCategory : 'dailywages';
+    const safeCategories = CATEGORY_PLACEHOLDERS[activeCategory] ? activeCategory : 'jobs';
     const placeholderList = CATEGORY_PLACEHOLDERS[safeCategories].map((id, i) => {
-        const overlayDataGroup = PLACEHOLDER_OVERLAY_DATA[safeCategories] || PLACEHOLDER_OVERLAY_DATA['dailywages'];
+        const overlayDataGroup = PLACEHOLDER_OVERLAY_DATA[safeCategories] || PLACEHOLDER_OVERLAY_DATA['jobs'];
         const overlay = overlayDataGroup[i % overlayDataGroup.length] || {};
         return {
             id: `placeholder-${i}`,
@@ -373,18 +373,6 @@ export function VideoFeed() {
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30, pointerEvents: 'none', paddingTop: 'env(safe-area-inset-top, 12px)' }}>
                     <div className="flex flex-col gap-2 p-4 pointer-events-auto">
                         <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
-
-                        {/* Inline Search Bar */}
-                        <div className="relative group mt-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/70 group-focus-within:text-white transition-colors" />
-                            <input
-                                type="text"
-                                placeholder={`Search in ${activeCategory}...`}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-black/20 backdrop-blur-md border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white outline-none focus:bg-black/40 transition-all placeholder:text-white/40"
-                            />
-                        </div>
                     </div>
                 </div>
 
@@ -446,7 +434,7 @@ export function VideoFeed() {
                                 thumbnailUrl={video.thumbnailUrl || video.userPhoto} // fallback to userPhoto for now
                                 isPlaceholder={video.isPlaceholder}
                                 isActive={activeIndex === index && !showGuestWall}
-                                isPreload={index >= activeIndex - 1 && index <= activeIndex + 2}
+                                isPreload={index >= activeIndex - 1 && index <= activeIndex + 1}
                             />
 
                             <div style={{
@@ -476,7 +464,7 @@ export function VideoFeed() {
                                         }
                                     }}
                                     connectLabel={
-                                        activeCategory === 'dailywages'
+                                        activeCategory === 'jobs'
                                             ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋')
                                             : activeCategory === 'marriage'
                                                 ? 'Interest 💍'

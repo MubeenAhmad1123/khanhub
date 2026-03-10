@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { ArrowLeft, Video, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, Video, CheckCircle, AlertCircle, X, Camera, Circle, RefreshCw, Loader2 } from 'lucide-react';
 import TagInput from '@/components/ui/TagInput';
 
 /* ─── helpers ─────────────────────────────────────────────────── */
@@ -80,7 +80,7 @@ const getCloudinaryThumb = (videoUrl: string): string => {
 /* ─── buildOverlayData ─────────────────────────────────────────── */
 function buildOverlayData(formData: Record<string, any>, category: string, role: string) {
     const map: Record<string, Record<string, any>> = {
-        dailywages: {
+        jobs: {
             worker: {
                 title: formData.specialization || '',
                 badge: 'Worker',
@@ -234,7 +234,7 @@ function ConditionalFields({
 }) {
     const set = (key: string) => (val: any) => onChange(key, val);
 
-    if (category === 'dailywages' && role === 'provider') {
+    if (category === 'jobs' && role === 'provider') {
         return (
             <>
                 <TextInput label="Skill / Type of Work" placeholder='e.g. "Electrician"' value={formData.specialization || ''} onChange={set('specialization')} required />
@@ -242,7 +242,7 @@ function ConditionalFields({
             </>
         );
     }
-    if (category === 'dailywages' && role === 'seeker') {
+    if (category === 'jobs' && role === 'seeker') {
         return (
             <>
                 <TextInput label="Hiring For" placeholder='e.g. "Plumber"' value={formData.companyName || ''} onChange={set('companyName')} required />
@@ -331,6 +331,97 @@ export default function UploadVideoPage() {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    /* ─── RECORDING STATES ─── */
+    const [isRecording, setIsRecording] = useState(false);
+    const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [isCameraActive, setIsCameraActive] = useState(false);
+    const [cameraMode, setCameraMode] = useState<'user' | 'environment'>('user');
+    const videoPreviewRef = useRef<HTMLVideoElement>(null);
+    const recordingChunks = useRef<Blob[]>([]);
+    const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    const startCamera = async (mode: 'user' | 'environment' = 'user') => {
+        try {
+            const constraints = {
+                video: {
+                    facingMode: mode,
+                    width: { ideal: 1080 },
+                    height: { ideal: 1920 },
+                    aspectRatio: 9 / 16
+                },
+                audio: true
+            };
+            const s = await navigator.mediaDevices.getUserMedia(constraints);
+            setStream(s);
+            if (videoPreviewRef.current) {
+                videoPreviewRef.current.srcObject = s;
+                videoPreviewRef.current.play();
+            }
+            setIsCameraActive(true);
+            setCameraMode(mode);
+        } catch (err) {
+            console.error('Camera access error:', err);
+            setValidationError('Unable to access camera. Please check permissions.');
+        }
+    };
+
+    const stopCamera = () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+        setIsCameraActive(false);
+        setIsRecording(false);
+        setRecordingTime(0);
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+
+    const startRecording = () => {
+        if (!stream) return;
+        recordingChunks.current = [];
+        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9,opus' });
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordingChunks.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordingChunks.current, { type: 'video/webm' });
+            const file = new File([blob], `recorded-video-${Date.now()}.webm`, { type: 'video/webm' });
+            handleFileSelect(file);
+            stopCamera();
+        };
+
+        mediaRecorder.start();
+        setRecorder(mediaRecorder);
+        setIsRecording(true);
+        setRecordingTime(0);
+
+        timerIntervalRef.current = setInterval(() => {
+            setRecordingTime(prev => {
+                if (prev >= 80) { // Limit to 80s
+                    mediaRecorder.stop();
+                    return 80;
+                }
+                return prev + 1;
+            });
+        }, 1000);
+    };
+
+    const stopRecording = () => {
+        if (recorder && recorder.state !== 'inactive') {
+            recorder.stop();
+        }
+    };
+
+    const switchCamera = () => {
+        const nextMode = cameraMode === 'user' ? 'environment' : 'user';
+        stopCamera();
+        startCamera(nextMode);
+    };
+
     /* Auth guard */
     useEffect(() => {
         if (!authLoading && !user) {
@@ -355,7 +446,7 @@ export default function UploadVideoPage() {
         );
     }
 
-    const userCategory = firestoreProfile.category || 'dailywages';
+    const userCategory = firestoreProfile.category || 'jobs';
 
     // Read uiRole from Firestore profile (NOT from Firebase Auth user object)
     // uiRole is 'provider' or 'seeker' — saved during onboarding
@@ -648,16 +739,13 @@ export default function UploadVideoPage() {
                         }}
                     >
                         {!videoFile ? (
-                            <div style={{ textAlign: 'center', padding: '40px 24px' }}>
-                                <div style={{ fontSize: 48, marginBottom: 12 }}>📹</div>
-                                <p style={{ color: '#0A0A0A', fontFamily: 'Poppins', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                            <div style={{ textAlign: 'center', padding: '24px' }}>
+                                <div style={{ fontSize: 40, marginBottom: 8 }}>📹</div>
+                                <p style={{ color: '#0A0A0A', fontFamily: 'Poppins', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
                                     Tap to select your video
                                 </p>
                                 <p style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 12 }}>
-                                    MP4, MOV, WebM
-                                </p>
-                                <p style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 12, marginTop: 4 }}>
-                                    Max 80 seconds · Max 200 MB
+                                    MP4, MOV, WebM · Max 80s · Max 200MB
                                 </p>
                             </div>
                         ) : (
@@ -677,6 +765,25 @@ export default function UploadVideoPage() {
                         style={{ display: 'none' }}
                         onChange={handleInputChange}
                     />
+
+                    {!videoFile && (
+                        <div
+                            onClick={() => startCamera()}
+                            style={{
+                                marginTop: 12, height: 74, border: '1.5px solid #E5E5E5', borderRadius: 20, display: 'flex',
+                                alignItems: 'center', gap: 14, padding: '0 16px', cursor: 'pointer', background: '#FFFFFF',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            <div style={{ padding: 10, background: 'rgba(0,100,255,0.08)', borderRadius: 12 }}>
+                                <Camera size={22} color="#0064FF" />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', fontFamily: 'DM Sans' }}>Record from Camera</p>
+                                <p style={{ fontSize: 11, color: '#888888', fontFamily: 'DM Sans' }}>Shoot a video up to 80s</p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Validation error */}
                     {validationError && (

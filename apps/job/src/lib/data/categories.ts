@@ -1,39 +1,63 @@
 export const INDUSTRY_CATEGORIES = [
     {
+        id: 'jobs',
+        label: 'Jobs',
+        icon: '💼',
+        subcategories: ['Software Engineer', 'Sales Executive', 'Receptionist', 'Manager']
+    },
+    {
         id: 'healthcare',
         label: 'Healthcare',
         icon: '🏥',
-        subcategories: ['Doctor', 'Nurse', 'Hospital Admin', 'Pharmacist', 'Lab Technician']
-    },
-    {
-        id: 'technology',
-        label: 'Technology',
-        icon: '💻',
-        subcategories: ['Software Engineer', 'UI/UX Designer', 'Data Analyst', 'DevOps', 'Product Manager']
-    },
-    {
-        id: 'finance',
-        label: 'Finance',
-        icon: '💰',
-        subcategories: ['Accountant', 'Financial Analyst', 'Banker', 'Auditor', 'Tax Consultant']
+        subcategories: ['Doctor', 'Nurse', 'Pharmacist', 'Lab Technician']
     },
     {
         id: 'education',
         label: 'Education',
-        icon: '📚',
-        subcategories: ['Teacher', 'Lecturer', 'Tutor', 'School Admin', 'Curriculum Designer']
+        icon: '🎓',
+        subcategories: ['Teacher', 'Lecturer', 'Tutor', 'School Admin']
     },
     {
-        id: 'engineering',
-        label: 'Engineering',
-        icon: '⚙️',
-        subcategories: ['Civil Engineer', 'Mechanical Engineer', 'Electrical Engineer', 'Site Supervisor']
+        id: 'marriage',
+        label: 'Marriage Bureau',
+        icon: '💍',
+        subcategories: ['Presenting Profile', 'Looking for Partner']
     },
     {
-        id: 'retail',
-        label: 'Retail',
-        icon: '🛒',
-        subcategories: ['Sales Executive', 'Store Manager', 'Cashier', 'Inventory Manager']
+        id: 'legal',
+        label: 'Legal',
+        icon: '⚖️',
+        subcategories: ['Lawyer', 'Consultant', 'Legal Assistant']
+    },
+    {
+        id: 'realestate',
+        label: 'Real Estate',
+        icon: '🏠',
+        subcategories: ['Agent', 'Consultant', 'Broker']
+    },
+    {
+        id: 'transport',
+        label: 'Transport',
+        icon: '🚛',
+        subcategories: ['Truck Driver', 'Delivery Rider', 'Dispatcher']
+    },
+    {
+        id: 'travel',
+        label: 'Travel & Tour',
+        icon: '✈️',
+        subcategories: ['Travel Agent', 'Tour Guide', 'Agency Owner']
+    },
+    {
+        id: 'agriculture',
+        label: 'Agriculture',
+        icon: '🌾',
+        subcategories: ['Farmer', 'Supplier', 'Buyer']
+    },
+    {
+        id: 'sellbuy',
+        label: 'Sell & Buy',
+        icon: '🛍️',
+        subcategories: ['Seller', 'Buyer', 'Shop Owner']
     }
 ] as const;
 

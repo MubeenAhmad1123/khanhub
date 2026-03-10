@@ -18,11 +18,8 @@ export function TopBar() {
     return (
         <header className="fixed top-0 left-0 right-0 backdrop-blur-md z-50 px-4 py-3" style={{ background: 'rgba(255,255,255,0.95)', borderBottom: '1px solid #E5E5E5' }}>
             <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 text-[#0A0A0A]">
-                {/* Left: Menu & Brand */}
+                {/* Left: Brand */}
                 <div className="flex items-center gap-3">
-                    <button className="p-1 hover:bg-slate-50 rounded-lg transition-colors">
-                        <Menu className="w-6 h-6 text-slate-700" />
-                    </button>
                     <Link href="/" className="text-xl font-black italic tracking-tighter uppercase whitespace-nowrap text-[--accent]">
                         KHAN HUB
                     </Link>
@@ -35,7 +32,7 @@ export function TopBar() {
                         className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full hover:border-[--accent] transition-all"
                     >
                         <span className="text-[11px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">
-                            {categoryConfig.label}
+                            {categoryConfig?.label || 'All'}
                         </span>
                         <ChevronDown className={`w-3.5 h-3.5 text-[#333333] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
                     </button>
@@ -90,7 +87,7 @@ export function TopBar() {
                     </AnimatePresence>
                 </div>
 
-                {/* Right: Icons */}
+                {/* Right: Icons & Menu */}
                 <div className="flex items-center gap-1.5">
                     <button
                         onClick={() => router.push('/explore')}
@@ -101,6 +98,9 @@ export function TopBar() {
                     <button className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors relative">
                         <Bell className="w-4.5 h-4.5" />
                         <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-[--accent] rounded-full border border-white" />
+                    </button>
+                    <button className="p-1 hover:bg-slate-50 rounded-lg transition-colors ml-1">
+                        <Menu className="w-6 h-6 text-slate-700" />
                     </button>
                 </div>
             </div>
