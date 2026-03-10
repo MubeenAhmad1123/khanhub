@@ -105,6 +105,7 @@
     @apply border border-[--border] bg-[--bg-card] rounded-[16px] backdrop-blur-sm;
   }
 
+  /* font-display: swap is handled automatically by next/font/google */
   /* Snap Scroll Styles */
   .feed-container {
     height: 100dvh;

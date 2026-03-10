@@ -21,10 +21,28 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 export function CategoryProvider({ children }: { children: React.ReactNode }) {
-    const [activeCategory, setActiveCategory] = useState<CategoryKey>('jobs');
-    const [activeRole, setActiveRole] = useState<'provider' | 'seeker'>('provider');
+    // Synchronous initial state from localStorage
+    const [activeCategory, setActiveCategory] = useState<CategoryKey>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('jobreel_active_category');
+            if (saved && Object.keys(CATEGORY_CONFIG).includes(saved)) {
+                return saved as CategoryKey;
+            }
+        }
+        return 'jobs';
+    });
 
-    // Restore from localStorage (Guest)
+    const [activeRole, setActiveRole] = useState<'provider' | 'seeker'>(() => {
+        if (typeof window !== 'undefined') {
+            const savedRole = localStorage.getItem('jobreel_active_role');
+            if (savedRole === 'provider' || savedRole === 'seeker') {
+                return savedRole;
+            }
+        }
+        return 'provider';
+    });
+
+    // Restore from localStorage (Guest) - No longer strictly needed for initialization but kept for safety
     useEffect(() => {
         const saved = localStorage.getItem('jobreel_active_category');
         if (saved && Object.keys(CATEGORY_CONFIG).includes(saved)) {

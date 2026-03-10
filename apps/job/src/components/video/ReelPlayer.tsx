@@ -6,16 +6,20 @@ import { Volume2, VolumeX, Play, Pause } from 'lucide-react';
 interface ReelPlayerProps {
     videoId?: string;         // YouTube ID (placeholder)
     cloudinaryUrl?: string;   // Cloudinary URL (real video)
+    thumbnailUrl?: string;    // Image thumbnail URL
     isPlaceholder: boolean;
     isActive: boolean;
+    isPreload?: boolean;      // Whether to preload this video
 }
 
-export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: ReelPlayerProps) {
+export function ReelPlayer({ videoId, cloudinaryUrl, thumbnailUrl, isPlaceholder, isActive, isPreload }: ReelPlayerProps) {
     const [isMuted, setIsMuted] = useState(true);
     const [isPlaying, setIsPlaying] = useState(true);
     const [userActed, setUserActed] = useState(false);
     const [showIndicator, setShowIndicator] = useState<'mute' | 'unmute' | 'play' | 'pause' | null>(null);
     const [isSpeed2x, setIsSpeed2x] = useState(false);
+    const [ready, setReady] = useState(false);
+    const [error, setError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const holdTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -33,7 +37,7 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
     // Play/pause real Cloudinary video based on isActive
     useEffect(() => {
         if (!isPlaceholder && videoRef.current) {
-            if (isActive && isPlaying) {
+            if (isActive && isPlaying && ready) {
                 videoRef.current.play().catch(() => { });
             } else {
                 videoRef.current.pause();
@@ -43,7 +47,7 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
                 }
             }
         }
-    }, [isActive, isPlaceholder, isPlaying]);
+    }, [isActive, isPlaceholder, isPlaying, ready]);
 
     // YouTube embed URL
     const embedUrl = isPlaceholder && videoId
@@ -102,15 +106,49 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
             {/* REAL VIDEO — Cloudinary native <video> */}
             {!isPlaceholder && cloudinaryUrl && (
                 <>
+                    {/* Thumbnail/Loading State */}
+                    {!ready && !error && (
+                        <div style={{ position: 'absolute', inset: 0, zIndex: 3, background: '#000' }}>
+                            {thumbnailUrl ? (
+                                <img
+                                    src={thumbnailUrl}
+                                    alt="Thumbnail"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="w-8 h-8 border-4 border-[--accent] border-t-transparent rounded-full animate-spin" />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Error State */}
+                    {error && (
+                        <div style={{
+                            position: 'absolute', inset: 0, zIndex: 11,
+                            background: 'rgba(0,0,0,0.8)', display: 'flex',
+                            flexDirection: 'column', alignItems: 'center',
+                            justifyContent: 'center', color: '#fff', textAlign: 'center',
+                            padding: 20
+                        }}>
+                            <span style={{ fontSize: 40, marginBottom: 12 }}>⚠️</span>
+                            <p style={{ fontFamily: 'Poppins', fontWeight: 600 }}>Video Unavailable</p>
+                        </div>
+                    )}
+
                     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0 }}>
                         <video
                             src={cloudinaryUrl}
                             muted loop playsInline
+                            preload={isPreload || isActive ? "auto" : "none"}
                             style={{
                                 width: '100%', height: '100%',
                                 objectFit: 'cover',
                                 filter: 'blur(20px) brightness(0.4)',
                                 transform: 'scale(1.1)',
+                                opacity: ready ? 1 : 0,
+                                transition: 'opacity 0.3s'
                             }}
                         />
                     </div>
@@ -119,11 +157,16 @@ export function ReelPlayer({ videoId, cloudinaryUrl, isPlaceholder, isActive }: 
                         src={cloudinaryUrl}
                         muted={isMuted}
                         loop playsInline
+                        preload={isPreload || isActive ? "auto" : "none"}
+                        onCanPlay={() => setReady(true)}
+                        onError={() => setError(true)}
                         style={{
                             position: 'absolute', inset: 0,
                             width: '100%', height: '100%',
                             objectFit: 'contain',
                             zIndex: 1,
+                            opacity: ready ? 1 : 0,
+                            transition: 'opacity 0.3s'
                         }}
                     />
                 </>

@@ -26,13 +26,24 @@ export interface AuthState {
     error: string | null;
 }
 
+// Module-level cache for auth state
+let cachedAuthState: AuthState = {
+    user: null,
+    firebaseUser: null,
+    loading: true,
+    error: null,
+};
+let initialized = false;
+
 export function useAuth() {
-    const [authState, setAuthState] = useState<AuthState>({
-        user: null,
-        firebaseUser: null,
-        loading: true,
-        error: null,
-    });
+    const [authState, setAuthState] = useState<AuthState>(
+        initialized ? cachedAuthState : {
+            user: null,
+            firebaseUser: null,
+            loading: true,
+            error: null,
+        }
+    );
 
     // Listen to auth state changes
     useEffect(() => {
@@ -41,28 +52,37 @@ export function useAuth() {
                 try {
                     // Fetch full user profile from Firestore
                     const userProfile = await getUserProfile(firebaseUser.uid);
-                    setAuthState({
+                    const newState = {
                         user: userProfile,
                         firebaseUser,
                         loading: false,
                         error: null,
-                    });
+                    };
+                    cachedAuthState = newState;
+                    initialized = true;
+                    setAuthState(newState);
                 } catch (err) {
                     console.error('Error fetching user data:', err);
-                    setAuthState({
+                    const newState = {
                         user: null,
                         firebaseUser,
                         loading: false,
                         error: 'Failed to load user data',
-                    });
+                    };
+                    cachedAuthState = newState;
+                    initialized = true;
+                    setAuthState(newState);
                 }
             } else {
-                setAuthState({
+                const newState = {
                     user: null,
                     firebaseUser: null,
                     loading: false,
                     error: null,
-                });
+                };
+                cachedAuthState = newState;
+                initialized = true;
+                setAuthState(newState);
             }
         });
 

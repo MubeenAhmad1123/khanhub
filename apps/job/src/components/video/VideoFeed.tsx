@@ -407,8 +407,10 @@ export function VideoFeed() {
                             <ReelPlayer
                                 videoId={video.videoId}
                                 cloudinaryUrl={video.cloudinaryUrl}
+                                thumbnailUrl={video.thumbnailUrl || video.userPhoto} // fallback to userPhoto for now
                                 isPlaceholder={video.isPlaceholder}
                                 isActive={activeIndex === index && !showGuestWall}
+                                isPreload={index >= activeIndex - 1 && index <= activeIndex + 2}
                             />
 
                             <div style={{

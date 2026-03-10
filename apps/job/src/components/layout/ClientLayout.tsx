@@ -11,6 +11,13 @@ import { CategoryProvider } from '@/context/CategoryContext';
 import { useEffect } from 'react';
 import { FeedToastProvider } from '@/components/ui/FeedToast';
 
+import dynamic from 'next/dynamic';
+import { Suspense } from 'react';
+
+// Wrap non-critical layout components with next/dynamic
+const DynamicTopBar = dynamic(() => import('@/components/layout/TopBar').then(mod => mod.TopBar), { ssr: false });
+const DynamicBottomNav = dynamic(() => import('@/components/layout/BottomNav').then(mod => mod.BottomNav), { ssr: false });
+
 export default function ClientLayout({
     children,
 }: {
@@ -49,7 +56,7 @@ export default function ClientLayout({
         <AuthProviderWrapper>
             <CategoryProvider>
                 <ToastProvider>
-                    {showTopBar && <TopBar />}
+                    {showTopBar && <DynamicTopBar />}
 
                     {/* Desktop sidebar */}
                     {showNav && (
@@ -84,9 +91,11 @@ export default function ClientLayout({
                     )}
 
                     <main className={showNav ? 'pt-20 pb-28 md:pb-12 md:pl-[72px]' : ''}>
-                        {children}
+                        <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+                            {children}
+                        </Suspense>
                     </main>
-                    {showNav && <BottomNav />}
+                    {showNav && <DynamicBottomNav />}
                     <FeedToastProvider />
                 </ToastProvider>
             </CategoryProvider>
