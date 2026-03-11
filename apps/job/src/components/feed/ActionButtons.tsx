@@ -52,6 +52,12 @@ export function ActionButtons({
     const isPlaceholder = !videoId || videoId.startsWith('placeholder') || videoId.startsWith('manual_') || videoId.length < 10;
     const isRealUser = videoUserId && !videoUserId.startsWith('placeholder') && !videoUserId.startsWith('manual_') && !videoUserId.startsWith('ph-') && videoUserId !== 'undefined' && videoUserId.length >= 10;
 
+    // Sync internal state with props (fixes stale count after scroll/parent update)
+    useEffect(() => {
+        setLikeCount(likes);
+        setSaveCount(saves);
+    }, [likes, saves]);
+
     // Check liked/saved state on mount
     useEffect(() => {
         if (!user || isPlaceholder) return;
@@ -59,8 +65,7 @@ export function ActionButtons({
             if (!snap.exists()) return;
             const data = snap.data();
             setLiked((data.likedBy || []).includes(user.uid));
-            setLikeCount(data.likes || 0);
-            setSaveCount(data.saves || 0);
+            // We set counts from props via the effect above, but fetch likedBy here locally
         });
         // Check saved list in user doc
         if (user && user.uid) {

@@ -17,8 +17,7 @@ interface ReelPlayerProps {
 export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, userHasInteracted }: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
-    const [isMuted, setIsMuted] = useState(false);      // Attempt unmuted by default
-    const [needsUnmutePrompt, setNeedsUnmutePrompt] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);      // Default to unmuted
     const [isPaused, setIsPaused] = useState(false);
     const [isBuffering, setIsBuffering] = useState(true);
     const [showTapIcon, setShowTapIcon] = useState(false);
@@ -29,14 +28,6 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         const video = videoRef.current;
         if (!video) return;
 
-        // If needs unmute — first tap unmutes
-        if (needsUnmutePrompt) {
-            video.muted = false;
-            setIsMuted(false);
-            setNeedsUnmutePrompt(false);
-            return;
-        }
-
         if (video.paused) {
             video.play().catch(() => { });
             setIsPaused(false);
@@ -46,16 +37,12 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
             setShowTapIcon(true);
             setTimeout(() => setShowTapIcon(false), 1000);
         }
-    }, [needsUnmutePrompt]);
+    }, []);
 
-    // Mute toggle — separate button
+    // Mute toggle — disabled as per request
     const handleMuteTap = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        const video = videoRef.current;
-        if (!video) return;
-        video.muted = !video.muted;
-        setIsMuted(video.muted);
-        setNeedsUnmutePrompt(false);
+        // User asked to disable manual muting/unmuting
     }, []);
 
     // Main control for isActive
@@ -63,26 +50,18 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         const video = videoRef.current;
         if (!video || !isActive) return;
 
-        // Try unmuted first
+        // Force unmuted by default
         video.muted = false;
         video.play()
             .then(() => {
                 setIsMuted(false);
-                setNeedsUnmutePrompt(false);
             })
             .catch(() => {
-                // If unmuted failed (autoplay policy), try muted
+                // Autoplay policy blocked unmuted — play muted silently (no prompt)
                 video.muted = true;
                 video.play()
-                    .then(() => {
-                        setIsMuted(true);
-                        setNeedsUnmutePrompt(true);
-                    })
-                    .catch(() => {
-                        // All failed (e.g. no user gesture at all)
-                        setIsMuted(true);
-                        setNeedsUnmutePrompt(true);
-                    });
+                    .then(() => setIsMuted(true))
+                    .catch(() => { }); // Extreme case: play failed entirely
             });
         setIsPaused(false);
     }, [isActive]);
@@ -239,42 +218,13 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
                 </div>
             )}
 
-            {/* 🔇 TAP TO UNMUTE prompt — shows when browser blocked audio */}
-            {needsUnmutePrompt && (
-                <div style={{
-                    position: 'absolute', top: '50%', left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 20, pointerEvents: 'none',
-                    background: 'rgba(0,0,0,0.65)',
-                    borderRadius: '24px', padding: '10px 18px',
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                }}>
-                    <span style={{ fontSize: '20px' }}>🔇</span>
-                    <span style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
-                        Tap to unmute
-                    </span>
-                </div>
-            )}
-
-            {/* Mute/Unmute button — always visible */}
-            <button
-                onClick={handleMuteTap}
-                style={{
-                    position: 'absolute', top: '70px', right: '12px', zIndex: 20,
-                    background: 'rgba(0,0,0,0.5)', border: 'none',
-                    borderRadius: '50%', width: '38px', height: '38px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', fontSize: '18px',
-                }}
-            >
-                {isMuted ? '🔇' : '🔊'}
-            </button>
+            {/* User requested removal of "Tap to unmute" prompt and Mute button */}
 
             <video
                 ref={videoRef}
                 poster={thumbnailUrl}
                 playsInline
-                muted          // always start muted — JS unmutes after play() resolves
+                muted={isMuted}
                 loop
                 preload={isActive || isAdjacent ? 'auto' : 'none'}
                 onCanPlay={() => setIsBuffering(false)}
