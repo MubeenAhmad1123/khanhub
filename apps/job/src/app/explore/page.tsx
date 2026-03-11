@@ -5,6 +5,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { ExploreGrid } from '@/components/feed/ExploreGrid';
 import { useCategory } from '@/context/CategoryContext';
+import { useSearchParams } from 'next/navigation';
 
 // Hardcoded chip styles for guaranteed visibility
 const selectedChipStyle = {
@@ -35,6 +36,8 @@ const unselectedChipStyle = {
 
 export default function ExplorePage() {
     const { activeCategory } = useCategory();
+    const searchParams = useSearchParams();
+    const searchQuery = searchParams.get('q') || '';
     const [activeFilter, setActiveFilter] = useState('All');
 
     const filters = ['All', 'Provider', 'Seeker', 'Nearby'];
@@ -59,7 +62,7 @@ export default function ExplorePage() {
                 marginTop: '0',
                 background: '#fff',
                 position: 'sticky',
-                top: '56px',
+                top: '64px', // Adjusted for TopBar height
                 zIndex: 40,
                 borderBottom: '1px solid #F0F0F0',
             }} className="no-scrollbar">
@@ -79,6 +82,7 @@ export default function ExplorePage() {
                 <ExploreGrid
                     category={activeCategory}
                     filter={activeFilter}
+                    searchQuery={searchQuery}
                 />
             </div>
 

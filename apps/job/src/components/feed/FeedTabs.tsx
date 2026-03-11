@@ -30,17 +30,19 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
             overflowX: 'auto',
             scrollbarWidth: 'none',
             WebkitOverflowScrolling: 'touch',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
             padding: '2px 8px',
             gap: '4px',
-            background: 'transparent', // Changed from #fff to transparent for overlay feel
-            position: 'relative',
-            zIndex: 50,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1000,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: '12px',
             width: '100%',
-        }} className="no-scrollbar">
+        }} className="no-scrollbar feed-tabs-bar">
 
             {/* FIRST ITEM: Category dropdown pill */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ position: 'relative', flexShrink: 0, zIndex: 1001 }}>
                 <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                     style={{
@@ -62,10 +64,14 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
                 {dropdownOpen && (
                     <div style={{
                         position: 'absolute', top: '110%', left: 0,
-                        background: '#111', borderRadius: '12px',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-                        zIndex: 200, minWidth: '180px', overflow: 'hidden',
-                        border: '1px solid rgba(255,255,255,0.1)'
+                        zIndex: 9999,
+                        background: '#FFFFFF',
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
+                        minWidth: '180px',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        isolation: 'isolate',
                     }}>
                         {CATEGORIES.map(cat => (
                             <button key={cat.key}
@@ -77,8 +83,8 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
                                 }}
                                 style={{
                                     width: '100%', padding: '12px 16px',
-                                    textAlign: 'left', background: activeCategory === cat.key ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                    color: '#fff', border: 'none', cursor: 'pointer',
+                                    textAlign: 'left', background: activeCategory === cat.key ? 'rgba(0,0,0,0.05)' : 'transparent',
+                                    color: '#000', border: 'none', cursor: 'pointer',
                                     fontSize: '14px', fontWeight: activeCategory === cat.key ? 700 : 400,
                                     display: 'flex', alignItems: 'center', gap: '8px'
                                 }}

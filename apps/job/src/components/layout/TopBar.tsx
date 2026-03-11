@@ -109,12 +109,20 @@ export function TopBar() {
                                         autoFocus
                                         type="text"
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setSearchQuery(val);
+                                            const params = new URLSearchParams(searchParams.toString());
+                                            if (val) params.set('q', val);
+                                            else params.delete('q');
+                                            router.replace(`${pathname}?${params.toString()}`);
+                                        }}
                                         onBlur={() => {
                                             if (!searchQuery) {
                                                 const params = new URLSearchParams(searchParams.toString());
                                                 params.delete('search');
-                                                router.push(`${pathname}?${params.toString()}`);
+                                                params.delete('q');
+                                                router.replace(`${pathname}?${params.toString()}`);
                                             }
                                         }}
                                         placeholder="Search..."
@@ -124,7 +132,9 @@ export function TopBar() {
                                         onClick={() => {
                                             const params = new URLSearchParams(searchParams.toString());
                                             params.delete('search');
-                                            router.push(`${pathname}?${params.toString()}`);
+                                            params.delete('q');
+                                            router.replace(`${pathname}?${params.toString()}`);
+                                            setSearchQuery('');
                                         }}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                                     >
@@ -136,7 +146,7 @@ export function TopBar() {
                                     onClick={() => {
                                         const params = new URLSearchParams(searchParams.toString());
                                         params.set('search', 'true');
-                                        router.push(`${pathname}?${params.toString()}`);
+                                        router.replace(`${pathname}?${params.toString()}`);
                                     }}
                                     className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors"
                                 >

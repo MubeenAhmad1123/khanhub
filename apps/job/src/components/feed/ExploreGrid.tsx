@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
-import { Play } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
 interface ExploreGridProps {
     category: string;
     filter: string;
+    searchQuery?: string;
 }
 
 interface VideoItem {
@@ -24,13 +24,11 @@ interface VideoItem {
     views: number;
 }
 
-export function ExploreGrid({ category, filter }: ExploreGridProps) {
+export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridProps) {
     const router = useRouter();
     const [videos, setVideos] = useState<VideoItem[]>([]);
 
     useEffect(() => {
-        // Simple single-field query — no composite index needed.
-        // Category + admin_status filtering happens client-side.
         const q = query(
             collection(db, 'videos'),
             where('is_live', '==', true)
@@ -68,7 +66,6 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
             if (real.length > 0) {
                 setVideos(real);
             } else {
-                // Fallback: placeholders
                 const safeCat = CATEGORY_PLACEHOLDERS[category] ? category : 'jobs';
                 const overlays = PLACEHOLDER_OVERLAY_DATA[safeCat] || [];
                 setVideos(
@@ -85,38 +82,10 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
                     }))
                 );
             }
-        }, () => {
-            // Index error or permission error → show placeholders
-            const safeCat = CATEGORY_PLACEHOLDERS[category] ? category : 'jobs';
-            const overlays = PLACEHOLDER_OVERLAY_DATA[safeCat] || [];
-            setVideos(
-                CATEGORY_PLACEHOLDERS[safeCat].map((id, i): VideoItem => ({
-                    id: `ph-${i}`,
-                    isPlaceholder: true,
-                    cloudinaryUrl: undefined,
-                    youtubeId: id,
-                    title: overlays[i % overlays.length]?.title || '',
-                    badge: overlays[i % overlays.length]?.badge || '',
-                    field1: overlays[i % overlays.length]?.field1,
-                    field2: overlays[i % overlays.length]?.field2,
-                    views: overlays[i % overlays.length]?.views || 0,
-                }))
-            );
         });
 
         return () => unsubscribe();
     }, [category]);
-
-    // ── Thumbnail helper ──────────────────────────────────────────
-    const getCloudinaryThumbnail = (videoUrl: string): string => {
-        if (!videoUrl) return '';
-        if (!videoUrl.includes('cloudinary.com')) return videoUrl;
-        return videoUrl
-            .replace('/video/upload/', '/video/upload/so_0,w_400,h_711,c_fill,q_80/')
-            .replace('.mp4', '.jpg')
-            .replace('.webm', '.jpg')
-            .replace('.mov', '.jpg');
-    };
 
     const getThumbnail = (item: VideoItem): string => {
         if (!item.isPlaceholder && item.cloudinaryUrl) {
@@ -127,7 +96,6 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
         return `https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`;
     };
 
-    // ── Filter ────────────────────────────────────────────────────
     const providerBadges = ['Doctor', 'Teacher', 'Agent', 'Freelancer', 'Job Seeker', 'Helper', 'Lawyer', 'Profile', 'Worker', 'Agency', 'Farmer', 'Seller', 'Driver', 'Presenting'];
     const seekerBadges = ['Patient', 'Student', 'Buyer / Renter', 'Client', 'Company', 'Household', 'Hiring', 'Seeking', 'Looking', 'Employer', 'Buyer', 'Passenger', 'Traveler'];
 
@@ -135,6 +103,13 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
         let matchesFilter = true;
         if (filter === 'Provider') matchesFilter = providerBadges.includes(item.badge);
         else if (filter === 'Seeker') matchesFilter = seekerBadges.includes(item.badge);
+
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            const titleMatch = item.title?.toLowerCase().includes(q);
+            const badgeMatch = item.badge?.toLowerCase().includes(q);
+            matchesFilter = matchesFilter && (titleMatch || badgeMatch);
+        }
 
         return matchesFilter;
     });
@@ -184,11 +159,10 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
                         }}
                     />
 
-                    {/* View count */}
                     <div style={{
-                        position: 'absolute', bottom: '4px', left: '4px',
-                        color: '#fff', fontSize: '11px',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                        position: 'absolute', bottom: '2px', left: '2px',
+                        color: '#fff', fontSize: '10px', fontWeight: 'bold',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
                     }}>
                         ▶ {formatCount(video.views)}
                     </div>

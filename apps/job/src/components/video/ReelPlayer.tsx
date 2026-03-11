@@ -1,127 +1,150 @@
-'use client'
-import { useEffect, useRef, useState } from 'react'
-import Hls from 'hls.js'
+'use client';
+
+import { useEffect, useRef, useState, useCallback } from 'react';
+import Hls from 'hls.js';
+import { getHlsUrl, getOptimizedVideoUrl } from '@/lib/services/cloudinary';
 
 interface ReelPlayerProps {
-    cloudinaryUrl: string
-    thumbnailUrl?: string
-    isActive: boolean
-    isAdjacent: boolean // ±1 from active = prebuffer
-    videoId: string
-    isMuted: boolean
+    cloudinaryUrl: string;
+    thumbnailUrl?: string;
+    isActive: boolean;
+    isAdjacent: boolean;
+    videoId: string;
+    isMuted?: boolean;
 }
 
-export default function ReelPlayer({
-    cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, isMuted
-}: ReelPlayerProps) {
-    const videoRef = useRef<HTMLVideoElement>(null)
-    const hlsRef = useRef<Hls | null>(null)
-    const [isBuffering, setIsBuffering] = useState(true)
-    const [isReady, setIsReady] = useState(false)
+export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId }: ReelPlayerProps) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const hlsRef = useRef<Hls | null>(null);
+    const [isPaused, setIsPaused] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(true);
+    const [showPauseIcon, setShowPauseIcon] = useState(false);
+    const [loadingTooLong, setLoadingTooLong] = useState(false);
 
-    // Convert Cloudinary URL to HLS streaming URL
-    const getHlsUrl = (url: string): string => {
-        if (!url) return ''
-        if (url.includes('cloudinary.com') && !url.includes('.m3u8')) {
-            // Transform Cloudinary URL to HLS format:
-            // Replace /upload/ with /upload/sp_hd/ and change extension to .m3u8
-            return url
-                .replace('/upload/', '/upload/sp_hd/')
-                .replace(/\.(mp4|mov|webm|avi)$/i, '.m3u8')
+    // Tap handler — toggle pause/play
+    const handleTap = useCallback(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (video.paused) {
+            video.play().catch(() => { });
+            setIsPaused(false);
+            setShowPauseIcon(false);
+        } else {
+            video.pause();
+            setIsPaused(true);
+            setShowPauseIcon(true);
+            setTimeout(() => setShowPauseIcon(false), 1200);
         }
-        return url // already HLS or other
-    }
+    }, []);
 
-    // Fallback optimized MP4 URL (if HLS not available)
-    const getOptimizedMp4 = (url: string): string => {
-        if (!url || !url.includes('cloudinary.com')) return url
-        return url.replace('/upload/', '/upload/q_auto,f_auto/')
-    }
+    // Mute toggle — separate button
+    const handleMuteToggle = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        const video = videoRef.current;
+        if (!video) return;
+        video.muted = !video.muted;
+        setIsMuted(video.muted);
+    }, []);
 
+    // Main control for isActive
     useEffect(() => {
         const video = videoRef.current;
-        if (!video || !isActive) return;
+        if (!video) return;
 
-        // Try HLS first
+        if (isActive) {
+            video.muted = false;
+            setIsMuted(false);
+            video.play().catch(() => {
+                video.muted = true;
+                setIsMuted(true);
+                video.play().catch(() => { });
+            });
+            setIsPaused(false);
+        } else {
+            video.pause();
+            video.currentTime = 0;
+            if (hlsRef.current) hlsRef.current.stopLoad();
+        }
+    }, [isActive]);
+
+    // Loading feedback
+    useEffect(() => {
+        if (!isActive) {
+            setLoadingTooLong(false);
+            return;
+        }
+        const timer = setTimeout(() => {
+            if (isBuffering) setLoadingTooLong(true);
+        }, 8000);
+        return () => clearTimeout(timer);
+    }, [isActive, isBuffering]);
+
+    // Player Initialization & Fallback Chain
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || (!isActive && !isAdjacent)) return;
+
         const hlsUrl = getHlsUrl(cloudinaryUrl);
-        const mp4Url = getOptimizedMp4(cloudinaryUrl);
+        const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
+        let fallbackAttempts = 0;
 
-        // Safety timeout: if video hasn't started in 4s, force MP4
-        const fallbackTimer = setTimeout(() => {
-            if (video.readyState < 2) { // HAVE_CURRENT_DATA = 2
-                console.log('HLS timeout — falling back to MP4');
+        const initHls = () => {
+            if (Hls.isSupported() && hlsUrl.includes('.m3u8')) {
+                const hls = new Hls({
+                    startLevel: 0,
+                    abrEwmaDefaultEstimate: 300000,
+                    maxBufferLength: 10,
+                    maxMaxBufferLength: 20,
+                    manifestLoadingTimeOut: 10000,
+                    manifestLoadingMaxRetry: 5,
+                    levelLoadingTimeOut: 10000,
+                    levelLoadingMaxRetry: 5,
+                    fragLoadingTimeOut: 20000,
+                    fragLoadingMaxRetry: 6,
+                    highBufferWatchdogPeriod: 3,
+                    nudgeMaxRetry: 5,
+                });
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(video);
+                hlsRef.current = hls;
+
+                hls.on(Hls.Events.ERROR, (_, data) => {
+                    if (data.fatal) {
+                        console.warn('HLS Fatal Error, falling back to MP4');
+                        hls.destroy();
+                        hlsRef.current = null;
+                        video.src = optimizedMp4;
+                        video.load();
+                        if (isActive) video.play().catch(() => { });
+                    }
+                });
+            } else {
+                video.src = optimizedMp4;
+                video.load();
+                if (isActive) video.play().catch(() => { });
+            }
+        };
+
+        const stallTimeout = setTimeout(() => {
+            if (isActive && video.readyState < 3) {
+                fallbackAttempts++;
+                console.log(`Video stalled — fallback level ${fallbackAttempts}`);
                 if (hlsRef.current) {
                     hlsRef.current.destroy();
                     hlsRef.current = null;
                 }
-                video.src = mp4Url;
+                video.src = fallbackAttempts === 1 ? optimizedMp4 : cloudinaryUrl;
                 video.load();
                 video.play().catch(() => { });
             }
-        }, 4000);
+        }, 6000);
 
-        return () => clearTimeout(fallbackTimer);
-    }, [isActive, cloudinaryUrl]);
-
-    // Cleanup previous HLS instance & Initial Load
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        if (!isActive && !isAdjacent) return; // don't load far videos
-
-        const hlsUrl = getHlsUrl(cloudinaryUrl);
-        const mp4Url = getOptimizedMp4(cloudinaryUrl);
-
-        if (hlsRef.current) {
-            hlsRef.current.destroy();
-            hlsRef.current = null;
-        }
-
-        if (Hls.isSupported() && hlsUrl.includes('.m3u8')) {
-            const hls = new Hls({
-                maxBufferLength: isActive ? 30 : 8,
-                maxMaxBufferLength: isActive ? 60 : 15,
-                maxBufferSize: isActive ? 60 * 1000 * 1000 : 10 * 1000 * 1000,
-                startLevel: -1,
-                abrEwmaDefaultEstimate: 500000,
-                manifestLoadingTimeOut: 8000,
-                manifestLoadingMaxRetry: 3,
-                levelLoadingTimeOut: 8000,
-                lowLatencyMode: false,
-                backBufferLength: 5,
-            });
-
-            hls.loadSource(hlsUrl);
-            hls.attachMedia(video);
-
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                setIsReady(true);
-                if (isActive) video.play().catch(() => { });
-            });
-
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (data.fatal) {
-                    hls.destroy();
-                    video.src = mp4Url;
-                    video.load();
-                    if (isActive) video.play().catch(() => { });
-                }
-            });
-
-            hlsRef.current = hls;
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = hlsUrl;
-            video.load();
-            if (isActive) video.play().catch(() => { });
-            setIsReady(true);
-        } else {
-            video.src = mp4Url;
-            video.load();
-            if (isActive) video.play().catch(() => { });
-            setIsReady(true);
-        }
+        initHls();
 
         return () => {
+            clearTimeout(stallTimeout);
             if (hlsRef.current) {
                 hlsRef.current.destroy();
                 hlsRef.current = null;
@@ -129,50 +152,116 @@ export default function ReelPlayer({
         };
     }, [cloudinaryUrl, isActive, isAdjacent]);
 
-    // Play/pause based on active state
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !isReady) return;
-        if (isActive) {
-            video.play().catch(() => { });
-        } else {
-            video.pause();
-            if (!isAdjacent) video.currentTime = 0;
-        }
-    }, [isActive, isReady, isAdjacent]);
-
-    // Mute control
-    useEffect(() => {
-        if (videoRef.current) videoRef.current.muted = isMuted;
-    }, [isMuted]);
-
     return (
-        <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
-            {(isBuffering || !isReady) && thumbnailUrl && (
-                <img
-                    src={thumbnailUrl}
-                    alt=""
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
-                />
-            )}
-
-            {isActive && isBuffering && (
-                <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.25)', borderTop: '3px solid rgba(255,255,255,0.9)', animation: 'spin 0.75s linear infinite' }} />
+        <div
+            onClick={handleTap}
+            style={{ position: 'absolute', inset: 0, cursor: 'pointer' }}
+            className="video-slide"
+        >
+            {/* Buffering spinner */}
+            {isBuffering && (
+                <div style={{
+                    position: 'absolute', inset: 0, zIndex: 2,
+                    background: thumbnailUrl ? `url(${thumbnailUrl}) center/cover no-repeat` : '#000',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <div style={{
+                        width: '40px', height: '40px', borderRadius: '50%',
+                        border: '3px solid rgba(255,255,255,0.3)',
+                        borderTop: '3px solid white',
+                        animation: 'spin 0.75s linear infinite',
+                    }} />
                 </div>
             )}
 
+            {/* Loading Feedback */}
+            {loadingTooLong && (
+                <div style={{
+                    position: 'absolute', bottom: '200px', left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(0,0,0,0.7)', borderRadius: '20px',
+                    padding: '8px 16px', zIndex: 15,
+                    color: 'white', fontSize: '13px', whiteSpace: 'nowrap',
+                }}>
+                    Slow connection — loading...
+                </div>
+            )}
+
+            {/* Tap Feedback Icon */}
+            {showPauseIcon && (
+                <div style={{
+                    position: 'absolute', inset: 0, zIndex: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                }}>
+                    <div style={{
+                        width: '64px', height: '64px', borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        animation: 'fadeOut 1.2s ease forwards',
+                    }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                            <div style={{ width: '5px', height: '22px', background: '#fff', borderRadius: '2px' }} />
+                            <div style={{ width: '5px', height: '22px', background: '#fff', borderRadius: '2px' }} />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Persistent Play Icon when paused */}
+            {isPaused && !showPauseIcon && (
+                <div style={{
+                    position: 'absolute', inset: 0, zIndex: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                }}>
+                    <div style={{
+                        width: '64px', height: '64px', borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <div style={{
+                            width: 0, height: 0,
+                            borderTop: '12px solid transparent',
+                            borderBottom: '12px solid transparent',
+                            borderLeft: '20px solid white',
+                            marginLeft: '4px',
+                        }} />
+                    </div>
+                </div>
+            )}
+
+            {/* Mute Toggle */}
+            <button
+                onClick={handleMuteToggle}
+                style={{
+                    position: 'absolute',
+                    bottom: '120px',
+                    right: '16px',
+                    zIndex: 20,
+                    background: 'rgba(0,0,0,0.5)',
+                    border: 'none', borderRadius: '50%',
+                    width: '36px', height: '36px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: 'white', fontSize: '16px',
+                }}
+            >
+                {isMuted ? '🔇' : '🔊'}
+            </button>
+
             <video
                 ref={videoRef}
-                poster={thumbnailUrl}
                 playsInline
-                muted={isMuted}
                 loop
-                preload={isActive ? 'auto' : isAdjacent ? 'metadata' : 'none'}
-                onCanPlay={() => setIsBuffering(false)}
+                muted={isMuted}
                 onWaiting={() => setIsBuffering(true)}
-                onPlaying={() => setIsBuffering(false)}
-                style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                onPlaying={() => { setIsBuffering(false); setIsPaused(false); }}
+                onCanPlay={() => setIsBuffering(false)}
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                }}
             />
         </div>
     );

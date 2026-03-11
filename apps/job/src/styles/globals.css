@@ -115,21 +115,17 @@
     @apply border border-[--border] bg-[--bg-card] rounded-[16px] backdrop-blur-sm;
   }
 
-  /* font-display: swap is handled automatically by next/font/google */
   /* Snap Scroll Styles */
   .feed-container {
     height: 100dvh;
     overflow-y: scroll;
     scroll-snap-type: y mandatory;
     scrollbar-width: none;
-    /* Firefox */
     -ms-overflow-style: none;
-    /* IE and Edge */
   }
 
   .feed-container::-webkit-scrollbar {
     display: none;
-    /* Chrome, Safari and Opera */
   }
 
   .reel-item {
@@ -143,5 +139,42 @@
   input::placeholder,
   textarea::placeholder {
     color: #999999;
+  }
+
+  /* Feed video slides must NOT have z-index that blocks overlay */
+  .video-slide {
+    position: relative;
+    z-index: 0;
+    isolation: auto;
+  }
+
+  /* The tabs bar must float above video */
+  .feed-tabs-bar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+
+  @keyframes fadeOut {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    70% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    100% {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 }

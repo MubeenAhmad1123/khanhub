@@ -144,3 +144,15 @@ export async function deleteVideoFromCloudinary(publicId: string): Promise<void>
 export function getVideoThumbnail(publicId: string, cloudName: string): string {
     return `https://res.cloudinary.com/${cloudName}/video/upload/so_0/${publicId}.jpg`;
 }
+
+export const getOptimizedVideoUrl = (url: string): string => {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    return url.replace('/upload/', '/upload/q_auto,f_auto,vc_auto,br_1m/');
+};
+
+export const getHlsUrl = (url: string): string => {
+    if (!url?.includes('cloudinary.com')) return url;
+    return url
+        .replace('/upload/', '/upload/sp_auto/')
+        .replace(/\.(mp4|mov|webm|avi|mkv)$/i, '.m3u8');
+};
