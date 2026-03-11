@@ -3,6 +3,7 @@ import { useState, useRef } from 'react'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase/firebase-config'
 import { useAuth } from '@/hooks/useAuth'
+import { useFeedToast } from '@/components/ui/FeedToast'
 
 interface RevealContactSheetProps {
     isOpen: boolean
@@ -56,6 +57,7 @@ export function RevealContactSheet({
     isOpen, onClose, targetUserId, targetUserName, videoId, category
 }: RevealContactSheetProps) {
     const { user } = useAuth()
+    const { showToast } = useFeedToast()
 
     const [step, setStep] = useState<'info' | 'submit' | 'done'>('info')
     const [transactionId, setTransactionId] = useState('')
@@ -124,6 +126,7 @@ export function RevealContactSheet({
                 updatedAt: serverTimestamp(),
             })
 
+            showToast('✅ Proof submitted!')
             setStep('done')
         } catch (err: any) {
             console.error('Payment submission error:', err)

@@ -97,9 +97,9 @@ export default function ProfilePage() {
                         {categoryConfig?.emoji} {categoryConfig?.label}
                     </span>
                     <span style={{
-                        background: profile.role?.toLowerCase() === 'employer' ? '#00C85315' : `${accentColor}22`,
-                        color: profile.role?.toLowerCase() === 'employer' ? '#00C853' : accentColor,
-                        border: profile.role?.toLowerCase() === 'employer' ? '1px solid #00C853' : `1px solid ${accentColor}`,
+                        background: profile.role?.toLowerCase() === 'company' ? '#00C85315' : `${accentColor}22`,
+                        color: profile.role?.toLowerCase() === 'company' ? '#00C853' : accentColor,
+                        border: profile.role?.toLowerCase() === 'company' ? '1px solid #00C853' : `1px solid ${accentColor}`,
                         borderRadius: 999, padding: '3px 12px',
                         fontSize: 11, fontFamily: 'DM Sans', fontWeight: 700,
                     }}>

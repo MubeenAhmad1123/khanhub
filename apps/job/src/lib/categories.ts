@@ -21,7 +21,7 @@ export interface CategoryConfig {
 }
 
 export const CATEGORY_FEED_TABS: Record<string, string[]> = {
-    jobs: ['For You', 'Job Seeker', 'Employer'],
+    jobs: ['For You', 'Job Seeker', 'Company'],
     healthcare: ['For You', 'Doctor', 'Patient'],
     education: ['For You', 'Teacher', 'Student'],
     marriage: ['For You', 'Presenting', 'Looking'],
@@ -55,7 +55,7 @@ export const CATEGORY_PLACEHOLDERS: Record<string, string[]> = {
 export const PLACEHOLDER_OVERLAY_DATA: Record<string, any[]> = {
     jobs: [
         { title: 'Experienced Developer', badge: 'Job Seeker', field1: 'React • Node', field2: '5 years exp', location: 'Karachi', views: 12400 },
-        { title: 'Hiring Designer', badge: 'Employer', field1: 'UI/UX', field2: 'Quick Service', location: 'Lahore', views: 45000 },
+        { title: 'Hiring Designer', badge: 'Company', field1: 'UI/UX', field2: 'Quick Service', location: 'Lahore', views: 45000 },
     ],
     healthcare: [
         { title: 'General Physician', badge: 'Doctor', field1: 'MBBS', field2: '10 years exp', location: 'Islamabad', views: 8900 },
@@ -72,7 +72,7 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         imageUrl: '/jobs.webp',
         accent: '#FF0069',
         providerLabel: 'Job Seeker',
-        seekerLabel: 'Employer',
+        seekerLabel: 'Company',
         placeholderVideos: CATEGORY_PLACEHOLDERS.jobs
     },
     healthcare: {

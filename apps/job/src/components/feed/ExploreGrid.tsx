@@ -39,10 +39,18 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
         const unsubscribe = onSnapshot(q, (snap) => {
             const real = snap.docs
                 .map(d => ({ id: d.id, ...d.data() } as any))
-                .filter(d =>
-                    d.admin_status === 'approved' &&
-                    (d.category === category || !d.category)
-                )
+                .filter(d => {
+                    const url = d.cloudinaryUrl;
+                    const isValidCloudinary = url &&
+                        url.includes('cloudinary.com') &&
+                        !url.includes('youtube.com') &&
+                        !url.includes('youtu.be') &&
+                        !url.includes('zoo');
+
+                    return d.admin_status === 'approved' &&
+                        (d.category === category || !d.category) &&
+                        isValidCloudinary;
+                })
                 .sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
                 .slice(0, 50)
                 .map((d: any): VideoItem => ({
@@ -130,6 +138,7 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
     });
 
     const openFeedAtVideo = (videoId: string) => {
+        if (!videoId) return;
         router.push(`/feed?v=${videoId}`);
     };
 
@@ -147,15 +156,15 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
             width: '100%',
             padding: '0 0 80px',
         }}>
-            {filteredItems.map((item, i) => (
+            {filteredItems.map((video, index) => (
                 <div
-                    key={item.id}
-                    className="relative aspect-square overflow-hidden cursor-pointer bg-slate-100 group"
-                    onClick={() => openFeedAtVideo(item.id)}
+                    key={video.id + '-' + index}
+                    className="aspect-[9/16] relative bg-[#111] overflow-hidden rounded-lg cursor-pointer group"
+                    onClick={() => openFeedAtVideo(video.id)}
                 >
                     <img
-                        src={getThumbnail(item)}
-                        alt={item.title}
+                        src={getThumbnail(video)}
+                        alt={video.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                             (e.target as HTMLImageElement).src = `https://via.placeholder.com/400x600/ffffff/000000?text=Video`;
@@ -172,7 +181,7 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
                         textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                     }}>
                         <Play className="w-2.5 h-2.5 fill-white" />
-                        {formatCount(item.views)}
+                        {formatCount(video.views)}
                     </div>
                 </div>
             ))}

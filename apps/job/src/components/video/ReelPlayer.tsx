@@ -22,6 +22,7 @@ export function ReelPlayer({ videoId, cloudinaryUrl, thumbnailUrl, isPlaceholder
     const [showIndicator, setShowIndicator] = useState<'mute' | 'unmute' | 'play' | 'pause' | null>(null);
     const [isSpeed2x, setIsSpeed2x] = useState(false);
     const [ready, setReady] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
     const [error, setError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const holdTimer = useRef<NodeJS.Timeout | null>(null);
@@ -36,6 +37,15 @@ export function ReelPlayer({ videoId, cloudinaryUrl, thumbnailUrl, isPlaceholder
             return () => clearTimeout(timer);
         }
     }, [isActive, userActed]);
+
+    // Optimize Cloudinary URL (Commit 3)
+    const getOptimizedUrl = (url: string) => {
+        if (!url || !url.includes('cloudinary.com')) return url;
+        if (url.includes('q_auto')) return url;
+        return url.replace('/video/upload/', '/video/upload/q_auto,f_auto/');
+    };
+
+    const optimizedCloudinaryUrl = cloudinaryUrl ? getOptimizedUrl(cloudinaryUrl) : null;
 
     // Play/pause real Cloudinary video based on isActive
     useEffect(() => {
@@ -139,19 +149,24 @@ export function ReelPlayer({ videoId, cloudinaryUrl, thumbnailUrl, isPlaceholder
             {!isPlaceholder && cloudinaryUrl && (
                 <>
                     {/* Thumbnail/Loading State */}
-                    {!ready && !error && (
+                    {(!ready || isBuffering) && !error && (
                         <div style={{ position: 'absolute', inset: 0, zIndex: 3, background: '#000' }}>
                             {thumbnailUrl ? (
                                 <img
                                     src={thumbnailUrl}
                                     alt="Thumbnail"
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }}
                                 />
-                            ) : (
-                                <div className="flex items-center justify-center h-full">
-                                    <div className="w-8 h-8 border-4 border-[--accent] border-t-transparent rounded-full animate-spin" />
-                                </div>
-                            )}
+                            ) : null}
+                            <div className="flex items-center justify-center absolute inset-0 bg-black/20">
+                                <div style={{
+                                    width: 40, height: 40,
+                                    border: '3px solid rgba(255,255,255,0.1)',
+                                    borderTop: '3px solid var(--accent)',
+                                    borderRadius: '50%',
+                                    animation: 'spin 0.8s linear infinite'
+                                }} />
+                            </div>
                         </div>
                     )}
 
@@ -171,7 +186,7 @@ export function ReelPlayer({ videoId, cloudinaryUrl, thumbnailUrl, isPlaceholder
 
                     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0 }}>
                         <video
-                            src={cloudinaryUrl}
+                            src={optimizedCloudinaryUrl!}
                             muted loop playsInline
                             preload={isPreload || isActive ? "auto" : "none"}
                             style={{
@@ -185,11 +200,15 @@ export function ReelPlayer({ videoId, cloudinaryUrl, thumbnailUrl, isPlaceholder
                         />
                     </div>
                     <video
-                        ref={videoRef}
-                        src={cloudinaryUrl}
-                        muted={isMuted}
-                        loop playsInline
+                        src={optimizedCloudinaryUrl!}
+                        muted loop playsInline
                         preload={isPreload || isActive ? "auto" : "none"}
+                        poster={thumbnailUrl}
+                        onPlaying={() => {
+                            setReady(true);
+                            setIsBuffering(false);
+                        }}
+                        onWaiting={() => setIsBuffering(true)}
                         onCanPlay={() => setReady(true)}
                         onError={() => setError(true)}
                         style={{

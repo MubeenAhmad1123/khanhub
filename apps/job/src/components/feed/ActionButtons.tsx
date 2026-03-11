@@ -84,6 +84,7 @@ export function ActionButtons({
         await updateDoc(doc(db, 'users', user.uid), {
             likedVideos: newLiked ? arrayUnion(videoId) : arrayRemove(videoId),
         });
+        showToast(newLiked ? '❤️ Liked' : 'Unliked');
     };
 
     const handleSave = async () => {
@@ -126,8 +127,8 @@ export function ActionButtons({
                 showToast("Got it. You'll see less of this.");
                 break;
             case 'copy_link':
-                const link = `${window.location.origin}/profile/${videoUserRole || 'user'}/${videoUserId}`;
-                navigator.clipboard.writeText(link).then(() => showToast('🔗 Profile link copied!'));
+                const link = `${window.location.origin}/feed?v=${videoId}`;
+                navigator.clipboard.writeText(link).then(() => showToast('🔗 Video link copied!'));
                 break;
         }
     };
@@ -322,23 +323,23 @@ export function ActionButtons({
                                 {
                                     name: 'WhatsApp',
                                     icon: 'https://cdn-icons-png.flaticon.com/512/124/124034.png',
-                                    link: `https://wa.me/?text=${encodeURIComponent(`${window.location.origin}/profile/${videoUserRole || 'user'}/${videoUserId}`)}`
+                                    link: `https://wa.me/?text=${encodeURIComponent(`${window.location.origin}/feed?v=${videoId}`)}`
                                 },
                                 {
                                     name: 'Facebook',
                                     icon: 'https://cdn-icons-png.flaticon.com/512/124/124010.png',
-                                    link: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/profile/${videoUserRole || 'user'}/${videoUserId}`)}`
+                                    link: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/feed?v=${videoId}`)}`
                                 },
                                 {
                                     name: 'LinkedIn',
                                     icon: 'https://cdn-icons-png.flaticon.com/512/174/174857.png',
-                                    link: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${window.location.origin}/profile/${videoUserRole || 'user'}/${videoUserId}`)}`
+                                    link: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${window.location.origin}/feed?v=${videoId}`)}`
                                 },
                                 {
                                     name: 'Copy',
                                     icon: 'https://cdn-icons-png.flaticon.com/512/1621/1621635.png',
                                     action: () => {
-                                        const link = `${window.location.origin}/profile/${videoUserRole || 'user'}/${videoUserId}`;
+                                        const link = `${window.location.origin}/feed?v=${videoId}`;
                                         navigator.clipboard.writeText(link).then(() => showToast('🔗 Link copied!'));
                                         setShowShareMenu(false);
                                     }

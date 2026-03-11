@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, getDocs, collection, query, where, orderBy, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, orderBy, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
 import { ArrowLeft, MapPin, ShieldCheck, Lock, Phone, Mail, MessageCircle, Navigation, ExternalLink, X } from 'lucide-react';
 import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
+import { useFeedToast } from '@/components/ui/FeedToast';
 import Image from 'next/image';
 
 export default function UserProfilePage() {
@@ -17,6 +18,7 @@ export default function UserProfilePage() {
     const router = useRouter();
     const { user: currentUser } = useAuth();
     const { accentColor } = useCategory();
+    const { showToast } = useFeedToast();
 
     const [profile, setProfile] = useState<any>(null);
     const [videos, setVideos] = useState<any[]>([]);
@@ -451,16 +453,16 @@ export default function UserProfilePage() {
                     </span>
 
                     <span style={{
-                        background: profile.role?.toLowerCase() === 'employer' ? '#00C85315' : `${catConfig.accent}15`,
-                        color: profile.role?.toLowerCase() === 'employer' ? '#00C853' : catConfig.accent,
-                        border: profile.role?.toLowerCase() === 'employer' ? '1px solid #00C853' : `1px solid ${catConfig.accent}`,
+                        background: profile.role?.toLowerCase() === 'company' ? '#00C85315' : `${catConfig.accent}15`,
+                        color: profile.role?.toLowerCase() === 'company' ? '#00C853' : catConfig.accent,
+                        border: profile.role?.toLowerCase() === 'company' ? '1px solid #00C853' : `1px solid ${catConfig.accent}`,
                         borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(12px, 3vw, 16px)',
                         fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'Poppins', fontWeight: 700,
                     }}>
                         {(() => {
                             const uiR = profile.uiRole;
                             const roles: Record<string, { provider: string; seeker: string }> = {
-                                jobs: { provider: 'Job Seeker', seeker: 'Employer' },
+                                jobs: { provider: 'Job Seeker', seeker: 'Company' },
                                 healthcare: { provider: 'Doctor', seeker: 'Patient' },
                                 education: { provider: 'Teacher', seeker: 'Student' },
                                 marriage: { provider: 'Presenting', seeker: 'Looking' },
@@ -536,15 +538,31 @@ export default function UserProfilePage() {
                             try {
                                 const followDocId = `${currentUser.uid}_${id}`;
                                 const followRef = doc(db, 'follows', followDocId);
+                                const targetUserRef = doc(db, 'users', id as string);
+                                const currentUserRef = doc(db, 'users', currentUser.uid);
+
                                 if (isFollowing) {
                                     await deleteDoc(followRef);
+                                    await updateDoc(targetUserRef, {
+                                        followers: arrayRemove(currentUser.uid)
+                                    });
+                                    await updateDoc(currentUserRef, {
+                                        following: arrayRemove(id)
+                                    });
                                 } else {
                                     await setDoc(followRef, {
                                         followerId: currentUser.uid,
                                         followingId: id,
                                         createdAt: serverTimestamp()
                                     });
+                                    await updateDoc(targetUserRef, {
+                                        followers: arrayUnion(currentUser.uid)
+                                    });
+                                    await updateDoc(currentUserRef, {
+                                        following: arrayUnion(id)
+                                    });
                                 }
+                                showToast(isFollowing ? `Unfollowed ${profile.name}` : `Following ${profile.name}`);
                             } catch (err) {
                                 console.error('Follow error:', err);
                             } finally {

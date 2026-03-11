@@ -66,18 +66,40 @@ export function VideoFeed() {
     // ── Real Firestore videos ─────────────────────────────────────
     const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
     const [firestoreLoading, setFirestoreLoading] = useState(true);
+    const [firestoreProfile, setFirestoreProfile] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [watchedIds, setWatchedIds] = useState<string[]>([]);
     const [displayVideos, setDisplayVideos] = useState<any[]>([]);
+
+    // ── Load User Profile (Commit 2) ──────────────────────────────
+    useEffect(() => {
+        if (!user) {
+            setFirestoreProfile(null);
+            return;
+        }
+        const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                setFirestoreProfile(data);
+                setWatchedIds(data.watchedVideos || []);
+            }
+        });
+        return () => unsub();
+    }, [user]);
 
     useEffect(() => {
         setFirestoreLoading(true);
         setFirestoreVideos([]);
 
+        const queryCategory = (activeTab === 0 && firestoreProfile?.category)
+            ? firestoreProfile.category
+            : activeCategory;
+
         const q = query(
             collection(db, 'videos'),
             where('is_live', '==', true),
             where('admin_status', '==', 'approved'),
+            where('category', '==', queryCategory),
             orderBy('createdAt', 'desc'),
             limit(30)
         );
@@ -109,7 +131,14 @@ export function VideoFeed() {
                         role.includes(searchLower) ||
                         catName.includes(searchLower);
 
-                    return d.admin_status === 'approved' && matchesCategory && matchesRole && matchesSearch;
+                    const url = d.cloudinaryUrl;
+                    const isValidCloudinary = url &&
+                        url.includes('cloudinary.com') &&
+                        !url.includes('youtube.com') &&
+                        !url.includes('youtu.be') &&
+                        !url.includes('zoo');
+
+                    return d.admin_status === 'approved' && matchesCategory && matchesRole && matchesSearch && isValidCloudinary;
                 })
                 .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
                 .map(d => ({
@@ -236,7 +265,24 @@ export function VideoFeed() {
         return () => { observer.disconnect(); clearTimeout(timeout); };
     }, [user, activeCategory, displayVideos, loading]);
 
+    // ── Update URL on scroll (Commit 5) ──────────────────────────
+    useEffect(() => {
+        if (displayVideos.length > 0 && activeIndex >= 0) {
+            const video = displayVideos[activeIndex];
+            if (video && !video.isPlaceholder) {
+                const url = new URL(window.location.href);
+                // Only update if it's different and we are NOT in the middle of a deep link initial scroll
+                if (url.searchParams.get('v') !== video.id) {
+                    url.searchParams.set('v', video.id);
+                    window.history.replaceState(null, '', url.pathname + url.search);
+                }
+            }
+        }
+    }, [activeIndex, displayVideos]);
+
     // ── Smart Feed Logic (Commit 3) ───────────────────────────────
+    // Moved to unified profile useEffect above
+    /*
     useEffect(() => {
         if (!user) {
             setWatchedIds([]);
@@ -249,6 +295,7 @@ export function VideoFeed() {
         });
         return () => unsub();
     }, [user]);
+    */
 
     useEffect(() => {
         const baseVideos = [...firestoreVideos, ...placeholderList];
@@ -331,8 +378,6 @@ export function VideoFeed() {
             fetchAndPrepend();
         }
 
-        // Clean URL after setting index (no reload):
-        window.history.replaceState(null, '', '/feed');
         watchedIndices.current = new Set();
     }, [displayVideos.length, searchParams]);
 
@@ -511,7 +556,7 @@ export function VideoFeed() {
                                 thumbnailUrl={video.thumbnailUrl || video.userPhoto} // fallback to userPhoto for now
                                 isPlaceholder={video.isPlaceholder}
                                 isActive={activeIndex === index && !showGuestWall}
-                                isPreload={index >= activeIndex - 1 && index <= activeIndex + 1}
+                                isPreload={index >= activeIndex - 2 && index <= activeIndex + 2}
                             />
 
                             <div style={{
