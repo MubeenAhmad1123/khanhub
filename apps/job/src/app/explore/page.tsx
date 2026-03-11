@@ -4,37 +4,78 @@ import React, { useState } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { ExploreGrid } from '@/components/feed/ExploreGrid';
-import { MapPin } from 'lucide-react';
 import { useCategory } from '@/context/CategoryContext';
 
+// Hardcoded chip styles for guaranteed visibility
+const selectedChipStyle = {
+    background: '#0A0A0A',
+    color: '#FFFFFF',
+    border: '1.5px solid #0A0A0A',
+    borderRadius: '20px',
+    padding: '6px 14px',
+    fontSize: '13px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+    fontFamily: 'Poppins'
+};
+
+const unselectedChipStyle = {
+    background: '#F0F0F0',
+    color: '#0A0A0A',
+    border: '1.5px solid #E5E5E5',
+    borderRadius: '20px',
+    padding: '6px 14px',
+    fontSize: '13px',
+    fontWeight: 400,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+    fontFamily: 'Poppins'
+};
+
 export default function ExplorePage() {
-    const { activeCategory, categoryConfig } = useCategory();
+    const { activeCategory } = useCategory();
     const [activeFilter, setActiveFilter] = useState('All');
 
     const filters = ['All', 'Provider', 'Seeker', 'Nearby'];
 
     return (
-        <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] pb-24 overflow-x-hidden">
+        <div style={{
+            paddingTop: '0',
+            marginTop: '0',
+            background: '#fff',
+            minHeight: '100vh',
+            paddingBottom: '80px'
+        }}>
             <TopBar />
 
-            <div className="pt-20 space-y-4">
-                {/* Filter Pills */}
-                <div className="flex gap-2 px-4 overflow-x-auto scrollbar-hide">
-                    {filters.map((filter) => (
-                        <button
-                            key={filter}
-                            onClick={() => setActiveFilter(filter)}
-                            className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${activeFilter === filter
-                                ? 'bg-[--accent] border-[--accent] text-[#FFFFFF]'
-                                : 'bg-[#F0F0F0] border-[#F0F0F0] text-[#0A0A0A] hover:border-[#E5E5E5]'
-                                }`}
-                        >
-                            {filter}
-                        </button>
-                    ))}
-                </div>
+            {/* Filter chips — sticky under navbar */}
+            <div style={{
+                display: 'flex',
+                gap: '8px',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                padding: '8px 12px',
+                marginTop: '0',
+                background: '#fff',
+                position: 'sticky',
+                top: '56px',
+                zIndex: 40,
+                borderBottom: '1px solid #F0F0F0',
+            }} className="no-scrollbar">
+                {filters.map((filter) => (
+                    <button
+                        key={filter}
+                        onClick={() => setActiveFilter(filter)}
+                        style={activeFilter === filter ? selectedChipStyle : unselectedChipStyle}
+                    >
+                        {filter}
+                    </button>
+                ))}
+            </div>
 
-                {/* Explore Grid */}
+            {/* Video grid — immediately below filters */}
+            <div style={{ marginTop: '0' }}>
                 <ExploreGrid
                     category={activeCategory}
                     filter={activeFilter}

@@ -11,7 +11,7 @@ import { CategoryStoriesBar } from '@/components/feed/CategoryStoriesBar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CategoryDropdown } from '@/components/feed/CategoryDropdown';
+// import { CategoryDropdown } from '@/components/feed/CategoryDropdown'; // Removed for inline placement
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
 import { collection, query, where, orderBy, onSnapshot, doc, limit, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
@@ -178,6 +178,21 @@ export function VideoFeed() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [activeIndex, displayVideos.length]);
 
+    // ── Deep Linking Support (?v=videoId) ────────────────────────
+    const targetVideoId = searchParams.get('v');
+
+    useEffect(() => {
+        if (!targetVideoId || displayVideos.length === 0) return;
+        const idx = displayVideos.findIndex(v => v.id === targetVideoId);
+        if (idx !== -1 && idx !== activeIndex) {
+            setActiveIndex(idx);
+            // Scroll to that video:
+            setTimeout(() => {
+                videoRefs.current[idx]?.scrollIntoView({ behavior: 'instant' });
+            }, 100);
+        }
+    }, [targetVideoId, displayVideos]);
+
     // ── Stories Bar Visibility ────────────────────────────────────
     useEffect(() => {
         setShowStoriesBar(activeIndex === 0);
@@ -205,10 +220,7 @@ export function VideoFeed() {
 
                 {/* Header Overlays */}
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, pointerEvents: 'none' }}>
-                    <div className="flex items-center justify-center p-4 pt-8 pointer-events-auto">
-                        <div className="absolute left-4">
-                            <CategoryDropdown />
-                        </div>
+                    <div className="flex items-center p-2 pt-6 pointer-events-auto overflow-hidden">
                         <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
                     </div>
                     <AnimatePresence>
@@ -240,11 +252,12 @@ export function VideoFeed() {
                                 key={video.id}
                                 ref={el => { videoRefs.current[index] = el; }}
                                 style={{
-                                    height: index === 0 && showStoriesBar ? 'calc(100dvh - 120px)' : '100dvh',
-                                    marginTop: index === 0 && showStoriesBar ? 120 : 0,
+                                    height: '100dvh',
                                     scrollSnapAlign: 'start',
+                                    scrollSnapStop: 'always',
                                     position: 'relative',
-                                    transition: 'margin-top 0.3s ease, height 0.3s ease'
+                                    overflow: 'hidden',
+                                    flexShrink: 0,
                                 }}
                             >
                                 {isVisible ? (

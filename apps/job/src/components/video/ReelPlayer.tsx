@@ -39,153 +39,141 @@ export default function ReelPlayer({
     }
 
     useEffect(() => {
-        const video = videoRef.current
-        if (!video) return
-        if (!isActive && !isAdjacent) return // don't load far videos
+        const video = videoRef.current;
+        if (!video || !isActive) return;
 
-        const hlsUrl = getHlsUrl(cloudinaryUrl)
-        const mp4Url = getOptimizedMp4(cloudinaryUrl)
+        // Try HLS first
+        const hlsUrl = getHlsUrl(cloudinaryUrl);
+        const mp4Url = getOptimizedMp4(cloudinaryUrl);
 
-        // Cleanup previous HLS instance
+        // Safety timeout: if video hasn't started in 4s, force MP4
+        const fallbackTimer = setTimeout(() => {
+            if (video.readyState < 2) { // HAVE_CURRENT_DATA = 2
+                console.log('HLS timeout — falling back to MP4');
+                if (hlsRef.current) {
+                    hlsRef.current.destroy();
+                    hlsRef.current = null;
+                }
+                video.src = mp4Url;
+                video.load();
+                video.play().catch(() => { });
+            }
+        }, 4000);
+
+        return () => clearTimeout(fallbackTimer);
+    }, [isActive, cloudinaryUrl]);
+
+    // Cleanup previous HLS instance & Initial Load
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (!isActive && !isAdjacent) return; // don't load far videos
+
+        const hlsUrl = getHlsUrl(cloudinaryUrl);
+        const mp4Url = getOptimizedMp4(cloudinaryUrl);
+
         if (hlsRef.current) {
-            hlsRef.current.destroy()
-            hlsRef.current = null
+            hlsRef.current.destroy();
+            hlsRef.current = null;
         }
 
         if (Hls.isSupported() && hlsUrl.includes('.m3u8')) {
-            // HLS path — full ABR streaming
             const hls = new Hls({
-                // Aggressive preloading config:
-                maxBufferLength: isActive ? 30 : 8,        // buffer 30s for active, 8s for adjacent
+                maxBufferLength: isActive ? 30 : 8,
                 maxMaxBufferLength: isActive ? 60 : 15,
-                maxBufferSize: isActive ? 60 * 1000 * 1000 : 10 * 1000 * 1000, // 60MB active, 10MB adjacent
-                startLevel: -1,           // auto quality selection
-                abrEwmaDefaultEstimate: 500000, // assume 500kbps default (Pakistan networks)
-
-                // Faster start:
+                maxBufferSize: isActive ? 60 * 1000 * 1000 : 10 * 1000 * 1000,
+                startLevel: -1,
+                abrEwmaDefaultEstimate: 500000,
                 manifestLoadingTimeOut: 8000,
                 manifestLoadingMaxRetry: 3,
                 levelLoadingTimeOut: 8000,
-
-                // Low latency start:
                 lowLatencyMode: false,
                 backBufferLength: 5,
-            })
+            });
 
-            hls.loadSource(hlsUrl)
-            hls.attachMedia(video)
+            hls.loadSource(hlsUrl);
+            hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                setIsReady(true)
-                if (isActive) {
-                    video.play().catch(() => { })
-                }
-            })
+                setIsReady(true);
+                if (isActive) video.play().catch(() => { });
+            });
 
             hls.on(Hls.Events.ERROR, (event, data) => {
                 if (data.fatal) {
-                    // HLS failed — fallback to plain MP4
-                    hls.destroy()
-                    video.src = mp4Url
-                    video.load()
-                    if (isActive) video.play().catch(() => { })
+                    hls.destroy();
+                    video.src = mp4Url;
+                    video.load();
+                    if (isActive) video.play().catch(() => { });
                 }
-            })
+            });
 
-            hlsRef.current = hls
-
+            hlsRef.current = hls;
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Safari native HLS support
-            video.src = hlsUrl
-            video.load()
-            if (isActive) video.play().catch(() => { })
-            setIsReady(true)
-
+            video.src = hlsUrl;
+            video.load();
+            if (isActive) video.play().catch(() => { });
+            setIsReady(true);
         } else {
-            // Fallback: optimized MP4
-            video.src = mp4Url
-            video.load()
-            if (isActive) video.play().catch(() => { })
-            setIsReady(true)
+            video.src = mp4Url;
+            video.load();
+            if (isActive) video.play().catch(() => { });
+            setIsReady(true);
         }
 
         return () => {
             if (hlsRef.current) {
-                hlsRef.current.destroy()
-                hlsRef.current = null
+                hlsRef.current.destroy();
+                hlsRef.current = null;
             }
-        }
-    }, [cloudinaryUrl, isActive, isAdjacent])
+        };
+    }, [cloudinaryUrl, isActive, isAdjacent]);
 
     // Play/pause based on active state
     useEffect(() => {
-        const video = videoRef.current
-        if (!video || !isReady) return
+        const video = videoRef.current;
+        if (!video || !isReady) return;
         if (isActive) {
-            video.play().catch(() => { })
+            video.play().catch(() => { });
         } else {
-            video.pause()
-            if (!isAdjacent) {
-                video.currentTime = 0 // reset far videos
-            }
+            video.pause();
+            if (!isAdjacent) video.currentTime = 0;
         }
-    }, [isActive, isReady])
+    }, [isActive, isReady, isAdjacent]);
 
     // Mute control
     useEffect(() => {
-        if (videoRef.current) videoRef.current.muted = isMuted
-    }, [isMuted])
+        if (videoRef.current) videoRef.current.muted = isMuted;
+    }, [isMuted]);
 
     return (
         <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
-
-            {/* Thumbnail shown while buffering */}
             {(isBuffering || !isReady) && thumbnailUrl && (
                 <img
                     src={thumbnailUrl}
                     alt=""
-                    style={{
-                        position: 'absolute', inset: 0,
-                        width: '100%', height: '100%',
-                        objectFit: 'cover', zIndex: 1
-                    }}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
                 />
             )}
 
-            {/* Loading spinner over thumbnail */}
             {isActive && isBuffering && (
-                <div style={{
-                    position: 'absolute', inset: 0, zIndex: 2,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(0,0,0,0.2)'
-                }}>
-                    <div style={{
-                        width: '36px', height: '36px',
-                        borderRadius: '50%',
-                        border: '3px solid rgba(255,255,255,0.25)',
-                        borderTop: '3px solid rgba(255,255,255,0.9)',
-                        animation: 'spin 0.75s linear infinite'
-                    }} />
+                <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.25)', borderTop: '3px solid rgba(255,255,255,0.9)', animation: 'spin 0.75s linear infinite' }} />
                 </div>
             )}
 
-            {/* The actual video */}
             <video
                 ref={videoRef}
                 poster={thumbnailUrl}
                 playsInline
                 muted={isMuted}
                 loop
-                preload={isActive || isAdjacent ? 'auto' : 'none'}
+                preload={isActive ? 'auto' : isAdjacent ? 'metadata' : 'none'}
                 onCanPlay={() => setIsBuffering(false)}
                 onWaiting={() => setIsBuffering(true)}
                 onPlaying={() => setIsBuffering(false)}
-                style={{
-                    position: 'absolute', inset: 0, zIndex: 0,
-                    width: '100%', height: '100%',
-                    objectFit: 'cover'
-                }}
+                style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', height: '100%', objectFit: 'cover' }}
             />
         </div>
-    )
+    );
 }

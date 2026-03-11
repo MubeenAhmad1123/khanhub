@@ -120,7 +120,9 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
 
     const getThumbnail = (item: VideoItem): string => {
         if (!item.isPlaceholder && item.cloudinaryUrl) {
-            return getCloudinaryThumbnail(item.cloudinaryUrl);
+            return item.cloudinaryUrl
+                .replace('/upload/', '/upload/w_300,h_533,c_fill,f_jpg,so_1/')
+                .replace(/\.(mp4|mov|webm)$/i, '.jpg');
         }
         return `https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`;
     };
@@ -159,29 +161,36 @@ export function ExploreGrid({ category, filter }: ExploreGridProps) {
             {filteredItems.map((video, index) => (
                 <div
                     key={video.id + '-' + index}
-                    className="aspect-[9/16] relative bg-[#111] overflow-hidden rounded-lg cursor-pointer group"
                     onClick={() => openFeedAtVideo(video.id)}
+                    style={{
+                        position: 'relative',
+                        aspectRatio: '9/16',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        background: '#111',
+                    }}
                 >
                     <img
                         src={getThumbnail(video)}
-                        alt={video.title}
-                        className="w-full h-full object-cover"
+                        alt=""
+                        loading="lazy"
+                        style={{
+                            width: '100%', height: '100%',
+                            objectFit: 'cover',
+                            display: 'block',
+                        }}
                         onError={(e) => {
                             (e.target as HTMLImageElement).src = `https://via.placeholder.com/400x600/ffffff/000000?text=Video`;
                         }}
                     />
 
-                    {/* View count bottom left */}
+                    {/* View count */}
                     <div style={{
-                        position: 'absolute', bottom: 4, left: 4,
-                        color: '#fff',
-                        fontSize: '10px', padding: '2px 4px',
-                        fontFamily: 'DM Sans', fontWeight: 600,
-                        display: 'flex', alignItems: 'center', gap: '2px', zIndex: 10,
-                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                        position: 'absolute', bottom: '4px', left: '4px',
+                        color: '#fff', fontSize: '11px',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.8)',
                     }}>
-                        <Play className="w-2.5 h-2.5 fill-white" />
-                        {formatCount(video.views)}
+                        ▶ {formatCount(video.views)}
                     </div>
                 </div>
             ))}
