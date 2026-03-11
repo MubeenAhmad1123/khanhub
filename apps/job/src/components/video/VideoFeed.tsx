@@ -35,6 +35,19 @@ export function VideoFeed() {
     const [watchedIds, setWatchedIds] = useState<string[]>([]);
     const [displayVideos, setDisplayVideos] = useState<any[]>([]);
     const [isMuted, setIsMuted] = useState(true);
+    const [userHasInteracted, setUserHasInteracted] = useState(false);
+
+    useEffect(() => {
+        const markInteracted = () => setUserHasInteracted(true);
+        document.addEventListener('click', markInteracted, { once: true });
+        document.addEventListener('keydown', markInteracted, { once: true });
+        document.addEventListener('scroll', markInteracted, { once: true });
+        return () => {
+            document.removeEventListener('click', markInteracted);
+            document.removeEventListener('keydown', markInteracted);
+            document.removeEventListener('scroll', markInteracted);
+        };
+    }, []);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -125,12 +138,14 @@ export function VideoFeed() {
         const observers: IntersectionObserver[] = [];
         const refs = videoRefs.current;
 
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
         refs.forEach((ref, index) => {
             if (!ref) return;
             const observer = new IntersectionObserver(
                 (entries) => {
                     entries.forEach(entry => {
-                        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+                        if (entry.isIntersecting && entry.intersectionRatio >= (isMobile ? 0.6 : 0.5)) {
                             setActiveIndex(index);
                             // Update URL
                             const video = displayVideos[index];
@@ -150,7 +165,11 @@ export function VideoFeed() {
                         }
                     });
                 },
-                { threshold: 0.6, root: containerRef.current }
+                {
+                    threshold: [0.5, 0.6, 0.8],
+                    root: containerRef.current,
+                    rootMargin: '0px',
+                }
             );
             observer.observe(ref);
             observers.push(observer);
@@ -239,8 +258,10 @@ export function VideoFeed() {
                         height: '100dvh',
                         overflowY: 'scroll',
                         scrollSnapType: 'y mandatory',
+                        scrollBehavior: 'smooth',
                         WebkitOverflowScrolling: 'touch',
-                        scrollbarWidth: 'none'
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
                     }}
                 >
                     {displayVideos.map((video, index) => {
@@ -269,6 +290,7 @@ export function VideoFeed() {
                                             isAdjacent={isAdjacent}
                                             videoId={video.id}
                                             isMuted={isMuted}
+                                            userHasInteracted={userHasInteracted}
                                         />
                                         <div style={{ position: 'absolute', bottom: 80, left: 0, right: 0, zIndex: 20, pointerEvents: 'none' }}>
                                             <VideoOverlay data={video} />

@@ -11,63 +11,89 @@ interface ReelPlayerProps {
     isAdjacent: boolean;
     videoId: string;
     isMuted?: boolean;
+    userHasInteracted?: boolean;
 }
 
-export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId }: ReelPlayerProps) {
+export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, userHasInteracted }: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
+    const [isMuted, setIsMuted] = useState(true);      // start muted (browser requirement)
+    const [needsUnmutePrompt, setNeedsUnmutePrompt] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
     const [isBuffering, setIsBuffering] = useState(true);
-    const [showPauseIcon, setShowPauseIcon] = useState(false);
+    const [showTapIcon, setShowTapIcon] = useState(false);
     const [loadingTooLong, setLoadingTooLong] = useState(false);
 
     // Tap handler — toggle pause/play
-    const handleTap = useCallback(() => {
+    const handleVideoTap = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
+
+        // If needs unmute — first tap unmutes
+        if (needsUnmutePrompt) {
+            video.muted = false;
+            setIsMuted(false);
+            setNeedsUnmutePrompt(false);
+            return;
+        }
 
         if (video.paused) {
             video.play().catch(() => { });
             setIsPaused(false);
-            setShowPauseIcon(false);
         } else {
             video.pause();
             setIsPaused(true);
-            setShowPauseIcon(true);
-            setTimeout(() => setShowPauseIcon(false), 1200);
+            setShowTapIcon(true);
+            setTimeout(() => setShowTapIcon(false), 1000);
         }
-    }, []);
+    }, [needsUnmutePrompt]);
 
     // Mute toggle — separate button
-    const handleMuteToggle = useCallback((e: React.MouseEvent) => {
+    const handleMuteTap = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         const video = videoRef.current;
         if (!video) return;
         video.muted = !video.muted;
         setIsMuted(video.muted);
+        setNeedsUnmutePrompt(false);
     }, []);
 
     // Main control for isActive
     useEffect(() => {
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || !isActive) return;
 
-        if (isActive) {
-            video.muted = false;
-            setIsMuted(false);
-            video.play().catch(() => {
-                video.muted = true;
+        video.muted = true; // must start muted
+        video.play()
+            .then(() => {
+                // Play succeeded — now try to unmute if user has interacted
+                if (userHasInteracted) {
+                    video.muted = false;
+                    setIsMuted(false);
+                    setNeedsUnmutePrompt(false);
+                } else {
+                    // Stay muted, show prompt if they haven't interacted yet
+                    setNeedsUnmutePrompt(true);
+                }
+            })
+            .catch(() => {
+                // Autoplay blocked — stay muted, show prompt
                 setIsMuted(true);
-                video.play().catch(() => { });
+                setNeedsUnmutePrompt(true);
             });
-            setIsPaused(false);
-        } else {
+        setIsPaused(false);
+    }, [isActive, userHasInteracted]);
+
+    // Handle isAdjacent/Inactive
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (!isActive) {
             video.pause();
-            video.currentTime = 0;
+            if (!isAdjacent) video.currentTime = 0;
             if (hlsRef.current) hlsRef.current.stopLoad();
         }
-    }, [isActive]);
+    }, [isActive, isAdjacent]);
 
     // Loading feedback
     useEffect(() => {
@@ -154,7 +180,7 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
 
     return (
         <div
-            onClick={handleTap}
+            onClick={handleVideoTap}
             style={{ position: 'absolute', inset: 0, cursor: 'pointer' }}
             className="video-slide"
         >
@@ -187,63 +213,55 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
                 </div>
             )}
 
-            {/* Tap Feedback Icon */}
-            {showPauseIcon && (
+            {/* Pause indicator */}
+            {(isPaused || showTapIcon) && (
                 <div style={{
                     position: 'absolute', inset: 0, zIndex: 10,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     pointerEvents: 'none',
                 }}>
                     <div style={{
-                        width: '64px', height: '64px', borderRadius: '50%',
-                        background: 'rgba(0,0,0,0.5)',
+                        width: '60px', height: '60px', borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.55)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        animation: 'fadeOut 1.2s ease forwards',
                     }}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                            <div style={{ width: '5px', height: '22px', background: '#fff', borderRadius: '2px' }} />
-                            <div style={{ width: '5px', height: '22px', background: '#fff', borderRadius: '2px' }} />
-                        </div>
+                        {isPaused
+                            ? <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '18px solid white', marginLeft: '4px' }} />
+                            : <div style={{ display: 'flex', gap: '5px' }}>
+                                <div style={{ width: '4px', height: '18px', background: 'white', borderRadius: '2px' }} />
+                                <div style={{ width: '4px', height: '18px', background: 'white', borderRadius: '2px' }} />
+                            </div>
+                        }
                     </div>
                 </div>
             )}
 
-            {/* Persistent Play Icon when paused */}
-            {isPaused && !showPauseIcon && (
+            {/* 🔇 TAP TO UNMUTE prompt — shows when browser blocked audio */}
+            {needsUnmutePrompt && (
                 <div style={{
-                    position: 'absolute', inset: 0, zIndex: 10,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    pointerEvents: 'none',
+                    position: 'absolute', top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 20, pointerEvents: 'none',
+                    background: 'rgba(0,0,0,0.65)',
+                    borderRadius: '24px', padding: '10px 18px',
+                    display: 'flex', alignItems: 'center', gap: '8px',
                 }}>
-                    <div style={{
-                        width: '64px', height: '64px', borderRadius: '50%',
-                        background: 'rgba(0,0,0,0.5)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        <div style={{
-                            width: 0, height: 0,
-                            borderTop: '12px solid transparent',
-                            borderBottom: '12px solid transparent',
-                            borderLeft: '20px solid white',
-                            marginLeft: '4px',
-                        }} />
-                    </div>
+                    <span style={{ fontSize: '20px' }}>🔇</span>
+                    <span style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
+                        Tap to unmute
+                    </span>
                 </div>
             )}
 
-            {/* Mute Toggle */}
+            {/* Mute/Unmute button — always visible */}
             <button
-                onClick={handleMuteToggle}
+                onClick={handleMuteTap}
                 style={{
-                    position: 'absolute',
-                    bottom: '120px',
-                    right: '16px',
-                    zIndex: 20,
-                    background: 'rgba(0,0,0,0.5)',
-                    border: 'none', borderRadius: '50%',
-                    width: '36px', height: '36px',
+                    position: 'absolute', top: '70px', right: '12px', zIndex: 20,
+                    background: 'rgba(0,0,0,0.5)', border: 'none',
+                    borderRadius: '50%', width: '38px', height: '38px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', color: 'white', fontSize: '16px',
+                    cursor: 'pointer', fontSize: '18px',
                 }}
             >
                 {isMuted ? '🔇' : '🔊'}
@@ -251,16 +269,17 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
 
             <video
                 ref={videoRef}
+                poster={thumbnailUrl}
                 playsInline
+                muted          // always start muted — JS unmutes after play() resolves
                 loop
-                muted={isMuted}
-                onWaiting={() => setIsBuffering(true)}
-                onPlaying={() => { setIsBuffering(false); setIsPaused(false); }}
+                preload={isActive || isAdjacent ? 'auto' : 'none'}
                 onCanPlay={() => setIsBuffering(false)}
+                onWaiting={() => setIsBuffering(true)}
+                onPlaying={() => setIsBuffering(false)}
                 style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+                    position: 'absolute', inset: 0, zIndex: 0,
+                    width: '100%', height: '100%', objectFit: 'cover',
                 }}
             />
         </div>

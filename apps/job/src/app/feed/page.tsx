@@ -25,8 +25,19 @@ export default function FeedPage() {
     }
 
     return (
-        <div className="min-h-screen bg-black">
-            <VideoFeed />
+        <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            background: '#000',           // black sides on desktop
+            minHeight: '100dvh',
+        }}>
+            <div style={{
+                width: '100%',
+                maxWidth: '430px',           // phone-width feed centered on desktop
+                position: 'relative',
+            }}>
+                <VideoFeed />
+            </div>
         </div>
     );
 }
