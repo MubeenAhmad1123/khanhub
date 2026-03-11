@@ -239,7 +239,7 @@ export function VideoFeed() {
 
                 {/* Header Overlays */}
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, pointerEvents: 'none' }}>
-                    <div className="flex items-center p-2 pt-6 pointer-events-auto overflow-hidden">
+                    <div className="flex items-center p-2 pt-6 pointer-events-auto">
                         <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
                     </div>
                     <AnimatePresence>

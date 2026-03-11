@@ -42,7 +42,6 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
         <div style={{
             display: 'flex',
             alignItems: 'center',
-            overflowX: 'auto',
             scrollbarWidth: 'none',
             WebkitOverflowScrolling: 'touch',
             padding: '2px 8px',
@@ -91,7 +90,7 @@ export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
                             background: '#FFFFFF',
                             borderRadius: '12px',
                             boxShadow: '0 8px 40px rgba(0,0,0,0.25)',
-                            zIndex: 99999,
+                            zIndex: 100000,
                             minWidth: '180px',
                             overflow: 'visible',
                             border: '1px solid #E5E5E5',

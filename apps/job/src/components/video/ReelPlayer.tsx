@@ -17,7 +17,7 @@ interface ReelPlayerProps {
 export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, userHasInteracted }: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
-    const [isMuted, setIsMuted] = useState(true);      // start muted (browser requirement)
+    const [isMuted, setIsMuted] = useState(false);      // Attempt unmuted by default
     const [needsUnmutePrompt, setNeedsUnmutePrompt] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [isBuffering, setIsBuffering] = useState(true);
@@ -63,26 +63,29 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         const video = videoRef.current;
         if (!video || !isActive) return;
 
-        video.muted = true; // must start muted
+        // Try unmuted first
+        video.muted = false;
         video.play()
             .then(() => {
-                // Play succeeded — now try to unmute if user has interacted
-                if (userHasInteracted) {
-                    video.muted = false;
-                    setIsMuted(false);
-                    setNeedsUnmutePrompt(false);
-                } else {
-                    // Stay muted, show prompt if they haven't interacted yet
-                    setNeedsUnmutePrompt(true);
-                }
+                setIsMuted(false);
+                setNeedsUnmutePrompt(false);
             })
             .catch(() => {
-                // Autoplay blocked — stay muted, show prompt
-                setIsMuted(true);
-                setNeedsUnmutePrompt(true);
+                // If unmuted failed (autoplay policy), try muted
+                video.muted = true;
+                video.play()
+                    .then(() => {
+                        setIsMuted(true);
+                        setNeedsUnmutePrompt(true);
+                    })
+                    .catch(() => {
+                        // All failed (e.g. no user gesture at all)
+                        setIsMuted(true);
+                        setNeedsUnmutePrompt(true);
+                    });
             });
         setIsPaused(false);
-    }, [isActive, userHasInteracted]);
+    }, [isActive]);
 
     // Handle isAdjacent/Inactive
     useEffect(() => {
