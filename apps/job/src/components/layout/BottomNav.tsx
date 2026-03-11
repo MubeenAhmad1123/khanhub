@@ -6,6 +6,7 @@ import { Home, Compass, Plus, Bookmark, UserCircle2 } from 'lucide-react';
 import { useCategory } from '@/context/CategoryContext';
 import { auth } from '@/lib/firebase/firebase-config';
 import { useRouter } from 'next/navigation';
+import { startProgress } from '@/components/layout/RouteProgressBar';
 
 export function BottomNav() {
     const pathname = usePathname();
@@ -40,7 +41,12 @@ export function BottomNav() {
                 const handleClick = (e: React.MouseEvent) => {
                     if (item.requiresAuth && !auth.currentUser) {
                         e.preventDefault();
+                        startProgress();
                         router.push('/auth/register?from=' + item.label.toLowerCase());
+                    } else {
+                        // For standard links that don't trigger native route events reliably in App Router,
+                        // we can start the bar manually on click.
+                        startProgress();
                     }
                 };
 

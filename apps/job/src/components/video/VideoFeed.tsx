@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useCategory } from '@/context/CategoryContext';
-import { ReelPlayer } from './ReelPlayer';
+import ReelPlayer from './ReelPlayer'; // Ensure default import or named if needed
 import { VideoOverlay } from '@/components/feed/VideoOverlay';
 import { ActionButtons } from '@/components/feed/ActionButtons';
 import { GuestWall } from '@/components/feed/GuestWall';
@@ -11,70 +11,44 @@ import { CategoryStoriesBar } from '@/components/feed/CategoryStoriesBar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search } from 'lucide-react';
 import { CategoryDropdown } from '@/components/feed/CategoryDropdown';
-
-
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, increment, limit, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, limit, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
+
+// Preload window config:
+const PRELOAD_AHEAD = 2   // preload 2 videos ahead
+const PRELOAD_BEHIND = 1  // keep 1 video behind buffered
 
 export function VideoFeed() {
     const { activeCategory, activeRole } = useCategory();
     const { user, loading } = useAuth();
     const router = useRouter();
-    const [activeIndex, setActiveIndex] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const saved = sessionStorage.getItem('feed_last_index');
-            if (saved !== null && !isNaN(Number(saved))) {
-                return Number(saved);
-            }
-        }
-        return 0;
-    });
+    const searchParams = useSearchParams();
+
+    const [activeIndex, setActiveIndex] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
     const [showGuestWall, setShowGuestWall] = useState(false);
     const [showStoriesBar, setShowStoriesBar] = useState(true);
-    const [feedKey, setFeedKey] = useState(0);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const reelRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const watchedIndices = useRef<Set<number>>(new Set());
-    const touchStartX = useRef<number>(0);
-    const touchStartY = useRef<number>(0);
-    const restoredIndexRef = useRef<number | null>(null);
-
-    // Initial restore from sessionStorage
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-
-        // Commit 5: Handle auth redirect reset
-        const isAuthRedirect = sessionStorage.getItem('authRedirect');
-        if (isAuthRedirect) {
-            sessionStorage.removeItem('authRedirect');
-            sessionStorage.removeItem('feed_last_index');
-            restoredIndexRef.current = 0;
-            setActiveIndex(0);
-            return;
-        }
-
-        const saved = sessionStorage.getItem('feed_last_index');
-        if (saved !== null && !isNaN(Number(saved))) {
-            restoredIndexRef.current = Number(saved);
-        }
-    }, []);
-
-    // ── Real Firestore videos ─────────────────────────────────────
-    const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
-    const [firestoreLoading, setFirestoreLoading] = useState(true);
     const [firestoreProfile, setFirestoreProfile] = useState<any>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
     const [watchedIds, setWatchedIds] = useState<string[]>([]);
     const [displayVideos, setDisplayVideos] = useState<any[]>([]);
+    const [isMuted, setIsMuted] = useState(true);
 
-    // ── Load User Profile (Commit 2) ──────────────────────────────
+    const containerRef = useRef<HTMLDivElement>(null);
+    const videoRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+    // Ensure videoRefs array is scaled
+    if (videoRefs.current.length < displayVideos.length) {
+        videoRefs.current = [...videoRefs.current, ...new Array(displayVideos.length - videoRefs.current.length).fill(null)];
+    }
+
+    // ── Load User Profile & Watched Videos ────────────────────────
     useEffect(() => {
         if (!user) {
             setFirestoreProfile(null);
+            setWatchedIds([]);
             return;
         }
         const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
@@ -87,10 +61,8 @@ export function VideoFeed() {
         return () => unsub();
     }, [user]);
 
+    // ── Fetch Firestore Videos ────────────────────────────────────
     useEffect(() => {
-        setFirestoreLoading(true);
-        setFirestoreVideos([]);
-
         const queryCategory = (activeTab === 0 && firestoreProfile?.category)
             ? firestoreProfile.category
             : activeCategory;
@@ -106,555 +78,216 @@ export function VideoFeed() {
 
         const getTabFilter = (tabIndex: number) => {
             if (tabIndex === 0) return null;
-            if (activeCategory === 'jobs') {
-                return tabIndex === 1 ? 'seeker' : 'provider';
-            }
+            if (activeCategory === 'jobs') return tabIndex === 1 ? 'seeker' : 'provider';
             return tabIndex === 1 ? 'provider' : 'seeker';
         };
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const roleFilter = getTabFilter(activeTab);
-
             const videos = snapshot.docs
                 .map(d => ({ id: d.id, ...d.data() } as any))
                 .filter(d => {
-                    const matchesCategory = d.category === activeCategory || (activeCategory === 'jobs' && !d.category);
+                    const matchesCategory = d.category === queryCategory;
                     const matchesRole = !roleFilter || d.userRole === roleFilter;
-
-                    // Search filter
-                    const title = (d.overlayData?.title || d.title || '').toLowerCase();
-                    const role = (d.overlayData?.badge || d.role || '').toLowerCase();
-                    const catName = (d.category || '').toLowerCase();
-                    const searchLower = searchQuery.toLowerCase();
-                    const matchesSearch = !searchQuery ||
-                        title.includes(searchLower) ||
-                        role.includes(searchLower) ||
-                        catName.includes(searchLower);
-
                     const url = d.cloudinaryUrl;
-                    const isValidCloudinary = url &&
-                        url.includes('cloudinary.com') &&
-                        !url.includes('youtube.com') &&
-                        !url.includes('youtu.be') &&
-                        !url.includes('zoo');
-
-                    return d.admin_status === 'approved' && matchesCategory && matchesRole && matchesSearch && isValidCloudinary;
+                    const isValidCloudinary = url && url.includes('cloudinary.com') && !url.includes('youtube.com');
+                    return d.admin_status === 'approved' && matchesCategory && matchesRole && isValidCloudinary;
                 })
-                .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
                 .map(d => ({
                     id: d.id,
                     isPlaceholder: false,
-                    videoId: undefined,
                     cloudinaryUrl: d.cloudinaryUrl,
-                    category: d.category,
-                    title: d.overlayData?.title || d.title || '',
-                    badge: d.overlayData?.badge || d.role || '',
-                    field1: d.overlayData?.field1 || '',
-                    field2: d.overlayData?.field2 || '',
-                    location: d.overlayData?.location || d.city || '',
-                    views: d.views || 0,
-                    likes: d.likes || 0,
-                    saves: d.saves || 0,
-                    shares: d.shares || 0,
-                    userId: d.userId,
-                    userPhoto: d.userPhoto || '',
-                    userRole: d.userRole || '',
+                    thumbnailUrl: d.thumbnailUrl || d.userPhoto || '',
+                    ...d
                 }));
             setFirestoreVideos(videos);
-            setFirestoreLoading(false);
-        }, () => {
-            setFirestoreLoading(false);
         });
 
         return () => unsubscribe();
-    }, [activeCategory, activeTab, searchQuery]);
+    }, [activeCategory, activeTab, firestoreProfile]);
 
-    // ── Build video list: real first, then placeholders ───────────
-    const roleFilter = activeTab === 0 ? null : (activeCategory === 'jobs' ? (activeTab === 1 ? 'seeker' : 'provider') : (activeTab === 1 ? 'provider' : 'seeker'));
-
-    // Map placeholder badge to role for filtering
-    const getPlaceholderRole = (badge: string): 'provider' | 'seeker' => {
-        const b = badge.toLowerCase();
-        if (b.includes('hiring') || b.includes('patient') || b.includes('client') || b.includes('looking') || b.includes('household') || b.includes('buyer')) return 'seeker';
-        return 'provider';
-    };
-
-    const safeCategories = CATEGORY_PLACEHOLDERS[activeCategory] ? activeCategory : 'jobs';
-    const placeholderList = CATEGORY_PLACEHOLDERS[safeCategories].map((id, i) => {
-        const overlayDataGroup = PLACEHOLDER_OVERLAY_DATA[safeCategories] || PLACEHOLDER_OVERLAY_DATA['jobs'];
-        const overlay = overlayDataGroup[i % overlayDataGroup.length] || {};
-        return {
-            id: `placeholder-${i}`,
-            isPlaceholder: true,
-            videoId: id,
-            userId: null,
-            userPhoto: null,
-            userRole: getPlaceholderRole(overlay.badge || ''),
-            cloudinaryUrl: undefined,
-            category: activeCategory,
-            ...overlay,
-        };
-    }).filter(p => !roleFilter || p.userRole === roleFilter);
-
-    const videos = [...firestoreVideos, ...placeholderList];
-
-
-
-    // ── Guest wall via IntersectionObserver ───────────────────────
+    // ── Build Final Display List ───────────────────────────────────
     useEffect(() => {
-        if (loading || user) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                        const index = reelRefs.current.findIndex(ref => ref === entry.target);
-
-                        if (index !== -1 && !watchedIndices.current.has(index)) {
-                            watchedIndices.current.add(index);
-                            setActiveIndex(index);
-                            sessionStorage.setItem('feed_last_index', String(index));
-
-                            const current = parseInt(localStorage.getItem('jobreel_videos_watched') || '0');
-                            const newCount = current + 1;
-                            localStorage.setItem('jobreel_videos_watched', String(newCount));
-
-                            if (newCount >= 3) {
-                                setShowGuestWall(true);
-                            }
-
-                            const targetVideo = displayVideos[index];
-                            // if (targetVideo) countView(targetVideo.id); // Tracked in ReelPlayer now
-                        }
-                    }
-                });
-            },
-            { threshold: 0.5, root: containerRef.current }
-        );
-
-        const timeout = setTimeout(() => {
-            reelRefs.current.forEach((ref) => { if (ref) observer.observe(ref); });
-        }, 100);
-
-        return () => { observer.disconnect(); clearTimeout(timeout); };
-    }, [user, activeCategory, videos]);
-
-    // ── Logged-in user: track active index via IntersectionObserver
-    useEffect(() => {
-        if (loading || !user) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                        const index = reelRefs.current.findIndex(ref => ref === entry.target);
-                        if (index !== -1) {
-                            setActiveIndex(index);
-                            sessionStorage.setItem('feed_last_index', String(index));
-                            const targetVideo = displayVideos[index];
-                            // if (targetVideo) countView(targetVideo.id); // Tracked in ReelPlayer now
-                        }
-                    }
-                });
-            },
-            { threshold: 0.5, root: containerRef.current }
-        );
-        const timeout = setTimeout(() => {
-            reelRefs.current.forEach((ref) => { if (ref) observer.observe(ref); });
-        }, 100);
-        return () => { observer.disconnect(); clearTimeout(timeout); };
-    }, [user, activeCategory, displayVideos, loading]);
-
-    // ── Update URL on scroll (Commit 5) ──────────────────────────
-    useEffect(() => {
-        if (displayVideos.length > 0 && activeIndex >= 0) {
-            const video = displayVideos[activeIndex];
-            if (video && !video.isPlaceholder) {
-                const url = new URL(window.location.href);
-                // Only update if it's different and we are NOT in the middle of a deep link initial scroll
-                if (url.searchParams.get('v') !== video.id) {
-                    url.searchParams.set('v', video.id);
-                    window.history.replaceState(null, '', url.pathname + url.search);
-                }
-            }
-        }
-    }, [activeIndex, displayVideos]);
-
-    // ── Smart Feed Logic (Commit 3) ───────────────────────────────
-    // Moved to unified profile useEffect above
-    /*
-    useEffect(() => {
-        if (!user) {
-            setWatchedIds([]);
-            return;
-        }
-        const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-            if (snap.exists()) {
-                setWatchedIds(snap.data().watchedVideos || []);
-            }
-        });
-        return () => unsub();
-    }, [user]);
-    */
-
-    useEffect(() => {
-        const baseVideos = [...firestoreVideos, ...placeholderList];
-        if (!baseVideos.length) {
-            setDisplayVideos([]);
-            return;
-        }
-
+        const baseVideos = [...firestoreVideos];
         if (!user) {
             setDisplayVideos(baseVideos);
             return;
         }
-
-        // Split into unwatched and watched
         const unwatched = baseVideos.filter(v => !watchedIds.includes(v.id));
         const watched = baseVideos.filter(v => watchedIds.includes(v.id));
+        setDisplayVideos(unwatched.length > 0 ? unwatched : (watched.length > 0 ? [...watched].reverse() : baseVideos));
+    }, [firestoreVideos, watchedIds, user]);
 
-        if (unwatched.length > 0) {
-            setDisplayVideos(unwatched);
-        } else if (watched.length > 0) {
-            // Seen everything - recycle, oldest watched first
-            // Approximation: reverse order of original newest-first feed
-            setDisplayVideos([...watched].reverse());
-        } else {
-            setDisplayVideos(baseVideos);
-        }
-    }, [firestoreVideos, placeholderList, watchedIds, user]);
-
-
-    // ── Jump to index or videoId from URL or Session ──────────────────────────
-    const searchParams = useSearchParams();
-
+    // ── Intersection Observer for Active Index & URL ───────────────
     useEffect(() => {
-        const targetVideoId = searchParams.get('v');
-        if (!targetVideoId || displayVideos.length === 0) return;
+        if (displayVideos.length === 0) return;
 
-        const idx = displayVideos.findIndex(v => v.id === targetVideoId);
-        if (idx !== -1) {
-            // Video is already in our smart feed
-            setTimeout(() => {
-                reelRefs.current[idx]?.scrollIntoView({ behavior: 'auto' });
-                setActiveIndex(idx);
-            }, 100);
-        } else {
-            // Video not in current feed (maybe already watched)
-            const fetchAndPrepend = async () => {
-                try {
-                    const videoDoc = await getDoc(doc(db, 'videos', targetVideoId));
-                    if (videoDoc.exists()) {
-                        const d = videoDoc.data();
-                        const targetVideo = {
-                            id: videoDoc.id,
-                            isPlaceholder: false,
-                            videoId: undefined,
-                            cloudinaryUrl: d.cloudinaryUrl,
-                            category: d.category,
-                            title: d.overlayData?.title || d.title || '',
-                            badge: d.overlayData?.badge || d.role || '',
-                            field1: d.overlayData?.field1 || '',
-                            field2: d.overlayData?.field2 || '',
-                            location: d.overlayData?.location || d.city || '',
-                            views: d.views || 0,
-                            likes: d.likes || 0,
-                            saves: d.saves || 0,
-                            shares: d.shares || 0,
-                            userId: d.userId,
-                            userPhoto: d.userPhoto || '',
-                            userRole: d.userRole || '',
-                        };
-                        setDisplayVideos(prev => [targetVideo, ...prev.filter(v => v.id !== targetVideoId)]);
-                        setActiveIndex(0);
-                        setTimeout(() => {
-                            reelRefs.current[0]?.scrollIntoView({ behavior: 'auto' });
-                        }, 100);
-                    }
-                } catch (err) {
-                    console.error("Error fetching deep link video:", err);
-                }
-            };
-            fetchAndPrepend();
-        }
+        const observers: IntersectionObserver[] = [];
+        const refs = videoRefs.current;
 
-        watchedIndices.current = new Set();
-    }, [displayVideos.length, searchParams]);
+        refs.forEach((ref, index) => {
+            if (!ref) return;
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+                            setActiveIndex(index);
+                            // Update URL
+                            const video = displayVideos[index];
+                            if (video && !video.isPlaceholder) {
+                                const url = new URL(window.location.href);
+                                if (url.searchParams.get('v') !== video.id) {
+                                    url.searchParams.set('v', video.id);
+                                    window.history.replaceState(null, '', url.pathname + url.search);
+                                }
+                            }
+                            // Guest Wall Logic
+                            if (!user) {
+                                const watchedCount = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
+                                localStorage.setItem('jobreel_videos_watched', String(watchedCount));
+                                if (watchedCount >= 3) setShowGuestWall(true);
+                            }
+                        }
+                    });
+                },
+                { threshold: 0.6, root: containerRef.current }
+            );
+            observer.observe(ref);
+            observers.push(observer);
+        });
 
-    // ── Restore scroll position on mount ──────────────────────────
-    useEffect(() => {
-        if (!displayVideos.length) return;
-        if (restoredIndexRef.current === null || restoredIndexRef.current === 0) return;
+        return () => observers.forEach(o => o.disconnect());
+    }, [displayVideos.length, user]);
 
-        const index = Math.min(restoredIndexRef.current, displayVideos.length - 1);
-        restoredIndexRef.current = null; // only restore once
-
-        // Small delay to ensure DOM is rendered
-        setTimeout(() => {
-            if (containerRef.current && reelRefs.current[index]) {
-                reelRefs.current[index]?.scrollIntoView({ behavior: 'auto' });
-                setActiveIndex(index);
-            }
-        }, 150);
-    }, [displayVideos]);
-
-
-    // Scroll to specific index programmatically
-    const scrollToIndex = (index: number) => {
-        if (index < 0 || index >= displayVideos.length) return;
-        reelRefs.current[index]?.scrollIntoView({ behavior: 'smooth' });
-        setActiveIndex(index);
-        sessionStorage.setItem('feed_last_index', String(index));
-    };
-
-    // Keyboard arrow keys — desktop navigation
+    // ── Keyboard Navigation ───────────────────────────────────────
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-                e.preventDefault();
-                scrollToIndex(activeIndex + 1);
-            }
-            if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-                e.preventDefault();
-                scrollToIndex(activeIndex - 1);
+            if (e.key === 'ArrowDown') {
+                const next = activeIndex + 1;
+                if (next < displayVideos.length) {
+                    videoRefs.current[next]?.scrollIntoView({ behavior: 'smooth' });
+                }
+            } else if (e.key === 'ArrowUp') {
+                const prev = activeIndex - 1;
+                if (prev >= 0) {
+                    videoRefs.current[prev]?.scrollIntoView({ behavior: 'smooth' });
+                }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [activeIndex, displayVideos.length]);
 
-    // Hide stories bar when user scrolls past first video
+    // ── Stories Bar Visibility ────────────────────────────────────
     useEffect(() => {
-        if (activeIndex > 0 && showStoriesBar) {
-            setShowStoriesBar(false);
-        }
-        // Show again only if user scrolls back to top
-        if (activeIndex === 0) {
-            setShowStoriesBar(true);
-        }
-    }, [activeIndex, showStoriesBar]);
+        setShowStoriesBar(activeIndex === 0);
+    }, [activeIndex]);
 
-    // When category changes from stories bar — scroll to top + refresh
-    const handleCategoryChange = () => {
-        setActiveIndex(0);
-        setFeedKey(prev => prev + 1);  // forces re-mount of video list
-        if (containerRef.current) {
-            containerRef.current.scrollTop = 0;
+    const getVideoState = (index: number) => {
+        const distance = index - activeIndex;
+        if (distance === 0) return { isActive: true, isAdjacent: false };
+        if (distance >= -PRELOAD_BEHIND && distance <= PRELOAD_AHEAD) {
+            return { isActive: false, isAdjacent: true };
         }
-    };
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        touchStartX.current = e.touches[0].clientX;
-        touchStartY.current = e.touches[0].clientY;
-    };
-
-    const handleTouchEnd = (e: React.TouchEvent, video: any) => {
-        const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-        const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-        // Swipe left > 60px, vertical movement < 30px, and video has real userId
-        if (deltaX < -60 && deltaY < 30 && video.userId && video.userId.length >= 10) {
-            router.push(`/profile/${video.userRole || 'user'}/${video.userId}`);
-        }
+        return { isActive: false, isAdjacent: false };
     };
 
     return (
-        <div style={{
-            position: 'fixed',
-            inset: 0,
-            background: '#fff',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-        }}>
-            {/* Desktop side panels — black with subtle content */}
-            <div className="hidden md:flex" style={{
-                flex: 1,
-                height: '100dvh',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                paddingRight: 24,
-                gap: 16,
-            }}>
-                <div style={{ color: '#333', fontSize: 12, fontFamily: 'DM Sans', textAlign: 'right' }}>
-                    <div>↑ ↓ to navigate</div>
-                </div>
+        <div style={{ position: 'fixed', inset: 0, background: '#000', display: 'flex', justifyContent: 'center' }}>
+
+            {/* Desktop UI Arrows (Side) */}
+            <div className="hidden md:flex flex-col justify-center gap-4 fixed left-8 z-50">
+                <button onClick={() => videoRefs.current[activeIndex - 1]?.scrollIntoView({ behavior: 'smooth' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↑</button>
+                <button onClick={() => videoRefs.current[activeIndex + 1]?.scrollIntoView({ behavior: 'smooth' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↓</button>
             </div>
 
-            {/* CENTER COLUMN — the actual feed */}
-            <div style={{
-                width: '100%',
-                maxWidth: 400,
-                height: '100dvh',
-                position: 'relative',
-                overflow: 'hidden',
-                flexShrink: 0,
-            }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30, pointerEvents: 'none', paddingTop: 'env(safe-area-inset-top, 12px)' }}>
-                    <div className="relative flex items-center justify-center p-4 pointer-events-auto">
+            <div style={{ width: '100%', maxWidth: 450, height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+
+                {/* Header Overlays */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, pointerEvents: 'none' }}>
+                    <div className="flex items-center justify-center p-4 pt-8 pointer-events-auto">
                         <div className="absolute left-4">
                             <CategoryDropdown />
                         </div>
                         <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
                     </div>
+                    <AnimatePresence>
+                        {showStoriesBar && (
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                <CategoryStoriesBar onCategoryChange={() => setActiveIndex(0)} />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
-
-                {/* STORIES BAR — only visible on first video */}
-                <AnimatePresence>
-                    {showStoriesBar && (
-                        <motion.div
-                            initial={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.25 }}
-                            style={{
-                                position: 'absolute',
-                                top: 48,       // below FeedTabs
-                                left: 0, right: 0,
-                                zIndex: 28,
-                            }}
-                        >
-                            <CategoryStoriesBar onCategoryChange={handleCategoryChange} />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
 
                 <div
                     ref={containerRef}
-                    key={feedKey}
-                    className="scrollbar-hide"
+                    className="no-scrollbar"
                     style={{
                         height: '100dvh',
                         overflowY: 'scroll',
                         scrollSnapType: 'y mandatory',
                         WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'none'
                     }}
                 >
-                    {displayVideos.map((video, index) => (
-                        <div
-                            key={video.id}
-                            data-index={index}
-                            ref={(el) => { reelRefs.current[index] = el; }}
-                            onTouchStart={handleTouchStart}
-                            onTouchEnd={(e) => handleTouchEnd(e, video)}
-                            style={{
-                                position: 'relative',
-                                height: index === 0 && showStoriesBar
-                                    ? 'calc(100dvh - 130px)'
-                                    : '100dvh',
-                                width: '100%',
-                                overflow: 'hidden',
-                                background: '#000',
-                                scrollSnapAlign: 'start',
-                                scrollSnapStop: 'always',
-                                flexShrink: 0,
-                                marginTop: index === 0 && showStoriesBar ? 130 : 0,
-                                transition: 'height 0.3s ease, margin-top 0.3s ease',
-                            }}
-                        >
-                            <ReelPlayer
-                                videoId={video.videoId}
-                                cloudinaryUrl={video.cloudinaryUrl}
-                                thumbnailUrl={video.thumbnailUrl || video.userPhoto} // fallback to userPhoto for now
-                                isPlaceholder={video.isPlaceholder}
-                                isActive={activeIndex === index && !showGuestWall}
-                                isPreload={index >= activeIndex - 2 && index <= activeIndex + 2}
-                            />
+                    {displayVideos.map((video, index) => {
+                        const { isActive, isAdjacent } = getVideoState(index);
+                        const isVisible = Math.abs(index - activeIndex) <= 3;
 
-                            <div style={{
-                                position: 'absolute',
-                                bottom: 80,
-                                left: 0,
-                                right: 60,
-                                zIndex: 20,
-                                pointerEvents: 'none',
-                            }}>
-                                <VideoOverlay data={video} />
+                        return (
+                            <div
+                                key={video.id}
+                                ref={el => { videoRefs.current[index] = el; }}
+                                style={{
+                                    height: index === 0 && showStoriesBar ? 'calc(100dvh - 120px)' : '100dvh',
+                                    marginTop: index === 0 && showStoriesBar ? 120 : 0,
+                                    scrollSnapAlign: 'start',
+                                    position: 'relative',
+                                    transition: 'margin-top 0.3s ease, height 0.3s ease'
+                                }}
+                            >
+                                {isVisible ? (
+                                    <>
+                                        <ReelPlayer
+                                            cloudinaryUrl={video.cloudinaryUrl}
+                                            thumbnailUrl={video.thumbnailUrl}
+                                            isActive={isActive}
+                                            isAdjacent={isAdjacent}
+                                            videoId={video.id}
+                                            isMuted={isMuted}
+                                        />
+                                        <div style={{ position: 'absolute', bottom: 80, left: 0, right: 0, zIndex: 20, pointerEvents: 'none' }}>
+                                            <VideoOverlay data={video} />
+                                        </div>
+                                        <div style={{ position: 'absolute', right: 12, bottom: 100, zIndex: 20 }}>
+                                            <ActionButtons
+                                                videoUserId={video.userId}
+                                                videoUserPhoto={video.userPhoto}
+                                                videoUserRole={video.userRole}
+                                                onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
+                                                connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
+                                                likes={video.likes || 0}
+                                                saves={video.saves || 0}
+                                                shares={video.shares || 0}
+                                                videoId={video.id}
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
+                                )}
                             </div>
-
-                            <div style={{
-                                position: 'absolute',
-                                right: 12,
-                                bottom: 100,
-                                zIndex: 20,
-                            }}>
-                                <ActionButtons
-                                    videoUserId={video.userId}
-                                    videoUserPhoto={video.userPhoto}
-                                    videoUserRole={video.userRole}
-                                    onConnect={() => {
-                                        if (video.userId) {
-                                            router.push(`/profile/${video.userRole || 'user'}/${video.userId}`);
-                                        }
-                                    }}
-                                    connectLabel={
-                                        activeCategory === 'jobs'
-                                            ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋')
-                                            : activeCategory === 'marriage'
-                                                ? 'Interest 💍'
-                                                : 'Connect'
-                                    }
-                                    likes={video.likes || 0}
-                                    saves={video.saves || 0}
-                                    shares={video.shares || 0}
-                                    videoId={video.id}
-                                />
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* RIGHT SIDE — desktop navigation arrows */}
-            <div className="hidden md:flex" style={{
-                flex: 1,
-                height: '100dvh',
-                alignItems: 'center',
-                paddingLeft: 24,
-                flexDirection: 'column',
-                justifyContent: 'center',
-                gap: 16,
-            }}>
-                <button
-                    onClick={() => scrollToIndex(activeIndex - 1)}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#e0e0e0')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#f5f5f5')}
-                    style={{
-                        width: 44, height: 44, borderRadius: '50%',
-                        background: '#f5f5f5', border: '1px solid #ddd',
-                        color: '#000', fontSize: 18, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'background 0.2s',
-                    }}
-                >
-                    ↑
-                </button>
-                <button
-                    onClick={() => scrollToIndex(activeIndex + 1)}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#e0e0e0')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#f5f5f5')}
-                    style={{
-                        width: 44, height: 44, borderRadius: '50%',
-                        background: '#f5f5f5', border: '1px solid #ddd',
-                        color: '#000', fontSize: 18, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'background 0.2s',
-                    }}
-                >
-                    ↓
-                </button>
-            </div>
-
-            {!user && !loading && (
-                <GuestWall
-                    isVisible={showGuestWall}
-                    onContinue={() => {
-                        const round = parseInt(localStorage.getItem('jobreel_guest_round') || '0');
-                        if (round === 0) {
-                            localStorage.setItem('jobreel_guest_round', '1');
-                            localStorage.setItem('jobreel_videos_watched', '0');
-                            setShowGuestWall(false);
-                        }
-                    }}
-                />
+            {!user && showGuestWall && (
+                <GuestWall isVisible={true} onContinue={() => {
+                    localStorage.setItem('jobreel_videos_watched', '0');
+                    setShowGuestWall(false);
+                }} />
             )}
         </div>
     );

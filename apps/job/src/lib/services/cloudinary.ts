@@ -61,7 +61,9 @@ export async function uploadVideoToCloudinary(
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', 'auto-filled'); // Must be an Unsigned preset
-    // formData.append('folder', 'job-portal/intro-videos'); // Optional
+    // Request HLS transcoding profile
+    formData.append('eager', 'sp_hd/m3u8');
+    formData.append('eager_async', 'true');
 
     console.log('[Cloudinary Debug] Uploading to:', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
     console.log('[Cloudinary Debug] Upload preset: auto-filled');

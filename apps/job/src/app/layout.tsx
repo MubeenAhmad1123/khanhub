@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { Poppins, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
+import 'nprogress/nprogress.css';
 import StructuredData from '@/components/seo/StructuredData';
+import RouteProgressBar from '@/components/layout/RouteProgressBar';
+import { Suspense } from 'react';
 import ClientLayout from '@/components/layout/ClientLayout';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -37,6 +40,9 @@ export default function RootLayout({
     return (
         <html lang="en" className={`${poppins.variable} ${dmSans.variable} ${jetbrains.variable}`}>
             <body style={{ background: '#fff', color: '#0A0A0A' }} className="antialiased">
+                <Suspense fallback={null}>
+                    <RouteProgressBar />
+                </Suspense>
                 <StructuredData />
                 <ClientLayout>{children}</ClientLayout>
                 <Analytics />

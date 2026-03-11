@@ -10,6 +10,7 @@ import { Home, Search, PlusSquare, User } from 'lucide-react';
 import { CategoryProvider } from '@/context/CategoryContext';
 import { useEffect } from 'react';
 import { FeedToastProvider } from '@/components/ui/FeedToast';
+import { startProgress } from '@/components/layout/RouteProgressBar';
 
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
@@ -76,7 +77,7 @@ export default function ClientLayout({
                             </div>
 
                             {desktopNavItems.map(item => (
-                                <button key={item.href} onClick={() => router.push(item.href)} style={{
+                                <button key={item.href} onClick={() => { startProgress(); router.push(item.href); }} style={{
                                     width: 48, height: 48, borderRadius: 12,
                                     background: pathname === item.href ? '#F0F0F0' : 'none',
                                     border: pathname === item.href ? '1px solid var(--accent)' : '1px solid transparent',

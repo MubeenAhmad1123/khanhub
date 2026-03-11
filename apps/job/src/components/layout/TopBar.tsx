@@ -10,6 +10,7 @@ import { useCategory } from '@/context/CategoryContext';
 import { CATEGORY_CONFIG, CategoryKey, CategoryConfig } from '@/lib/categories';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { startProgress } from '@/components/layout/RouteProgressBar';
 
 export function TopBar() {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
@@ -67,6 +68,7 @@ export function TopBar() {
                                             key={key}
                                             onClick={() => {
                                                 setShowSwitcher(false);
+                                                startProgress();
                                                 router.push(`/auth/onboarding?mode=change&cat=${key}`);
                                             }}
                                             className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all ${activeCategory === key

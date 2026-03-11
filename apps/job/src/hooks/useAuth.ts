@@ -34,6 +34,7 @@ let cachedAuthState: AuthState = {
     error: null,
 };
 let initialized = false;
+let authListenerStarted = false;
 
 export function useAuth() {
     const [authState, setAuthState] = useState<AuthState>(
@@ -47,6 +48,9 @@ export function useAuth() {
 
     // Listen to auth state changes
     useEffect(() => {
+        if (authListenerStarted) return;
+        authListenerStarted = true;
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 try {
