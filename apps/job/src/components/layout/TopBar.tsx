@@ -225,9 +225,13 @@ export function TopBar() {
 
                     <button 
                         onClick={() => setDrawerOpen(true)}
-                        className="p-1 hover:bg-slate-50 rounded-lg transition-colors ml-1"
+                        style={{
+                            background: 'none', border: 'none',
+                            cursor: 'pointer', padding: '4px',
+                            display: 'flex', alignItems: 'center',
+                        }}
                     >
-                        <Menu className="w-6 h-6 text-slate-700" />
+                        <Menu size={22} color="#0A0A0A" />
                     </button>
 
                     <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
