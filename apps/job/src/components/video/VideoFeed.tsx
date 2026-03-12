@@ -26,6 +26,9 @@ export function VideoFeed() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
+    const targetVideoId = searchParams.get('v');
+    const targetCategoryId = searchParams.get('c');
+
     const [activeIndex, setActiveIndex] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
     const [showGuestWall, setShowGuestWall] = useState(false);
@@ -63,8 +66,8 @@ export function VideoFeed() {
         
         // Let the feed handle deep links gracefully instead of snapping back to 0
         const currentTargetId = searchParams.get('v');
-        if (currentTargetId && displayVideos.some(v => v.id === currentTargetId)) {
-            return; 
+        if (currentTargetId) {
+            return; // Never reset to 0 during deep-linking — video may not be loaded yet
         }
 
         // Give DOM time to render, then ensure index 0 is active
@@ -95,9 +98,11 @@ export function VideoFeed() {
 
     // ── Fetch Firestore Videos ────────────────────────────────────
     useEffect(() => {
-        const queryCategory = (activeTab === 0 && firestoreProfile?.category)
-            ? firestoreProfile.category
-            : activeCategory;
+        const queryCategory = (targetCategoryId && targetVideoId)
+            ? targetCategoryId
+            : (activeTab === 0 && firestoreProfile?.category)
+                ? firestoreProfile.category
+                : activeCategory;
 
         const q = query(
             collection(db, 'videos'),
@@ -138,7 +143,7 @@ export function VideoFeed() {
         });
 
         return () => unsubscribe();
-    }, [activeCategory, activeTab, firestoreProfile]);
+    }, [activeCategory, activeTab, firestoreProfile, targetCategoryId, targetVideoId]);
 
     // ── Build Final Display List ───────────────────────────────────
     useEffect(() => {
@@ -240,8 +245,6 @@ export function VideoFeed() {
     }, [activeIndex, displayVideos.length]);
 
     // ── Deep Linking Support (?v=videoId&c=categoryId) ────────────
-    const targetVideoId = searchParams.get('v');
-    const targetCategoryId = searchParams.get('c');
     const { setActiveCategory } = useCategory();
 
     // 1. Sync Category if needed
