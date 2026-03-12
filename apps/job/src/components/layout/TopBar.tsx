@@ -17,8 +17,20 @@ export function TopBar() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const isShowSearch = searchParams.get('search') === 'true';
+    
+    // Search state
+    const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleSearchToggle = () => {
+        setSearchOpen(prev => !prev);
+        if (!searchOpen) {
+            setTimeout(() => searchInputRef.current?.focus(), 100);
+        } else {
+            setSearchQuery('');
+        }
+    };
 
     const [showSwitcher, setShowSwitcher] = useState(false);
 
@@ -97,64 +109,55 @@ export function TopBar() {
 
                 {/* Right: Icons & Menu */}
                 <div className="flex items-center gap-1.5 flex-1 justify-end">
-                    {pathname === '/explore' && (
-                        <>
-                            {isShowSearch ? (
-                                <motion.div
-                                    initial={{ width: 40, opacity: 0 }}
-                                    animate={{ width: '100%', opacity: 1 }}
-                                    className="relative flex-1 max-w-[200px]"
-                                >
-                                    <input
-                                        autoFocus
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            setSearchQuery(val);
-                                            const params = new URLSearchParams(searchParams.toString());
-                                            if (val) params.set('q', val);
-                                            else params.delete('q');
-                                            router.replace(`${pathname}?${params.toString()}`);
-                                        }}
-                                        onBlur={() => {
-                                            if (!searchQuery) {
-                                                const params = new URLSearchParams(searchParams.toString());
-                                                params.delete('search');
-                                                params.delete('q');
-                                                router.replace(`${pathname}?${params.toString()}`);
-                                            }
-                                        }}
-                                        placeholder="Search..."
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-full px-4 py-1.5 text-xs font-bold focus:outline-none focus:border-[--accent]"
-                                    />
-                                    <button
-                                        onClick={() => {
-                                            const params = new URLSearchParams(searchParams.toString());
-                                            params.delete('search');
-                                            params.delete('q');
-                                            router.replace(`${pathname}?${params.toString()}`);
-                                            setSearchQuery('');
-                                        }}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                                    >
-                                        <Search className="w-3.5 h-3.5" />
-                                    </button>
-                                </motion.div>
-                            ) : (
-                                <button
-                                    onClick={() => {
-                                        const params = new URLSearchParams(searchParams.toString());
-                                        params.set('search', 'true');
-                                        router.replace(`${pathname}?${params.toString()}`);
-                                    }}
-                                    className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors"
-                                >
-                                    <Search className="w-4.5 h-4.5" />
-                                </button>
-                            )}
-                        </>
-                    )}
+                    
+                    {/* Expanding search container */}
+                    <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                        <div style={{
+                            overflow: 'hidden',
+                            width: searchOpen ? '180px' : '0px',
+                            transition: 'width 0.3s ease',
+                            marginRight: searchOpen ? '8px' : '0px',
+                        }}>
+                            <input
+                                ref={searchInputRef}
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && searchQuery.trim()) {
+                                        router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
+                                        setSearchOpen(false);
+                                        setSearchQuery('');
+                                    }
+                                    if (e.key === 'Escape') {
+                                        setSearchOpen(false);
+                                        setSearchQuery('');
+                                    }
+                                }}
+                                placeholder="Search..."
+                                style={{
+                                    width: '100%',
+                                    background: '#F0F0F0',
+                                    border: 'none',
+                                    borderRadius: '20px',
+                                    padding: '7px 14px',
+                                    fontSize: '13px',
+                                    color: '#0A0A0A',
+                                    outline: 'none',
+                                }}
+                            />
+                        </div>
+
+                        <button
+                            onClick={handleSearchToggle}
+                            className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors"
+                        >
+                            {searchOpen
+                                ? <X size={20} />
+                                : <Search size={20} />
+                            }
+                        </button>
+                    </div>
+
                     <button className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors relative">
                         <Bell className="w-4.5 h-4.5" />
                         <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-[--accent] rounded-full border border-white" />
@@ -165,6 +168,25 @@ export function TopBar() {
                 </div>
             </div>
         </header>
+    );
+}
+
+// Helper X icon for search close (if not imported)
+function X({ size }: { size: number }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
     );
 }
 
