@@ -200,9 +200,13 @@ export function TopBar() {
                     {/* Notification Bell */}
                     <button
                         onClick={() => setNotifOpen(prev => !prev)}
-                        className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors relative"
+                        style={{
+                            position: 'relative', background: 'none',
+                            border: 'none', cursor: 'pointer', padding: '4px',
+                            display: 'flex', alignItems: 'center',
+                        }}
                     >
-                        <Bell className="w-4.5 h-4.5" />
+                        <Bell size={20} color="#0A0A0A" />
                         {unreadCount > 0 && (
                             <span style={{
                                 position: 'absolute', top: '0px', right: '0px',

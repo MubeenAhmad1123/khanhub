@@ -1,5 +1,5 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/firebase-config';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase/firebase-config'
 
 export const createNotification = async (
   userId: string,
@@ -17,8 +17,8 @@ export const createNotification = async (
       is_read: false,
       targetId: targetId || null,
       createdAt: serverTimestamp(),
-    });
+    })
   } catch (e) {
-    console.warn('Failed to create notification:', e);
+    console.warn('Failed to create notification:', e)
   }
-};
+}
