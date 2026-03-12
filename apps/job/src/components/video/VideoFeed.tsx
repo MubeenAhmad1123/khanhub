@@ -60,12 +60,19 @@ export function VideoFeed() {
     // Fix 1: Force first video active on mount (Guaranteed Playback Start)
     useEffect(() => {
         if (displayVideos.length === 0) return;
+        
+        // Let the feed handle deep links gracefully instead of snapping back to 0
+        const currentTargetId = searchParams.get('v');
+        if (currentTargetId && displayVideos.some(v => v.id === currentTargetId)) {
+            return; 
+        }
+
         // Give DOM time to render, then ensure index 0 is active
         const timer = setTimeout(() => {
             setActiveIndex(0);
         }, 300);
         return () => clearTimeout(timer);
-    }, [displayVideos.length]);
+    }, [displayVideos.length, searchParams]);
 
     // ── Load User Profile & Watched Videos ────────────────────────
     useEffect(() => {
