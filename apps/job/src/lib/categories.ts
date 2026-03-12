@@ -21,16 +21,16 @@ export interface CategoryConfig {
 }
 
 export const CATEGORY_FEED_TABS: Record<string, string[]> = {
-    jobs: ['For You', 'Job Seeker', 'Company'],
-    healthcare: ['For You', 'Doctor', 'Patient'],
-    education: ['For You', 'Teacher', 'Student'],
-    marriage: ['For You', 'Presenting', 'Looking'],
-    legal: ['For You', 'Lawyer', 'Client'],
-    realestate: ['For You', 'Agent', 'Buyer'],
-    transport: ['For You', 'Driver', 'Passenger'],
-    travel: ['For You', 'Agency', 'Traveler'],
-    agriculture: ['For You', 'Farmer', 'Buyer'],
-    sellbuy: ['For You', 'Seller', 'Buyer'],
+    jobs: ['Job Seeker', 'Company', 'For You'],
+    healthcare: ['Doctor', 'Patient', 'For You'],
+    education: ['Teacher', 'Student', 'For You'],
+    marriage: ['Presenting', 'Looking', 'For You'],
+    legal: ['Lawyer', 'Client', 'For You'],
+    realestate: ['Agent', 'Buyer', 'For You'],
+    transport: ['Driver', 'Passenger', 'For You'],
+    travel: ['Agency', 'Traveler', 'For You'],
+    agriculture: ['Farmer', 'Buyer', 'For You'],
+    sellbuy: ['Seller', 'Buyer', 'For You'],
 };
 
 export const PLACEHOLDER_VIDEO_IDS = [

@@ -108,14 +108,14 @@ export function VideoFeed() {
     useEffect(() => {
         const queryCategory = (targetCategoryId && targetVideoId)
             ? targetCategoryId
-            : (activeTab === 0 && firestoreProfile?.category)
+            : (activeTab === 2 && firestoreProfile?.category)
                 ? firestoreProfile.category
                 : activeCategory;
 
         console.log('[QUERY] queryCategory resolved to →', queryCategory,
             '| reason:',
             (targetCategoryId && targetVideoId) ? 'URL param (deep link)'
-            : (activeTab === 0 && firestoreProfile?.category) ? 'firestoreProfile.category'
+            : (activeTab === 2 && firestoreProfile?.category) ? 'firestoreProfile.category (For You tab)'
             : 'activeCategory'
         );
 
@@ -129,9 +129,9 @@ export function VideoFeed() {
         );
 
         const getTabFilter = (tabIndex: number) => {
-            if (tabIndex === 0) return null;
-            if (activeCategory === 'jobs') return tabIndex === 1 ? 'seeker' : 'provider';
-            return tabIndex === 1 ? 'provider' : 'seeker';
+            if (tabIndex === 2) return null; // 'For You' — no role filter
+            if (activeCategory === 'jobs') return tabIndex === 0 ? 'seeker' : 'provider';
+            return tabIndex === 0 ? 'provider' : 'seeker';
         };
 
         const unsubscribe = onSnapshot(q, (snapshot) => {

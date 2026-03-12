@@ -139,7 +139,7 @@ export default function SavedVideosPage() {
         <div className="min-h-screen bg-white pb-24">
             <TopBar />
 
-            <div className="pt-20 px-4 max-w-lg mx-auto">
+            <div className="pt-16 px-4 max-w-lg mx-auto">
                 <div className="flex items-center gap-3 mb-8">
                     <div className="p-2 bg-[--accent]/10 rounded-xl">
                         <Bookmark className="w-5 h-5 text-[--accent]" />

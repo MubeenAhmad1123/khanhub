@@ -280,6 +280,12 @@ export default function UploadVideoPage() {
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [caption, setCaption] = useState('');
 
+    // Profile completeness fields
+    const [profileCity, setProfileCity] = useState('');
+    const [profilePhone, setProfilePhone] = useState('');
+    // Video topic
+    const [videoTopic, setVideoTopic] = useState('');
+
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadError, setUploadError] = useState<string | null>(null);
@@ -493,7 +499,17 @@ export default function UploadVideoPage() {
             // 3. Build overlay data
             const overlayData = buildOverlayData(formData, userCategory, userRole);
 
+            // 3b. Save profile fields if filled in (city / phone)
+            const profileUpdates: Record<string, any> = {};
+            if (profileCity && !firestoreProfile?.city) profileUpdates.city = profileCity;
+            if (profilePhone && !firestoreProfile?.phone) profileUpdates.phone = profilePhone;
+            if (Object.keys(profileUpdates).length > 0) {
+                await updateDoc(doc(db, 'users', user.uid), profileUpdates);
+            }
+
             // 4. Write to Firestore 'videos' collection (schema admin page reads)
+            const effectiveCity = profileCity || firestoreProfile?.city || (user as any).city || '';
+            const effectivePhone = profilePhone || firestoreProfile?.phone || '';
             const videoDocRef = await addDoc(collection(db, 'videos'), {
                 // User info
                 userId: user.uid,
@@ -509,7 +525,9 @@ export default function UploadVideoPage() {
                 // Category
                 category: userCategory,
                 userRole: userRole,
-                city: (user as any).city || '',
+                city: effectiveCity,
+                phone: effectivePhone,
+                videoTopic,
 
                 // Overlay (shown on feed card)
                 overlayData: {
@@ -517,7 +535,7 @@ export default function UploadVideoPage() {
                     badge: overlayData.badge,
                     field1: overlayData.field1,
                     field2: overlayData.field2,
-                    location: (user as any).city || formData.city || formData.companyLocation || '',
+                    location: effectiveCity || formData.city || formData.companyLocation || '',
                     userPhoto: (user as any).photoURL || '',
                     userName: (user as any).displayName || (user as any).name || '',
                 },
@@ -582,6 +600,9 @@ export default function UploadVideoPage() {
         setCaption('');
         setUploadError(null);
         setUploadProgress(0);
+        setVideoTopic('');
+        setProfileCity('');
+        setProfilePhone('');
     };
 
     /* ─── STYLES ────────────────────────────────────────────────── */
@@ -922,6 +943,42 @@ export default function UploadVideoPage() {
                     )}
                 </div>
 
+                {/* ── Profile Completeness Gate ── */}
+                {(!firestoreProfile?.city || !firestoreProfile?.phone) && (
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(255,0,105,0.06), rgba(118,56,250,0.06))',
+                        border: '1.5px solid rgba(255,0,105,0.18)',
+                        borderRadius: 16, padding: '16px 18px', marginBottom: 24,
+                    }}>
+                        <p style={{
+                            fontFamily: 'Poppins', fontWeight: 700, fontSize: 13,
+                            color: '#0A0A0A', marginBottom: 14,
+                            display: 'flex', alignItems: 'center', gap: 6,
+                        }}>
+                            <span>✅</span> Complete Your Profile First
+                        </p>
+                        {!firestoreProfile?.city && (
+                            <TextInput
+                                label="Your City"
+                                placeholder='e.g. "Lahore"'
+                                value={profileCity}
+                                onChange={setProfileCity}
+                                required
+                            />
+                        )}
+                        {!firestoreProfile?.phone && (
+                            <TextInput
+                                label="Phone / WhatsApp Number"
+                                placeholder='e.g. "+923001234567"'
+                                value={profilePhone}
+                                onChange={setProfilePhone}
+                                required
+                                type="tel"
+                            />
+                        )}
+                    </div>
+                )}
+
                 {/* Section label */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
                     <div style={{ flex: 1, height: 1, background: '#E5E5E5' }} />
@@ -930,6 +987,35 @@ export default function UploadVideoPage() {
                     </span>
                     <div style={{ flex: 1, height: 1, background: '#E5E5E5' }} />
                 </div>
+
+                {/* Video Topic */}
+                <PillSelector
+                    label="What is this video about?"
+                    required
+                    options={
+                        userCategory === 'jobs'
+                            ? ['Job Offer', 'Portfolio / Skills', 'Company Tour', 'Testimonial', 'Other']
+                            : userCategory === 'healthcare'
+                            ? ['Service Introduction', 'Patient Story', 'Clinic Tour', 'Health Tips', 'Other']
+                            : userCategory === 'education'
+                            ? ['Course Preview', 'Student Success', 'Teaching Demo', 'Institute Tour', 'Other']
+                            : userCategory === 'marriage'
+                            ? ['Self Introduction', 'Family Message', 'Lifestyle', 'Other']
+                            : userCategory === 'realestate'
+                            ? ['Property Tour', 'Price Offer', 'Area Overview', 'Other']
+                            : userCategory === 'transport'
+                            ? ['Service Demo', 'Fleet Showcase', 'Route Info', 'Other']
+                            : userCategory === 'travel'
+                            ? ['Package Tour', 'Destination Showcase', 'Travel Tips', 'Other']
+                            : userCategory === 'agriculture'
+                            ? ['Product Showcase', 'Farm Tour', 'Pricing', 'Other']
+                            : userCategory === 'sellbuy'
+                            ? ['Item for Sale', 'Unboxing', 'Price Negotiable', 'Other']
+                            : ['About My Service', 'Promotion', 'Introduction', 'Other']
+                    }
+                    value={videoTopic}
+                    onChange={setVideoTopic}
+                />
 
                 {/* Conditional fields */}
                 <ConditionalFields
