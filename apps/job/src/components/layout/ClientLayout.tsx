@@ -91,7 +91,7 @@ export default function ClientLayout({
                         </aside>
                     )}
 
-                    <main className={showNav ? 'pt-20 pb-28 md:pb-12 md:pl-[72px]' : ''}>
+                    <main className={showNav ? 'pt-[58px] pb-28 md:pb-12 md:pl-[72px]' : ''}>
                         <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
                             {children}
                         </Suspense>

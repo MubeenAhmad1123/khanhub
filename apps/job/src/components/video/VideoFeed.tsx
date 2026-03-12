@@ -32,7 +32,7 @@ export function VideoFeed() {
     console.log('[DEEPLINK] URL params on mount →', { targetVideoId, targetCategoryId });
 
     const [activeIndex, setActiveIndex] = useState(0);
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState(2); // Default to 'For You'
     const [showGuestWall, setShowGuestWall] = useState(false);
     const [showStoriesBar, setShowStoriesBar] = useState(true);
     const [firestoreProfile, setFirestoreProfile] = useState<any>(null);
@@ -61,22 +61,31 @@ export function VideoFeed() {
     if (videoRefs.current.length < displayVideos.length) {
         videoRefs.current = [...videoRefs.current, ...new Array(displayVideos.length - videoRefs.current.length).fill(null)];
     }
+    // Reset feed on category change or signal
+    useEffect(() => {
+        const resetRequested = sessionStorage.getItem('feed_reset_requested');
+        
+        if (resetRequested === 'true') {
+            console.log('[RESET] Feed reset requested by CategoryStoriesBar');
+            setActiveTab(2); // Back to For You
+            setActiveIndex(0);
+            sessionStorage.removeItem('feed_reset_requested');
+            
+            // Scroll to top immediately
+            const timer = setTimeout(() => {
+                videoRefs.current[0]?.scrollIntoView({ behavior: 'instant' });
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [activeCategory, searchParams]);
 
-    // Fix 1: Force first video active on mount (Guaranteed Playback Start)
+    // Ensure first video active on mount (Guaranteed Playback Start)
     useEffect(() => {
         if (displayVideos.length === 0) return;
-
-        console.log('[RESET GUARD] triggered →', {
-            currentTargetId: searchParams.get('v'),
-            displayVideosLength: displayVideos.length,
-            willReset: !searchParams.get('v')
-        });
         
         // Let the feed handle deep links gracefully instead of snapping back to 0
         const currentTargetId = searchParams.get('v');
-        if (currentTargetId) {
-            return; // Never reset to 0 during deep-linking — video may not be loaded yet
-        }
+        if (currentTargetId) return;
 
         // Give DOM time to render, then ensure index 0 is active
         const timer = setTimeout(() => {
@@ -165,7 +174,7 @@ export function VideoFeed() {
         });
 
         return () => unsubscribe();
-    }, [activeCategory, activeTab, firestoreProfile, targetCategoryId, targetVideoId]);
+    }, [activeCategory, activeTab, firestoreProfile, targetCategoryId, targetVideoId, activeRole]);
 
     // ── Build Final Display List ───────────────────────────────────
     useEffect(() => {
@@ -403,7 +412,49 @@ export function VideoFeed() {
                         background: '#000',
                     }}
                 >
-                    {displayVideos.map((video, index) => {
+                    {displayVideos.length === 0 ? (
+                        <div style={{
+                            height: '100dvh',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '40px',
+                            textAlign: 'center',
+                            background: '#000',
+                            color: '#fff'
+                        }}>
+                            <div style={{
+                                width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.05)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}>
+                                <span style={{ fontSize: 32 }}>📹</span>
+                            </div>
+                            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, fontFamily: 'Poppins' }}>
+                                No videos yet
+                            </h3>
+                            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 32, lineHeight: 1.5 }}>
+                                Be the first one to upload video in this category.
+                            </p>
+                            <button
+                                onClick={() => router.push('/dashboard/upload-video')}
+                                style={{
+                                    background: 'var(--accent)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '16px',
+                                    padding: '16px 32px',
+                                    fontSize: 15,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 8px 16px var(--accent-glow)'
+                                }}
+                            >
+                                Upload Video
+                            </button>
+                        </div>
+                    ) : displayVideos.map((video, index) => {
                         const { isActive, isAdjacent } = getVideoState(index);
                         const isVisible = Math.abs(index - activeIndex) <= 3;
 

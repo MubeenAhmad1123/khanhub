@@ -16,6 +16,8 @@ export interface CategoryConfig {
     accent: string;
     providerLabel: string;
     seekerLabel: string;
+    providerDescription?: string;
+    seekerDescription?: string;
     placeholderVideos: string[];
     imageUrl?: string;
 }
@@ -71,8 +73,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '💼',
         imageUrl: '/jobs.webp',
         accent: '#FF0069',
-        providerLabel: 'Job Seeker',
-        seekerLabel: 'Company',
+        providerLabel: 'Employer',
+        seekerLabel: 'Job Seeker',
+        providerDescription: 'I am looking to hire talent',
+        seekerDescription: 'I am looking for a job',
         placeholderVideos: CATEGORY_PLACEHOLDERS.jobs
     },
     healthcare: {
@@ -80,8 +84,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '🏥',
         imageUrl: '/healthcare.webp',
         accent: '#00C896',
-        providerLabel: 'Doctor',
+        providerLabel: 'Doctor/Clinic',
         seekerLabel: 'Patient',
+        providerDescription: 'I provide medical services',
+        seekerDescription: 'I am seeking medical help',
         placeholderVideos: CATEGORY_PLACEHOLDERS.healthcare
     },
     education: {
@@ -89,8 +95,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '🎓',
         imageUrl: '/education (2).webp',
         accent: '#FFD600',
-        providerLabel: 'Teacher',
-        seekerLabel: 'Student',
+        providerLabel: 'Teacher/Artist',
+        seekerLabel: 'Student/Learner',
+        providerDescription: 'I want to teach or share skills',
+        seekerDescription: 'I want to learn something new',
         placeholderVideos: CATEGORY_PLACEHOLDERS.education
     },
     marriage: {
@@ -98,8 +106,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '💍',
         imageUrl: '/marraige.webp',
         accent: '#FF6B9D',
-        providerLabel: 'Presenting',
-        seekerLabel: 'Looking',
+        providerLabel: 'Groom/Male Side',
+        seekerLabel: 'Bride/Female Side',
+        providerDescription: 'I am looking for a partner',
+        seekerDescription: 'I am looking for a proposal',
         placeholderVideos: CATEGORY_PLACEHOLDERS.marriage
     },
     legal: {
@@ -107,8 +117,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '⚖️',
         imageUrl: '/translation.webp',
         accent: '#4A90D9',
-        providerLabel: 'Lawyer',
+        providerLabel: 'Lawyer/Notary',
         seekerLabel: 'Client',
+        providerDescription: 'I provide legal assistance',
+        seekerDescription: 'I need legal advice',
         placeholderVideos: CATEGORY_PLACEHOLDERS.legal
     },
     realestate: {
@@ -116,8 +128,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '🏠',
         imageUrl: '/real-estate.webp',
         accent: '#7638FA',
-        providerLabel: 'Agent',
-        seekerLabel: 'Buyer',
+        providerLabel: 'Agent/Owner',
+        seekerLabel: 'Buyer/Tenant',
+        providerDescription: 'I am selling or renting property',
+        seekerDescription: 'I am looking to buy or rent',
         placeholderVideos: CATEGORY_PLACEHOLDERS.realestate
     },
     transport: {
@@ -125,8 +139,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '🚛',
         imageUrl: '/jobs.webp',
         accent: '#FF8C00',
-        providerLabel: 'Driver',
-        seekerLabel: 'Passenger',
+        providerLabel: 'Driver/Carrier',
+        seekerLabel: 'Passenger/Sender',
+        providerDescription: 'I provide transport services',
+        seekerDescription: 'I need a ride or delivery',
         placeholderVideos: CATEGORY_PLACEHOLDERS.transport
     },
     travel: {
@@ -134,8 +150,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '✈️',
         imageUrl: '/jobs.webp',
         accent: '#00BFFF',
-        providerLabel: 'Agency',
+        providerLabel: 'Agency/Guide',
         seekerLabel: 'Traveler',
+        providerDescription: 'I offer travel packages',
+        seekerDescription: 'I am planning a trip',
         placeholderVideos: CATEGORY_PLACEHOLDERS.travel
     },
     agriculture: {
@@ -143,8 +161,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '🌾',
         imageUrl: '/jobs.webp',
         accent: '#4CAF50',
-        providerLabel: 'Farmer',
-        seekerLabel: 'Buyer',
+        providerLabel: 'Farmer/Producer',
+        seekerLabel: 'Bulk Buyer',
+        providerDescription: 'I grow or produce goods',
+        seekerDescription: 'I want to buy in bulk',
         placeholderVideos: CATEGORY_PLACEHOLDERS.agriculture
     },
     sellbuy: {
@@ -154,6 +174,8 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         accent: '#FF5722',
         providerLabel: 'Seller',
         seekerLabel: 'Buyer',
+        providerDescription: 'I have something to sell',
+        seekerDescription: 'I am looking for products',
         placeholderVideos: CATEGORY_PLACEHOLDERS.sellbuy
     }
 };
