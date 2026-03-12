@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import NotificationDropdown from './NotificationDropdown';
+import HamburgerDrawer from './HamburgerDrawer';
 
 export function TopBar() {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
@@ -65,6 +66,7 @@ export function TopBar() {
     }, [uid]);
 
     const [showSwitcher, setShowSwitcher] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     return (
         <header className="fixed top-0 left-0 right-0 backdrop-blur-md z-50 px-4 py-3" style={{ background: 'rgba(255,255,255,0.95)', borderBottom: '1px solid #E5E5E5' }}>
@@ -212,9 +214,14 @@ export function TopBar() {
 
                     <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
 
-                    <button className="p-1 hover:bg-slate-50 rounded-lg transition-colors ml-1">
+                    <button 
+                        onClick={() => setDrawerOpen(true)}
+                        className="p-1 hover:bg-slate-50 rounded-lg transition-colors ml-1"
+                    >
                         <Menu className="w-6 h-6 text-slate-700" />
                     </button>
+
+                    <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
                 </div>
             </div>
         </header>
