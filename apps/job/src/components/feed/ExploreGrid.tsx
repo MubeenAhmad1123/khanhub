@@ -22,6 +22,7 @@ interface VideoItem {
     field1?: string;
     field2?: string;
     views: number;
+    category?: string;
 }
 
 export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridProps) {
@@ -61,6 +62,7 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
                     field1: d.overlayData?.field1,
                     field2: d.overlayData?.field2,
                     views: d.views || 0,
+                    category: d.category,
                 }));
 
             if (real.length > 0) {
@@ -116,9 +118,10 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
         return matchesFilter;
     });
 
-    const openFeedAtVideo = (videoId: string) => {
+    const openFeedAtVideo = (videoId: string, videoCategory: string) => {
         if (!videoId) return;
-        router.push(`/feed?v=${videoId}`);
+        const catParam = videoCategory ? `&c=${videoCategory}` : '';
+        router.push(`/feed?v=${videoId}${catParam}`);
     };
 
     const formatCount = (n: number) => {
@@ -138,7 +141,7 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
             {filteredItems.map((video, index) => (
                 <div
                     key={video.id + '-' + index}
-                    onClick={() => openFeedAtVideo(video.id)}
+                    onClick={() => openFeedAtVideo(video.id, video.category || 'jobs')}
                     style={{
                         position: 'relative',
                         aspectRatio: '9/16',

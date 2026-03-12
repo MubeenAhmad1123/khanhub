@@ -239,9 +239,23 @@ export function VideoFeed() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [activeIndex, displayVideos.length]);
 
-    // ── Deep Linking Support (?v=videoId) ────────────────────────
+    // ── Deep Linking Support (?v=videoId&c=categoryId) ────────────
     const targetVideoId = searchParams.get('v');
+    const targetCategoryId = searchParams.get('c');
+    const { setActiveCategory } = useCategory();
 
+    // 1. Sync Category if needed
+    useEffect(() => {
+        if (targetCategoryId && targetCategoryId !== activeCategory) {
+            // Ensure it's a valid category
+            const { CATEGORY_CONFIG } = require('@/lib/categories');
+            if (CATEGORY_CONFIG && Object.keys(CATEGORY_CONFIG).includes(targetCategoryId)) {
+                setActiveCategory(targetCategoryId as any);
+            }
+        }
+    }, [targetCategoryId, activeCategory, setActiveCategory]);
+
+    // 2. Sync Video Index
     useEffect(() => {
         if (!targetVideoId || displayVideos.length === 0) return;
         const idx = displayVideos.findIndex(v => v.id === targetVideoId);
