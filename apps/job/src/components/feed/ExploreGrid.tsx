@@ -82,6 +82,8 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
                     }))
                 );
             }
+        }, (error) => {
+            console.warn('[ExploreGrid] Snapshot error:', error.message);
         });
 
         return () => unsubscribe();

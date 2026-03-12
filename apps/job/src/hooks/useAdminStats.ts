@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { useAuth } from './useAuth';
 
 export interface AdminStats {
     totalUsers: number;
@@ -29,7 +30,14 @@ export function useAdminStats(): AdminStats {
         loading: true,
     });
 
+    const { user } = useAuth();
+
     useEffect(() => {
+        if (user?.role !== 'admin') {
+            setStats(prev => ({ ...prev, loading: false }));
+            return;
+        }
+
         const unsubs: (() => void)[] = [];
 
         // Total users and role breakdown
@@ -49,14 +57,15 @@ export function useAdminStats(): AdminStats {
                     totalCompanies: companies,
                     loading: false
                 }));
-            })
+            }, (err) => console.warn('[useAdminStats] Users error:', err.message))
         );
 
         // Pending payments count
         unsubs.push(
             onSnapshot(
                 query(collection(db, 'payments'), where('status', '==', 'pending')),
-                (snap) => setStats(prev => ({ ...prev, pendingPayments: snap.size }))
+                (snap) => setStats(prev => ({ ...prev, pendingPayments: snap.size })),
+                (err) => console.warn('[useAdminStats] Pending payments error:', err.message)
             )
         );
 
@@ -64,7 +73,8 @@ export function useAdminStats(): AdminStats {
         unsubs.push(
             onSnapshot(
                 query(collection(db, 'videos'), where('admin_status', '==', 'pending')),
-                (snap) => setStats(prev => ({ ...prev, pendingVideos: snap.size }))
+                (snap) => setStats(prev => ({ ...prev, pendingVideos: snap.size })),
+                (err) => console.warn('[useAdminStats] Pending videos error:', err.message)
             )
         );
 
@@ -72,14 +82,16 @@ export function useAdminStats(): AdminStats {
         unsubs.push(
             onSnapshot(
                 query(collection(db, 'videos'), where('is_live', '==', true)),
-                (snap) => setStats(prev => ({ ...prev, liveVideos: snap.size }))
+                (snap) => setStats(prev => ({ ...prev, liveVideos: snap.size })),
+                (err) => console.warn('[useAdminStats] Live videos error:', err.message)
             )
         );
 
         // Total connections
         unsubs.push(
             onSnapshot(collection(db, 'connections'), (snap) =>
-                setStats(prev => ({ ...prev, totalConnections: snap.size }))
+                setStats(prev => ({ ...prev, totalConnections: snap.size })),
+                (err) => console.warn('[useAdminStats] Connections error:', err.message)
             )
         );
 
@@ -90,7 +102,8 @@ export function useAdminStats(): AdminStats {
                 (snap) => {
                     const total = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
                     setStats(prev => ({ ...prev, totalRevenue: total }));
-                }
+                },
+                (err) => console.warn('[useAdminStats] Approved payments error:', err.message)
             )
         );
 

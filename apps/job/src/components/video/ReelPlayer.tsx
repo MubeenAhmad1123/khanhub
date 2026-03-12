@@ -46,6 +46,34 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
     }, []);
 
     // Fix 4: ReelPlayer: Play Video When isActive Becomes True
+    const attemptPlay = useCallback(() => {
+        const video = videoRef.current;
+        if (!video || !isActive) return;
+
+        // Autoplay policy: must be muted to start
+        video.muted = true;
+        const playPromise = video.play();
+
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => {
+                    setIsBuffering(false);
+                    // Standard autoplay logic: wait a moment then unmute
+                    setTimeout(() => {
+                        if (videoRef.current && isActive) {
+                            videoRef.current.muted = false;
+                            setIsMuted(false);
+                        }
+                    }, 150);
+                })
+                .catch((err) => {
+                    console.log('Autoplay failed:', err.message);
+                    setIsMuted(true);
+                });
+        }
+        setIsPaused(false);
+    }, [isActive]);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
@@ -54,30 +82,18 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
             // Reset to start
             video.currentTime = 0;
 
-            // Must be muted first for autoplay policy
-            video.muted = true;
-
-            const playPromise = video.play();
-
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => {
-                        // Play succeeded — unmute
-                        setIsBuffering(false);
-                        setTimeout(() => {
-                            if (videoRef.current) {
-                                videoRef.current.muted = false;
-                                setIsMuted(false);
-                            }
-                        }, 100); // tiny delay before unmuting
-                    })
-                    .catch((err) => {
-                        console.log('Autoplay failed:', err.message);
-                        // Stay muted
-                        setIsMuted(true);
-                    });
+            if (video.readyState >= 3) {
+                // Already have enough data to play
+                attemptPlay();
+            } else {
+                // Wait for enough data
+                const handleCanPlay = () => {
+                    attemptPlay();
+                    video.removeEventListener('canplay', handleCanPlay);
+                };
+                video.addEventListener('canplay', handleCanPlay);
+                return () => video.removeEventListener('canplay', handleCanPlay);
             }
-            setIsPaused(false);
         } else {
             video.pause();
             if (!isAdjacent) {
@@ -86,7 +102,7 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
             }
             if (hlsRef.current) hlsRef.current.stopLoad();
         }
-    }, [isActive]); // ← ONLY depend on isActive, not other state
+    }, [isActive, attemptPlay, isAdjacent]);
 
     // Ensure the video src is actually set
     useEffect(() => {

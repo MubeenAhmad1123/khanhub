@@ -23,7 +23,9 @@ export default function UserProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [videos, setVideos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'videos' | 'info'>('videos');
+    const [authUser, setAuthUser] = useState<any>(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'videos' | 'info' > ('videos');
     const [contactRevealed, setContactRevealed] = useState(false);
     const [checkingUnlock, setCheckingUnlock] = useState(true);
     const [showRevealSheet, setShowRevealSheet] = useState(false);
@@ -139,6 +141,9 @@ export default function UserProfilePage() {
         let unsubFollow: (() => void) | null = null;
 
         const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+            setAuthUser(firebaseUser);
+            setAuthLoading(false);
+
             // Clean up any previous snapshot listener
             if (unsubscribeSnapshot) {
                 unsubscribeSnapshot();
@@ -160,6 +165,8 @@ export default function UserProfilePage() {
             const followDocId = `${firebaseUser.uid}_${id}`;
             unsubFollow = onSnapshot(doc(db, 'follows', followDocId), (snap) => {
                 setIsFollowing(snap.exists());
+            }, (error) => {
+                console.warn('[Profile Follow] Snapshot error:', error.message);
             });
 
             // 2. Contact Unlock Listener
@@ -233,6 +240,28 @@ export default function UserProfilePage() {
         if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
         return String(n || 0);
     };
+
+    if (authLoading) {
+        return (
+            <div style={{
+                height: '100dvh', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: '#fff'
+            }}>
+                <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    border: '3px solid #eee', borderTop: '3px solid #FF0069',
+                    animation: 'spin 0.75s linear infinite'
+                }} />
+                <style>{`
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
 
     if (loading) {
         return (
@@ -345,7 +374,7 @@ export default function UserProfilePage() {
     }
 
     const catConfig = getCategoryConfig(profile.category);
-    const isOwnProfile = currentUser?.uid === id;
+    const isOwnProfile = authUser?.uid === id;
 
     // Redirect to own profile if viewing self
     if (isOwnProfile) {
@@ -533,7 +562,7 @@ export default function UserProfilePage() {
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24, padding: '0 16px' }}>
                     <button
                         onClick={async () => {
-                            if (!currentUser) { router.push('/auth/login'); return; }
+                            if (!authUser) { router.push('/auth/login'); return; }
                             setFollowingLoading(true);
                             try {
                                 const followDocId = `${currentUser.uid}_${id}`;

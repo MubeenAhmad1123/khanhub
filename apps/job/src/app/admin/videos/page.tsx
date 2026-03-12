@@ -36,6 +36,11 @@ export default function AdminVideosPage() {
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'superseded'>('pending');
 
     useEffect(() => {
+        if (user?.role !== 'admin') {
+            setLoading(false);
+            return;
+        }
+
         // We fetch everything to have live counts for tabs, but filter client-side
         const q = query(collection(db, 'videos'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -48,10 +53,13 @@ export default function AdminVideosPage() {
             });
             setVideos(list);
             setLoading(false);
+        }, (error) => {
+            console.error('[AdminVideos] Snapshot error:', error);
+            setLoading(false);
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [user?.role]);
 
     const handleApprove = async (videoId: string) => {
         const video = videos.find(v => v.id === videoId);

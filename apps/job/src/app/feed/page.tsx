@@ -1,19 +1,26 @@
 'use client';
 
 import { VideoFeed } from '@/components/video/VideoFeed';
-import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase/firebase-config';
+import { onAuthStateChanged } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function FeedPage() {
-    const { user, loading } = useAuth();
+    const [authUser, setAuthUser] = useState<any>(null);
+    const [authLoading, setAuthLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setAuthUser(user);
+            setAuthLoading(false);
+        });
+        return () => unsubscribe();
     }, []);
 
-    if (!mounted || loading) {
+    if (!mounted || authLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[80vh] bg-black">
                 <div className="relative">

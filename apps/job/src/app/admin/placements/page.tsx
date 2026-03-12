@@ -32,6 +32,11 @@ export default function AdminPlacementsPage() {
     const [statusFilter, setStatusFilter] = useState('all');
 
     useEffect(() => {
+        if (adminUser?.role !== 'admin') {
+            setLoading(false);
+            return;
+        }
+
         // Placements are essentially confirmed connections
         const q = query(collection(db, 'placements'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -44,10 +49,13 @@ export default function AdminPlacementsPage() {
             });
             setPlacements(list);
             setLoading(false);
+        }, (error) => {
+            console.error('[AdminPlacements] Snapshot error:', error);
+            setLoading(false);
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [adminUser?.role]);
 
     const handleUpdateStatus = async (placementId: string, newStatus: string) => {
         const placement = placements.find(p => p.id === placementId);

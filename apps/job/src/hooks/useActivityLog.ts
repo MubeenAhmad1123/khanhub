@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
+import { useAuth } from './useAuth';
 
 export type ActivityActionType =
     | 'payment_approved'
@@ -30,10 +31,16 @@ export interface ActivityLogEntry {
 }
 
 export function useActivityLog(limitCount = 20) {
+    const { user } = useAuth();
     const [entries, setEntries] = useState<ActivityLogEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!user || user.role !== 'admin') {
+            setLoading(false);
+            return;
+        }
+
         const q = query(
             collection(db, 'activity_log'),
             orderBy('created_at', 'desc'),
@@ -46,6 +53,9 @@ export function useActivityLog(limitCount = 20) {
                 ...doc.data(),
             })) as ActivityLogEntry[];
             setEntries(logs);
+            setLoading(false);
+        }, (error) => {
+            console.error('[useActivityLog] Snapshot error:', error);
             setLoading(false);
         });
 

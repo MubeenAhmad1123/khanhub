@@ -39,6 +39,11 @@ export default function AdminUsersPage() {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
     useEffect(() => {
+        if (adminUser?.role !== 'admin') {
+            setLoading(false);
+            return;
+        }
+
         const q = query(collection(db, 'users'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -50,10 +55,13 @@ export default function AdminUsersPage() {
             });
             setUsers(list);
             setLoading(false);
+        }, (error) => {
+            console.error('[AdminUsers] Snapshot error:', error);
+            setLoading(false);
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [adminUser?.role]);
 
     const handleBanToggle = async (user: any) => {
         const isBanning = !user.isBanned;

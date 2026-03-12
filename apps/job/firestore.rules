@@ -15,12 +15,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    // Users can read/write their own doc
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if request.auth != null;           // any logged-in user can read profiles
+      allow write: if request.auth != null && request.auth.uid == userId;
       allow list: if isAdmin();
-      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
     
     match /notifications/{notificationId} {
@@ -29,7 +29,7 @@ service cloud.firestore {
       allow update: if isOwner(resource.data.user_id) || isAdmin();
       allow delete: if isOwner(resource.data.user_id) || isAdmin();
     }
-
+    
     match /activity_log/{logId} {
       allow read, write: if isAuthenticated();
     }
@@ -57,12 +57,11 @@ service cloud.firestore {
       allow delete: if isAdmin() || isOwner(resource.data.userId) || isOwner(paymentId);
     }
 
-    // ✅ NEW — paymentRequests (contact unlock submissions)
-    match /paymentRequests/{requestId} {
+    // Payment requests
+    match /paymentRequests/{docId} {
       allow create: if isAuthenticated();
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.requestedBy || isAdmin());
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read, write: if request.auth != null 
+                         && (request.auth.uid == resource.data.requestedBy || isAdmin());
     }
 
     // ✅ NEW — reports (three dots → report video)
@@ -102,11 +101,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Videos — anyone logged in can read approved videos
     match /videos/{videoId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.userId || isAdmin());
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow read: if resource.data.is_live == true 
+                  && resource.data.admin_status == 'approved';
+      allow read: if request.auth != null;           // logged-in users see all
+      allow write: if request.auth != null;
     }
 
 
@@ -120,6 +120,10 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.followerId;
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.followerId;
+    }
+  }
+}
+erId;
     }
   }
 }

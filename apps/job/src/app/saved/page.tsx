@@ -20,16 +20,17 @@ interface VideoItem {
 
 export default function SavedVideosPage() {
     const [videos, setVideos] = useState<VideoItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [authUser, setAuthUser] = useState<any>(null);
+    const [authLoading, setAuthLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (u) => {
-            setUser(u);
-            if (!u) {
-                setLoading(false);
-            } else {
+            setAuthUser(u);
+            setAuthLoading(false);
+            if (u) {
+                setLoading(true);
                 fetchSavedVideos(u.uid);
             }
         });
@@ -93,15 +94,29 @@ export default function SavedVideosPage() {
         router.push('/feed');
     };
 
-    if (loading) {
+    if (authLoading || loading) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[--accent]" />
+            <div style={{
+                height: '100dvh', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: '#fff'
+            }}>
+                <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    border: '3px solid #eee', borderTop: '3px solid #FF0069',
+                    animation: 'spin 0.75s linear infinite'
+                }} />
+                <style>{`
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `}</style>
             </div>
         );
     }
 
-    if (!user) {
+    if (!authUser) {
         return (
             <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-6">

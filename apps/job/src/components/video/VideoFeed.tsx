@@ -80,6 +80,8 @@ export function VideoFeed() {
                 setFirestoreProfile(data);
                 setWatchedIds(data.watchedVideos || []);
             }
+        }, (error) => {
+            console.warn('[VideoFeed Profile] Snapshot error:', error.message);
         });
         return () => unsub();
     }, [user]);
@@ -124,6 +126,8 @@ export function VideoFeed() {
                     ...d
                 }));
             setFirestoreVideos(videos);
+        }, (error) => {
+            console.warn('[VideoFeed Videos] Snapshot error:', error.message);
         });
 
         return () => unsubscribe();

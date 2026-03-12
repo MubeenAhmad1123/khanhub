@@ -1,10 +1,10 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/firebase-config';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useCategory } from '@/context/CategoryContext';
 
 // Components
@@ -32,29 +32,57 @@ function ProfileSkeleton() {
 }
 
 export default function ProfilePage() {
-    const { user, loading } = useAuth();
+    const [authUser, setAuthUser] = useState<any>(null);
+    const [authLoading, setAuthLoading] = useState(true);
     const router = useRouter();
     const { categoryConfig, accentColor } = useCategory();
     const [profile, setProfile] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<ProfileTab>('videos');
 
     useEffect(() => {
-        if (!loading && !user) {
-            router.push('/auth/register?from=profile');
-        }
-    }, [user, loading, router]);
+        const unsubscribe = onAuthStateChanged(auth, (u) => {
+            setAuthUser(u);
+            setAuthLoading(false);
+            if (!u) {
+                router.push('/auth/register?from=profile');
+            }
+        });
+        return () => unsubscribe();
+    }, [router]);
 
     useEffect(() => {
-        if (user) {
+        if (authUser) {
             // Use onSnapshot for live updates
-            const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+            const unsub = onSnapshot(doc(db, 'users', authUser.uid), (snap) => {
                 if (snap.exists()) setProfile(snap.data());
+            }, (error) => {
+                console.warn('[Dashboard Profile] Snapshot error:', error.message);
             });
             return () => unsub();
         }
-    }, [user]);
+    }, [authUser]);
 
-    if (loading || !user || !profile) return <ProfileSkeleton />;
+    if (authLoading || !authUser || !profile) {
+        return (
+            <div style={{
+                height: '100dvh', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: '#fff'
+            }}>
+                <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    border: '3px solid #eee', borderTop: '3px solid #FF0069',
+                    animation: 'spin 0.75s linear infinite'
+                }} />
+                <style>{`
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
 
     return (
         <div style={{ background: '#FFFFFF', minHeight: '100dvh', paddingBottom: 80, color: '#0A0A0A' }}>
@@ -65,7 +93,7 @@ export default function ProfilePage() {
                 {/* Avatar */}
                 <div style={{ position: 'relative', width: 88, height: 88, margin: '0 auto 12px' }}>
                     <img
-                        src={user.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.uid}
+                        src={authUser.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + authUser.uid}
                         alt={profile.name}
                         style={{
                             width: 88, height: 88, borderRadius: '50%',
@@ -77,7 +105,7 @@ export default function ProfilePage() {
 
                 {/* Name */}
                 <h1 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 4px' }}>
-                    {profile.name || user.displayName}
+                    {profile.name || authUser.displayName}
                 </h1>
 
                 {/* Category + Role badges - Clickable to change */}
@@ -188,7 +216,7 @@ export default function ProfilePage() {
                 {/* Videos grid — 3 col like TikTok */}
                 {activeTab === 'videos' && (
                     <VideosGrid
-                        uid={user.uid}
+                        uid={authUser.uid}
                         onVideoTap={(i) => {
                             sessionStorage.setItem('feed_start_index', String(i));
                             router.push('/feed');

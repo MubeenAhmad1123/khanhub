@@ -60,6 +60,8 @@ export default function JobSeekerDashboard() {
                     profile_views: data.profile_views || 0,
                 }));
             }
+        }, (error) => {
+            console.warn('[Dashboard UserData] Snapshot error:', error.message);
         });
 
         // 2. Connections Stats
@@ -70,6 +72,8 @@ export default function JobSeekerDashboard() {
         );
         const unsubscribeConn = onSnapshot(connQ, (snap) => {
             setStats(prev => ({ ...prev, connectionsMade: snap.size }));
+        }, (error) => {
+            console.warn('[Dashboard Connections] Snapshot error:', error.message);
         });
 
         // 3. User's Video Status (for the button logic)
@@ -85,6 +89,8 @@ export default function JobSeekerDashboard() {
             } else {
                 setUserVideoStatus(null);
             }
+        }, (error) => {
+            console.warn('[Dashboard VideoStatus] Snapshot error:', error.message);
         });
 
         return () => {

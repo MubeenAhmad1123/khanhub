@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth';
 import { X, Menu } from 'lucide-react';
 
 interface SidebarProps {
@@ -62,18 +63,24 @@ export default function AdminSidebar({ isOpen, onClose }: SidebarProps) {
     const pathname = usePathname();
     const [badges, setBadges] = useState<BadgeCounts>({ pendingVideos: 0, pendingPayments: 0 });
 
+    const { user } = useAuth();
+
     useEffect(() => {
+        if (user?.role !== 'admin') return;
+
         // Live badge counts
         const videosUnsub = onSnapshot(
             query(collection(db, 'videos'), where('admin_status', '==', 'pending')),
-            (snap) => setBadges(prev => ({ ...prev, pendingVideos: snap.size }))
+            (snap) => setBadges(prev => ({ ...prev, pendingVideos: snap.size })),
+            (err) => console.warn('[AdminSidebar] Videos error:', err.message)
         );
         const paymentsUnsub = onSnapshot(
             query(collection(db, 'paymentRequests'), where('status', '==', 'pending')),
-            (snap) => setBadges(prev => ({ ...prev, pendingPayments: snap.size }))
+            (snap) => setBadges(prev => ({ ...prev, pendingPayments: snap.size })),
+            (err) => console.warn('[AdminSidebar] Payments error:', err.message)
         );
         return () => { videosUnsub(); paymentsUnsub(); };
-    }, []);
+    }, [user?.role]);
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full">

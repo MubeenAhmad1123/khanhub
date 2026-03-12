@@ -389,6 +389,8 @@ export default function UploadVideoPage() {
         if (!user) return;
         const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
             if (snap.exists()) setFirestoreProfile(snap.data());
+        }, (error) => {
+            console.warn('[UploadVideo Profile] Snapshot error:', error.message);
         });
         return () => unsub();
     }, [user]);

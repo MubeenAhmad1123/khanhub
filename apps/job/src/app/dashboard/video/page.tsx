@@ -82,6 +82,8 @@ export default function VideoUploadPage() {
                 setCanUpload(true);
                 setCooldownRemaining(null);
             }
+        }, (error) => {
+            console.warn('[VideoUpload Status] Snapshot error:', error.message);
         });
 
         return () => unsubscribe();

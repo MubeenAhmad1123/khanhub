@@ -44,7 +44,8 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
                 });
             setVideos(vids);
             setLoading(false);
-        }, () => {
+        }, (error) => {
+            console.warn('[VideosGrid] Snapshot error:', error.message);
             setLoading(false);
         });
 
