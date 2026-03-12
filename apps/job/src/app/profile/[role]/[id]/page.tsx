@@ -544,7 +544,7 @@ export default function UserProfilePage() {
                     gap: 'clamp(20px, 8vw, 48px)', margin: '16px 0 24px',
                 }}>
                     {[
-                        { label: 'Videos', value: videos.length },
+                        { label: 'Posts', value: videos.filter((v: any) => v.admin_status === 'approved' && v.is_live !== false).length },
                         { label: 'Followers', value: profile.followers?.length || 0 },
                         { label: 'Following', value: profile.following?.length || 0 },
                     ].map((stat) => (

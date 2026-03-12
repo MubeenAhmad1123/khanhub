@@ -26,12 +26,14 @@ export function BottomNav() {
             className="flex md:hidden items-center"
             style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0,
-                background: 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(20px)',
-                borderTop: '1px solid #E5E5E5',
-                zIndex: 50,
-                paddingBottom: 'env(safe-area-inset-bottom, 8px)',
-                height: '70px'
+                background: '#FFFFFF',        // ← explicit white
+                borderTop: '1px solid #F0F0F0',
+                height: 'calc(64px + env(safe-area-inset-bottom))',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+                zIndex: 1000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-around',
             }}
         >
             {navItems.map((item) => {

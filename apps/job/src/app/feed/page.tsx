@@ -36,9 +36,7 @@ export default function FeedPage() {
             display: 'flex',
             justifyContent: 'center',
             background: '#000',           // black sides on desktop
-            height: '100dvh',
-            minHeight: '100vh',           // fallback
-            maxHeight: '100dvh',
+            height: '100dvh',             // videos start from very top
             overflow: 'hidden',
         }}>
             <div style={{

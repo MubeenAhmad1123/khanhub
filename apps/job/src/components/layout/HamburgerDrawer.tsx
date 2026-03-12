@@ -38,9 +38,10 @@ export default function HamburgerDrawer({
       <div
         onClick={onClose}
         style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          zIndex: 9997,
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          zIndex: 99998,
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'all' : 'none',
           transition: 'opacity 0.3s ease',
@@ -52,41 +53,48 @@ export default function HamburgerDrawer({
         position: 'fixed',
         top: 0, right: 0, bottom: 0,
         width: '280px',
-        background: '#FFFFFF',
-        zIndex: 9999,
+        backgroundColor: '#FFFFFF',        // ← explicit, not 'white' or 'bg-white'
+        zIndex: 99999,
+        isolation: 'isolate',
         transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-        transition: 'transform 0.3s ease',
+        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '-8px 0 40px rgba(0,0,0,0.15)',
+        boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+        overflowY: 'auto',
       }}>
         {/* Header */}
         <div style={{
           display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', padding: '20px 20px 16px',
           borderBottom: '1px solid #F0F0F0',
+          backgroundColor: '#FFFFFF',      // ← explicit on every section
         }}>
-          <span style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '-0.5px' }}>
+          <span style={{
+            fontWeight: 800, fontSize: '18px',
+            color: '#0A0A0A',              // ← explicit dark text
+            letterSpacing: '-0.5px',
+          }}>
             KHAN HUB
           </span>
           <button
             onClick={onClose}
             style={{
-              background: '#F0F0F0', border: 'none',
-              borderRadius: '50%', width: '32px', height: '32px',
+              backgroundColor: '#F5F5F5',
+              border: 'none', borderRadius: '50%',
+              width: '32px', height: '32px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}
           >
-            <X size={16} />
+            <X size={16} color="#0A0A0A" />   // ← explicit icon color
           </button>
         </div>
 
         {/* Nav Links */}
-        <nav style={{ flex: 1, padding: '12px 0' }}>
+        <nav style={{ flex: 1, padding: '8px 0', backgroundColor: '#FFFFFF' }}>
           {menuItems.map(item => {
-            const isActive = pathname === item.href || 
-              (item.href === '/feed' && pathname === '/')
+            const isActive = pathname.startsWith(item.href)
             return (
               <button
                 key={item.href}
@@ -94,21 +102,20 @@ export default function HamburgerDrawer({
                 style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
                   width: '100%', padding: '14px 20px',
-                  background: isActive ? '#FFF0F5' : 'transparent',
-                  border: 'none', cursor: 'pointer',
-                  borderLeft: isActive ? '3px solid #FF0069' : '3px solid transparent',
-                  transition: 'all 0.15s',
+                  backgroundColor: isActive ? '#FFF0F5' : '#FFFFFF',  // ← explicit
+                  border: 'none',
+                  borderLeft: `3px solid ${isActive ? '#FF0069' : 'transparent'}`,
+                  cursor: 'pointer',
                 }}
               >
                 <item.icon
                   size={20}
-                  color={isActive ? '#FF0069' : '#444'}
-                  strokeWidth={isActive ? 2.5 : 1.8}
+                  color={isActive ? '#FF0069' : '#333333'}
                 />
                 <span style={{
                   fontSize: '15px',
                   fontWeight: isActive ? 700 : 400,
-                  color: isActive ? '#FF0069' : '#0A0A0A',
+                  color: isActive ? '#FF0069' : '#0A0A0A',  // ← explicit
                 }}>
                   {item.label}
                 </span>
@@ -118,13 +125,17 @@ export default function HamburgerDrawer({
         </nav>
 
         {/* Sign Out at bottom */}
-        <div style={{ padding: '16px 20px', borderTop: '1px solid #F0F0F0' }}>
+        <div style={{
+          padding: '16px 20px',
+          borderTop: '1px solid #F0F0F0',
+          backgroundColor: '#FFFFFF',
+        }}>
           <button
             onClick={handleSignOut}
             style={{
               display: 'flex', alignItems: 'center', gap: '12px',
-              width: '100%', padding: '12px 0',
               background: 'none', border: 'none', cursor: 'pointer',
+              padding: '8px 0', width: '100%',
             }}
           >
             <LogOut size={18} color="#FF3B30" />

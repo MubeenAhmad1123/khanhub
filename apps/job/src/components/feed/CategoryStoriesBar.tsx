@@ -75,95 +75,62 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
 
     return (
         <div style={{
-            padding: '10px 0 12px 0',
-            background: 'rgba(0,0,0,0.45)',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
+            padding: '10px 16px',
+            background: 'transparent',    // ← NOT white, NOT solid
             position: 'relative',
             zIndex: 25,
-        }}>
-            <div
-                ref={scrollRef}
-                style={{
-                    display: 'flex',
-                    gap: 14,
-                    overflowX: 'scroll',
-                    scrollbarWidth: 'none',
-                    WebkitOverflowScrolling: 'touch',
-                    paddingLeft: 14,
-                    paddingRight: 14,
-                    userSelect: 'none',
-                }}
-                className="scrollbar-hide"
-            >
-                {CATEGORIES.map((cat) => {
-                    const isActive = activeCategory === cat.key;
-                    return (
-                        <div
-                            key={cat.key}
-                            onClick={() => handleCategoryTap(cat.key)}
-                            style={{
-                                flexShrink: 0,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: 6,
-                                cursor: 'pointer',
-                            }}
-                        >
-                            {/* Circle */}
+            display: 'flex',
+            gap: '16px',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
+        }} className="scrollbar-hide" ref={scrollRef}>
+            {CATEGORIES.map((cat) => {
+                const isActive = activeCategory === cat.key;
+                return (
+                    <button
+                        key={cat.key}
+                        onClick={() => handleCategoryTap(cat.key)}
+                        style={{
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', gap: '6px',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            flexShrink: 0,
+                        }}
+                    >
+                        {/* Circle with accent border */}
+                        <div style={{
+                            width: '52px', height: '52px', borderRadius: '50%',
+                            border: `2px solid ${isActive
+                                ? cat.accent
+                                : 'rgba(255,255,255,0.4)'}`,
+                            padding: '2px',
+                            background: 'rgba(0,0,0,0.3)',   // ← dark translucent, NOT white
+                            transition: 'all 0.25s ease',
+                            transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                        }}>
                             <div style={{
-                                width: 58,
-                                height: 58,
-                                borderRadius: '50%',
-                                padding: 2,
-                                background: isActive
-                                    ? `linear-gradient(135deg, ${cat.accent}, #7638FA)`
-                                    : 'rgba(255,255,255,0.15)',
-                                transition: 'all 0.25s ease',
-                                transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                                boxShadow: isActive ? `0 0 16px ${cat.accent}88` : 'none',
-                                flexShrink: 0,
+                                width: '100%', height: '100%',
+                                borderRadius: '50%', background: 'rgba(0,0,0,0.2)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '22px'
                             }}>
-                                <div style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    borderRadius: '50%',
-                                    background: isActive
-                                        ? 'rgba(0,0,0,0.28)'
-                                        : 'rgba(255,255,255,0.08)',
-                                    border: '2px solid rgba(255,255,255,0.25)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: 24,
-                                    transition: 'background 0.25s',
-                                }}>
-                                    {cat.emoji}
-                                </div>
+                                {cat.emoji}
                             </div>
-
-                            {/* Label */}
-                            <span style={{
-                                fontSize: 10,
-                                fontFamily: 'DM Sans, sans-serif',
-                                fontWeight: isActive ? 700 : 400,
-                                color: isActive ? '#fff' : 'rgba(255,255,255,0.65)',
-                                textAlign: 'center',
-                                maxWidth: 58,
-                                lineHeight: 1.2,
-                                transition: 'color 0.25s',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                letterSpacing: isActive ? '0.3px' : '0px',
-                            }}>
-                                {cat.label}
-                            </span>
                         </div>
-                    );
-                })}
-            </div>
+                        {/* Label — white text, visible on dark video */}
+                        <span style={{
+                            fontSize: '10px', fontWeight: 500,
+                            color: isActive ? cat.accent : '#FFFFFF',
+                            textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                            whiteSpace: 'nowrap',
+                            fontFamily: 'DM Sans, sans-serif',
+                        }}>
+                            {cat.label}
+                        </span>
+                    </button>
+                );
+            })}
 
             {/* Role Selection Overlay */}
             <AnimatePresence>

@@ -382,18 +382,28 @@ export function VideoFeed() {
 
             <div style={{ width: '100%', maxWidth: 450, height: '100dvh', position: 'relative', overflow: 'hidden' }}>
 
-                {/* Header Overlays */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, pointerEvents: 'none' }}>
-                    <div className="flex items-center p-2 pt-6 pointer-events-auto">
-                        <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
+                {/* Overlay layer — floats above video */}
+                <div style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0,
+                    zIndex: 100,
+                    // Gradient fades to transparent so video visible below stories
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%)',
+                    pointerEvents: 'none',    // clicks pass through to video
+                }}>
+                    {/* Give pointer events back to interactive elements */}
+                    <div style={{ pointerEvents: 'all' }}>
+                        <div className="flex items-center p-2 pt-6">
+                            <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
+                        </div>
+                        <AnimatePresence>
+                            {showStoriesBar && (
+                                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                    <CategoryStoriesBar onCategoryChange={() => setActiveIndex(0)} />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
-                    <AnimatePresence>
-                        {showStoriesBar && (
-                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                <CategoryStoriesBar onCategoryChange={() => setActiveIndex(0)} />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
                 </div>
 
                 <div

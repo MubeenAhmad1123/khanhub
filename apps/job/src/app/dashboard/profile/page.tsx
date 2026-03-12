@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, query, where, collection } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useCategory } from '@/context/CategoryContext';
@@ -50,6 +50,8 @@ export default function ProfilePage() {
         return () => unsubscribe();
     }, [router]);
 
+    const [postCount, setPostCount] = useState(0);
+
     useEffect(() => {
         if (authUser) {
             // Use onSnapshot for live updates
@@ -60,6 +62,21 @@ export default function ProfilePage() {
             });
             return () => unsub();
         }
+    }, [authUser]);
+
+    // ── Fetch Post Count (Approved & Live Videos) ────────────────
+    useEffect(() => {
+        if (!authUser) return;
+        const q = query(
+            collection(db, 'videos'),
+            where('userId', '==', authUser.uid),
+            where('is_live', '==', true),
+            where('admin_status', '==', 'approved')
+        );
+        const unsub = onSnapshot(q, (snap) => {
+            setPostCount(snap.size);
+        });
+        return () => unsub();
     }, [authUser]);
 
     if (authLoading || !authUser || !profile) {
@@ -146,6 +163,7 @@ export default function ProfilePage() {
                 {/* Stats row — Following | Followers | Likes */}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 16 }}>
                     {[
+                        { label: 'Posts', value: postCount },
                         { label: 'Following', value: profile.following?.length || 0 },
                         { label: 'Followers', value: profile.followers?.length || 0 },
                         { label: 'Likes', value: profile.totalLikes || 0 },

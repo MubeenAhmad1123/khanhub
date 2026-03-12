@@ -23,7 +23,10 @@ export function TopBar() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    
+
+    const isFeed = pathname === '/feed' || pathname.startsWith('/feed');
+    const iconColor = isFeed ? '#FFFFFF' : '#0A0A0A';
+
     // Search state
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -69,11 +72,33 @@ export function TopBar() {
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     return (
-        <header className="fixed top-0 left-0 right-0 backdrop-blur-md z-50 px-4 py-3" style={{ background: 'rgba(255,255,255,0.95)', borderBottom: '1px solid #E5E5E5' }}>
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 text-[#0A0A0A]">
+        <header style={{
+            position: isFeed ? 'fixed' : 'sticky',
+            top: 0, left: 0, right: 0,
+            zIndex: 1000,
+            height: '52px',
+            display: 'flex', alignItems: 'center',
+            padding: '0 16px',
+            gap: '8px',
+            backgroundColor: isFeed ? 'transparent' : '#FFFFFF',
+            borderBottom: isFeed ? 'none' : '1px solid #F0F0F0',
+            transition: 'background-color 0.3s ease',
+        }}>
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 w-full">
                 {/* Left: Brand */}
                 <div className="flex items-center gap-3">
-                    <Link href="/" className="text-xl font-black italic tracking-tighter uppercase whitespace-nowrap text-[--accent]">
+                    <Link
+                        href="/"
+                        style={{
+                            fontSize: '16px',
+                            fontWeight: 800,
+                            letterSpacing: '-0.5px',
+                            color: iconColor,
+                            textTransform: 'uppercase',
+                            fontStyle: 'italic',
+                            textDecoration: 'none'
+                        }}
+                    >
                         KHAN HUB
                     </Link>
                 </div>
@@ -142,7 +167,7 @@ export function TopBar() {
 
                 {/* Right: Icons & Menu */}
                 <div className="flex items-center gap-1.5 flex-1 justify-end">
-                    
+
                     {/* Expanding search container */}
                     <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
                         <div style={{
@@ -169,14 +194,15 @@ export function TopBar() {
                                 placeholder="Search..."
                                 style={{
                                     width: '100%',
-                                    background: '#F0F0F0',
+                                    background: isFeed ? 'rgba(255,255,255,0.2)' : '#F0F0F0',
                                     border: 'none',
                                     borderRadius: '20px',
                                     padding: '7px 14px',
                                     fontSize: '13px',
-                                    color: '#0A0A0A',
+                                    color: iconColor,
                                     outline: 'none',
                                 }}
+                                className="placeholder-current"
                             />
                         </div>
 
@@ -186,7 +212,7 @@ export function TopBar() {
                                 background: 'none', border: 'none',
                                 cursor: 'pointer', padding: '4px',
                                 display: 'flex', alignItems: 'center',
-                                color: '#0A0A0A',
+                                color: iconColor,
                             }}
                         >
                             {searchOpen
@@ -205,7 +231,7 @@ export function TopBar() {
                             display: 'flex', alignItems: 'center',
                         }}
                     >
-                        <Bell size={20} color="#0A0A0A" />
+                        <Bell size={20} color={iconColor} />
                         {unreadCount > 0 && (
                             <span style={{
                                 position: 'absolute', top: '0px', right: '0px',
@@ -222,7 +248,7 @@ export function TopBar() {
 
                     <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
 
-                    <button 
+                    <button
                         onClick={() => setDrawerOpen(true)}
                         style={{
                             background: 'none', border: 'none',
@@ -230,7 +256,7 @@ export function TopBar() {
                             display: 'flex', alignItems: 'center',
                         }}
                     >
-                        <Menu size={22} color="#0A0A0A" />
+                        <Menu size={22} color={iconColor} />
                     </button>
 
                     <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
