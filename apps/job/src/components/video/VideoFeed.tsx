@@ -16,6 +16,16 @@ import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categorie
 import { collection, query, where, orderBy, onSnapshot, doc, limit, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
+// Shuffle helper:
+const shuffleArray = <T,>(arr: T[]): T[] => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+};
+
 // Preload window config:
 const PRELOAD_AHEAD = 2   // preload 2 videos ahead
 const PRELOAD_BEHIND = 1  // keep 1 video behind buffered
@@ -115,27 +125,32 @@ export function VideoFeed() {
 
     // ── Fetch Firestore Videos ────────────────────────────────────
     useEffect(() => {
-        const queryCategory = (targetCategoryId && targetVideoId)
-            ? targetCategoryId
-            : (activeTab === 2 && firestoreProfile?.category)
-                ? firestoreProfile.category
+        const isForYou = activeTab === 2;
+
+        let q;
+        if (isForYou) {
+            // ── FOR YOU: mixed categories, newest first ──
+            q = query(
+                collection(db, 'videos'),
+                where('is_live', '==', true),
+                where('admin_status', '==', 'approved'),
+                orderBy('createdAt', 'desc'),
+                limit(50)
+            );
+        } else {
+            const qCategory = (targetCategoryId && targetVideoId)
+                ? targetCategoryId
                 : activeCategory;
 
-        console.log('[QUERY] queryCategory resolved to →', queryCategory,
-            '| reason:',
-            (targetCategoryId && targetVideoId) ? 'URL param (deep link)'
-            : (activeTab === 2 && firestoreProfile?.category) ? 'firestoreProfile.category (For You tab)'
-            : 'activeCategory'
-        );
-
-        const q = query(
-            collection(db, 'videos'),
-            where('is_live', '==', true),
-            where('admin_status', '==', 'approved'),
-            where('category', '==', queryCategory),
-            orderBy('createdAt', 'desc'),
-            limit(30)
-        );
+            q = query(
+                collection(db, 'videos'),
+                where('is_live', '==', true),
+                where('admin_status', '==', 'approved'),
+                where('category', '==', qCategory),
+                orderBy('createdAt', 'desc'),
+                limit(30)
+            );
+        }
 
         const getTabFilter = (tabIndex: number) => {
             if (tabIndex === 2) return null; // 'For You' — no role filter
@@ -145,10 +160,10 @@ export function VideoFeed() {
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const roleFilter = getTabFilter(activeTab);
-            const videos = snapshot.docs
+            let videos = snapshot.docs
                 .map(d => ({ id: d.id, ...d.data() } as any))
                 .filter(d => {
-                    const matchesCategory = d.category === queryCategory;
+                    const matchesCategory = isForYou || d.category === (targetCategoryId || activeCategory);
                     const matchesRole = !roleFilter || d.userRole === roleFilter;
                     const url = d.cloudinaryUrl;
                     const isValidCloudinary = url && url.includes('cloudinary.com') && !url.includes('youtube.com');
@@ -162,12 +177,12 @@ export function VideoFeed() {
                     ...d
                 }));
 
-            console.log('[FIRESTORE] Videos fetched →', videos.length, 'videos');
-            console.log('[FIRESTORE] Video IDs →', videos.map(v => v.id));
-            console.log('[FIRESTORE] Does list contain targetVideoId?',
-                targetVideoId ? videos.some(v => v.id === targetVideoId) : 'no targetVideoId'
-            );
+            // Shuffle if For You tab:
+            if (isForYou) {
+                videos = shuffleArray(videos);
+            }
 
+            console.log('[FIRESTORE] Videos fetched →', videos.length, 'videos');
             setFirestoreVideos(videos);
         }, (error) => {
             console.warn('[VideoFeed Videos] Snapshot error:', error.message);
@@ -235,7 +250,7 @@ export function VideoFeed() {
                     });
                 },
                 {
-                    threshold: 0.5,
+                    threshold: [0.5],
                     root: containerRef.current,
                     rootMargin: '0px',
                 }

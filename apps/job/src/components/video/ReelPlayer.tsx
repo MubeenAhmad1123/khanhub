@@ -45,33 +45,38 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         // User asked to disable manual muting/unmuting
     }, []);
 
-    // Fix 4: ReelPlayer: Play Video When isActive Becomes True
+    // Play logic — correct sequence for iOS:
     const attemptPlay = useCallback(() => {
         const video = videoRef.current;
         if (!video || !isActive) return;
 
-        // Autoplay policy: must be muted to start
+        // Step 1: Must be muted first (browser autoplay policy)
         video.muted = true;
-        const playPromise = video.play();
+        video.currentTime = 0;
 
-        if (playPromise !== undefined) {
-            playPromise
+        // Step 2: Attempt play
+        const playAttempt = video.play();
+
+        if (playAttempt !== undefined) {
+            playAttempt
                 .then(() => {
-                    setIsBuffering(false);
-                    // Standard autoplay logic: wait a moment then unmute
+                    // Step 3: Unmute after play starts (100ms delay for iOS)
                     setTimeout(() => {
                         if (videoRef.current && isActive) {
                             videoRef.current.muted = false;
                             setIsMuted(false);
                         }
-                    }, 150);
+                    }, 100);
+                    setIsPaused(false);
                 })
                 .catch((err) => {
-                    console.log('Autoplay failed:', err.message);
+                    // Autoplay blocked — show unmute button
+                    console.error('Autoplay failed:', err.message);
+                    video.muted = true;
                     setIsMuted(true);
+                    setIsPaused(false);
                 });
         }
-        setIsPaused(false);
     }, [isActive]);
 
     useEffect(() => {
@@ -252,15 +257,18 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
                 ref={videoRef}
                 poster={thumbnailUrl}
                 playsInline
-                muted={isMuted}
+                muted
+                autoPlay={false}
                 loop
-                preload={isActive || isAdjacent ? 'auto' : 'none'}
+                preload={isActive || isAdjacent ? 'auto' : 'metadata'}
                 onCanPlay={() => setIsBuffering(false)}
                 onWaiting={() => setIsBuffering(true)}
                 onPlaying={() => setIsBuffering(false)}
                 style={{
                     position: 'absolute', inset: 0, zIndex: 0,
                     width: '100%', height: '100%', objectFit: 'cover',
+                    WebkitTransform: 'translateZ(0)',
+                    transform: 'translateZ(0)',
                 }}
             />
         </div>

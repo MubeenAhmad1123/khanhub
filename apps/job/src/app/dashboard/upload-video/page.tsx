@@ -996,22 +996,22 @@ export default function UploadVideoPage() {
                         userCategory === 'jobs'
                             ? ['Job Offer', 'Portfolio / Skills', 'Company Tour', 'Testimonial', 'Other']
                             : userCategory === 'healthcare'
-                            ? ['Service Introduction', 'Patient Story', 'Clinic Tour', 'Health Tips', 'Other']
-                            : userCategory === 'education'
-                            ? ['Course Preview', 'Student Success', 'Teaching Demo', 'Institute Tour', 'Other']
-                            : userCategory === 'marriage'
-                            ? ['Self Introduction', 'Family Message', 'Lifestyle', 'Other']
-                            : userCategory === 'realestate'
-                            ? ['Property Tour', 'Price Offer', 'Area Overview', 'Other']
-                            : userCategory === 'transport'
-                            ? ['Service Demo', 'Fleet Showcase', 'Route Info', 'Other']
-                            : userCategory === 'travel'
-                            ? ['Package Tour', 'Destination Showcase', 'Travel Tips', 'Other']
-                            : userCategory === 'agriculture'
-                            ? ['Product Showcase', 'Farm Tour', 'Pricing', 'Other']
-                            : userCategory === 'sellbuy'
-                            ? ['Item for Sale', 'Unboxing', 'Price Negotiable', 'Other']
-                            : ['About My Service', 'Promotion', 'Introduction', 'Other']
+                                ? ['Service Introduction', 'Patient Story', 'Clinic Tour', 'Health Tips', 'Other']
+                                : userCategory === 'education'
+                                    ? ['Course Preview', 'Student Success', 'Teaching Demo', 'Institute Tour', 'Other']
+                                    : userCategory === 'marriage'
+                                        ? ['Self Introduction', 'Family Message', 'Lifestyle', 'Other']
+                                        : userCategory === 'realestate'
+                                            ? ['Property Tour', 'Price Offer', 'Area Overview', 'Other']
+                                            : userCategory === 'transport'
+                                                ? ['Service Demo', 'Fleet Showcase', 'Route Info', 'Other']
+                                                : userCategory === 'travel'
+                                                    ? ['Package Tour', 'Destination Showcase', 'Travel Tips', 'Other']
+                                                    : userCategory === 'agriculture'
+                                                        ? ['Product Showcase', 'Farm Tour', 'Pricing', 'Other']
+                                                        : userCategory === 'sellbuy'
+                                                            ? ['Item for Sale', 'Unboxing', 'Price Negotiable', 'Other']
+                                                            : ['About My Service', 'Promotion', 'Introduction', 'Other']
                     }
                     value={videoTopic}
                     onChange={setVideoTopic}

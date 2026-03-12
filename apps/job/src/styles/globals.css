@@ -68,11 +68,51 @@
     --video-gradient: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.2) 40%, transparent 70%);
   }
 
+  /* ── iOS Video GPU fix ── */
+  video {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* ── CRITICAL mobile resets ── */
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* prevent iOS auto font scaling */
+    text-size-adjust: 100%;
+    touch-action: pan-y;
+    /* allow vertical scroll only */
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    height: 100dvh;
+    width: 100vw;
+  }
+
   body {
-    background: #FFFFFF;
-    color: #0A0A0A;
-    @apply antialiased;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100vw;
+    height: 100dvh;
+    overflow-x: hidden;
+    background-color: #000;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-family: var(--font-dm-sans);
+  }
+
+  /* Prevent any element from causing horizontal scroll */
+  * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
   }
 
   /* scrollbar on light theme */
@@ -84,16 +124,45 @@
     background: #CCCCCC;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  h1, h2, h3, h4, h5, h6 {
     @apply font-bold;
     font-family: var(--font-poppins);
   }
 
+  /* ── DEVICE BREAKPOINTS ── */
+  @media (max-width: 390px) {
+    .feed-tabs-bar { font-size: 11px; padding: 0 4px; }
+    .bottom-nav-label { font-size: 9px; }
+    .topbar-logo { font-size: 14px; }
+  }
+
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .feed-wrapper { display: flex; justify-content: center; background: #111; min-height: 100dvh; }
+    .feed-inner { width: 430px; max-width: 430px; position: relative; }
+    .bottom-nav { left: 50%; transform: translateX(-50%); width: 430px; }
+  }
+
+  @media (min-width: 1024px) {
+    .feed-wrapper { display: flex; justify-content: center; align-items: flex-start; background: #0a0a0a; min-height: 100dvh; }
+    .feed-inner { width: 390px; position: relative; height: 100dvh; }
+    .bottom-nav { left: 50%; transform: translateX(-50%); width: 390px; border-radius: 0; }
+  }
+
+  .bottom-nav {
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .feed-container {
+    height: 100dvh;
+    height: -webkit-fill-available;
+    min-height: 100vh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    overscroll-behavior: none;
+  }
   code,
   pre {
     font-family: var(--font-jetbrains);

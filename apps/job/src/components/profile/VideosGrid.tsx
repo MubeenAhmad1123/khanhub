@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Play, Video } from 'lucide-react';
+import { Play, Video, Clock } from 'lucide-react';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -148,15 +148,27 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
                         </div>
 
                         {/* Status badge */}
-                        {badge && (
+                        {vid.admin_status === 'pending' && (
+                            <div style={{
+                                position: 'absolute', top: 6, left: 6,
+                                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                                color: '#fff', fontSize: 8, fontWeight: 900,
+                                padding: '2px 6px', borderRadius: 4,
+                                zIndex: 10, border: '1px solid rgba(255,255,255,0.2)',
+                                display: 'flex', alignItems: 'center', gap: 3
+                            }}>
+                                <Clock size={8} /> PENDING
+                            </div>
+                        )}
+                        {vid.admin_status === 'approved' && (
                             <div style={{
                                 position: 'absolute', top: 6, right: 6,
-                                width: 20, height: 20, borderRadius: '50%',
-                                background: 'rgba(0,0,0,0.7)',
+                                width: 18, height: 18, borderRadius: '50%',
+                                background: 'rgba(0,200,100,0.8)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 10, color: badge.color, fontWeight: 800,
+                                fontSize: 10, color: '#fff', zIndex: 10
                             }}>
-                                {badge.text}
+                                ✓
                             </div>
                         )}
                     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { TopBar } from '@/components/layout/TopBar';
-import { BottomNav } from '@/components/layout/BottomNav';
+import BottomNav from '@/components/layout/BottomNav';
 import AuthProviderWrapper from '@/components/providers/AuthProviderWrapper';
 import { ToastProvider } from '@/components/ui/toast';
 import { usePathname, useRouter } from 'next/navigation';
@@ -17,7 +17,7 @@ import { Suspense } from 'react';
 
 // Wrap non-critical layout components with next/dynamic
 const DynamicTopBar = dynamic(() => import('@/components/layout/TopBar').then(mod => mod.TopBar), { ssr: false });
-const DynamicBottomNav = dynamic(() => import('@/components/layout/BottomNav').then(mod => mod.BottomNav), { ssr: false });
+const DynamicBottomNav = dynamic(() => import('@/components/layout/BottomNav').then(mod => mod.default), { ssr: false });
 
 export default function ClientLayout({
     children,
@@ -34,6 +34,8 @@ export default function ClientLayout({
     const showNav = !isAdminRoute && !isAuthRoute;
     const showTopBar = showNav && !isFeedRoute;
 
+    const router = useRouter();
+
     useEffect(() => {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -42,9 +44,14 @@ export default function ClientLayout({
                 }
             }).catch(err => console.error('SW unregistration error:', err));
         }
-    }, []);
 
-    const router = useRouter();
+        // Prefetch key routes for instant navigation
+        router.prefetch('/feed')
+        router.prefetch('/explore')
+        router.prefetch('/saved')
+        router.prefetch('/dashboard/profile')
+        router.prefetch('/dashboard/upload-video')
+    }, [router]);
 
     const desktopNavItems = [
         { icon: Home, href: '/feed' },

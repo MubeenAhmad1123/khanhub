@@ -40,6 +40,9 @@ export default function UserProfilePage() {
     // DP Zoom state
     const [showDPZoom, setShowDPZoom] = useState(false);
 
+    // Real-time post count
+    const [postCount, setPostCount] = useState(0);
+
     useEffect(() => {
         if (!id) {
             setLoading(false);
@@ -61,71 +64,54 @@ export default function UserProfilePage() {
             return;
         }
 
+        let unsub: (() => void) | undefined;
+
         const fetchProfile = async () => {
             try {
-                console.log(`[Profile Page] Fetching user profile for ID: ${id}`);
                 const userSnap = await getDoc(doc(db, 'users', id as string));
                 if (userSnap.exists()) {
-                    console.log('[Profile Page] Profile found successfully:', userSnap.data());
                     setProfile(userSnap.data());
                 } else {
-                    console.warn(`[Profile Page] User document does not exist for ID: ${id}`);
                     setProfile(null);
-                    return; // No need to fetch videos if user doesn't exist
+                    setLoading(false);
+                    return;
                 }
 
-                // Fetch videos in a separate try-catch so it doesn't wipe profile if index is missing
+                // Fetch videos for grid
                 try {
-                    // Try 1: approved + is_live
-                    let vidsSnap = await getDocs(query(
+                    const qv = query(
                         collection(db, 'videos'),
                         where('userId', '==', id),
                         where('admin_status', '==', 'approved'),
                         orderBy('createdAt', 'desc')
-                    ));
-
-                    if (vidsSnap.docs.length > 0) {
-                        setVideos(vidsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-                    } else {
-                        // Fallback 2: just userId, no filters
-                        try {
-                            const fallback2 = await getDocs(query(
-                                collection(db, 'videos'),
-                                where('userId', '==', id),
-                                orderBy('createdAt', 'desc')
-                            ));
-                            if (fallback2.docs.length > 0) {
-                                setVideos(fallback2.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-                            } else {
-                                // Fallback 3: no orderBy (handles missing index)
-                                const fallback3 = await getDocs(query(
-                                    collection(db, 'videos'),
-                                    where('userId', '==', id)
-                                ));
-                                setVideos(fallback3.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-                            }
-                        } catch {
-                            // Fallback 3 on inner error
-                            const fallback3 = await getDocs(query(
-                                collection(db, 'videos'),
-                                where('userId', '==', id)
-                            ));
-                            setVideos(fallback3.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-                        }
-                    }
-                } catch (vidErr: any) {
-                    console.error('[Profile Page] Error fetching videos:', vidErr.message || vidErr);
-                    setVideos([]);
+                    );
+                    const vidsSnap = await getDocs(qv);
+                    setVideos(vidsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+                } catch (vErr) {
+                    // Fallback to simpler query
+                    const qf = query(collection(db, 'videos'), where('userId', '==', id));
+                    const fallbackSnap = await getDocs(qf);
+                    setVideos(fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
                 }
 
-            } catch (err: any) {
-                console.error('❌ [Profile Page] Error fetching profile:', err.message || err);
-                setProfile(null);
-            } finally {
+                // real-time post count
+                const qp = query(
+                    collection(db, 'videos'),
+                    where('userId', '==', id),
+                    where('is_live', '==', true),
+                    where('admin_status', '==', 'approved')
+                );
+                unsub = onSnapshot(qp, (snap) => setPostCount(snap.size));
+
+                setLoading(false);
+            } catch (err) {
+                console.error('[Profile Page] fetch error:', err);
                 setLoading(false);
             }
         };
+
         fetchProfile();
+        return () => unsub?.();
     }, [id]);
 
     useEffect(() => {
@@ -464,68 +450,11 @@ export default function UserProfilePage() {
                 {/* Name */}
                 <h2 style={{
                     fontFamily: 'Poppins', fontWeight: 900, fontSize: 'clamp(20px, 6vw, 28px)',
-                    color: '#0A0A0A', margin: '0 0 8px',
+                    color: '#0A0A0A', margin: '0 0 16px',
                     lineHeight: 1.1,
                 }}>
                     {profile.name}
                 </h2>
-
-                {/* Category + Role badges */}
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-                    <span style={{
-                        background: `${catConfig.accent}15`,
-                        color: catConfig.accent,
-                        border: `1px solid ${catConfig.accent}`,
-                        borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(12px, 3vw, 16px)',
-                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'Poppins', fontWeight: 700,
-                    }}>
-                        {catConfig.emoji} {catConfig.label}
-                    </span>
-
-                    <span style={{
-                        background: profile.role?.toLowerCase() === 'company' ? '#00C85315' : `${catConfig.accent}15`,
-                        color: profile.role?.toLowerCase() === 'company' ? '#00C853' : catConfig.accent,
-                        border: profile.role?.toLowerCase() === 'company' ? '1px solid #00C853' : `1px solid ${catConfig.accent}`,
-                        borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(12px, 3vw, 16px)',
-                        fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'Poppins', fontWeight: 700,
-                    }}>
-                        {(() => {
-                            const uiR = profile.uiRole;
-                            const roles: Record<string, { provider: string; seeker: string }> = {
-                                jobs: { provider: 'Job Seeker', seeker: 'Company' },
-                                healthcare: { provider: 'Doctor', seeker: 'Patient' },
-                                education: { provider: 'Teacher', seeker: 'Student' },
-                                marriage: { provider: 'Presenting', seeker: 'Looking' },
-                                legal: { provider: 'Lawyer', seeker: 'Client' },
-                                realestate: { provider: 'Agent', seeker: 'Buyer' },
-                                transport: { provider: 'Driver', seeker: 'Passenger' },
-                                travel: { provider: 'Agency', seeker: 'Traveler' },
-                                agriculture: { provider: 'Farmer', seeker: 'Buyer' },
-                                sellbuy: { provider: 'Seller', seeker: 'Buyer' },
-                            };
-                            const catRoles = roles[profile.category as string] || { provider: 'Provider', seeker: 'Seeker' };
-
-                            if (uiR === 'provider') return catRoles.provider;
-                            if (uiR === 'seeker') return catRoles.seeker;
-
-                            // Fallback: use roleKey from Firestore
-                            const roleKey = profile.role || '';
-                            const providerKeys = ['worker', 'groom', 'agent', 'seller', 'teacher', 'doctor', 'freelancer'];
-                            return providerKeys.includes(roleKey) ? catRoles.provider : catRoles.seeker;
-                        })()}
-                    </span>
-
-                    {profile.city && (
-                        <span style={{
-                            background: '#f5f5f5', color: '#666', border: '1px solid #e0e0e0',
-                            borderRadius: 999, padding: 'clamp(4px, 1vw, 6px) clamp(10px, 2.5vw, 14px)',
-                            fontSize: 'clamp(10px, 2.5vw, 12px)', fontFamily: 'DM Sans', fontWeight: 500,
-                            display: 'flex', alignItems: 'center', gap: 4,
-                        }}>
-                            <MapPin size={12} /> {profile.city}
-                        </span>
-                    )}
-                </div>
 
                 {/* Bio */}
                 {profile.bio && (
@@ -544,9 +473,10 @@ export default function UserProfilePage() {
                     gap: 'clamp(20px, 8vw, 48px)', margin: '16px 0 24px',
                 }}>
                     {[
-                        { label: 'Posts', value: videos.filter((v: any) => v.admin_status === 'approved' && v.is_live !== false).length },
-                        { label: 'Followers', value: profile.followers?.length || 0 },
+                        { label: 'Posts', value: postCount },
                         { label: 'Following', value: profile.following?.length || 0 },
+                        { label: 'Followers', value: profile.followers?.length || 0 },
+                        { label: 'Likes', value: profile.totalLikes || 0 },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
                             <div style={{ fontFamily: 'Poppins', fontWeight: 900, fontSize: 'clamp(18px, 5vw, 24px)', color: '#0A0A0A' }}>

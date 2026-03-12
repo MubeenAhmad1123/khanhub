@@ -29,8 +29,17 @@ const jetbrains = JetBrains_Mono({
 });
 
 import { constructMetadata } from '@/lib/seo/metadata';
+import type { Viewport } from 'next';
 
 export const metadata = constructMetadata();
+
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+};
 
 export default function RootLayout({
     children,

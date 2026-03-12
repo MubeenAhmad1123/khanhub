@@ -121,44 +121,9 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Name */}
-                <h1 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 4px' }}>
+                <h1 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 16px' }}>
                     {profile.name || authUser.displayName}
                 </h1>
-
-                {/* Category + Role badges - Clickable to change */}
-                <div
-                    onClick={() => router.push('/auth/onboarding?mode=change')}
-                    style={{
-                        display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap',
-                        cursor: 'pointer'
-                    }}
-                    title="Change Category"
-                >
-                    <span style={{
-                        background: `${accentColor}22`, color: accentColor,
-                        border: `1px solid ${accentColor}`, borderRadius: 999,
-                        padding: '3px 12px', fontSize: 11, fontFamily: 'DM Sans', fontWeight: 700,
-                    }}>
-                        {categoryConfig?.emoji} {categoryConfig?.label}
-                    </span>
-                    <span style={{
-                        background: profile.role?.toLowerCase() === 'company' ? '#00C85315' : `${accentColor}22`,
-                        color: profile.role?.toLowerCase() === 'company' ? '#00C853' : accentColor,
-                        border: profile.role?.toLowerCase() === 'company' ? '1px solid #00C853' : `1px solid ${accentColor}`,
-                        borderRadius: 999, padding: '3px 12px',
-                        fontSize: 11, fontFamily: 'DM Sans', fontWeight: 700,
-                    }}>
-                        {(() => {
-                            const uiR = profile.uiRole;
-                            if (uiR === 'provider') return categoryConfig?.providerLabel;
-                            if (uiR === 'seeker') return categoryConfig?.seekerLabel;
-                            // Fallback: use roleKey from Firestore
-                            const roleKey = profile.role || '';
-                            const providerKeys = ['job_seeker', 'doctor', 'teacher', 'presenting', 'helper', 'lawyer', 'agent', 'freelancer'];
-                            return providerKeys.includes(roleKey) ? categoryConfig?.providerLabel : categoryConfig?.seekerLabel;
-                        })()}
-                    </span>
-                </div>
 
                 {/* Stats row — Following | Followers | Likes */}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 16 }}>
@@ -214,7 +179,13 @@ export default function ProfilePage() {
                 ].map((tab) => (
                     <button
                         key={tab.key}
-                        onClick={() => setActiveTab(tab.key as ProfileTab)}
+                        onClick={() => {
+                            if (tab.key === 'info') {
+                                router.push('/dashboard/profile/edit');
+                            } else {
+                                setActiveTab(tab.key as ProfileTab);
+                            }
+                        }}
                         style={{
                             flex: 1, padding: '12px 0',
                             background: 'none', border: 'none', cursor: 'pointer',

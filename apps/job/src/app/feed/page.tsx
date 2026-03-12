@@ -32,19 +32,8 @@ export default function FeedPage() {
     }
 
     return (
-        <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            background: '#000',           // black sides on desktop
-            height: '100dvh',             // videos start from very top
-            overflow: 'hidden',
-        }}>
-            <div style={{
-                width: '100%',
-                maxWidth: '430px',           // phone-width feed centered on desktop
-                position: 'relative',
-                height: '100%',
-            }}>
+        <div className="feed-wrapper">
+            <div className="feed-inner">
                 <VideoFeed />
             </div>
         </div>

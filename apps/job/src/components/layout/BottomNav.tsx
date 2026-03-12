@@ -1,109 +1,85 @@
-'use client';
+'use client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Home, Compass, Bookmark, User, Plus } from 'lucide-react'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Compass, Plus, Bookmark, UserCircle2 } from 'lucide-react';
-import { useCategory } from '@/context/CategoryContext';
-import { auth } from '@/lib/firebase/firebase-config';
-import { useRouter } from 'next/navigation';
-import { startProgress } from '@/components/layout/RouteProgressBar';
+const navItems = [
+  { href: '/feed',               label: 'Home',    Icon: Home },
+  { href: '/explore',            label: 'Explore', Icon: Compass },
+  { href: '/dashboard/upload-video', label: 'Post', Icon: Plus, isPost: true },
+  { href: '/saved',              label: 'Saved',   Icon: Bookmark },
+  { href: '/dashboard/profile',  label: 'Profile', Icon: User },
+]
 
-export function BottomNav() {
-    const pathname = usePathname();
-    const router = useRouter();
-    const { activeCategory } = useCategory();
+export default function BottomNav() {
+  const pathname = usePathname()
 
-    const navItems = [
-        { icon: Home, label: 'Home', href: '/feed' },
-        { icon: Compass, label: 'Explore', href: '/explore' },
-        { icon: Plus, label: 'Post', href: '/dashboard/upload-video', isSpecial: true },
-        { icon: Bookmark, label: 'Saved', href: '/saved', requiresAuth: true },
-        { icon: UserCircle2, label: 'Profile', href: '/dashboard/profile', requiresAuth: true },
-    ];
+  return (
+    <nav style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+      background: '#FFFFFF',
+      borderTop: '1px solid #F0F0F0',
+      display: 'flex', alignItems: 'flex-start',
+      paddingTop: '8px',
+      zIndex: 500,
+      // GPU acceleration for smoother transitions:
+      WebkitTransform: 'translateZ(0)',
+      transform: 'translateZ(0)',
+      willChange: 'transform',
+    }}>
+      {navItems.map(({ href, label, Icon, isPost }) => {
+        const isActive = pathname === href ||
+          (href === '/feed' && pathname === '/')
 
-    return (
-        <nav
-            className="flex md:hidden items-center"
-            style={{
-                position: 'fixed', bottom: 0, left: 0, right: 0,
-                background: '#FFFFFF',        // ← explicit white
-                borderTop: '1px solid #F0F0F0',
-                height: 'calc(64px + env(safe-area-inset-bottom))',
-                paddingBottom: 'env(safe-area-inset-bottom)',
-                zIndex: 1000,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-around',
-            }}
-        >
-            {navItems.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
+        if (isPost) {
+          return (
+            <Link key={href} href={href} style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', textDecoration: 'none',
+              // Increase tap target for mobile:
+              minHeight: '44px', justifyContent: 'center',
+            }}>
+              <div style={{
+                width: '48px', height: '32px',
+                background: '#FF0069', borderRadius: '14px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(255,0,105,0.4)',
+              }}>
+                <Plus size={22} color="#fff" strokeWidth={2.5} />
+              </div>
+              <span style={{ fontSize: '10px', color: '#FF0069', marginTop: '2px', fontWeight: 600 }}>
+                Post
+              </span>
+            </Link>
+          )
+        }
 
-                const handleClick = (e: React.MouseEvent) => {
-                    if (item.requiresAuth && !auth.currentUser) {
-                        e.preventDefault();
-                        startProgress();
-                        router.push('/auth/register?from=' + item.label.toLowerCase());
-                    } else {
-                        // For standard links that don't trigger native route events reliably in App Router,
-                        // we can start the bar manually on click.
-                        startProgress();
-                    }
-                };
-
-                if (item.isSpecial) {
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={handleClick}
-                            className="flex-1 flex flex-col items-center justify-center -mt-4"
-                        >
-                            <div style={{
-                                background: 'var(--accent)',
-                                borderRadius: '16px',
-                                width: '52px',
-                                height: '36px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: '8px',
-                                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                            }}>
-                                <Plus size={24} color="#fff" strokeWidth={3} />
-                            </div>
-                            <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 700, color: '#0A0A0A' }}>
-                                {item.label}
-                            </span>
-                        </Link>
-                    );
-                }
-
-                return (
-                    <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={handleClick}
-                        style={{
-                            flex: 1, height: '100%',
-                            display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', justifyContent: 'center',
-                            gap: 4,
-                            cursor: 'pointer',
-                            color: isActive ? 'var(--accent)' : '#888888',
-                            transition: 'color 0.2s',
-                        }}
-                    >
-                        <Icon size={22}
-                            strokeWidth={isActive ? 2.5 : 2}
-                        />
-                        <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--accent)' : '#888888' }}>
-                            {item.label}
-                        </span>
-                    </Link>
-                );
-            })}
-        </nav>
-    );
+        return (
+          <Link key={href} href={href} style={{
+            flex: 1, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: '2px',
+            textDecoration: 'none',
+            // LARGE tap target — 44px minimum for iOS HIG:
+            minHeight: '44px', justifyContent: 'center',
+            WebkitTapHighlightColor: 'transparent', // remove iOS tap flash
+          }}>
+            <Icon
+              size={22}
+              color={isActive ? '#FF0069' : '#888'}
+              strokeWidth={isActive ? 2.5 : 1.8}
+            />
+            <span style={{
+              fontSize: '10px',
+              color: isActive ? '#FF0069' : '#888',
+              fontWeight: isActive ? 700 : 400,
+            }}>
+              {label}
+            </span>
+          </Link>
+        )
+      })}
+    </nav>
+  )
 }
+

@@ -20,6 +20,7 @@ export interface CategoryConfig {
     seekerDescription?: string;
     placeholderVideos: string[];
     imageUrl?: string;
+    roles?: Record<string, { label: string }>;
 }
 
 export const CATEGORY_FEED_TABS: Record<string, string[]> = {
@@ -77,7 +78,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Job Seeker',
         providerDescription: 'I am looking to hire talent',
         seekerDescription: 'I am looking for a job',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.jobs
+        placeholderVideos: CATEGORY_PLACEHOLDERS.jobs,
+        roles: {
+            worker: { label: 'Job Seeker' },
+            hiring: { label: 'Employer' }
+        }
     },
     healthcare: {
         label: 'Healthcare',
@@ -88,7 +93,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Patient',
         providerDescription: 'I provide medical services',
         seekerDescription: 'I am seeking medical help',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.healthcare
+        placeholderVideos: CATEGORY_PLACEHOLDERS.healthcare,
+        roles: {
+            doctor: { label: 'Doctor/Clinic' },
+            patient: { label: 'Patient' }
+        }
     },
     education: {
         label: 'Education',
@@ -99,7 +108,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Student/Learner',
         providerDescription: 'I want to teach or share skills',
         seekerDescription: 'I want to learn something new',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.education
+        placeholderVideos: CATEGORY_PLACEHOLDERS.education,
+        roles: {
+            teacher: { label: 'Teacher/Artist' },
+            student: { label: 'Student' }
+        }
     },
     marriage: {
         label: 'Marriage Bureau',
@@ -110,7 +123,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Bride/Female Side',
         providerDescription: 'I am looking for a partner',
         seekerDescription: 'I am looking for a proposal',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.marriage
+        placeholderVideos: CATEGORY_PLACEHOLDERS.marriage,
+        roles: {
+            groom: { label: 'Groom/Male Side' },
+            bride: { label: 'Bride/Female Side' }
+        }
     },
     legal: {
         label: 'Legal',
@@ -121,7 +138,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Client',
         providerDescription: 'I provide legal assistance',
         seekerDescription: 'I need legal advice',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.legal
+        placeholderVideos: CATEGORY_PLACEHOLDERS.legal,
+        roles: {
+            lawyer: { label: 'Lawyer/Notary' },
+            client: { label: 'Client' }
+        }
     },
     realestate: {
         label: 'Real Estate',
@@ -132,7 +153,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Buyer/Tenant',
         providerDescription: 'I am selling or renting property',
         seekerDescription: 'I am looking to buy or rent',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.realestate
+        placeholderVideos: CATEGORY_PLACEHOLDERS.realestate,
+        roles: {
+            agent: { label: 'Agent/Owner' },
+            buyer: { label: 'Buyer/Tenant' }
+        }
     },
     transport: {
         label: 'Transport',
@@ -143,7 +168,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Passenger/Sender',
         providerDescription: 'I provide transport services',
         seekerDescription: 'I need a ride or delivery',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.transport
+        placeholderVideos: CATEGORY_PLACEHOLDERS.transport,
+        roles: {
+            seller: { label: 'Driver/Carrier' },
+            buyer: { label: 'Passenger/Sender' }
+        }
     },
     travel: {
         label: 'Travel & Tour',
@@ -154,7 +183,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Traveler',
         providerDescription: 'I offer travel packages',
         seekerDescription: 'I am planning a trip',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.travel
+        placeholderVideos: CATEGORY_PLACEHOLDERS.travel,
+        roles: {
+            agency: { label: 'Agency/Guide' },
+            traveler: { label: 'Traveler' }
+        }
     },
     agriculture: {
         label: 'Agriculture',
@@ -165,7 +198,11 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Bulk Buyer',
         providerDescription: 'I grow or produce goods',
         seekerDescription: 'I want to buy in bulk',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.agriculture
+        placeholderVideos: CATEGORY_PLACEHOLDERS.agriculture,
+        roles: {
+            farmer: { label: 'Farmer/Producer' },
+            buyer: { label: 'Bulk Buyer' }
+        }
     },
     sellbuy: {
         label: 'Sell & Buy',
@@ -176,6 +213,10 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         seekerLabel: 'Buyer',
         providerDescription: 'I have something to sell',
         seekerDescription: 'I am looking for products',
-        placeholderVideos: CATEGORY_PLACEHOLDERS.sellbuy
+        placeholderVideos: CATEGORY_PLACEHOLDERS.sellbuy,
+        roles: {
+            seller: { label: 'Seller' },
+            buyer: { label: 'Buyer' }
+        }
     }
 };
