@@ -1,129 +1,139 @@
-'use client';
+'use client'
+import { useRouter, usePathname } from 'next/navigation'
+import { Home, Compass, Bookmark, User, X, Video, LogOut } from 'lucide-react'
+import { getAuth, signOut } from 'firebase/auth'
 
-import React from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { 
-  Home, 
-  Search, 
-  Bookmark, 
-  User, 
-  PlusSquare, 
-  LogOut, 
-  X,
-  ChevronRight
-} from 'lucide-react';
-import { getAuth, signOut } from 'firebase/auth';
-import { motion, AnimatePresence } from 'framer-motion';
-
-const MENU_ITEMS = [
-  { label: 'Home', icon: Home, href: '/' },
-  { label: 'Explore', icon: Search, href: '/explore' },
+const menuItems = [
+  { label: 'Home', icon: Home, href: '/feed' },
+  { label: 'Explore', icon: Compass, href: '/explore' },
   { label: 'Saved', icon: Bookmark, href: '/saved' },
-  { label: 'Profile', icon: User, href: '/profile/me' },
-  { label: 'Upload Video', icon: PlusSquare, href: '/upload' },
-];
+  { label: 'Profile', icon: User, href: '/dashboard/profile' },
+  { label: 'Upload Video', icon: Video, href: '/dashboard/upload-video' },
+]
 
-export default function HamburgerDrawer({
-  isOpen,
-  onClose
-}: {
-  isOpen: boolean;
-  onClose: () => void;
+export default function HamburgerDrawer({ 
+  isOpen, 
+  onClose 
+}: { 
+  isOpen: boolean
+  onClose: () => void 
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const handleNav = (href: string) => {
+    router.push(href)
+    onClose()
+  }
 
   const handleSignOut = async () => {
-    const auth = getAuth();
-    try {
-      await signOut(auth);
-      onClose();
-      router.push('/auth/login');
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
-  };
+    await signOut(getAuth())
+    router.push('/auth/login')
+    onClose()
+  }
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 9997,
+          opacity: isOpen ? 1 : 0,
+          pointerEvents: isOpen ? 'all' : 'none',
+          transition: 'opacity 0.3s ease',
+        }}
+      />
+
+      {/* Drawer panel — slides in from right */}
+      <div style={{
+        position: 'fixed',
+        top: 0, right: 0, bottom: 0,
+        width: '280px',
+        background: '#FFFFFF',
+        zIndex: 9999,
+        transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 0.3s ease',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '-8px 0 40px rgba(0,0,0,0.15)',
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', padding: '20px 20px 16px',
+          borderBottom: '1px solid #F0F0F0',
+        }}>
+          <span style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '-0.5px' }}>
+            KHAN HUB
+          </span>
+          <button
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]"
-          />
-
-          {/* Drawer */}
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 h-full w-[280px] bg-white z-[101] shadow-2xl flex flex-col"
+            style={{
+              background: '#F0F0F0', border: 'none',
+              borderRadius: '50%', width: '32px', height: '32px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
           >
-            {/* Header */}
-            <div className="p-6 flex items-center justify-between border-bottom border-slate-100">
-              <span className="text-xl font-black italic tracking-tighter uppercase text-[--accent]">
-                KHAN HUB
-              </span>
-              <button 
-                onClick={onClose}
-                className="p-2 hover:bg-slate-50 rounded-full transition-colors"
-              >
-                <X size={24} className="text-slate-500" />
-              </button>
-            </div>
+            <X size={16} />
+          </button>
+        </div>
 
-            {/* Menu Items */}
-            <div className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
-              {MENU_ITEMS.map((item) => {
-                const isActive = pathname === item.href || (item.href === '/profile/me' && pathname.startsWith('/profile'));
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onClick={onClose}
-                    className={`flex items-center justify-between p-4 rounded-2xl transition-all group ${
-                      isActive 
-                        ? 'bg-[#FFF5F8] text-[#FF0069] border border-[#FFE0EB]' 
-                        : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                      <span className={`font-poppins text-[15px] ${isActive ? 'font-bold' : 'font-medium'}`}>
-                        {item.label}
-                      </span>
-                    </div>
-                    <ChevronRight size={18} className={`${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'} transition-opacity`} />
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Footer / Logout */}
-            <div className="p-6 border-t border-slate-100">
+        {/* Nav Links */}
+        <nav style={{ flex: 1, padding: '12px 0' }}>
+          {menuItems.map(item => {
+            const isActive = pathname === item.href || 
+              (item.href === '/feed' && pathname === '/')
+            return (
               <button
-                onClick={handleSignOut}
-                className="flex items-center gap-4 w-full p-4 rounded-2xl text-red-500 hover:bg-red-50 transition-colors font-poppins font-bold"
+                key={item.href}
+                onClick={() => handleNav(item.href)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  width: '100%', padding: '14px 20px',
+                  background: isActive ? '#FFF0F5' : 'transparent',
+                  border: 'none', cursor: 'pointer',
+                  borderLeft: isActive ? '3px solid #FF0069' : '3px solid transparent',
+                  transition: 'all 0.15s',
+                }}
               >
-                <LogOut size={22} />
-                <span>Sign Out</span>
+                <item.icon
+                  size={20}
+                  color={isActive ? '#FF0069' : '#444'}
+                  strokeWidth={isActive ? 2.5 : 1.8}
+                />
+                <span style={{
+                  fontSize: '15px',
+                  fontWeight: isActive ? 700 : 400,
+                  color: isActive ? '#FF0069' : '#0A0A0A',
+                }}>
+                  {item.label}
+                </span>
               </button>
-              <p className="mt-4 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                Khan Hub v2.0
-              </p>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
+            )
+          })}
+        </nav>
+
+        {/* Sign Out at bottom */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid #F0F0F0' }}>
+          <button
+            onClick={handleSignOut}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              width: '100%', padding: '12px 0',
+              background: 'none', border: 'none', cursor: 'pointer',
+            }}
+          >
+            <LogOut size={18} color="#FF3B30" />
+            <span style={{ color: '#FF3B30', fontSize: '15px', fontWeight: 500 }}>
+              Sign Out
+            </span>
+          </button>
+        </div>
+      </div>
+    </>
+  )
 }
