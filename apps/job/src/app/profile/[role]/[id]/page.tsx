@@ -8,6 +8,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
 import { ArrowLeft, MapPin, ShieldCheck, Lock, Phone, Mail, MessageCircle, Navigation, ExternalLink, X } from 'lucide-react';
+import { createNotification } from '@/lib/createNotification';
 import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
 import { useFeedToast } from '@/components/ui/FeedToast';
 import Image from 'next/image';
@@ -590,6 +591,15 @@ export default function UserProfilePage() {
                                     await updateDoc(currentUserRef, {
                                         following: arrayUnion(id)
                                     });
+
+                                    // Create Notification
+                                    await createNotification(
+                                        id as string,
+                                        'follow',
+                                        'New Follower',
+                                        `${currentUser.displayName || 'Someone'} started following you`,
+                                        currentUser.uid
+                                    );
                                 }
                                 showToast(isFollowing ? `Unfollowed ${profile.name}` : `Following ${profile.name}`);
                             } catch (err) {

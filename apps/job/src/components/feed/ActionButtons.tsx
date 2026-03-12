@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase/firebase-config';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeedToast } from '@/components/ui/FeedToast';
 import { Heart, Bookmark, Send, MoreVertical } from 'lucide-react';
+import { createNotification } from '@/lib/createNotification';
 
 interface ActionButtonsProps {
     videoId: string;
@@ -90,6 +91,16 @@ export function ActionButtons({
             likedVideos: newLiked ? arrayUnion(videoId) : arrayRemove(videoId),
         });
         showToast(newLiked ? '❤️ Liked' : 'Unliked');
+
+        if (newLiked && isRealUser && videoUserId) {
+            await createNotification(
+                videoUserId,
+                'like',
+                'New Like',
+                `${user.displayName || 'Someone'} liked your video`,
+                videoId
+            );
+        }
     };
 
     const handleSave = async () => {

@@ -12,6 +12,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { startProgress } from '@/components/layout/RouteProgressBar';
 
+import { db } from '@/lib/firebase/firebase-config';
+import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import NotificationDropdown from './NotificationDropdown';
+
 export function TopBar() {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
     const router = useRouter();
@@ -31,6 +36,33 @@ export function TopBar() {
             setSearchQuery('');
         }
     };
+
+    // Notification state
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [uid, setUid] = useState<string | null>(null);
+
+    useEffect(() => {
+        const auth = getAuth();
+        const unsub = onAuthStateChanged(auth, user => {
+            setUid(user?.uid || null);
+        });
+        return () => unsub();
+    }, []);
+
+    useEffect(() => {
+        if (!uid) return;
+        const q = query(
+            collection(db, 'notifications'),
+            where('user_id', '==', uid),
+            where('is_read', '==', false),
+            limit(99)
+        );
+        const unsub = onSnapshot(q, snap => {
+            setUnreadCount(snap.size);
+        }, () => { });
+        return () => unsub();
+    }, [uid]);
 
     const [showSwitcher, setShowSwitcher] = useState(false);
 
@@ -158,10 +190,28 @@ export function TopBar() {
                         </button>
                     </div>
 
-                    <button className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors relative">
+                    {/* Notification Bell */}
+                    <button
+                        onClick={() => setNotifOpen(prev => !prev)}
+                        className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors relative"
+                    >
                         <Bell className="w-4.5 h-4.5" />
-                        <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-[--accent] rounded-full border border-white" />
+                        {unreadCount > 0 && (
+                            <span style={{
+                                position: 'absolute', top: '0px', right: '0px',
+                                background: '#FF0000', color: 'white',
+                                borderRadius: '50%', minWidth: '16px', height: '16px',
+                                fontSize: '10px', fontWeight: 700,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                border: '1.5px solid white', lineHeight: 1,
+                            }}>
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        )}
                     </button>
+
+                    <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+
                     <button className="p-1 hover:bg-slate-50 rounded-lg transition-colors ml-1">
                         <Menu className="w-6 h-6 text-slate-700" />
                     </button>

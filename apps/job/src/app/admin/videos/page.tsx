@@ -9,6 +9,7 @@ import { writeActivityLog } from '@/hooks/useActivityLog';
 import VideoModerationCard from '@/components/admin/VideoModerationCard';
 import { Loader2, Video, CheckCircle, Clock, XCircle, Filter, Search } from 'lucide-react';
 import Image from 'next/image';
+import { createNotification } from '@/lib/createNotification';
 
 interface VideoRequest {
     id: string;
@@ -81,14 +82,13 @@ export default function AdminVideosPage() {
             });
 
             // 3. Write notification
-            await addDoc(collection(db, 'notifications'), {
-                user_id: video.userId,
-                type: 'video_approved',
-                title: 'Video Approved',
-                message: 'Your introduction video has been approved! Your profile is now live.',
-                is_read: false,
-                created_at: serverTimestamp()
-            });
+            await createNotification(
+                video.userId,
+                'video_approved',
+                'Video Approved ✅',
+                'Your introduction video has been approved! Your profile is now live.',
+                videoId
+            );
 
             // 4. Write activity log
             await writeActivityLog({
@@ -127,14 +127,13 @@ export default function AdminVideosPage() {
 
 
             // 3. Write notification
-            await addDoc(collection(db, 'notifications'), {
-                user_id: video.userId,
-                type: 'video_rejected',
-                title: 'Video Rejected',
-                message: `Your video was rejected: ${reason}. Please upload a new one.`,
-                is_read: false,
-                created_at: serverTimestamp()
-            });
+            await createNotification(
+                video.userId,
+                'video_rejected',
+                'Video Rejected',
+                `Your video was rejected: ${reason}. Please upload a new one.`,
+                videoId
+            );
 
             // 4. Write activity log
             await writeActivityLog({
