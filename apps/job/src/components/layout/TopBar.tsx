@@ -114,8 +114,7 @@ export function TopBar() {
                                             key={key}
                                             onClick={() => {
                                                 setShowSwitcher(false);
-                                                startProgress();
-                                                router.push(`/auth/onboarding?mode=change&cat=${key}`);
+                                                setCategory(key as CategoryKey);
                                             }}
                                             className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all ${activeCategory === key
                                                 ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'

@@ -63,16 +63,26 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
                     const data = userDoc.data();
                     if (data.category && Object.keys(CATEGORY_CONFIG).includes(data.category)) {
                         setActiveCategory(data.category as CategoryKey);
+                        // Store the DB profile category as the permanent one
+                        localStorage.setItem('jobreel_permanent_category', data.category);
                     }
-                    if (data.role) setActiveRole(data.role as 'provider' | 'seeker');
+                    if (data.role) {
+                        setActiveRole(data.role as 'provider' | 'seeker');
+                        localStorage.setItem('jobreel_permanent_role', data.role);
+                    }
                 }
             } else {
-                // Return to localStorage prefs if logged out
-                const saved = localStorage.getItem('jobreel_active_category');
+                // Return to localStorage permanent prefs if logged out
+                const saved = localStorage.getItem('jobreel_permanent_category') || localStorage.getItem('jobreel_active_category');
                 if (saved && Object.keys(CATEGORY_CONFIG).includes(saved)) {
                     setActiveCategory(saved as CategoryKey);
                 } else {
                     setActiveCategory('jobs');
+                }
+
+                const savedRole = localStorage.getItem('jobreel_permanent_role') || localStorage.getItem('jobreel_active_role');
+                if (savedRole === 'provider' || savedRole === 'seeker') {
+                    setActiveRole(savedRole);
                 }
             }
         });
@@ -80,8 +90,9 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        localStorage.setItem('jobreel_active_category', activeCategory);
-        localStorage.setItem('jobreel_active_role', activeRole);
+        // We NO LONGER continuously overwrite localStorage with activeCategory. 
+        // This makes activeCategory act as a temporary "lens" or "view" of the DB. 
+        // A page refresh will re-trigger the Auth query, snapping them back to their actual DB profile.
 
         // Update CSS Variable
         const config = CATEGORY_CONFIG[activeCategory] || CATEGORY_CONFIG['jobs'];
