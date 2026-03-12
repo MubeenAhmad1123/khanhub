@@ -376,8 +376,8 @@ export default function CategoryRoleFlow() {
                 </div>
 
                 <button
-                    onClick={() => selectedRole && setStep(3)}
-                    disabled={!selectedRole}
+                    onClick={handleSave}
+                    disabled={!selectedRole || saving}
                     style={{
                         width: '100%', marginTop: 24, padding: '15px',
                         background: selectedRole ? accent : '#E5E5E5',
@@ -388,101 +388,6 @@ export default function CategoryRoleFlow() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                         transition: 'all 0.2s',
                         boxShadow: selectedRole ? `0 6px 20px ${accent}44` : 'none',
-                    }}
-                >
-                    Continue <ArrowRight size={18} />
-                </button>
-            </div>
-        );
-    };
-
-    // ── STEP 3: Quick Info Fields ──────────────────────────────────────
-    const renderStep3 = () => {
-        const roles = CATEGORY_ROLES[selectedCategory!];
-        if (!roles) return null;
-        const roleKey = selectedRole === 'provider' ? roles.providerKey : roles.seekerKey;
-        const fields = ROLE_FIELDS[selectedCategory!]?.[roleKey] || [];
-
-        return (
-            <div>
-                <button
-                    onClick={() => setStep(2)}
-                    style={{ background: 'none', border: 'none', color: '#888', fontFamily: 'DM Sans', fontSize: 13, cursor: 'pointer', marginBottom: 16, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
-                >
-                    <ArrowLeft size={16} /> Back
-                </button>
-                <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 22, color: '#0A0A0A', marginBottom: 4 }}>
-                    A bit about you
-                </h2>
-                <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#888', marginBottom: 24 }}>
-                    This helps people connect with you
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {fields.map((f) => {
-                        const Icon = f.icon;
-                        return (
-                            <div key={f.key}>
-                                {/* Bold visible label */}
-                                <label style={{
-                                    display: 'block',
-                                    fontFamily: 'DM Sans',
-                                    fontWeight: 700,
-                                    fontSize: 13,
-                                    color: '#0A0A0A',
-                                    marginBottom: 8,
-                                }}>
-                                    {f.label}
-                                </label>
-                                {/* Input with black border, white bg, black text */}
-                                <div style={{ position: 'relative' }}>
-                                    <div style={{
-                                        position: 'absolute', left: 14, top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        color: '#999', pointerEvents: 'none',
-                                    }}>
-                                        <Icon size={16} />
-                                    </div>
-                                    <input
-                                        type={f.type || 'text'}
-                                        placeholder={f.placeholder}
-                                        value={formFields[f.key] || ''}
-                                        onChange={(e) => handleFieldChange(f.key, e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '13px 14px 13px 40px',
-                                            background: '#fff',
-                                            border: '2px solid #0A0A0A',
-                                            borderRadius: 12,
-                                            fontFamily: 'DM Sans',
-                                            fontWeight: 500,
-                                            fontSize: 15,
-                                            color: '#0A0A0A',
-                                            outline: 'none',
-                                            boxSizing: 'border-box',
-                                            transition: 'border-color 0.15s',
-                                        }}
-                                        onFocus={(e) => { e.target.style.borderColor = accent; e.target.style.boxShadow = `0 0 0 3px ${accent}22`; }}
-                                        onBlur={(e) => { e.target.style.borderColor = '#0A0A0A'; e.target.style.boxShadow = 'none'; }}
-                                    />
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    style={{
-                        width: '100%', marginTop: 28,
-                        padding: '15px',
-                        background: accent,
-                        color: '#fff', border: 'none', borderRadius: 14,
-                        fontFamily: 'Poppins', fontWeight: 800,
-                        fontSize: 15, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                        boxShadow: `0 6px 20px ${accent}44`,
                         opacity: saving ? 0.7 : 1,
                     }}
                 >
@@ -495,7 +400,6 @@ export default function CategoryRoleFlow() {
                         <>Save & Go to Feed <Check size={18} /></>
                     )}
                 </button>
-
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
@@ -505,7 +409,7 @@ export default function CategoryRoleFlow() {
         <div style={{ width: '100%', maxWidth: 440, margin: '0 auto' }}>
             {/* Progress dots */}
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 28 }}>
-                {[1, 2, 3].map((s) => (
+                {[1, 2].map((s) => (
                     <div key={s} style={{
                         width: step === s ? 28 : 8,
                         height: 8, borderRadius: 99,
@@ -517,7 +421,6 @@ export default function CategoryRoleFlow() {
 
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
         </div>
     );
 }
