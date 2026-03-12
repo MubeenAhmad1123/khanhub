@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useCategory } from '@/context/CategoryContext';
 import { CategoryKey } from '@/lib/categories';
 
@@ -100,9 +101,11 @@ export default function CategorySection({ onSelect }: CategorySectionProps) {
                                 boxShadow: `0 0 0 3px ${cat.accent}22`,
                                 flexShrink: 0,
                             }}>
-                                <img
+                                <Image
                                     src={cat.image}
                                     alt={cat.label}
+                                    width={100}
+                                    height={100}
                                     style={{
                                         width: '100%',
                                         height: '100%',

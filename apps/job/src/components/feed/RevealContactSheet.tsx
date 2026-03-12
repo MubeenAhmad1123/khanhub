@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase/firebase-config'
 import { useAuth } from '@/hooks/useAuth'
@@ -309,9 +310,12 @@ export function RevealContactSheet({
                             {screenshotPreview ? (
                                 /* Preview */
                                 <div style={{ position: 'relative' }}>
-                                    <img
+                                    <Image
                                         src={screenshotPreview}
                                         alt="Payment screenshot"
+                                        width={400}
+                                        height={200}
+                                        unoptimized
                                         style={{
                                             width: '100%', maxHeight: 200,
                                             objectFit: 'contain',

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { MapPin, ShieldCheck, Zap } from 'lucide-react';
+import Image from 'next/image';
 
 interface VideoOverlayProps {
     data: {
@@ -22,12 +23,16 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             {(data.userPhoto || data.userName) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     {data.userPhoto && (
-                        <img
+                        <Image
                             src={data.userPhoto}
+                            alt={data.userName || 'User profile'}
+                            width={32}
+                            height={32}
                             style={{
-                                width: 32, height: 32, borderRadius: '50%',
+                                borderRadius: '50%',
                                 border: '1.5px solid rgba(255,255,255,0.8)',
                                 objectFit: 'cover', flexShrink: 0,
+                                width: 32, height: 32
                             }}
                         />
                     )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Play } from 'lucide-react';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -96,10 +97,12 @@ export default function SavedGrid({ savedIds, onVideoTap }: SavedGridProps) {
                     className="relative aspect-[9/16] bg-[#F0F0F0] overflow-hidden group cursor-pointer"
                     onClick={() => onVideoTap?.(index)}
                 >
-                    <img
+                    <Image
                         src={getThumbnail(vid)}
-                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all"
-                        onError={e => (e.currentTarget.style.display = 'none')}
+                        alt={vid.title || 'Saved video thumbnail'}
+                        fill
+                        sizes="(max-width: 600px) 33vw, 200px"
+                        className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all"
                     />
                     <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white z-10">
                         <Play size={10} fill="white" />

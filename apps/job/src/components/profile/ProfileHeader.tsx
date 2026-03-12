@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { LogOut, Edit2, Check, X, Camera } from 'lucide-react';
 import { auth, db } from '@/lib/firebase/firebase-config';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -44,9 +45,11 @@ export default function ProfileHeader({ user, accentColor }: ProfileHeaderProps)
                 {/* Avatar */}
                 <div className="relative group">
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#1A1A1A] p-1">
-                        <img
+                        <Image
                             src={user?.photoURL || '/default-avatar.svg'}
-                            alt={user?.name}
+                            alt={user?.name || 'User avatar'}
+                            width={96}
+                            height={96}
                             className="w-full h-full rounded-full object-cover"
                         />
                     </div>

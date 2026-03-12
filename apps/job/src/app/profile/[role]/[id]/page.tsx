@@ -937,9 +937,12 @@ export default function UserProfilePage() {
                             display: 'flex', alignItems: 'center', gap: 10,
                             marginBottom: 20,
                         }}>
-                            <img
+                            <Image
                                 src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000`}
-                                style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }}
+                                alt={profile.name || 'User avatar'}
+                                width={44}
+                                height={44}
+                                style={{ borderRadius: '50%', objectFit: 'cover' }}
                             />
                             <div>
                                 <div style={{ fontFamily: 'Poppins', fontWeight: 700, fontSize: 15, color: '#0A0A0A' }}>
@@ -1103,9 +1106,12 @@ export default function UserProfilePage() {
                     >
                         <X size={32} />
                     </button>
-                    <img
+                    <Image
                         src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000&size=400`}
-                        style={{ maxWidth: '100%', maxHeight: '80dvh', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                        alt={profile.name || 'User profile picture'}
+                        width={400}
+                        height={400}
+                        style={{ maxWidth: '100%', maxHeight: '80dvh', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', width: 'auto', height: 'auto' }}
                         onClick={(e) => e.stopPropagation()}
                     />
                 </div>

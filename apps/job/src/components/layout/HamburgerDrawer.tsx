@@ -87,7 +87,7 @@ export default function HamburgerDrawer({
               cursor: 'pointer',
             }}
           >
-            <X size={16} color="#0A0A0A" />   // ← explicit icon color
+            <X size={16} color="#0A0A0A" />
           </button>
         </div>
 

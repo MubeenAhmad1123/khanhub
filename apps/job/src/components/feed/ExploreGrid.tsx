@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -150,17 +151,14 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
                         background: '#111',
                     }}
                 >
-                    <img
+                    <Image
                         src={getThumbnail(video)}
-                        alt=""
-                        loading="lazy"
+                        alt={video.title || 'Video thumbnail'}
+                        fill
+                        sizes="(max-width: 600px) 33vw, 200px"
                         style={{
-                            width: '100%', height: '100%',
                             objectFit: 'cover',
                             display: 'block',
-                        }}
-                        onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://via.placeholder.com/400x600/ffffff/000000?text=Video`;
                         }}
                     />
 

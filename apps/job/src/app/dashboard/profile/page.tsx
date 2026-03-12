@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, onSnapshot, query, where, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
@@ -104,11 +105,13 @@ export default function ProfilePage() {
 
                 {/* Avatar */}
                 <div style={{ position: 'relative', width: 88, height: 88, margin: '0 auto 12px' }}>
-                    <img
+                    <Image
                         src={user.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.uid}
-                        alt={profile.name}
+                        alt={profile.name || 'User avatar'}
+                        width={88}
+                        height={88}
                         style={{
-                            width: 88, height: 88, borderRadius: '50%',
+                            borderRadius: '50%',
                             border: `3px solid ${accentColor}`,
                             objectFit: 'cover',
                         }}

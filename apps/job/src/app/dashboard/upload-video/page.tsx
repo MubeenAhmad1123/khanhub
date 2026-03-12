@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
@@ -927,7 +928,14 @@ export default function UploadVideoPage() {
                                         background: '#F8F8F8', cursor: 'pointer', flexShrink: 0,
                                     }}
                                 >
-                                    <img src={frame} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <Image
+                                        src={frame}
+                                        alt={`Video frame ${i}`}
+                                        width={56}
+                                        height={80}
+                                        unoptimized
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
                                 </div>
                             ))}
 
@@ -951,8 +959,14 @@ export default function UploadVideoPage() {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F8F8F8', padding: 8, borderRadius: 12, border: '1px solid #E5E5E5' }}>
-                            <img src={URL.createObjectURL(thumbnailFile)}
-                                style={{ width: 56, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                            <Image
+                                src={URL.createObjectURL(thumbnailFile)}
+                                alt="Custom thumbnail"
+                                width={56}
+                                height={80}
+                                unoptimized
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
                             <button onClick={() => setThumbnailFile(null)}
                                 style={{ color: '#FF0069', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '8px 16px' }}>
                                 Remove Custom Cover

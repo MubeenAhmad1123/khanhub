@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Play, Video, Clock } from 'lucide-react';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -119,13 +120,12 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
                         onClick={() => openVideoInFeed(index, vid.id)}
                     >
                         {thumb ? (
-                            <img
+                            <Image
                                 src={thumb}
-                                alt={vid.overlayData?.title || 'Video'}
-                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-                                onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                }}
+                                alt={vid.overlayData?.title || 'Video thumbnail'}
+                                fill
+                                sizes="(max-width: 600px) 33vw, 200px"
+                                className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
                             />
                         ) : (
                             /* Fallback when no thumbnail available yet */

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { collection, query, orderBy, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase/firebase-config'
 
@@ -163,9 +164,12 @@ export default function AdminPaymentsPage() {
 
                                 {/* Requester info */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 200 }}>
-                                    <img
+                                    <Image
                                         src={payment.requestedByPhoto || `https://ui-avatars.com/api/?name=${payment.requestedByName}&background=eee`}
-                                        style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                                        alt={payment.requestedByName || 'User avatar'}
+                                        width={44}
+                                        height={44}
+                                        style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                                     />
                                     <div>
                                         <div style={{ fontWeight: 700, fontSize: 14, color: '#0A0A0A' }}>
@@ -228,10 +232,12 @@ export default function AdminPaymentsPage() {
                                 {payment.screenshotUrl && (
                                     <div>
                                         <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>SCREENSHOT</div>
-                                        <img
+                                        <Image
                                             src={payment.screenshotUrl}
                                             alt="Payment screenshot"
                                             onClick={() => setSelectedScreenshot(payment.screenshotUrl!)}
+                                            width={120}
+                                            height={64}
                                             style={{
                                                 height: 64, width: 'auto', borderRadius: 6,
                                                 border: '1px solid #E5E5E5',
@@ -294,9 +300,12 @@ export default function AdminPaymentsPage() {
                         justifyContent: 'center', cursor: 'zoom-out', padding: 20,
                     }}
                 >
-                    <img
+                    <Image
                         src={selectedScreenshot}
-                        style={{ maxWidth: '100%', maxHeight: '90dvh', borderRadius: 12 }}
+                        alt="Full size payment screenshot"
+                        width={800}
+                        height={1200}
+                        style={{ maxWidth: '100%', maxHeight: '90dvh', borderRadius: 12, width: 'auto', height: 'auto' }}
                     />
                 </div>
             )}

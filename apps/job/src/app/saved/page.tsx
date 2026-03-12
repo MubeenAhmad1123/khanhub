@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { db } from '@/lib/firebase/firebase-config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { TopBar } from '@/components/layout/TopBar';
@@ -160,10 +161,12 @@ export default function SavedVideosPage() {
                                 className="relative aspect-[9/16] bg-slate-100 rounded-lg overflow-hidden cursor-pointer group"
                                 onClick={() => openFeedAtVideo(item.id)}
                             >
-                                <img
+                                <Image
                                     src={getCloudinaryThumbnail(item.cloudinaryUrl)}
-                                    alt={item.title}
-                                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                    alt={item.title || 'Video thumbnail'}
+                                    fill
+                                    sizes="(max-width: 600px) 33vw, 200px"
+                                    className="object-cover transition-transform group-hover:scale-105"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 

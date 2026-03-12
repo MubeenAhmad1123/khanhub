@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
@@ -266,8 +267,13 @@ export default function CategoryRoleFlow() {
                             boxShadow: `0 0 0 3px ${cat.accent}22`,
                             flexShrink: 0,
                         }}>
-                            <img src={cat.image} alt={cat.label}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <Image
+                                src={cat.image}
+                                alt={cat.label}
+                                width={72}
+                                height={72}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
                         </div>
                         <span style={{
                             fontFamily: 'DM Sans', fontWeight: 700,

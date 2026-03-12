@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
     doc, updateDoc, increment, onSnapshot, arrayUnion, arrayRemove,
@@ -180,9 +181,11 @@ export function ActionButtons({
                         border: '2px solid #fff',
                         filter: ICON_SHADOW,
                     }}>
-                        <img
+                        <Image
                             src={videoUserPhoto || `https://ui-avatars.com/api/?name=U&background=333&color=fff`}
-                            alt="profile"
+                            alt="User profile"
+                            width={48}
+                            height={48}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                     </div>
@@ -387,7 +390,13 @@ export function ActionButtons({
                                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer' }}
                                 >
                                     <div style={{ width: 50, height: 50, borderRadius: 12, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <img src={platform.icon} alt={platform.name} style={{ width: '60%', height: '60%', objectFit: 'contain' }} />
+                                        <Image
+                                            src={platform.icon}
+                                            alt={platform.name}
+                                            width={30}
+                                            height={30}
+                                            style={{ width: '60%', height: '60%', objectFit: 'contain' }}
+                                        />
                                     </div>
                                     <span style={{ fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600, color: '#666' }}>{platform.name}</span>
                                 </div>
