@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Search, Bell, ChevronDown, Menu } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Search, Bell, ChevronDown, Menu, X } from 'lucide-react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
@@ -27,7 +27,7 @@ export function TopBar() {
     // Search state
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const searchInputRef = React.useRef<HTMLInputElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const handleSearchToggle = () => {
         setSearchOpen(prev => !prev);
@@ -183,7 +183,12 @@ export function TopBar() {
 
                         <button
                             onClick={handleSearchToggle}
-                            className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[--accent] transition-colors"
+                            style={{
+                                background: 'none', border: 'none',
+                                cursor: 'pointer', padding: '4px',
+                                display: 'flex', alignItems: 'center',
+                                color: '#0A0A0A',
+                            }}
                         >
                             {searchOpen
                                 ? <X size={20} />
@@ -228,22 +233,4 @@ export function TopBar() {
     );
 }
 
-// Helper X icon for search close (if not imported)
-function X({ size }: { size: number }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width={size}
-            height={size}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
-    );
-}
 
