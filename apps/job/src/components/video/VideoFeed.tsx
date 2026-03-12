@@ -302,13 +302,49 @@ export function VideoFeed() {
         });
 
         if (!targetVideoId || displayVideos.length === 0) return;
+
         const idx = displayVideos.findIndex(v => v.id === targetVideoId);
-        if (idx !== -1 && idx !== activeIndex) {
-            setActiveIndex(idx);
-            // Scroll to that video:
-            setTimeout(() => {
-                videoRefs.current[idx]?.scrollIntoView({ behavior: 'instant' });
-            }, 100);
+
+        if (idx !== -1) {
+            // Video found in list — scroll to it
+            if (idx !== activeIndex) {
+                setActiveIndex(idx);
+                setTimeout(() => {
+                    videoRefs.current[idx]?.scrollIntoView({ behavior: 'instant' });
+                }, 100);
+            }
+        } else {
+            // Video NOT in list (e.g. has no category field, was excluded by Firestore query)
+            // Fetch it directly by document ID and prepend it to the feed
+            const fetchAndPrepend = async () => {
+                try {
+                    const docSnap = await getDoc(doc(db, 'videos', targetVideoId));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data() as any;
+                        const missingVideo = {
+                            id: docSnap.id,
+                            isPlaceholder: false,
+                            cloudinaryUrl: data.cloudinaryUrl,
+                            thumbnailUrl: data.thumbnailUrl || data.userPhoto || '',
+                            ...data,
+                        };
+                        // Prepend the missing video so it becomes index 0
+                        setDisplayVideos(prev => {
+                            // Avoid duplicates in case of race condition
+                            if (prev.some(v => v.id === targetVideoId)) return prev;
+                            return [missingVideo, ...prev];
+                        });
+                        // Scroll to index 0 after prepend
+                        setTimeout(() => {
+                            setActiveIndex(0);
+                            videoRefs.current[0]?.scrollIntoView({ behavior: 'instant' });
+                        }, 150);
+                    }
+                } catch (err) {
+                    console.warn('[DEEPLINK] Failed to fetch missing video:', err);
+                }
+            };
+            fetchAndPrepend();
         }
     }, [targetVideoId, displayVideos]);
 
