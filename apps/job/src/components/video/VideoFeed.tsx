@@ -29,6 +29,8 @@ export function VideoFeed() {
     const targetVideoId = searchParams.get('v');
     const targetCategoryId = searchParams.get('c');
 
+    console.log('[DEEPLINK] URL params on mount →', { targetVideoId, targetCategoryId });
+
     const [activeIndex, setActiveIndex] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
     const [showGuestWall, setShowGuestWall] = useState(false);
@@ -63,6 +65,12 @@ export function VideoFeed() {
     // Fix 1: Force first video active on mount (Guaranteed Playback Start)
     useEffect(() => {
         if (displayVideos.length === 0) return;
+
+        console.log('[RESET GUARD] triggered →', {
+            currentTargetId: searchParams.get('v'),
+            displayVideosLength: displayVideos.length,
+            willReset: !searchParams.get('v')
+        });
         
         // Let the feed handle deep links gracefully instead of snapping back to 0
         const currentTargetId = searchParams.get('v');
@@ -104,6 +112,13 @@ export function VideoFeed() {
                 ? firestoreProfile.category
                 : activeCategory;
 
+        console.log('[QUERY] queryCategory resolved to →', queryCategory,
+            '| reason:',
+            (targetCategoryId && targetVideoId) ? 'URL param (deep link)'
+            : (activeTab === 0 && firestoreProfile?.category) ? 'firestoreProfile.category'
+            : 'activeCategory'
+        );
+
         const q = query(
             collection(db, 'videos'),
             where('is_live', '==', true),
@@ -137,6 +152,13 @@ export function VideoFeed() {
                     thumbnailUrl: d.thumbnailUrl || d.userPhoto || '',
                     ...d
                 }));
+
+            console.log('[FIRESTORE] Videos fetched →', videos.length, 'videos');
+            console.log('[FIRESTORE] Video IDs →', videos.map(v => v.id));
+            console.log('[FIRESTORE] Does list contain targetVideoId?',
+                targetVideoId ? videos.some(v => v.id === targetVideoId) : 'no targetVideoId'
+            );
+
             setFirestoreVideos(videos);
         }, (error) => {
             console.warn('[VideoFeed Videos] Snapshot error:', error.message);
@@ -154,6 +176,18 @@ export function VideoFeed() {
         }
         const unwatched = baseVideos.filter(v => !watchedIds.includes(v.id));
         const watched = baseVideos.filter(v => watchedIds.includes(v.id));
+
+        console.log('[DISPLAY] displayVideos being set →',
+            unwatched.length > 0 ? unwatched.length + ' unwatched'
+            : watched.length > 0 ? watched.length + ' watched (reversed)'
+            : baseVideos.length + ' base (fallback)'
+        );
+        console.log('[DISPLAY] Does displayVideos contain targetVideoId?',
+            targetVideoId
+                ? (unwatched.length > 0 ? unwatched : watched.length > 0 ? [...watched].reverse() : baseVideos).some(v => v.id === targetVideoId)
+                : 'no targetVideoId'
+        );
+
         setDisplayVideos(unwatched.length > 0 ? unwatched : (watched.length > 0 ? [...watched].reverse() : baseVideos));
     }, [firestoreVideos, watchedIds, user]);
 
@@ -260,6 +294,13 @@ export function VideoFeed() {
 
     // 2. Sync Video Index
     useEffect(() => {
+        console.log('[SCROLL] Sync Video Index triggered →', {
+            targetVideoId,
+            displayVideosCount: displayVideos.length,
+            foundAtIndex: displayVideos.findIndex(v => v.id === targetVideoId),
+            currentActiveIndex: activeIndex
+        });
+
         if (!targetVideoId || displayVideos.length === 0) return;
         const idx = displayVideos.findIndex(v => v.id === targetVideoId);
         if (idx !== -1 && idx !== activeIndex) {
