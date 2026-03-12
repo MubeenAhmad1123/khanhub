@@ -45,60 +45,59 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         // User asked to disable manual muting/unmuting
     }, []);
 
-    // Main control for isActive
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !isActive) return;
-
-        // Force unmuted by default
-        video.muted = false;
-        video.play()
-            .then(() => {
-                setIsMuted(false);
-            })
-            .catch(() => {
-                // Autoplay policy blocked unmuted — play muted silently (no prompt)
-                video.muted = true;
-                video.play()
-                    .then(() => setIsMuted(true))
-                    .catch(() => { }); // Extreme case: play failed entirely
-            });
-        setIsPaused(false);
-    }, [isActive]);
-
-    // Handle isAdjacent/Inactive
+    // Fix 4: ReelPlayer: Play Video When isActive Becomes True
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
-        if (!isActive) {
+
+        if (isActive) {
+            // Reset to start
+            video.currentTime = 0;
+
+            // Must be muted first for autoplay policy
+            video.muted = true;
+
+            const playPromise = video.play();
+
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        // Play succeeded — unmute
+                        setIsBuffering(false);
+                        setTimeout(() => {
+                            if (videoRef.current) {
+                                videoRef.current.muted = false;
+                                setIsMuted(false);
+                            }
+                        }, 100); // tiny delay before unmuting
+                    })
+                    .catch((err) => {
+                        console.log('Autoplay failed:', err.message);
+                        // Stay muted
+                        setIsMuted(true);
+                    });
+            }
+            setIsPaused(false);
+        } else {
             video.pause();
-            if (!isAdjacent) video.currentTime = 0;
+            if (!isAdjacent) {
+                video.currentTime = 0;
+                setIsBuffering(true);
+            }
             if (hlsRef.current) hlsRef.current.stopLoad();
         }
-    }, [isActive, isAdjacent]);
+    }, [isActive]); // ← ONLY depend on isActive, not other state
 
-    // Loading feedback
-    useEffect(() => {
-        if (!isActive) {
-            setLoadingTooLong(false);
-            return;
-        }
-        const timer = setTimeout(() => {
-            if (isBuffering) setLoadingTooLong(true);
-        }, 8000);
-        return () => clearTimeout(timer);
-    }, [isActive, isBuffering]);
-
-    // Player Initialization & Fallback Chain
+    // Ensure the video src is actually set
     useEffect(() => {
         const video = videoRef.current;
-        if (!video || (!isActive && !isAdjacent)) return;
+        if (!video || !cloudinaryUrl || (!isActive && !isAdjacent)) return;
 
-        const hlsUrl = getHlsUrl(cloudinaryUrl);
-        const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
-        let fallbackAttempts = 0;
+        // If video has no src yet — set it:
+        if (!video.src || video.src === window.location.href) {
+            const hlsUrl = getHlsUrl(cloudinaryUrl);
+            const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
 
-        const initHls = () => {
             if (Hls.isSupported() && hlsUrl.includes('.m3u8')) {
                 const hls = new Hls({
                     startLevel: 0,
@@ -133,10 +132,31 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
                 video.load();
                 if (isActive) video.play().catch(() => { });
             }
-        };
+        }
+    }, [cloudinaryUrl, isActive, isAdjacent]);
 
-        const stallTimeout = setTimeout(() => {
-            if (isActive && video.readyState < 3) {
+    // Loading feedback
+    useEffect(() => {
+        if (!isActive) {
+            setLoadingTooLong(false);
+            return;
+        }
+        const timer = setTimeout(() => {
+            if (isBuffering) setLoadingTooLong(true);
+        }, 8000);
+        return () => clearTimeout(timer);
+    }, [isActive, isBuffering]);
+
+    // Status monitoring for stall
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !isActive) return;
+
+        let fallbackAttempts = 0;
+        const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
+
+        const stallTimeout = setInterval(() => {
+            if (video.readyState < 3) {
                 fallbackAttempts++;
                 console.log(`Video stalled — fallback level ${fallbackAttempts}`);
                 if (hlsRef.current) {
@@ -149,16 +169,8 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
             }
         }, 6000);
 
-        initHls();
-
-        return () => {
-            clearTimeout(stallTimeout);
-            if (hlsRef.current) {
-                hlsRef.current.destroy();
-                hlsRef.current = null;
-            }
-        };
-    }, [cloudinaryUrl, isActive, isAdjacent]);
+        return () => clearInterval(stallTimeout);
+    }, [isActive, cloudinaryUrl]);
 
     return (
         <div

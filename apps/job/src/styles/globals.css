@@ -118,6 +118,8 @@
   /* Snap Scroll Styles */
   .feed-container {
     height: 100dvh;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
     overflow-y: scroll;
     scroll-snap-type: y mandatory;
     scrollbar-width: none;
@@ -134,6 +136,8 @@
 
   .reel-item {
     height: 100dvh;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
     scroll-snap-align: start;
     scroll-snap-stop: always;
     position: relative;

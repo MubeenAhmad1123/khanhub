@@ -57,6 +57,16 @@ export function VideoFeed() {
         videoRefs.current = [...videoRefs.current, ...new Array(displayVideos.length - videoRefs.current.length).fill(null)];
     }
 
+    // Fix 1: Force first video active on mount (Guaranteed Playback Start)
+    useEffect(() => {
+        if (displayVideos.length === 0) return;
+        // Give DOM time to render, then ensure index 0 is active
+        const timer = setTimeout(() => {
+            setActiveIndex(0);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [displayVideos.length]);
+
     // ── Load User Profile & Watched Videos ────────────────────────
     useEffect(() => {
         if (!user) {
@@ -145,7 +155,7 @@ export function VideoFeed() {
             const observer = new IntersectionObserver(
                 (entries) => {
                     entries.forEach(entry => {
-                        if (entry.isIntersecting && entry.intersectionRatio >= (isMobile ? 0.6 : 0.5)) {
+                        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
                             setActiveIndex(index);
                             // Update URL
                             const video = displayVideos[index];
@@ -166,7 +176,7 @@ export function VideoFeed() {
                     });
                 },
                 {
-                    threshold: [0.5, 0.6, 0.8],
+                    threshold: 0.5,
                     root: containerRef.current,
                     rootMargin: '0px',
                 }
@@ -177,6 +187,27 @@ export function VideoFeed() {
 
         return () => observers.forEach(o => o.disconnect());
     }, [displayVideos.length, user]);
+
+    // Method 2: Scroll event fallback (DevTools emulation backup)
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container || displayVideos.length === 0) return;
+
+        const handleScroll = () => {
+            const containerHeight = container.clientHeight;
+            if (containerHeight === 0) return;
+
+            const scrollTop = container.scrollTop;
+            const newIndex = Math.round(scrollTop / containerHeight);
+
+            if (newIndex !== activeIndex && newIndex >= 0 && newIndex < displayVideos.length) {
+                setActiveIndex(newIndex);
+            }
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [displayVideos.length, activeIndex]);
 
     // ── Keyboard Navigation ───────────────────────────────────────
     useEffect(() => {
@@ -253,15 +284,18 @@ export function VideoFeed() {
 
                 <div
                     ref={containerRef}
-                    className="no-scrollbar"
+                    className="feed-container no-scrollbar"
                     style={{
                         height: '100dvh',
+                        minHeight: '-webkit-fill-available', // iOS Safari fix
                         overflowY: 'scroll',
                         scrollSnapType: 'y mandatory',
                         scrollBehavior: 'smooth',
                         WebkitOverflowScrolling: 'touch',
                         scrollbarWidth: 'none',
                         msOverflowStyle: 'none',
+                        position: 'relative',
+                        background: '#000',
                     }}
                 >
                     {displayVideos.map((video, index) => {
@@ -274,10 +308,12 @@ export function VideoFeed() {
                                 ref={el => { videoRefs.current[index] = el; }}
                                 style={{
                                     height: '100dvh',
+                                    minHeight: '100vh',         // fallback
                                     scrollSnapAlign: 'start',
                                     scrollSnapStop: 'always',
                                     position: 'relative',
                                     overflow: 'hidden',
+                                    background: '#000',
                                     flexShrink: 0,
                                 }}
                             >

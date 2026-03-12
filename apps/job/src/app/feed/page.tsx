@@ -29,12 +29,16 @@ export default function FeedPage() {
             display: 'flex',
             justifyContent: 'center',
             background: '#000',           // black sides on desktop
-            minHeight: '100dvh',
+            height: '100dvh',
+            minHeight: '100vh',           // fallback
+            maxHeight: '100dvh',
+            overflow: 'hidden',
         }}>
             <div style={{
                 width: '100%',
                 maxWidth: '430px',           // phone-width feed centered on desktop
                 position: 'relative',
+                height: '100%',
             }}>
                 <VideoFeed />
             </div>
