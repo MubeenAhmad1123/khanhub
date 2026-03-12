@@ -282,18 +282,12 @@ export default function CategoryRoleFlow() {
     );
 
     // ── STEP 2: Role Selection ─────────────────────────────────────────
-    const renderStep2 = () => {
+    const renderStep2Content = () => {
         const roles = CATEGORY_ROLES[selectedCategory!];
         if (!roles) return null;
 
         return (
             <div>
-                <button
-                    onClick={() => { setStep(1); setSelectedRole(null); }}
-                    style={{ background: 'none', border: 'none', color: '#888', fontFamily: 'DM Sans', fontSize: 13, cursor: 'pointer', marginBottom: 16, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
-                >
-                    <ArrowLeft size={16} /> Back
-                </button>
                 <h2 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 22, color: '#0A0A0A', textAlign: 'center', marginBottom: 6 }}>
                     Who are you?
                 </h2>
@@ -408,19 +402,53 @@ export default function CategoryRoleFlow() {
     return (
         <div style={{ width: '100%', maxWidth: 440, margin: '0 auto' }}>
             {/* Progress dots */}
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 28 }}>
+            <div style={{
+                display: 'flex', justifyContent: 'center', gap: '8px',
+                padding: '12px 0', marginBottom: 16
+            }}>
                 {[1, 2].map((s) => (
                     <div key={s} style={{
-                        width: step === s ? 28 : 8,
-                        height: 8, borderRadius: 99,
-                        background: step >= s ? accent : '#E5E5E5',
-                        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        width: step === s ? '20px' : '8px',
+                        height: '8px', borderRadius: '4px',
+                        background: step === s ? (accent || '#FF0069') : '#E5E5E5',
+                        transition: 'all 0.3s ease',
                     }} />
                 ))}
             </div>
 
-            {step === 1 && renderStep1()}
-            {step === 2 && renderStep2()}
+            {step === 1 && (
+                <div>
+                    <button
+                        onClick={() => router.back()}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: '#666', fontSize: '14px', padding: '16px 20px',
+                            WebkitTapHighlightColor: 'transparent',
+                        }}
+                    >
+                        ← Back
+                    </button>
+                    {renderStep1()}
+                </div>
+            )}
+            
+            {step === 2 && (
+                <div>
+                    <button
+                        onClick={() => { setStep(1); setSelectedRole(null); }}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: '#666', fontSize: '14px', padding: '16px 20px',
+                            WebkitTapHighlightColor: 'transparent',
+                        }}
+                    >
+                        ← Back
+                    </button>
+                    {renderStep2Content()}
+                </div>
+            )}
         </div>
     );
 }

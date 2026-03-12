@@ -401,12 +401,30 @@ export default function UploadVideoPage() {
         return () => unsub();
     }, [user]);
 
-    if (authLoading || !user || !firestoreProfile) {
+    if (authLoading) {
         return (
-            <div style={{ minHeight: '100dvh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 40, height: 40, border: '3px solid #222', borderTop: '3px solid var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{
+                height: '100dvh', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: '#000'
+            }}>
+                <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    border: '3px solid #333', borderTop: '3px solid #FF0069',
+                    animation: 'spin 0.75s linear infinite'
+                }} />
+                <style>{`
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `}</style>
             </div>
         );
+    }
+
+    if (!user || !firestoreProfile) {
+        return null;
     }
 
     const userCategory = firestoreProfile.category || 'jobs';

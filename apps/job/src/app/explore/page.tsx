@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
-import { BottomNav } from '@/components/layout/BottomNav';
 import { ExploreGrid } from '@/components/feed/ExploreGrid';
+import BottomNav from '@/components/layout/BottomNav';
 import { useCategory } from '@/context/CategoryContext';
 import { useSearchParams } from 'next/navigation';
 
@@ -34,13 +34,22 @@ const unselectedChipStyle = {
     fontFamily: 'Poppins'
 };
 
+import { CATEGORY_CONFIG } from '@/lib/categories';
+
 export default function ExplorePage() {
-    const { activeCategory } = useCategory();
+    const { activeCategory: globalCategory } = useCategory();
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('q') || '';
     const [activeFilter, setActiveFilter] = useState('All');
 
-    const filters = ['All', 'Provider', 'Seeker', 'Nearby'];
+    // Combine static filters with categories
+    const categories = Object.keys(CATEGORY_CONFIG);
+    const filters = ['All', 'Nearby', ...categories];
+
+    const getSelectedCategory = () => {
+        if (activeFilter === 'All' || activeFilter === 'Nearby') return globalCategory;
+        return activeFilter;
+    };
 
     return (
         <div style={{
@@ -50,38 +59,41 @@ export default function ExplorePage() {
             minHeight: '100vh',
             paddingBottom: '80px'
         }}>
-            <TopBar />
+            <TopBar hideCategorySwitcher={true} />
 
-            {/* Filter chips — sticky under navbar */}
+            {/* Filter chips — horizontal scroll */}
             <div style={{
                 display: 'flex',
                 gap: '8px',
                 overflowX: 'auto',
                 scrollbarWidth: 'none',
-                padding: '8px 12px',
-                marginTop: '0',
+                padding: '12px 16px',
                 background: '#fff',
                 position: 'sticky',
-                top: '64px', // Adjusted for TopBar height
+                top: '56px',
                 zIndex: 40,
                 borderBottom: '1px solid #F0F0F0',
             }} className="no-scrollbar">
-                {filters.map((filter) => (
-                    <button
-                        key={filter}
-                        onClick={() => setActiveFilter(filter)}
-                        style={activeFilter === filter ? selectedChipStyle : unselectedChipStyle}
-                    >
-                        {filter}
-                    </button>
-                ))}
+                {filters.map((filter) => {
+                    const isCat = CATEGORY_CONFIG[filter as keyof typeof CATEGORY_CONFIG];
+                    const label = isCat ? `${isCat.emoji} ${isCat.label}` : filter;
+                    return (
+                        <button
+                            key={filter}
+                            onClick={() => setActiveFilter(filter)}
+                            style={activeFilter === filter ? selectedChipStyle : unselectedChipStyle}
+                        >
+                            {label}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Video grid — immediately below filters */}
             <div style={{ marginTop: '0' }}>
                 <ExploreGrid
-                    category={activeCategory}
-                    filter={activeFilter}
+                    category={getSelectedCategory()}
+                    filter={activeFilter === 'Nearby' ? 'Nearby' : 'All'}
                     searchQuery={searchQuery}
                 />
             </div>

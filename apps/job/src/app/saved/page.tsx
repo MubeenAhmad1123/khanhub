@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '@/lib/firebase/firebase-config';
+import { db } from '@/lib/firebase/firebase-config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { TopBar } from '@/components/layout/TopBar';
-import { BottomNav } from '@/components/layout/BottomNav';
+import BottomNav from '@/components/layout/BottomNav';
 import { useRouter } from 'next/navigation';
 import { Bookmark, Play, Loader2 } from 'lucide-react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface VideoItem {
     id: string;
@@ -21,21 +21,15 @@ interface VideoItem {
 export default function SavedVideosPage() {
     const [videos, setVideos] = useState<VideoItem[]>([]);
     const [loading, setLoading] = useState(false);
-    const [authUser, setAuthUser] = useState<any>(null);
-    const [authLoading, setAuthLoading] = useState(true);
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (u) => {
-            setAuthUser(u);
-            setAuthLoading(false);
-            if (u) {
-                setLoading(true);
-                fetchSavedVideos(u.uid);
-            }
-        });
-        return () => unsubscribe();
-    }, []);
+        if (!authLoading && user) {
+            setLoading(true);
+            fetchSavedVideos(user.uid);
+        }
+    }, [user, authLoading]);
 
     const fetchSavedVideos = async (uid: string) => {
         try {
@@ -116,7 +110,7 @@ export default function SavedVideosPage() {
         );
     }
 
-    if (!authUser) {
+    if (!user) {
         return (
             <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-6">

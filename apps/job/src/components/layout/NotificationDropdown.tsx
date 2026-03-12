@@ -23,15 +23,23 @@ const notifIcon = (type: string) => {
   return <Bell size={14} color="#666" />
 }
 
+import { useRef } from 'react'
+import { useClickOutside } from '@/hooks/useClickOutside'
+
 export default function NotificationDropdown({ 
   isOpen, 
-  onClose 
+  onClose,
+  triggerRef
 }: { 
   isOpen: boolean
   onClose: () => void 
+  triggerRef: React.RefObject<HTMLElement>
 }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [uid, setUid] = useState<string | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useClickOutside([dropdownRef, triggerRef], onClose, isOpen)
 
   useEffect(() => {
     const auth = getAuth()
@@ -78,18 +86,9 @@ export default function NotificationDropdown({
   if (!isOpen) return null
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0,
-          zIndex: 9998, background: 'transparent'
-        }}
-      />
-
-      {/* Dropdown panel */}
-      <div style={{
+    <div 
+      ref={dropdownRef}
+      style={{
         position: 'fixed',
         top: '56px',
         right: '12px',
@@ -184,6 +183,5 @@ export default function NotificationDropdown({
           )}
         </div>
       </div>
-    </>
   )
 }

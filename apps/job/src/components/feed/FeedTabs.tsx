@@ -10,24 +10,15 @@ interface FeedTabsProps {
     onChange: (index: number) => void;
 }
 
+import { useClickOutside } from '@/hooks/useClickOutside';
+
 export function FeedTabs({ activeTab, onChange }: FeedTabsProps) {
     const { activeCategory, setCategory, categoryConfig } = useCategory();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const dropdownButtonRef = useRef<HTMLButtonElement>(null);
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (
-                dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-                dropdownButtonRef.current && !dropdownButtonRef.current.contains(e.target as Node)
-            ) {
-                setDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    useClickOutside([dropdownRef, dropdownButtonRef], () => setDropdownOpen(false), dropdownOpen);
 
     const tabs = CATEGORY_FEED_TABS[activeCategory] || ['For You', 'Providers', 'Seekers'];
     const currentCategoryLabel = categoryConfig?.label || 'Jobs';

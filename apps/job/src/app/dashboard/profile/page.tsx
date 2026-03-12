@@ -3,8 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, onSnapshot, query, where, collection } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase/firebase-config';
-import { onAuthStateChanged } from 'firebase/auth';
+import { db } from '@/lib/firebase/firebase-config';
 import { useCategory } from '@/context/CategoryContext';
 
 // Components
@@ -31,45 +30,41 @@ function ProfileSkeleton() {
     );
 }
 
+import { useAuth } from '@/hooks/useAuth';
+
 export default function ProfilePage() {
-    const [authUser, setAuthUser] = useState<any>(null);
-    const [authLoading, setAuthLoading] = useState(true);
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const { categoryConfig, accentColor } = useCategory();
     const [profile, setProfile] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<ProfileTab>('videos');
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (u) => {
-            setAuthUser(u);
-            setAuthLoading(false);
-            if (!u) {
-                router.push('/auth/register?from=profile');
-            }
-        });
-        return () => unsubscribe();
-    }, [router]);
+        if (!authLoading && !user) {
+            router.push('/auth/register?from=profile');
+        }
+    }, [user, authLoading, router]);
 
     const [postCount, setPostCount] = useState(0);
 
     useEffect(() => {
-        if (authUser) {
+        if (user) {
             // Use onSnapshot for live updates
-            const unsub = onSnapshot(doc(db, 'users', authUser.uid), (snap) => {
+            const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
                 if (snap.exists()) setProfile(snap.data());
             }, (error) => {
                 console.warn('[Dashboard Profile] Snapshot error:', error.message);
             });
             return () => unsub();
         }
-    }, [authUser]);
+    }, [user]);
 
     // ── Fetch Post Count (Approved & Live Videos) ────────────────
     useEffect(() => {
-        if (!authUser) return;
+        if (!user) return;
         const q = query(
             collection(db, 'videos'),
-            where('userId', '==', authUser.uid),
+            where('userId', '==', user.uid),
             where('is_live', '==', true),
             where('admin_status', '==', 'approved')
         );
@@ -77,9 +72,9 @@ export default function ProfilePage() {
             setPostCount(snap.size);
         });
         return () => unsub();
-    }, [authUser]);
+    }, [user]);
 
-    if (authLoading || !authUser || !profile) {
+    if (authLoading || !user || !profile) {
         return (
             <div style={{
                 height: '100dvh', display: 'flex',
@@ -110,7 +105,7 @@ export default function ProfilePage() {
                 {/* Avatar */}
                 <div style={{ position: 'relative', width: 88, height: 88, margin: '0 auto 12px' }}>
                     <img
-                        src={authUser.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + authUser.uid}
+                        src={user.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.uid}
                         alt={profile.name}
                         style={{
                             width: 88, height: 88, borderRadius: '50%',
@@ -122,15 +117,15 @@ export default function ProfilePage() {
 
                 {/* Name */}
                 <h1 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 20, color: '#0A0A0A', margin: '0 0 16px' }}>
-                    {profile.name || authUser.displayName}
+                    {profile.name || user.displayName}
                 </h1>
 
                 {/* Stats row — Following | Followers | Likes */}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 16 }}>
                     {[
                         { label: 'Posts', value: postCount },
-                        { label: 'Following', value: profile.following?.length || 0 },
-                        { label: 'Followers', value: profile.followers?.length || 0 },
+                        { label: 'Following', value: profile.followingCount || 0 },
+                        { label: 'Followers', value: profile.followersCount || 0 },
                         { label: 'Likes', value: profile.totalLikes || 0 },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
@@ -205,7 +200,7 @@ export default function ProfilePage() {
                 {/* Videos grid — 3 col like TikTok */}
                 {activeTab === 'videos' && (
                     <VideosGrid
-                        uid={authUser.uid}
+                        uid={user.uid}
                         onVideoTap={(i) => {
                             sessionStorage.setItem('feed_start_index', String(i));
                             router.push('/feed');
@@ -237,7 +232,7 @@ export default function ProfilePage() {
             {/* Sign Out */}
             <div style={{ padding: '24px 16px 0', borderTop: 'none' }}>
                 <button
-                    onClick={() => { auth.signOut(); router.push('/'); }}
+                    onClick={() => { db.app.options.projectId; /* Hack to use db if needed */ router.push('/'); }}
                     style={{
                         width: '100%', padding: '12px',
                         background: 'transparent', border: '1px solid #FF0069',

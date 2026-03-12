@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCategory } from '@/context/CategoryContext';
 import { ArrowLeft, MapPin, ShieldCheck, Lock, Phone, Mail, MessageCircle, Navigation, ExternalLink, X } from 'lucide-react';
 import { createNotification } from '@/lib/createNotification';
+import { followUser, unfollowUser, checkIsFollowing } from '@/lib/followSystem';
 import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
 import { useFeedToast } from '@/components/ui/FeedToast';
 import Image from 'next/image';
@@ -40,7 +41,8 @@ export default function UserProfilePage() {
     // DP Zoom state
     const [showDPZoom, setShowDPZoom] = useState(false);
 
-    // Real-time post count
+    // Real-time stats
+    const [counts, setCounts] = useState({ followers: 0, following: 0, likes: 0 });
     const [postCount, setPostCount] = useState(0);
 
     useEffect(() => {
@@ -103,7 +105,23 @@ export default function UserProfilePage() {
                 );
                 unsub = onSnapshot(qp, (snap) => setPostCount(snap.size));
 
+                // Real-time counts (followers, following, likes)
+                const unsubCounts = onSnapshot(doc(db, 'users', id as string), (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        setCounts({
+                            followers: data.followersCount || 0,
+                            following: data.followingCount || 0,
+                            likes: data.totalLikes || 0
+                        });
+                    }
+                });
+
                 setLoading(false);
+                return () => {
+                    unsub?.();
+                    unsubCounts();
+                };
             } catch (err) {
                 console.error('[Profile Page] fetch error:', err);
                 setLoading(false);
@@ -111,7 +129,6 @@ export default function UserProfilePage() {
         };
 
         fetchProfile();
-        return () => unsub?.();
     }, [id]);
 
     useEffect(() => {
@@ -474,9 +491,9 @@ export default function UserProfilePage() {
                 }}>
                     {[
                         { label: 'Posts', value: postCount },
-                        { label: 'Following', value: profile.following?.length || 0 },
-                        { label: 'Followers', value: profile.followers?.length || 0 },
-                        { label: 'Likes', value: profile.totalLikes || 0 },
+                        { label: 'Following', value: counts.following },
+                        { label: 'Followers', value: counts.followers },
+                        { label: 'Likes', value: counts.likes },
                     ].map((stat) => (
                         <div key={stat.label} style={{ textAlign: 'center' }}>
                             <div style={{ fontFamily: 'Poppins', fontWeight: 900, fontSize: 'clamp(18px, 5vw, 24px)', color: '#0A0A0A' }}>
@@ -496,32 +513,10 @@ export default function UserProfilePage() {
                             if (!authUser) { router.push('/auth/login'); return; }
                             setFollowingLoading(true);
                             try {
-                                const followDocId = `${currentUser.uid}_${id}`;
-                                const followRef = doc(db, 'follows', followDocId);
-                                const targetUserRef = doc(db, 'users', id as string);
-                                const currentUserRef = doc(db, 'users', currentUser.uid);
-
                                 if (isFollowing) {
-                                    await deleteDoc(followRef);
-                                    await updateDoc(targetUserRef, {
-                                        followers: arrayRemove(currentUser.uid)
-                                    });
-                                    await updateDoc(currentUserRef, {
-                                        following: arrayRemove(id)
-                                    });
+                                    await unfollowUser(currentUser.uid, id as string);
                                 } else {
-                                    await setDoc(followRef, {
-                                        followerId: currentUser.uid,
-                                        followingId: id,
-                                        createdAt: serverTimestamp()
-                                    });
-                                    await updateDoc(targetUserRef, {
-                                        followers: arrayUnion(currentUser.uid)
-                                    });
-                                    await updateDoc(currentUserRef, {
-                                        following: arrayUnion(id)
-                                    });
-
+                                    await followUser(currentUser.uid, id as string);
                                     // Create Notification
                                     await createNotification(
                                         id as string,

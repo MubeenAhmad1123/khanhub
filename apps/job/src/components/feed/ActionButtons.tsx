@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    doc, updateDoc, increment, arrayUnion, arrayRemove,
+    doc, updateDoc, increment, onSnapshot, arrayUnion, arrayRemove,
     getDoc, addDoc, collection, serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
@@ -32,8 +32,10 @@ const fmt = (n: number) => {
 };
 
 // Shared icon drop-shadow — visible on ALL video types (TikTok/Insta style)
-const ICON_SHADOW = 'drop-shadow(0px 1px 4px rgba(0,0,0,1)) drop-shadow(0px 0px 10px rgba(0,0,0,0.8))';
-const TEXT_SHADOW = '0 1px 4px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.8)';
+const ICON_SHADOW = 'drop-shadow(0px 1px 6px rgba(0,0,0,0.9)) drop-shadow(0px 0px 12px rgba(0,0,0,0.7))';
+const TEXT_SHADOW = '0 1px 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.7)';
+
+import { likeVideo, unlikeVideo, checkIsLiked } from '@/lib/likeSystem';
 
 export function ActionButtons({
     videoId, videoUserId, videoUserPhoto, videoUserRole,
@@ -53,21 +55,24 @@ export function ActionButtons({
     const isPlaceholder = !videoId || videoId.startsWith('placeholder') || videoId.startsWith('manual_') || videoId.length < 10;
     const isRealUser = videoUserId && !videoUserId.startsWith('placeholder') && !videoUserId.startsWith('manual_') && !videoUserId.startsWith('ph-') && videoUserId !== 'undefined' && videoUserId.length >= 10;
 
-    // Sync internal state with props (fixes stale count after scroll/parent update)
+    // Real-time listener for LIKE COUNT
     useEffect(() => {
-        setLikeCount(likes);
-        setSaveCount(saves);
-    }, [likes, saves]);
+        if (isPlaceholder) return;
+        const unsub = onSnapshot(doc(db, 'videos', videoId), (snap) => {
+            if (snap.exists()) {
+                setLikeCount(snap.data().likes || 0);
+            }
+        });
+        return () => unsub();
+    }, [videoId, isPlaceholder]);
 
     // Check liked/saved state on mount
     useEffect(() => {
         if (!user || isPlaceholder) return;
-        getDoc(doc(db, 'videos', videoId)).then(snap => {
-            if (!snap.exists()) return;
-            const data = snap.data();
-            setLiked((data.likedBy || []).includes(user.uid));
-            // We set counts from props via the effect above, but fetch likedBy here locally
-        });
+        
+        // Check if liked
+        checkIsLiked(user.uid, videoId).then(setLiked);
+
         // Check saved list in user doc
         if (user && user.uid) {
             getDoc(doc(db, 'users', user.uid)).then(snap => {
@@ -80,26 +85,34 @@ export function ActionButtons({
     const handleLike = async () => {
         if (!user) { router.push('/auth/register?from=feed'); return; }
         const newLiked = !liked;
+        
+        // Optimistic UI
         setLiked(newLiked);
         setLikeCount(p => newLiked ? p + 1 : p - 1);
-        if (isPlaceholder) return;
-        await updateDoc(doc(db, 'videos', videoId), {
-            likes: increment(newLiked ? 1 : -1),
-            likedBy: newLiked ? arrayUnion(user.uid) : arrayRemove(user.uid),
-        });
-        await updateDoc(doc(db, 'users', user.uid), {
-            likedVideos: newLiked ? arrayUnion(videoId) : arrayRemove(videoId),
-        });
-        showToast(newLiked ? '❤️ Liked' : 'Unliked');
 
-        if (newLiked && isRealUser && videoUserId) {
-            await createNotification(
-                videoUserId,
-                'like',
-                'New Like',
-                `${user.displayName || 'Someone'} liked your video`,
-                videoId
-            );
+        if (isPlaceholder) return;
+
+        try {
+            if (newLiked) {
+                await likeVideo(user.uid, videoId, videoUserId || '');
+                if (isRealUser && videoUserId) {
+                    await createNotification(
+                        videoUserId,
+                        'like',
+                        'New Like',
+                        `${user.displayName || 'Someone'} liked your video`,
+                        videoId
+                    );
+                }
+            } else {
+                await unlikeVideo(user.uid, videoId, videoUserId || '');
+            }
+            showToast(newLiked ? '❤️ Liked' : 'Unliked');
+        } catch (err) {
+            console.error('Like error:', err);
+            // Revert on error
+            setLiked(!newLiked);
+            setLikeCount(p => !newLiked ? p + 1 : p - 1);
         }
     };
 

@@ -17,8 +17,9 @@ import { collection, query, where, limit, onSnapshot } from 'firebase/firestore'
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import NotificationDropdown from './NotificationDropdown';
 import HamburgerDrawer from './HamburgerDrawer';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
-export function TopBar() {
+export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?: boolean }) {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
     const router = useRouter();
     const pathname = usePathname();
@@ -43,6 +44,8 @@ export function TopBar() {
 
     // Notification state
     const [notifOpen, setNotifOpen] = useState(false);
+    const triggerNotifRef = useRef<HTMLButtonElement>(null);
+
     const [unreadCount, setUnreadCount] = useState(0);
     const [uid, setUid] = useState<string | null>(null);
 
@@ -69,22 +72,29 @@ export function TopBar() {
     }, [uid]);
 
     const [showSwitcher, setShowSwitcher] = useState(false);
+    const switcherRef = useRef<HTMLDivElement>(null);
+    const switcherTriggerRef = useRef<HTMLButtonElement>(null);
+
     const [drawerOpen, setDrawerOpen] = useState(false);
+
+    useClickOutside([switcherRef, switcherTriggerRef], () => setShowSwitcher(false), showSwitcher);
 
     return (
         <header style={{
-            position: isFeed ? 'fixed' : 'sticky',
-            top: 0, left: 0, right: 0,
-            zIndex: 1000,
-            height: '52px',
-            display: 'flex', alignItems: 'center',
-            padding: '0 16px',
-            gap: '8px',
-            backgroundColor: isFeed ? 'transparent' : '#FFFFFF',
+            position: 'sticky', top: 0, zIndex: 1000,
+            background: isFeed ? 'transparent' : '#FFFFFF',
+            backdropFilter: isFeed ? 'none' : 'blur(10px)',
             borderBottom: isFeed ? 'none' : '1px solid #F0F0F0',
-            transition: 'background-color 0.3s ease',
+            // Mobile edge-to-edge fix:
+            marginLeft: '-1px', marginRight: '-1px',
+            padding: '0 4px',
         }}>
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 w-full">
+            <div style={{
+                height: '56px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0 12px',
+                maxWidth: '600px', margin: '0 auto',
+            }}>
                 {/* Left: Brand */}
                 <div className="flex items-center gap-3">
                     <Link
@@ -104,28 +114,23 @@ export function TopBar() {
                 </div>
 
                 {/* Center: Category Dropdown */}
-                <div className="relative">
-                    <button
-                        onClick={() => setShowSwitcher(!showSwitcher)}
-                        className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full hover:border-[--accent] transition-all"
-                    >
-                        <span className="text-[11px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">
-                            {categoryConfig?.label || 'All'}
-                        </span>
-                        <ChevronDown className={`w-3.5 h-3.5 text-[#333333] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
-                    </button>
+                {!hideCategorySwitcher && (
+                    <div className="relative">
+                        <button
+                            ref={switcherTriggerRef}
+                            onClick={() => setShowSwitcher(!showSwitcher)}
+                            className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full hover:border-[--accent] transition-all"
+                        >
+                            <span className="text-[11px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">
+                                {categoryConfig?.label || 'All'}
+                            </span>
+                            <ChevronDown className={`w-3.5 h-3.5 text-[#333333] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
+                        </button>
 
-                    <AnimatePresence>
-                        {showSwitcher && (
-                            <>
+                        <AnimatePresence>
+                            {showSwitcher && (
                                 <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    onClick={() => setShowSwitcher(false)}
-                                    className="fixed inset-0 z-[60] bg-black/5 backdrop-blur-[2px]"
-                                />
-                                <motion.div
+                                    ref={switcherRef}
                                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -160,10 +165,10 @@ export function TopBar() {
                                         </button>
                                     ))}
                                 </motion.div>
-                            </>
-                        )}
-                    </AnimatePresence>
-                </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
 
                 {/* Right: Icons & Menu */}
                 <div className="flex items-center gap-1.5 flex-1 justify-end">
@@ -224,6 +229,7 @@ export function TopBar() {
 
                     {/* Notification Bell */}
                     <button
+                        ref={triggerNotifRef}
                         onClick={() => setNotifOpen(prev => !prev)}
                         style={{
                             position: 'relative', background: 'none',
@@ -246,7 +252,11 @@ export function TopBar() {
                         )}
                     </button>
 
-                    <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+                    <NotificationDropdown 
+                        isOpen={notifOpen} 
+                        onClose={() => setNotifOpen(false)} 
+                        triggerRef={triggerNotifRef}
+                    />
 
                     <button
                         onClick={() => setDrawerOpen(true)}
