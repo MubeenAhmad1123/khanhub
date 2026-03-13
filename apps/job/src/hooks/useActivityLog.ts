@@ -60,7 +60,7 @@ export function useActivityLog(limitCount = 20) {
         });
 
         return () => unsubscribe();
-    }, [limitCount]);
+    }, [limitCount, user]);
 
     return { entries, loading };
 }

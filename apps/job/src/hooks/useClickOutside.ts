@@ -22,5 +22,5 @@ export function useClickOutside(
       document.removeEventListener('mousedown', listener)
       document.removeEventListener('touchstart', listener)
     }
-  }, [enabled, handler])
+  }, [enabled, handler, refs])
 }

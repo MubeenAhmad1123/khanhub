@@ -108,7 +108,7 @@ export function useAdminStats(): AdminStats {
         );
 
         return () => unsubs.forEach(u => u());
-    }, []);
+    }, [user?.role]);
 
     return stats;
 }

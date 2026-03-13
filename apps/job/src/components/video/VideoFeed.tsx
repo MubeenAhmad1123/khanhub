@@ -213,7 +213,7 @@ export function VideoFeed() {
         );
 
         setDisplayVideos(unwatched.length > 0 ? unwatched : (watched.length > 0 ? [...watched].reverse() : baseVideos));
-    }, [firestoreVideos, watchedIds, user]);
+    }, [firestoreVideos, watchedIds, user, targetVideoId]);
 
     // ── Intersection Observer for Active Index & URL ───────────────
     useEffect(() => {
@@ -260,7 +260,7 @@ export function VideoFeed() {
         });
 
         return () => observers.forEach(o => o.disconnect());
-    }, [displayVideos.length, user]);
+    }, [displayVideos, user]);
 
     // Method 2: Scroll event fallback (DevTools emulation backup)
     useEffect(() => {
@@ -370,7 +370,7 @@ export function VideoFeed() {
             };
             fetchAndPrepend();
         }
-    }, [targetVideoId, displayVideos]);
+    }, [targetVideoId, displayVideos, activeIndex]);
 
     // ── Stories Bar Visibility ────────────────────────────────────
     useEffect(() => {
