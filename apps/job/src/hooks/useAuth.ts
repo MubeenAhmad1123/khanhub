@@ -1,6 +1,5 @@
 'use client';
 
-// Enhanced useAuth Hook - Complete Authentication Management
 import { useState, useEffect } from 'react';
 import {
   User as FirebaseUser,
@@ -14,8 +13,7 @@ import {
   GoogleAuthProvider,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase/firebase-config';
-import { doc, getDoc } from 'firebase/firestore';
+import { auth } from '@/lib/firebase/firebase-config';
 import { getUserProfile, createUserProfile, updateUserProfile } from '@/lib/firebase/auth';
 import { User, UserRole } from '@/types/user';
 
@@ -26,76 +24,89 @@ export interface AuthState {
   error: string | null;
 }
 
-// Module-level cache for auth state
-let cachedAuthState: AuthState = {
+// ─── Module-level singleton ───────────────────────────────────────────────────
+// Stores latest resolved state so NEW components get it immediately on mount
+let _state: AuthState = {
   user: null,
   firebaseUser: null,
   loading: true,
   error: null,
 };
-let initialized = false;
-let authListenerStarted = false;
 
-export function useAuth() {
-  const [authState, setAuthState] = useState<AuthState>(
-    initialized ? cachedAuthState : {
-      user: null,
-      firebaseUser: null,
-      loading: true,
-      error: null,
-    }
-  );
+// All mounted useAuth components subscribe here:
+const _subscribers = new Set<(s: AuthState) => void>();
 
-  // Listen to auth state changes
-  useEffect(() => {
-    if (authListenerStarted) return;
-    authListenerStarted = true;
+// Broadcast to every mounted component:
+const _broadcast = (newState: AuthState) => {
+  _state = newState;
+  _subscribers.forEach(fn => fn(newState));
+};
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          // Fetch full user profile from Firestore
-          const userProfile = await getUserProfile(firebaseUser.uid);
-          const newState = {
-            user: userProfile,
-            firebaseUser,
-            loading: false,
-            error: null,
-          };
-          cachedAuthState = newState;
-          initialized = true;
-          setAuthState(newState);
-        } catch (err) {
-          console.error('Error fetching user data:', err);
-          const newState = {
-            user: null,
-            firebaseUser,
-            loading: false,
-            error: 'Failed to load user data',
-          };
-          cachedAuthState = newState;
-          initialized = true;
-          setAuthState(newState);
-        }
-      } else {
-        const newState = {
-          user: null,
-          firebaseUser: null,
+// The ONE permanent listener — started once, never unsubscribed:
+let _listenerActive = false;
+
+const _startListener = () => {
+  if (_listenerActive) return;
+  _listenerActive = true;
+
+  onAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
+      try {
+        const userProfile = await getUserProfile(firebaseUser.uid);
+        _broadcast({
+          user: userProfile,
+          firebaseUser,
           loading: false,
           error: null,
-        };
-        cachedAuthState = newState;
-        initialized = true;
-        setAuthState(newState);
+        });
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        _broadcast({
+          user: null,
+          firebaseUser,
+          loading: false,
+          error: 'Failed to load user data',
+        });
       }
-    });
+    } else {
+      _broadcast({
+        user: null,
+        firebaseUser: null,
+        loading: false,
+        error: null,
+      });
+    }
+  });
+  // NOTE: No return / no unsubscribe — this listener lives forever
+  // This is intentional — auth state must always be tracked
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
-    return () => unsubscribe();
+export function useAuth() {
+  // Initialize from cached state immediately (no flash of loading):
+  const [authState, setAuthState] = useState<AuthState>(_state);
+
+  useEffect(() => {
+    // Start the singleton listener (idempotent — safe to call many times):
+    _startListener();
+
+    // Subscribe this component to future state changes:
+    _subscribers.add(setAuthState);
+
+    // If state already resolved (user navigated to page after login),
+    // apply it immediately so this component doesn't show stale loading:
+    if (!_state.loading) {
+      setAuthState(_state);
+    }
+
+    // Cleanup — just unsubscribe this component, never kill the listener:
+    return () => {
+      _subscribers.delete(setAuthState);
+    };
   }, []);
 
-  /**
-   * Register with email and password
-   */
+  // ── All your existing methods below — NO changes needed ──────────────────
+
   const register = async (
     email: string,
     password: string,
@@ -103,29 +114,20 @@ export function useAuth() {
     role: UserRole = 'job_seeker'
   ): Promise<void> => {
     const trimmedEmail = email.trim();
-
     try {
-      setAuthState(prev => ({ ...prev, loading: true, error: null }));
+      _broadcast({ ..._state, loading: true, error: null });
 
-      // 1. Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
-
-      // 2. Update display name in Firebase Auth if provided
       const displayName = additionalData.name || additionalData.displayName || 'User';
       await firebaseUpdateProfile(userCredential.user, { displayName });
-
-      // 3. Send verification email
       await sendEmailVerification(userCredential.user);
 
-      // 4. Create user profile in Firestore
       await createUserProfile({
         uid: userCredential.user.uid,
         email: trimmedEmail,
         displayName,
         role,
-        ...additionalData, // Spread all flat fields here
-
-        // Explicitly mapping core fields to flat schema (Fix 4 Step D)
+        ...additionalData,
         name: additionalData.name || additionalData.displayName,
         phone: additionalData.phone,
         city: additionalData.city,
@@ -149,80 +151,55 @@ export function useAuth() {
         isActive: true,
         isFeatured: false,
         isBanned: false,
-        onboardingCompleted: false, // New users must go through the Category/Role flow
+        onboardingCompleted: false,
         registrationMethod: 'email',
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
-      // 5. Fetch the created profile
       const userProfile = await getUserProfile(userCredential.user.uid);
-
-      setAuthState({
+      _broadcast({
         user: userProfile,
         firebaseUser: userCredential.user,
         loading: false,
         error: null,
       });
     } catch (error: any) {
-      setAuthState(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message || 'Registration failed',
-      }));
+      _broadcast({ ..._state, loading: false, error: error.message || 'Registration failed' });
       throw error;
     }
   };
 
-  /**
-   * Login with email and password
-   */
   const login = async (email: string, password: string): Promise<void> => {
     const trimmedEmail = email.trim();
     try {
-      setAuthState(prev => ({ ...prev, loading: true, error: null }));
-
+      _broadcast({ ..._state, loading: true, error: null });
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
       const userProfile = await getUserProfile(userCredential.user.uid);
-
       if (userProfile) {
-        // Update last login time
-        await updateUserProfile(userCredential.user.uid, {
-          lastLoginAt: new Date(),
-        });
+        await updateUserProfile(userCredential.user.uid, { lastLoginAt: new Date() });
       }
-
-      setAuthState({
+      _broadcast({
         user: userProfile,
         firebaseUser: userCredential.user,
         loading: false,
         error: null,
       });
     } catch (error: any) {
-      setAuthState(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message || 'Login failed',
-      }));
+      _broadcast({ ..._state, loading: false, error: error.message || 'Login failed' });
       throw error;
     }
   };
 
-  /**
-   * Login with Google
-   */
   const loginWithGoogle = async (role: UserRole): Promise<void> => {
     try {
-      setAuthState(prev => ({ ...prev, loading: true, error: null }));
-
+      _broadcast({ ..._state, loading: true, error: null });
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
 
-      // Check if user already exists
       let userProfile = await getUserProfile(userCredential.user.uid);
 
       if (!userProfile) {
-        // Create new user profile
         await createUserProfile({
           uid: userCredential.user.uid,
           email: userCredential.user.email!,
@@ -240,113 +217,57 @@ export function useAuth() {
           isBanned: false,
           onboardingCompleted: false,
         });
-
         userProfile = await getUserProfile(userCredential.user.uid);
       } else if (!userProfile.onboardingCompleted && userProfile.role !== role) {
-        // Allow changing role IF onboarding is not completed
         await updateUserProfile(userCredential.user.uid, { role });
         userProfile = await getUserProfile(userCredential.user.uid);
       }
 
-      setAuthState({
+      _broadcast({
         user: userProfile,
         firebaseUser: userCredential.user,
         loading: false,
         error: null,
       });
     } catch (error: any) {
-      setAuthState(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message || 'Google login failed',
-      }));
+      _broadcast({ ..._state, loading: false, error: error.message || 'Google login failed' });
       throw error;
     }
   };
 
-  /**
-   * Logout
-   */
   const logout = async (): Promise<void> => {
     try {
       await firebaseSignOut(auth);
-      setAuthState({
-        user: null,
-        firebaseUser: null,
-        loading: false,
-        error: null,
-      });
+      _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
     } catch (error: any) {
-      setAuthState(prev => ({
-        ...prev,
-        error: error.message || 'Logout failed',
-      }));
+      _broadcast({ ..._state, error: error.message || 'Logout failed' });
       throw error;
     }
   };
 
-  /**
-   * Reset password
-   */
   const resetPassword = async (email: string): Promise<void> => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-    } catch (error: any) {
-      throw error;
-    }
+    await sendPasswordResetEmail(auth, email);
   };
 
-  /**
-   * Resend verification email
-   */
   const resendVerificationEmail = async (): Promise<void> => {
-    if (!authState.firebaseUser) {
-      throw new Error('No user logged in');
-    }
-
-    try {
-      await sendEmailVerification(authState.firebaseUser);
-    } catch (error: any) {
-      throw error;
-    }
+    if (!authState.firebaseUser) throw new Error('No user logged in');
+    await sendEmailVerification(authState.firebaseUser);
   };
 
-  /**
-   * Update user profile
-   */
   const updateProfile = async (updates: Partial<User>): Promise<void> => {
-    if (!authState.user) {
-      throw new Error('No user logged in');
-    }
-
-    try {
-      await updateUserProfile(authState.user.uid, updates);
-
-      // Refresh user profile
-      const updatedProfile = await getUserProfile(authState.user.uid);
-      setAuthState(prev => ({
-        ...prev,
-        user: updatedProfile,
-      }));
-    } catch (error: any) {
-      throw error;
-    }
+    if (!authState.user) throw new Error('No user logged in');
+    await updateUserProfile(authState.user.uid, updates);
+    const updatedProfile = await getUserProfile(authState.user.uid);
+    _broadcast({ ..._state, user: updatedProfile });
   };
 
-  /**
-   * Refresh user profile from Firestore
-   */
   const refreshProfile = async (): Promise<void> => {
     if (!authState.user) return;
-
     try {
       const updatedProfile = await getUserProfile(authState.user.uid);
-      setAuthState(prev => ({
-        ...prev,
-        user: updatedProfile,
-      }));
-    } catch (error: any) {
-      console.error('Error refreshing profile:', error);
+      _broadcast({ ..._state, user: updatedProfile });
+    } catch (err) {
+      console.error('Error refreshing profile:', err);
     }
   };
 
@@ -374,47 +295,27 @@ export function useAuth() {
   };
 }
 
-/**
- * Hook to check if user has paid registration fee
- */
+// ── Helper hooks — unchanged ──────────────────────────────────────────────────
 export function usePaymentStatus() {
   const { user, loading } = useAuth();
-
   if (loading) return { paymentApproved: false, loading: true };
-
-  if (user && 'paymentStatus' in user) {
-    return { paymentApproved: user.paymentStatus === 'approved', loading: false };
-  }
-
-  return { paymentApproved: false, loading: false };
+  return { paymentApproved: user?.paymentStatus === 'approved', loading: false };
 }
 
-/**
- * Hook to check if user has active premium membership
- */
 export function usePremiumStatus() {
   const { user, loading } = useAuth();
-
   if (loading) return { isPremium: false, loading: true };
-
-  if (user && 'isPremium' in user) {
-    // Check if premium is active and not expired
-    const isPremium = user.isPremium && user.premiumEndDate && (
-      user.premiumEndDate instanceof Date ? user.premiumEndDate : (user.premiumEndDate as any).toDate()
-    ) > new Date();
-    return { isPremium, loading: false };
+  if (user?.isPremium && user?.premiumEndDate) {
+    const end = user.premiumEndDate instanceof Date
+      ? user.premiumEndDate
+      : (user.premiumEndDate as any).toDate();
+    return { isPremium: end > new Date(), loading: false };
   }
-
   return { isPremium: false, loading: false };
 }
 
-/**
- * Hook to check if user is admin
- */
 export function useIsAdmin() {
   const { user, loading } = useAuth();
-
   if (loading) return { isAdmin: false, loading: true };
-
   return { isAdmin: user?.role === 'admin', loading: false };
 }
