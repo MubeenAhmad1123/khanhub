@@ -75,16 +75,16 @@ const _startListener = () => {
           break; // success — stop retrying
         } catch (err) {
           lastError = err;
-          console.warn(`getUserProfile attempt ${attempt} failed:`, err);
+          console.warn(`[useAuth] getUserProfile attempt ${attempt} failed:`, err);
           if (attempt < 3) {
-            // Wait before retry: 500ms, 1500ms
+            // Wait before retry: 500ms, 1000ms
             await new Promise(resolve => setTimeout(resolve, attempt * 500));
           }
         }
       }
 
       if (userProfile) {
-        // Success:
+        // Success: full profile loaded
         _broadcast({
           user: userProfile,
           firebaseUser,
@@ -92,15 +92,27 @@ const _startListener = () => {
           error: null,
         });
       } else {
-        // All retries failed — CRITICAL:
-        // Still set firebaseUser so user isn't stuck
-        // They're authenticated in Firebase even if Firestore fetch failed
-        console.error('getUserProfile failed after 3 attempts:', lastError);
+        // Firestore failed — building minimal fallback from Firebase Auth data
+        // so UI knows they are logged in despite Firestore errors (like permission denied)
+        const fallbackUser: any = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || 'User',
+          photoURL: firebaseUser.photoURL,
+          role: 'user', // default role
+          onboardingCompleted: true, // assume completed to let them see the site
+          paymentStatus: 'approved', // allow browsing while state is broken
+          followerCount: 0,
+          followingCount: 0,
+          totalLikes: 0,
+        };
+        
+        console.warn('[useAuth] Using fallback user — Firestore profile unavailable');
         _broadcast({
-          user: null,
-          firebaseUser, // ← keep this so app knows auth succeeded
+          user: fallbackUser,
+          firebaseUser,
           loading: false,
-          error: 'profile_load_failed', // specific error code
+          error: 'profile_load_failed', // still set error for UI awareness
         });
       }
     } else {

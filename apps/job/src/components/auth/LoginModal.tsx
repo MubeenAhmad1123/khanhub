@@ -87,10 +87,18 @@ export default function LoginModal() {
         try {
             await loginWithGoogle(role);
         } catch (err: any) {
+            // popup-closed-by-user fires even on SUCCESS or benign cancellation — ignore it
+            if (
+                err.code === 'auth/popup-closed-by-user' ||
+                err.code === 'auth/cancelled-popup-request' ||
+                err.message?.includes('popup-closed-by-user')
+            ) {
+                console.log('[Auth] Google popup closed or cancelled');
+                return;
+            }
+
             console.error('Google login error:', err);
-            if (err.message.includes('popup-closed-by-user')) {
-              setError('Sign-in popup was closed before completion. Please try again and keep the window open.');
-            } else if (err.message.includes('auth/operation-not-allowed')) {
+            if (err.message.includes('auth/operation-not-allowed')) {
               setError('Google sign-in is not enabled for this domain. Please contact admin.');
             } else {
               setError(err.message || 'Failed to login with Google');
