@@ -84,7 +84,10 @@ export function ActionButtons({
     }, [videoId, user, isPlaceholder]);
 
     const handleLike = async () => {
-        if (!user) { router.push('/auth/register?from=feed'); return; }
+        if (!user?.uid) {
+            showToast('Sign in to like videos', 'info');
+            return;
+        }
         const newLiked = !liked;
         
         // Optimistic UI
@@ -118,7 +121,10 @@ export function ActionButtons({
     };
 
     const handleSave = async () => {
-        if (!user) { router.push('/auth/register?from=feed'); return; }
+        if (!user?.uid) {
+            showToast('Sign in to save videos', 'info');
+            return;
+        }
         const newSaved = !saved;
         setSaved(newSaved);
         setSaveCount(p => newSaved ? p + 1 : p - 1);

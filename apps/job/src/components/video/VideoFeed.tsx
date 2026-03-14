@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 // import { CategoryDropdown } from '@/components/feed/CategoryDropdown'; // Removed for inline placement
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
-import { collection, query, where, orderBy, onSnapshot, doc, limit, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, limit, getDoc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
 // Shuffle helper:
@@ -89,20 +89,44 @@ export function VideoFeed() {
         }
     }, [activeCategory, searchParams]);
 
-    // Ensure first video active on mount (Guaranteed Playback Start)
-    useEffect(() => {
-        if (displayVideos.length === 0) return;
-        
-        // Let the feed handle deep links gracefully instead of snapping back to 0
-        const currentTargetId = searchParams.get('v');
-        if (currentTargetId) return;
+    // Ensure first video active on mount and preserve active index on list update
+    const prevDisplayRef = useRef<any[]>([]);
+    const prevActiveRef  = useRef<number>(0);
 
-        // Give DOM time to render, then ensure index 0 is active
-        const timer = setTimeout(() => {
-            setActiveIndex(0);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [displayVideos.length, searchParams]);
+    useEffect(() => {
+        const prev = prevDisplayRef.current;
+        const prevActive = prevActiveRef.current;
+
+        if (prev.length === 0) {
+            // First load — go to index 0 or deeplink target
+            if (displayVideos.length > 0) {
+                const currentTargetId = searchParams.get('v');
+                if (!currentTargetId) {
+                    const timer = setTimeout(() => { setActiveIndex(0); }, 300);
+                }
+                prevDisplayRef.current = displayVideos;
+            }
+            return;
+        }
+
+        // List updated — find where the currently-active video moved to:
+        const currentVideoId = prev[prevActive]?.id;
+        if (currentVideoId) {
+            const newIndex = displayVideos.findIndex(v => v.id === currentVideoId);
+            if (newIndex !== -1 && newIndex !== prevActive) {
+                // Silently snap to new position without animation:
+                setActiveIndex(newIndex);
+                const container = containerRef.current;
+                if (container) {
+                    container.scrollTop = newIndex * container.clientHeight;
+                }
+            }
+        }
+
+        prevDisplayRef.current = displayVideos;
+        prevActiveRef.current = activeIndex;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [displayVideos]);
 
     // ── Load User Profile & Watched Videos ────────────────────────
     useEffect(() => {
@@ -198,22 +222,26 @@ export function VideoFeed() {
             setDisplayVideos(baseVideos);
             return;
         }
-        const unwatched = baseVideos.filter(v => !watchedIds.includes(v.id));
-        const watched = baseVideos.filter(v => watchedIds.includes(v.id));
 
-        console.log('[DISPLAY] displayVideos being set →',
-            unwatched.length > 0 ? unwatched.length + ' unwatched'
-            : watched.length > 0 ? watched.length + ' watched (reversed)'
-            : baseVideos.length + ' base (fallback)'
-        );
-        console.log('[DISPLAY] Does displayVideos contain targetVideoId?',
-            targetVideoId
-                ? (unwatched.length > 0 ? unwatched : watched.length > 0 ? [...watched].reverse() : baseVideos).some(v => v.id === targetVideoId)
-                : 'no targetVideoId'
-        );
+        const getDisplayVideos = (all: any[], wIds: string[]) => {
+            if (!wIds || wIds.length === 0) return all;
+            const unwatched = all.filter((v: any) => !wIds.includes(v.id));
+            const watched = all.filter((v: any) => wIds.includes(v.id));
 
-        setDisplayVideos(unwatched.length > 0 ? unwatched : (watched.length > 0 ? [...watched].reverse() : baseVideos));
-    }, [firestoreVideos, watchedIds, user, targetVideoId]);
+            if (unwatched.length >= 5) {
+                return [...unwatched, ...watched];
+            }
+            if (unwatched.length === 0) {
+                return all;
+            }
+            return [...unwatched, ...watched];
+        };
+
+        const sorted = getDisplayVideos(baseVideos, watchedIds);
+        
+        console.log('[DISPLAY] displayVideos being set');
+        setDisplayVideos(sorted);
+    }, [firestoreVideos, watchedIds, user]);
 
     // ── Intersection Observer for Active Index & URL ───────────────
     useEffect(() => {
@@ -377,6 +405,31 @@ export function VideoFeed() {
         setShowStoriesBar(activeIndex === 0);
     }, [activeIndex]);
 
+    // ── View Tracking (Fix 2 & 4 Auth Guarded Timer) ────────────────
+    useEffect(() => {
+        if (!user?.uid || displayVideos.length === 0) return;
+        const currentVideo = displayVideos[activeIndex];
+        if (!currentVideo || currentVideo.isPlaceholder) return;
+
+        const markVideoWatched = async (videoId: string) => {
+            if (!user?.uid) return;
+            try {
+                await updateDoc(doc(db, 'videos', videoId), { views: increment(1) });
+                await updateDoc(doc(db, 'users', user.uid), { watchedVideos: arrayUnion(videoId) });
+            } catch (err) {
+                console.warn('View tracking skipped:', err);
+            }
+        };
+
+        const timer = setTimeout(() => {
+            if (user?.uid) {
+                markVideoWatched(currentVideo.id);
+            }
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [activeIndex, displayVideos, user]);
+
     const getVideoState = (index: number) => {
         const distance = index - activeIndex;
         if (distance === 0) return { isActive: true, isAdjacent: false };
@@ -525,6 +578,15 @@ export function VideoFeed() {
                                                 videoId={video.id}
                                             />
                                         </div>
+                                        {index === displayVideos.length - 1 && (
+                                            <div style={{
+                                                position: 'absolute', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
+                                                background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '8px 16px', borderRadius: '20px',
+                                                fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
+                                            }}>
+                                                You're all caught up ✓
+                                            </div>
+                                        )}
                                     </>
                                 ) : (
                                     <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
