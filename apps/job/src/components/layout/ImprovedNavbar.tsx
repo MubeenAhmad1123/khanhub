@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import {
     LogOut, User, Users, Settings, LayoutDashboard,
@@ -11,7 +11,6 @@ import {
     Shield, Menu, X, ChevronDown, Sparkles, Bell
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
-import GoogleTranslateWidget from '@/components/ui/GoogleTranslateWidget';
 import HamburgerDrawer from '@/components/layout/HamburgerDrawer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -144,6 +143,38 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
 
+    // Search state
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!searchOpen) return;
+        const handler = (e: MouseEvent) => {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+                setSearchOpen(false);
+                setSearchQuery('');
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [searchOpen]);
+
+    useEffect(() => {
+        if (searchOpen) {
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+        }
+    }, [searchOpen]);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!searchQuery.trim()) return;
+        router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
+        setSearchOpen(false);
+        setSearchQuery('');
+    };
+
     // ── Logout ────────────────────────────────────────────────────────────────
     // FIX: Wrapped in useCallback to prevent recreation on every render
     const handleLogout = useCallback(async () => {
@@ -269,7 +300,79 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
 
                     {/* ── Right: Actions ───────────────────────────────────── */}
                     <div className="flex items-center gap-2 lg:gap-3">
-                        <GoogleTranslateWidget />
+                        <div ref={searchContainerRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                          {/* Animated search bar */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            overflow: 'hidden',
+                            width: searchOpen ? '200px' : '0px',
+                            opacity: searchOpen ? 1 : 0,
+                            transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease',
+                            background: '#F5F5F5',
+                            borderRadius: '20px',
+                            marginRight: searchOpen ? '8px' : '0px',
+                          }}>
+                            <form onSubmit={handleSearch} style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+                              <input
+                                ref={searchInputRef}
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                onKeyDown={e => e.key === 'Escape' && (setSearchOpen(false), setSearchQuery(''))}
+                                placeholder="Search..."
+                                style={{
+                                  flex: 1,
+                                  padding: '7px 14px',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  outline: 'none',
+                                  fontSize: '14px',
+                                  color: '#0A0A0A',
+                                  fontFamily: 'inherit',
+                                }}
+                              />
+                              {searchQuery && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSearchQuery('')}
+                                  style={{
+                                    background: 'none', border: 'none',
+                                    cursor: 'pointer', padding: '0 8px',
+                                    color: '#888', fontSize: '16px', lineHeight: 1,
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </form>
+                          </div>
+
+                          {/* Search icon button */}
+                          <button
+                            onClick={() => {
+                              if (searchOpen && searchQuery.trim()) {
+                                router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
+                                setSearchOpen(false);
+                                setSearchQuery('');
+                              } else {
+                                setSearchOpen(prev => !prev);
+                              }
+                            }}
+                            style={{
+                              background: searchOpen ? '#FF0069' : 'none',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '36px', height: '36px',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s ease',
+                              flexShrink: 0,
+                            }}
+                            aria-label="Search"
+                          >
+                            <Search size={18} color={searchOpen ? '#fff' : '#555'} />
+                          </button>
+                        </div>
 
                         {/* FIX: Avoid rendering anything auth-related while loading
                             to prevent layout shift / flash of wrong state */}
