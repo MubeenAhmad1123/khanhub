@@ -17,6 +17,7 @@ interface ReelPlayerProps {
 export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, userHasInteracted }: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
+    const userPausedRef = useRef(false);
     const [isMuted, setIsMuted] = useState(false);      // Default to unmuted
     const [isPaused, setIsPaused] = useState(false);
     const [isBuffering, setIsBuffering] = useState(true);
@@ -29,9 +30,11 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         if (!video) return;
 
         if (video.paused) {
+            userPausedRef.current = false;   // user wants to play
             video.play().catch(() => { });
             setIsPaused(false);
         } else {
+            userPausedRef.current = true;    // user wants to pause — RESPECT THIS
             video.pause();
             setIsPaused(true);
             setShowTapIcon(true);
@@ -49,17 +52,18 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         const video = videoRef.current;
         if (!video) return;
 
-        // Track if this effect is still valid (not cleaned up):
         let cancelled = false;
-        let playAttemptTimeout: NodeJS.Timeout;
+        let playTimeout: NodeJS.Timeout;
 
         const attemptPlay = async () => {
             if (cancelled || !videoRef.current) return;
 
+            // CRITICAL: if user manually paused this video, don't resume:
+            if (userPausedRef.current) return;
+
             try {
                 video.muted = true;
 
-                // Wait for video to be ready before calling play():
                 if (video.readyState < 2) {
                     await new Promise<void>((resolve) => {
                         const onCanPlay = () => {
@@ -67,24 +71,21 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
                             resolve();
                         };
                         video.addEventListener('canplay', onCanPlay);
-                        // Timeout fallback if canplay never fires:
                         setTimeout(resolve, 3000);
                     });
                 }
 
-                if (cancelled) return;  // ← Check AGAIN after await
+                if (cancelled || userPausedRef.current) return;
 
                 await video.play();
 
                 if (cancelled) {
-                    // Effect was cleaned up during play() — pause immediately:
                     video.pause();
                     return;
                 }
 
-                // Unmute after confirmed playing:
                 setTimeout(() => {
-                    if (!cancelled && videoRef.current) {
+                    if (!cancelled && !userPausedRef.current && videoRef.current) {
                         videoRef.current.muted = false;
                         setIsMuted(false);
                     }
@@ -94,7 +95,6 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
 
             } catch (err: any) {
                 if (cancelled) return;
-                // Only log non-abort errors:
                 if (err?.name !== 'AbortError') {
                     video.muted = true;
                     setIsMuted(true);
@@ -103,27 +103,25 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         };
 
         if (isActive) {
-            // Small delay to let scroll settle before playing:
-            playAttemptTimeout = setTimeout(attemptPlay, 100);
+            // Reset user-paused flag ONLY when scrolling to a NEW video:
+            // (not when re-rendering the same video)
+            userPausedRef.current = false;
+            playTimeout = setTimeout(attemptPlay, 100);
         } else {
-            // Pause — but only if not in a play() promise:
-            const pauseVideo = () => {
-                if (video.paused) return;
-                try { video.pause(); } catch (_) {}
-                if (!isAdjacent) {
-                    video.currentTime = 0;
-                }
-            };
-            pauseVideo();
+            try { video.pause(); } catch (_) {}
+            if (!isAdjacent) video.currentTime = 0;
             if (hlsRef.current) hlsRef.current.stopLoad();
             if (!isAdjacent) setIsBuffering(true);
+            // Reset flag when video leaves view:
+            userPausedRef.current = false;
         }
 
         return () => {
             cancelled = true;
-            clearTimeout(playAttemptTimeout);
+            clearTimeout(playTimeout);
         };
-    }, [isActive, isAdjacent]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isActive]); // ONLY isActive
 
     // Ensure the video src is actually set
     useEffect(() => {
