@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { auth } from '@/lib/firebase/firebase-config';
 import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, X } from 'lucide-react';
 
