@@ -40,10 +40,29 @@ export default function LoginPage() {
             console.log('✅ [Login] Step 4: router.push called!');
 
         } catch (error: any) {
-            // Already handled in useAuth for silent closure, but catch here just in case
             if (error.code === 'auth/popup-closed-by-user' ||
                 error.code === 'auth/cancelled-popup-request') {
-                console.warn('⚠️ [Login] Popup cancelled — not an error.');
+                
+                // ✅ THE KEY FIX: check if user actually got logged in despite the error
+                const currentUser = auth.currentUser;
+                if (currentUser) {
+                    console.log('✅ [Login] User authenticated despite popup error — continuing...');
+                    
+                    // Post-login logic (duplicated from above for safety, or we could extract it)
+                    const guestPrefs = JSON.parse(localStorage.getItem('jobreel_guest_prefs') || '{}');
+                    if (guestPrefs.category) {
+                        localStorage.setItem('jobreel_active_category', guestPrefs.category);
+                    }
+
+                    localStorage.removeItem('jobreel_videos_watched');
+                    localStorage.setItem('jobreel_registered', 'true');
+                    sessionStorage.setItem('authRedirect', 'true');
+
+                    router.push('/feed');
+                    return;
+                }
+
+                console.warn('⚠️ [Login] Popup cancelled or closed.');
                 return;
             }
             console.error('❌ [Login] FAILED:', error);

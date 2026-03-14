@@ -285,9 +285,51 @@ export function useAuth() {
         error: null,
       });
     } catch (error: any) {
-      // ✅ Silent handling for popup closure
+      // ✅ THE KEY FIX: Firebase sometimes throws 'popup-closed-by-user' 
+      // even after the authentication has actually succeeded.
       if (error.code === 'auth/popup-closed-by-user' || 
           error.code === 'auth/cancelled-popup-request') {
+        
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          console.log('✅ [useAuth] User authenticated despite popup error — continuing flow...');
+          
+          let userProfile = await getUserProfile(currentUser.uid);
+
+          if (!userProfile) {
+            await createUserProfile({
+              uid: currentUser.uid,
+              email: currentUser.email!,
+              displayName: currentUser.displayName || 'User',
+              photoURL: currentUser.photoURL,
+              role,
+              emailVerified: currentUser.emailVerified,
+              paymentStatus: 'pending',
+              isPremium: false,
+              applicationsUsed: 0,
+              premiumJobsViewed: 0,
+              points: 0,
+              isActive: true,
+              isFeatured: false,
+              isBanned: false,
+              onboardingCompleted: false,
+            });
+            userProfile = await getUserProfile(currentUser.uid);
+          } else if (!userProfile.onboardingCompleted && userProfile.role !== role) {
+            await updateUserProfile(currentUser.uid, { role });
+            userProfile = await getUserProfile(currentUser.uid);
+          }
+
+          _broadcast({
+            user: userProfile,
+            firebaseUser: currentUser,
+            loading: false,
+            error: null,
+          });
+          return;
+        }
+
+        console.warn('⚠️ [useAuth] Popup closed or cancelled by user.');
         _broadcast({ ..._state, loading: false, error: null });
         return;
       }

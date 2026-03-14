@@ -43,7 +43,21 @@ export default function RegisterPage() {
         } catch (error: any) {
             if (error.code === 'auth/popup-closed-by-user' ||
                 error.code === 'auth/cancelled-popup-request') {
-                console.warn('⚠️ [Register] Popup cancelled — not an error.');
+                
+                // ✅ THE KEY FIX: check if user actually got logged in despite the error
+                const currentUser = auth.currentUser;
+                if (currentUser) {
+                    console.log('✅ [Register] User authenticated despite popup error — continuing...');
+                    
+                    localStorage.removeItem('jobreel_videos_watched');
+                    localStorage.setItem('jobreel_registered', 'true');
+                    sessionStorage.setItem('authRedirect', 'true');
+
+                    router.push('/feed');
+                    return;
+                }
+
+                console.warn('⚠️ [Register] Popup cancelled or closed.');
                 return;
             }
             console.error('❌ [Register] FAILED:', error);

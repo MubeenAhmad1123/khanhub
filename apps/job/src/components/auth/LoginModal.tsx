@@ -89,13 +89,20 @@ export default function LoginModal() {
             await loginWithGoogle(role);
             console.log('✅ [LoginModal] Google login success!');
         } catch (err: any) {
-            // popup-closed-by-user fires even on SUCCESS or benign cancellation — ignore it
+            // popup-closed-by-user fires even on SUCCESS or benign cancellation — ignore if auth succeeded
             if (
                 err.code === 'auth/popup-closed-by-user' ||
                 err.code === 'auth/cancelled-popup-request' ||
                 err.message?.includes('popup-closed-by-user')
             ) {
-                console.warn('⚠️ [LoginModal] Google popup closed or cancelled — ignoring.');
+                const currentUser = auth.currentUser;
+                if (currentUser) {
+                    console.log('✅ [LoginModal] User authenticated despite popup error.');
+                    // The useEffect in LoginModal handles navigation when 'user' changes
+                    return;
+                }
+
+                console.warn('⚠️ [LoginModal] Google popup closed or cancelled.');
                 return;
             }
 
