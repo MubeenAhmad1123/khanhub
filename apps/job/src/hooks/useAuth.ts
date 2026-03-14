@@ -49,7 +49,20 @@ const _startListener = () => {
   if (_listenerActive) return;
   _listenerActive = true;
 
+  // SAFETY TIMEOUT:
+  // If Firebase Auth fails to resolve (e.g. 400 error on iframe/network issues),
+  // we don't want the app stuck in "loading: true" forever.
+  const timeoutId = setTimeout(() => {
+    if (_state.loading) {
+      console.warn('[useAuth] Auth session resolution timed out. Forcing interactive state.');
+      _broadcast({ ..._state, loading: false });
+    }
+  }, 7000); // 7 seconds is plenty for initial check
+
   onAuthStateChanged(auth, async (firebaseUser) => {
+    // Clear timeout as soon as any state is returned
+    clearTimeout(timeoutId);
+
     if (firebaseUser) {
       // Retry getUserProfile up to 3 times with delay:
       let userProfile = null;

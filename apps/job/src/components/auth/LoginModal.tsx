@@ -88,7 +88,13 @@ export default function LoginModal() {
             await loginWithGoogle(role);
         } catch (err: any) {
             console.error('Google login error:', err);
-            setError(err.message || 'Failed to login with Google');
+            if (err.message.includes('popup-closed-by-user')) {
+              setError('Sign-in popup was closed before completion. Please try again and keep the window open.');
+            } else if (err.message.includes('auth/operation-not-allowed')) {
+              setError('Google sign-in is not enabled for this domain. Please contact admin.');
+            } else {
+              setError(err.message || 'Failed to login with Google');
+            }
         }
     };
 
@@ -115,7 +121,14 @@ export default function LoginModal() {
                     {/* Error Message */}
                     {error && (
                         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm font-medium">
-                            {error}
+                            <div className="flex flex-col gap-1">
+                              <span>{error}</span>
+                              {error.includes('popup') && (
+                                <span className="text-[11px] opacity-70">
+                                  Tip: Ensure your browser allows popups for this site.
+                                </span>
+                              )}
+                            </div>
                         </div>
                     )}
 
