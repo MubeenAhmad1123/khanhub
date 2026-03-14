@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import GoogleTranslateWidget from '@/components/ui/GoogleTranslateWidget';
+import HamburgerDrawer from '@/components/layout/HamburgerDrawer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface NavItem {
@@ -136,7 +137,7 @@ export default function ImprovedNavbar() {
     const router = useRouter();
     // FIX: Removed unused `hasPaymentApproved` destructure
     const { user, loading } = useAuth();
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -168,18 +169,8 @@ export default function ImprovedNavbar() {
     // ── Close menus on route change ───────────────────────────────────────────
     useEffect(() => {
         setShowProfileMenu(false);
-        setShowMobileMenu(false);
+        // drawer closes itself via HamburgerDrawer's onClose
     }, [pathname]);
-
-    // ── Lock body scroll when mobile drawer is open ───────────────────────────
-    useEffect(() => {
-        document.body.style.overflow = showMobileMenu ? 'hidden' : '';
-        document.body.style.touchAction = showMobileMenu ? 'none' : '';
-        return () => {
-            document.body.style.overflow = '';
-            document.body.style.touchAction = '';
-        };
-    }, [showMobileMenu]);
 
     // ── Derived user info ─────────────────────────────────────────────────────
     const isCompany = user?.role === 'employer';
@@ -238,6 +229,7 @@ export default function ImprovedNavbar() {
 
     return (
         // FIX: Added role="navigation" and aria-label for accessibility
+        <>
         <nav
             role="navigation"
             aria-label="Main navigation"
@@ -352,7 +344,7 @@ export default function ImprovedNavbar() {
 
                         {/* Mobile Menu Toggle */}
                         <button
-                            onClick={() => setShowMobileMenu(true)}
+                            onClick={() => setDrawerOpen(true)}
                             aria-label="Open navigation menu"
                             className="lg:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 active:scale-95 transition-all"
                         >
@@ -362,102 +354,11 @@ export default function ImprovedNavbar() {
                 </div>
             </div>
 
-            {/* ── Mobile Drawer ─────────────────────────────────────────────── */}
-            {showMobileMenu && (
-                <>
-                    {/* Backdrop */}
-                    <div
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] lg:hidden animate-in fade-in duration-300"
-                        onClick={() => setShowMobileMenu(false)}
-                        aria-hidden="true"
-                    />
-
-                    {/* Drawer panel */}
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="Navigation menu"
-                        className="fixed top-0 bottom-0 right-0 w-[280px] h-[100dvh] bg-white z-[160] lg:hidden shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
-                    >
-                        {/* Header */}
-                        <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-                            <h2 className="text-xl font-black text-blue-600 italic">KHAN HUB</h2>
-                            <button
-                                onClick={() => setShowMobileMenu(false)}
-                                aria-label="Close navigation menu"
-                                className="p-2 rounded-xl bg-slate-50 text-slate-500"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                            {user && (
-                                <div className="mb-6 px-3 py-4 bg-slate-50 rounded-2xl flex items-center gap-3 border border-slate-100">
-                                    <Avatar avatarUrl={avatarUrl} email={user.email ?? undefined} size="lg" />
-                                    <div className="flex flex-col flex-1 overflow-hidden">
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded text-orange-600 bg-orange-100 uppercase tracking-wider">
-                                                {displayRole}
-                                            </span>
-                                        </div>
-                                        <span className="text-sm font-bold text-slate-900 truncate">{displayName}</span>
-                                        <span className="text-xs text-slate-500 truncate">{user.email}</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {navItems.map((item) => (
-                                <Link
-                                    key={item.path}
-                                    href={item.path}
-                                    onClick={() => setShowMobileMenu(false)}
-                                    className={`flex items-center gap-4 px-4 py-4 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${
-                                        isActive(item.path)
-                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                            : 'text-slate-600 hover:bg-slate-50'
-                                    }`}
-                                >
-                                    {item.icon}
-                                    {item.name}
-                                </Link>
-                            ))}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 border-t border-slate-50 space-y-3 bg-white mt-auto">
-                            {!user ? (
-                                <>
-                                    <Link
-                                        onClick={() => setShowMobileMenu(false)}
-                                        href="/auth/register"
-                                        className="flex items-center justify-center gap-2 h-14 bg-[#F97316] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20"
-                                    >
-                                        <PlusCircle className="w-5 h-5" />
-                                        Upload My Video
-                                    </Link>
-                                    <Link
-                                        onClick={() => setShowMobileMenu(false)}
-                                        href="/auth/login"
-                                        className="flex items-center justify-center gap-2 w-full h-14 bg-blue-50 text-blue-600 rounded-2xl font-black text-sm uppercase tracking-widest"
-                                    >
-                                        Log In
-                                    </Link>
-                                </>
-                            ) : (
-                                <button
-                                    onClick={handleLogout}
-                                    className="flex items-center justify-center gap-2 w-full h-14 bg-red-50 text-red-600 rounded-2xl font-black text-sm uppercase tracking-widest"
-                                >
-                                    <LogOut className="w-5 h-5" />
-                                    Sign Out
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </>
-            )}
         </nav>
+            <HamburgerDrawer
+                isOpen={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+            />
+        </>
     );
 }
