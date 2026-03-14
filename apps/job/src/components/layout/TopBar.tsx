@@ -74,6 +74,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
     const [showSwitcher, setShowSwitcher] = useState(false);
     const switcherRef = useRef<HTMLDivElement>(null);
     const switcherTriggerRef = useRef<HTMLButtonElement>(null);
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
 
     const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -118,7 +119,22 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                     <div className="relative">
                         <button
                             ref={switcherTriggerRef}
-                            onClick={() => setShowSwitcher(!showSwitcher)}
+                            onClick={() => {
+                                if (!showSwitcher && switcherTriggerRef.current) {
+                                    const rect = switcherTriggerRef.current.getBoundingClientRect();
+                                    const dropdownWidth = 240; 
+                                    let leftPos = rect.left;
+                                    if (leftPos + dropdownWidth > window.innerWidth - 16) {
+                                        leftPos = window.innerWidth - dropdownWidth - 16;
+                                    }
+                                    if (leftPos < 8) leftPos = 8;
+                                    setDropdownPos({
+                                        top: rect.bottom + 8,
+                                        left: leftPos,
+                                    });
+                                }
+                                setShowSwitcher(!showSwitcher);
+                            }}
                             className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full hover:border-[--accent] transition-all"
                         >
                             <span className="text-[11px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">
@@ -134,7 +150,16 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 z-[70] overflow-hidden"
+                                    style={{
+                                        position: 'fixed',
+                                        top: dropdownPos.top,
+                                        left: dropdownPos.left,
+                                        minWidth: '200px',
+                                        width: 'max-content',
+                                        maxWidth: '240px',
+                                        zIndex: 9999,
+                                    }}
+                                    className="bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 overflow-hidden"
                                 >
                                     <div className="px-4 py-2 mb-1">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Select Category</span>
@@ -146,7 +171,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                                 setShowSwitcher(false);
                                                 setCategory(key as CategoryKey);
                                             }}
-                                            className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all ${activeCategory === key
+                                            className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all whitespace-nowrap ${activeCategory === key
                                                 ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'
                                                 : 'hover:bg-black/5 text-[#444444]'
                                                 }`}
@@ -158,7 +183,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                                     <span className="text-sm">{config.emoji}</span>
                                                 )}
                                             </div>
-                                            <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">{config.label}</span>
+                                            <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A] whitespace-nowrap">{config.label}</span>
                                             {activeCategory === key && (
                                                 <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" />
                                             )}
