@@ -64,6 +64,12 @@ const _startListener = () => {
     clearTimeout(timeoutId);
 
     if (firebaseUser) {
+      // ✅ BROADCAST LOADING if not already loading or if user is different
+      // This prevents gaps where firebaseUser is present but 'user' (profile) is still null
+      if (!_state.loading || (_state.firebaseUser?.uid !== firebaseUser.uid)) {
+        _broadcast({ ..._state, firebaseUser, loading: true });
+      }
+
       // Retry getUserProfile up to 3 times with delay:
       let userProfile = null;
       let lastError = null;
@@ -278,6 +284,20 @@ export function useAuth() {
         userProfile = await getUserProfile(userCredential.user.uid);
       }
 
+      if (!userProfile) {
+        // Log explicitly if profile creation/fetch is taking long or failing
+        console.warn('[useAuth] Profile not found after login, using fallback...');
+        userProfile = {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email!,
+          displayName: userCredential.user.displayName || 'User',
+          photoURL: userCredential.user.photoURL,
+          role,
+          onboardingCompleted: false,
+          paymentStatus: 'pending',
+        } as any;
+      }
+
       _broadcast({
         user: userProfile,
         firebaseUser: userCredential.user,
@@ -318,6 +338,19 @@ export function useAuth() {
           } else if (!userProfile.onboardingCompleted && userProfile.role !== role) {
             await updateUserProfile(currentUser.uid, { role });
             userProfile = await getUserProfile(currentUser.uid);
+          }
+
+          if (!userProfile) {
+            console.warn('[useAuth] Profile not found after popup error login, using fallback...');
+            userProfile = {
+              uid: currentUser.uid,
+              email: currentUser.email!,
+              displayName: currentUser.displayName || 'User',
+              photoURL: currentUser.photoURL,
+              role,
+              onboardingCompleted: false,
+              paymentStatus: 'pending',
+            } as any;
           }
 
           _broadcast({

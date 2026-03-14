@@ -32,7 +32,7 @@ const PRELOAD_BEHIND = 1  // keep 1 video behind buffered
 
 export function VideoFeed() {
     const { activeCategory, activeRole } = useCategory();
-    const { user, loading } = useAuth();
+    const { user, loading, firebaseUser } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -229,10 +229,16 @@ export function VideoFeed() {
                             }
 
                             // Guest Wall Logic — ONLY if auth resolved AND user is confirmed null
-                            if (!user && !loading) {
+                            // Also check firebaseUser to avoid flicker during profile resolution
+                            const isRegistered = localStorage.getItem('jobreel_registered') === 'true';
+
+                            if (!user && !firebaseUser && !loading && !isRegistered) {
                                 const watchedCount = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
                                 localStorage.setItem('jobreel_videos_watched', String(watchedCount));
-                                if (watchedCount >= 3) setShowGuestWall(true);
+                                if (watchedCount >= 3) {
+                                    console.log('🛑 [VideoFeed] Showing GuestWall — user is confirmed guest.');
+                                    setShowGuestWall(true);
+                                }
                             }
                         }
                     });
@@ -564,7 +570,8 @@ export function VideoFeed() {
                 </div>
             </div>
 
-            {!user && showGuestWall && (
+            {/* Only show wall if user is NOT logged in (both profile and firebase auth) */}
+            {!user && !firebaseUser && showGuestWall && (
                 <GuestWall isVisible={true} onContinue={() => {
                     localStorage.setItem('jobreel_videos_watched', '0');
                     setShowGuestWall(false);
