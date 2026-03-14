@@ -140,12 +140,7 @@ export function useAuth() {
   // CRITICAL: Initialize with a fixed state to match server-side render.
   // This prevents hydration mismatches by ensuring the first render on the client
   // matches the "loading" state sent by the server.
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    firebaseUser: null,
-    loading: true,
-    error: null,
-  });
+  const [authState, setAuthState] = useState<AuthState>(() => _state);
 
   useEffect(() => {
     // Start the singleton listener (idempotent — safe to call many times):

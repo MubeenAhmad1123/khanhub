@@ -230,11 +230,10 @@ export function VideoFeed() {
 
                             // Guest Wall Logic — only trigger if user is completely unauthenticated
                             // Check BOTH user (Firestore profile) AND firebaseUser (Firebase Auth)
-                            if (!user && !firebaseUser && !loading) {
+                            if (!user && !firebaseUser) {
                                 const watchedCount = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
                                 localStorage.setItem('jobreel_videos_watched', String(watchedCount));
                                 if (watchedCount >= 3) {
-                                    console.log('🛑 [VideoFeed] Showing GuestWall — user is confirmed guest.');
                                     setShowGuestWall(true);
                                 }
                             }
@@ -404,6 +403,7 @@ export function VideoFeed() {
     // Fix D: If user logs in while GuestWall is showing — hide it immediately
     useEffect(() => {
         if (firebaseUser && showGuestWall) {
+            console.log('[VideoFeed] User authenticated — hiding GuestWall');
             setShowGuestWall(false);
             localStorage.removeItem('jobreel_videos_watched');
         }
