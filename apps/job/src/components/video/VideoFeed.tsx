@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 // import { CategoryDropdown } from '@/components/feed/CategoryDropdown'; // Removed for inline placement
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
-import { collection, query, where, orderBy, onSnapshot, doc, limit, getDoc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, limit, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
 // Shuffle helper:
@@ -45,9 +45,7 @@ export function VideoFeed() {
     const [activeTab, setActiveTab] = useState(2); // Default to 'For You'
     const [showGuestWall, setShowGuestWall] = useState(false);
     const [showStoriesBar, setShowStoriesBar] = useState(true);
-    const [firestoreProfile, setFirestoreProfile] = useState<any>(null);
     const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
-    const [watchedIds, setWatchedIds] = useState<string[]>([]);
     const [displayVideos, setDisplayVideos] = useState<any[]>([]);
     const [isMuted, setIsMuted] = useState(true);
     const [userHasInteracted, setUserHasInteracted] = useState(false);
@@ -92,59 +90,14 @@ export function VideoFeed() {
     const prevDisplayRef = useRef<any[]>([]);
     const prevActiveRef  = useRef<number>(0);
 
+    // List updated — just sync refs
     useEffect(() => {
-        const prev = prevDisplayRef.current;
-        const prevActive = prevActiveRef.current;
-
-        if (prev.length === 0) {
-            // First load — go to index 0 or deeplink target
-            if (displayVideos.length > 0) {
-                const currentTargetId = searchParams.get('v');
-                if (!currentTargetId) {
-                    const timer = setTimeout(() => { setActiveIndex(0); }, 300);
-                }
-                prevDisplayRef.current = displayVideos;
-            }
-            return;
-        }
-
-        // List updated — find where the currently-active video moved to:
-        const currentVideoId = prev[prevActive]?.id;
-        if (currentVideoId) {
-            const newIndex = displayVideos.findIndex(v => v.id === currentVideoId);
-            if (newIndex !== -1 && newIndex !== prevActive) {
-                // Silently snap to new position without animation:
-                setActiveIndex(newIndex);
-                const container = containerRef.current;
-                if (container) {
-                    container.scrollTop = newIndex * container.clientHeight;
-                }
-            }
-        }
-
         prevDisplayRef.current = displayVideos;
         prevActiveRef.current = activeIndex;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [displayVideos]);
+    }, [displayVideos, activeIndex]);
 
     // ── Load User Profile & Watched Videos ────────────────────────
-    useEffect(() => {
-        if (!user) {
-            setFirestoreProfile(null);
-            setWatchedIds([]);
-            return;
-        }
-        const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                setFirestoreProfile(data);
-                setWatchedIds(data.watchedVideos || []);
-            }
-        }, (error) => {
-            console.warn('[VideoFeed Profile] Snapshot error:', error.message);
-        });
-        return () => unsub();
-    }, [user]);
+    // User Profile Snapshot removed to stop chain reaction
 
     // ── Fetch Firestore Videos ────────────────────────────────────
     useEffect(() => {
@@ -200,19 +153,19 @@ export function VideoFeed() {
                     ...d
                 }));
 
-            // Shuffle if For You tab:
-            if (isForYou) {
-                videos = shuffleArray(videos);
-            }
-
-            console.log('[FIRESTORE] Videos fetched →', videos.length, 'videos');
-            setFirestoreVideos(videos);
+            // Shuffle if For You tab — ONLY on first load:
+            setFirestoreVideos(prev => {
+                if (isForYou && prev.length === 0) {
+                    return shuffleArray(videos);
+                }
+                return videos;
+            });
         }, (error) => {
             console.warn('[VideoFeed Videos] Snapshot error:', error.message);
         });
 
         return () => unsubscribe();
-    }, [activeCategory, activeTab, firestoreProfile, targetCategoryId, targetVideoId, activeRole]);
+    }, [activeCategory, activeTab, targetCategoryId, targetVideoId, activeRole]);
 
     // ── Display videos — NEVER filter, only soft-sort: ──
     const buildDisplayList = useCallback((
@@ -387,7 +340,7 @@ export function VideoFeed() {
             };
             fetchAndPrepend();
         }
-    }, [targetVideoId, displayVideos, activeIndex]);
+    }, [targetVideoId, displayVideos]);
 
     // ── Stories Bar Visibility ────────────────────────────────────
     useEffect(() => {
