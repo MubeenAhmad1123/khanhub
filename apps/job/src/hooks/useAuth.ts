@@ -51,24 +51,47 @@ const _startListener = () => {
 
   onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
-      try {
-        const userProfile = await getUserProfile(firebaseUser.uid);
+      // Retry getUserProfile up to 3 times with delay:
+      let userProfile = null;
+      let lastError = null;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          userProfile = await getUserProfile(firebaseUser.uid);
+          lastError = null;
+          break; // success — stop retrying
+        } catch (err) {
+          lastError = err;
+          console.warn(`getUserProfile attempt ${attempt} failed:`, err);
+          if (attempt < 3) {
+            // Wait before retry: 500ms, 1500ms
+            await new Promise(resolve => setTimeout(resolve, attempt * 500));
+          }
+        }
+      }
+
+      if (userProfile) {
+        // Success:
         _broadcast({
           user: userProfile,
           firebaseUser,
           loading: false,
           error: null,
         });
-      } catch (err) {
-        console.error('Error fetching user profile:', err);
+      } else {
+        // All retries failed — CRITICAL:
+        // Still set firebaseUser so user isn't stuck
+        // They're authenticated in Firebase even if Firestore fetch failed
+        console.error('getUserProfile failed after 3 attempts:', lastError);
         _broadcast({
           user: null,
-          firebaseUser,
+          firebaseUser, // ← keep this so app knows auth succeeded
           loading: false,
-          error: 'Failed to load user data',
+          error: 'profile_load_failed', // specific error code
         });
       }
     } else {
+      // Signed out:
       _broadcast({
         user: null,
         firebaseUser: null,
@@ -237,11 +260,18 @@ export function useAuth() {
 
   const logout = async (): Promise<void> => {
     try {
-      await firebaseSignOut(auth);
+      // Reset state first so UI shows logged-out immediately:
       _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
+
+      // Then sign out from Firebase:
+      await firebaseSignOut(auth);
+
+      // Hard redirect — clears any in-memory state completely:
+      window.location.href = '/auth/login';
     } catch (error: any) {
-      _broadcast({ ..._state, error: error.message || 'Logout failed' });
-      throw error;
+      console.error('Logout error:', error);
+      // Force reload even on error — better than being stuck:
+      window.location.href = '/auth/login';
     }
   };
 

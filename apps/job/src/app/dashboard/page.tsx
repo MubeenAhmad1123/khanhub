@@ -100,10 +100,43 @@ export default function JobSeekerDashboard() {
         };
     }, [user?.uid]);
 
+    const { firebaseUser, error, logout } = useAuth();
+
     if (loading) {
         return (
             <div className="min-h-screen bg-[#F8FAFF] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
+
+    // NEW: profile failed to load but user IS authenticated
+    if (error === 'profile_load_failed' && firebaseUser) {
+        return (
+            <div className="min-h-screen bg-[#F8FAFF] flex flex-col items-center justify-center gap-6 p-10 text-center">
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-10 h-10 text-red-600" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">Profile Load Failed</h2>
+                    <p className="text-slate-500 max-w-sm">
+                        You're authenticated in Firebase, but we couldn't fetch your profile from Firestore.
+                    </p>
+                </div>
+                <div className="flex flex-col gap-3 w-full max-w-xs">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-blue-500/20 hover:scale-105 transition-all"
+                    >
+                        Try Again
+                    </button>
+                    <button
+                        onClick={logout}
+                        className="text-slate-500 font-bold hover:text-slate-800 transition-colors"
+                    >
+                        Sign Out
+                    </button>
+                </div>
             </div>
         );
     }
