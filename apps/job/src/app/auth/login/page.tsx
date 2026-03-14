@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { auth, db } from '@/lib/firebase/firebase-config';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -16,7 +16,14 @@ export default function LoginPage() {
     const handleGoogleLogin = async () => {
         try {
             setLoading(true);
+
+            // ✅ Force sign out any stale session before re-authenticating
+            await signOut(auth);
+
             const provider = new GoogleAuthProvider();
+            // Add this so Google always shows account picker — important for multi-account users
+            provider.setCustomParameters({ prompt: 'select_account' });
+
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
 

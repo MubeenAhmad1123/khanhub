@@ -292,6 +292,12 @@ export function useAuth() {
       // Reset state first so UI shows logged-out immediately:
       _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
 
+      // ✅ Clear app-specific storage
+      localStorage.removeItem('jobreel_registered');
+      localStorage.removeItem('jobreel_active_category');
+      localStorage.removeItem('jobreel_guest_prefs');
+      sessionStorage.removeItem('authRedirect');
+
       // Then sign out from Firebase:
       await firebaseSignOut(auth);
 

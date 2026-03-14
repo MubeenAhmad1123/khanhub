@@ -34,7 +34,7 @@ function ProfileSkeleton() {
 import { useAuth } from '@/hooks/useAuth';
 
 export default function ProfilePage() {
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, logout } = useAuth();
     const router = useRouter();
     const { categoryConfig, accentColor } = useCategory();
     const [profile, setProfile] = useState<any>(null);
@@ -233,9 +233,14 @@ export default function ProfilePage() {
             </div>
 
             {/* Sign Out */}
-            <div style={{ padding: '24px 16px 0', borderTop: 'none' }}>
                 <button
-                    onClick={() => { db.app.options.projectId; /* Hack to use db if needed */ router.push('/'); }}
+                    onClick={async () => {
+                        try {
+                            await logout();
+                        } catch (e) {
+                            console.error('Logout failed', e);
+                        }
+                    }}
                     style={{
                         width: '100%', padding: '12px',
                         background: 'transparent', border: '1px solid #FF0069',
@@ -245,7 +250,6 @@ export default function ProfilePage() {
                 >
                     Sign Out
                 </button>
-            </div>
         </div>
     );
 }
