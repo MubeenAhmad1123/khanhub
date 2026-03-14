@@ -29,7 +29,7 @@ import ProfileEngagement from '@/components/dashboard/ProfileEngagement';
 
 export default function JobSeekerDashboard() {
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading, firebaseUser, error, logout } = useAuth();
     const [userData, setUserData] = useState<User | null>(null);
     const [stats, setStats] = useState({
         videos_watched: 0,
@@ -100,7 +100,6 @@ export default function JobSeekerDashboard() {
         };
     }, [user?.uid]);
 
-    const { firebaseUser, error, logout } = useAuth();
 
     if (loading) {
         return (

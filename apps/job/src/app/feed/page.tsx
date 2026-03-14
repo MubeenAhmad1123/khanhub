@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function FeedPage() {
-    const { user, loading } = useAuth();
+    const { user, loading, firebaseUser, error, logout } = useAuth();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -35,7 +35,6 @@ export default function FeedPage() {
         );
     }
 
-    const { firebaseUser, error, logout } = useAuth();
 
     // NEW: profile failed to load but user IS authenticated
     if (error === 'profile_load_failed' && firebaseUser) {
