@@ -41,7 +41,7 @@ function NotificationBell() {
     }, []);
 
     const handleNotificationClick = useCallback(async (notification: any) => {
-        if (!notification.is_read) await markAsRead(notification.id);
+        if (!notification.isRead) await markAsRead(notification.id);
         setIsOpen(false);
     }, [markAsRead]);
 
@@ -76,17 +76,17 @@ function NotificationBell() {
                                 <div
                                     key={notification.id}
                                     onClick={() => handleNotificationClick(notification)}
-                                    className={`px-4 py-3 border-b border-gray-50 last:border-none cursor-pointer hover:bg-gray-50 transition-colors ${!notification.is_read ? 'bg-blue-50/30' : ''}`}
+                                    className={`px-4 py-3 border-b border-gray-50 last:border-none cursor-pointer hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-blue-50/30' : ''}`}
                                 >
                                     <div className="flex gap-3">
-                                        <div className={`mt-1 flex-shrink-0 w-2 h-2 rounded-full ${!notification.is_read ? 'bg-blue-500' : 'bg-transparent'}`} />
+                                        <div className={`mt-1 flex-shrink-0 w-2 h-2 rounded-full ${!notification.isRead ? 'bg-blue-500' : 'bg-transparent'}`} />
                                         <div>
-                                            <p className={`text-sm ${!notification.is_read ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+                                            <p className={`text-sm ${!notification.isRead ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
                                                 {notification.message}
                                             </p>
                                             <p className="text-[10px] text-gray-400 mt-1">
-                                                {notification.created_at?.toDate
-                                                    ? new Date(notification.created_at.toDate()).toLocaleDateString()
+                                                {notification.createdAt?.toDate
+                                                    ? new Date(notification.createdAt.toDate()).toLocaleDateString()
                                                     : 'Just now'}
                                             </p>
                                         </div>

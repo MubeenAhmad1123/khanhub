@@ -10,7 +10,7 @@ interface Notification {
   type: 'like' | 'follow' | 'video_approved' | 'video_rejected' | 'new_payment' | string
   title: string
   message: string
-  is_read: boolean
+  isRead: boolean
   createdAt: any
   targetId?: string
 }
@@ -54,7 +54,7 @@ export default function NotificationDropdown({
 
     const q = query(
       collection(db, 'notifications'),
-      where('user_id', '==', uid),
+      where('userId', '==', uid),
       orderBy('createdAt', 'desc'),
       limit(20)
     )
@@ -73,13 +73,13 @@ export default function NotificationDropdown({
 
   const markRead = async (id: string) => {
     try {
-      await updateDoc(doc(db, 'notifications', id), { is_read: true })
+      await updateDoc(doc(db, 'notifications', id), { isRead: true })
     } catch (e) {}
   }
 
   const markAllRead = async () => {
     notifications
-      .filter(n => !n.is_read)
+      .filter(n => !n.isRead)
       .forEach(n => markRead(n.id))
   }
 
@@ -108,7 +108,7 @@ export default function NotificationDropdown({
           borderBottom: '1px solid #F0F0F0',
         }}>
           <span style={{ fontWeight: 700, fontSize: '15px' }}>Notifications</span>
-          {notifications.some(n => !n.is_read) && (
+          {notifications.some(n => !n.isRead) && (
             <button
               onClick={markAllRead}
               style={{
@@ -139,7 +139,7 @@ export default function NotificationDropdown({
                 style={{
                   display: 'flex', gap: '12px',
                   padding: '12px 16px', cursor: 'pointer',
-                  background: notif.is_read ? '#fff' : '#FFF5F8',
+                  background: notif.isRead ? '#fff' : '#FFF5F8',
                   borderBottom: '1px solid #F8F8F8',
                   transition: 'background 0.2s',
                 }}
@@ -157,7 +157,7 @@ export default function NotificationDropdown({
                 {/* Text */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{
-                    fontSize: '13px', fontWeight: notif.is_read ? 400 : 600,
+                    fontSize: '13px', fontWeight: notif.isRead ? 400 : 600,
                     color: '#0A0A0A', margin: 0, lineHeight: 1.4,
                   }}>
                     {notif.title}
@@ -171,7 +171,7 @@ export default function NotificationDropdown({
                 </div>
 
                 {/* Unread dot */}
-                {!notif.is_read && (
+                {!notif.isRead && (
                   <div style={{
                     width: '8px', height: '8px',
                     borderRadius: '50%', background: '#FF0069',

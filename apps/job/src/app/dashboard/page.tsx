@@ -67,7 +67,7 @@ export default function JobSeekerDashboard() {
         // 2. Connections Stats
         const connQ = query(
             collection(db, 'connections'),
-            where('from_user_id', '==', user.uid),
+            where('seekerId', '==', user.uid),
             where('status', '==', 'active')
         );
         const unsubscribeConn = onSnapshot(connQ, (snap) => {

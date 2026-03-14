@@ -61,8 +61,8 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
         if (!uid) return;
         const q = query(
             collection(db, 'notifications'),
-            where('user_id', '==', uid),
-            where('is_read', '==', false),
+            where('userId', '==', uid),
+            where('isRead', '==', false),
             limit(99)
         );
         const unsub = onSnapshot(q, snap => {

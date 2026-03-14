@@ -10,7 +10,7 @@ export const createNotification = async (
 ) => {
   try {
     await addDoc(collection(db, 'notifications'), {
-      user_id: userId,
+      userId: userId,
       type,
       title,
       message,

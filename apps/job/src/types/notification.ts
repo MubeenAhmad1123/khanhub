@@ -9,13 +9,18 @@ export type NotificationType =
 
 export interface Notification {
     id: string;
-    user_id: string;
+    userId: string;
     type: NotificationType;
     message: string;
-    is_read: boolean;
-    created_at: Timestamp;
+    isRead: boolean;
+    createdAt: Timestamp;
 
     // Optional reference data
-    reference_id?: string; // e.g., payment_id or video_id
+    reference_Id?: string; // e.g., payment_id or video_id
     action_url?: string;
+    
+    // For backward compatibility while migrating
+    user_id?: string;
+    is_read?: boolean;
+    created_at?: Timestamp;
 }

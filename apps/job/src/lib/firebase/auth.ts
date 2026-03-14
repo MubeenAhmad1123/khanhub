@@ -165,14 +165,14 @@ export async function wipeUserData(uid: string): Promise<void> {
     await deleteWhere('payments', 'userId', uid);
 
     // 3. Delete user's notifications
-    await deleteWhere('notifications', 'user_id', uid);
+    await deleteWhere('notifications', 'userId', uid);
 
     // 4. Delete user's activity log entries
     await deleteWhere('activity_log', 'userId', uid);
 
-    // 5. Delete connections (can be stored under userId OR employerId)
+    // 5. Delete connections (can be stored under seekerId OR employerId)
     const [connSnap1, connSnap2] = await Promise.all([
-        getDocs(query(collection(db, 'connections'), where('userId', '==', uid))),
+        getDocs(query(collection(db, 'connections'), where('seekerId', '==', uid))),
         getDocs(query(collection(db, 'connections'), where('employerId', '==', uid))),
     ]);
     await Promise.all([

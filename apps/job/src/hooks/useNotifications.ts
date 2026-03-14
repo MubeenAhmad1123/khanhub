@@ -31,8 +31,8 @@ export function useNotifications() {
         console.log('[useNotifications] Setting up listener for user:', user.uid);
         const q = query(
             collection(db, 'notifications'),
-            where('user_id', '==', user.uid),
-            orderBy('created_at', 'desc')
+            where('userId', '==', user.uid),
+            orderBy('createdAt', 'desc')
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -41,16 +41,18 @@ export function useNotifications() {
                 return {
                     id: doc.id,
                     ...data,
-                    // Handle potential legacy/alternate field names
-                    user_id: data.user_id || data.userId,
-                    created_at: data.created_at || data.createdAt,
-                    is_read: data.is_read !== undefined ? data.is_read : data.read
-                };
+                    userId: data.userId || data.user_id,
+                    createdAt: data.createdAt || data.created_at,
+                    isRead: data.isRead !== undefined ? data.isRead : (data.is_read !== undefined ? data.is_read : data.read),
+                    type: data.type || 'new_connection',
+                    message: data.message || '',
+                    action_url: data.action_url || ''
+                } as Notification;
             }) as Notification[];
 
             console.log(`[useNotifications] Fetched ${notifs.length} notifications`);
             setNotifications(notifs);
-            setUnreadCount(notifs.filter(n => !n.is_read).length);
+            setUnreadCount(notifs.filter(n => !n.isRead).length);
             setLoading(false);
         }, (error) => {
             console.error('Error fetching notifications:', error);
@@ -68,7 +70,7 @@ export function useNotifications() {
         try {
             const notifRef = doc(db, 'notifications', notificationId);
             await updateDoc(notifRef, {
-                is_read: true
+                isRead: true
             });
         } catch (error) {
             console.error('Error marking notification as read:', error);
@@ -77,9 +79,9 @@ export function useNotifications() {
 
     const markAllAsRead = async () => {
         if (!user) return;
-        const unreadNotifs = notifications.filter(n => !n.is_read);
+        const unreadNotifs = notifications.filter(n => !n.isRead);
         const promises = unreadNotifs.map(n =>
-            updateDoc(doc(db, 'notifications', n.id), { is_read: true })
+            updateDoc(doc(db, 'notifications', n.id), { isRead: true })
         );
         try {
             await Promise.all(promises);
@@ -97,11 +99,11 @@ export function useNotifications() {
     ) => {
         try {
             await addDoc(collection(db, 'notifications'), {
-                user_id: userId,
+                userId: userId,
                 type,
                 message,
-                is_read: false,
-                created_at: serverTimestamp(),
+                isRead: false,
+                createdAt: serverTimestamp(),
                 reference_id: referenceId || null,
                 action_url: actionUrl || null
             });
