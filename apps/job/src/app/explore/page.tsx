@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TopBar } from '@/components/layout/TopBar';
 import { ExploreGrid } from '@/components/feed/ExploreGrid';
 import BottomNav from '@/components/layout/BottomNav';
 import { useCategory } from '@/context/CategoryContext';
@@ -59,8 +58,6 @@ export default function ExplorePage() {
             minHeight: '100vh',
             paddingBottom: '80px'
         }}>
-            <TopBar hideCategorySwitcher={true} />
-
             {/* Filter chips — horizontal scroll */}
             <div style={{
                 display: 'flex',
@@ -70,7 +67,7 @@ export default function ExplorePage() {
                 padding: '12px 16px',
                 background: '#fff',
                 position: 'sticky',
-                top: '56px',
+                top: '64px',
                 zIndex: 40,
                 borderBottom: '1px solid #F0F0F0',
             }} className="no-scrollbar">
