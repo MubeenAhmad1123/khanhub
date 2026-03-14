@@ -228,11 +228,9 @@ export function VideoFeed() {
                                 }
                             }
 
-                            // Guest Wall Logic — ONLY if auth resolved AND user is confirmed null
-                            // Also check firebaseUser to avoid flicker during profile resolution
-                            const isRegistered = localStorage.getItem('jobreel_registered') === 'true';
-
-                            if (!user && !firebaseUser && !loading && !isRegistered) {
+                            // Guest Wall Logic — only trigger if user is completely unauthenticated
+                            // Check BOTH user (Firestore profile) AND firebaseUser (Firebase Auth)
+                            if (!user && !firebaseUser && !loading) {
                                 const watchedCount = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
                                 localStorage.setItem('jobreel_videos_watched', String(watchedCount));
                                 if (watchedCount >= 3) {
@@ -402,6 +400,14 @@ export function VideoFeed() {
 
         return () => clearTimeout(timer);
     }, [activeIndex, displayVideos, user, markWatched]);
+
+    // Fix D: If user logs in while GuestWall is showing — hide it immediately
+    useEffect(() => {
+        if (firebaseUser && showGuestWall) {
+            setShowGuestWall(false);
+            localStorage.removeItem('jobreel_videos_watched');
+        }
+    }, [firebaseUser, showGuestWall]);
 
     const getVideoState = (index: number) => {
         const distance = index - activeIndex;
@@ -573,7 +579,7 @@ export function VideoFeed() {
             {/* Only show wall if user is NOT logged in (both profile and firebase auth) */}
             {!user && !firebaseUser && showGuestWall && (
                 <GuestWall isVisible={true} onContinue={() => {
-                    localStorage.setItem('jobreel_videos_watched', '0');
+                    localStorage.removeItem('jobreel_videos_watched');
                     setShowGuestWall(false);
                 }} />
             )}

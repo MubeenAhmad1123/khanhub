@@ -13,6 +13,13 @@ export default function FeedPage() {
         setMounted(true);
     }, []);
 
+    // ── CRITICAL FIX: Clear guest watch counter when user is detected ──
+    useEffect(() => {
+        if (firebaseUser) {
+            localStorage.removeItem('jobreel_videos_watched');
+        }
+    }, [firebaseUser]);
+
     useEffect(() => {
         if (mounted && user && typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
