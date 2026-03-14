@@ -76,11 +76,10 @@ export default function HamburgerDrawer({
     <>
       {/* Backdrop */}
       <div
+        className="hamburger-drawer-backdrop"
         onClick={onClose}
         style={{
-          position: 'fixed', inset: 0,
           backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 99998,
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'all' : 'none',
           transition: 'opacity 0.3s ease',
@@ -89,12 +88,10 @@ export default function HamburgerDrawer({
       />
 
       {/* Drawer Panel */}
-      <div style={{
-        position: 'fixed',
-        top: 0, right: 0, bottom: 0,
-        width: '300px',
+      <div 
+        className="hamburger-drawer-panel"
+        style={{
         backgroundColor: '#FFFFFF',
-        zIndex: 99999,
         isolation: 'isolate',
         transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',

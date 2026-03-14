@@ -8,15 +8,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, Search, PlusSquare, User } from 'lucide-react';
 
 import { CategoryProvider } from '@/context/CategoryContext';
-import { useEffect } from 'react';
+import ImprovedNavbar from '@/components/layout/ImprovedNavbar';
+import HamburgerDrawer from '@/components/layout/HamburgerDrawer';
+import { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { FeedToastProvider } from '@/components/ui/FeedToast';
 import { startProgress } from '@/components/layout/RouteProgressBar';
 
-import dynamic from 'next/dynamic';
-import { Suspense } from 'react';
-
 // Wrap non-critical layout components with next/dynamic
-const DynamicTopBar = dynamic(() => import('@/components/layout/TopBar').then(mod => mod.TopBar), { ssr: false });
 const DynamicBottomNav = dynamic(() => import('@/components/layout/BottomNav').then(mod => mod.default), { ssr: false });
 
 export default function ClientLayout({
@@ -33,6 +32,8 @@ export default function ClientLayout({
     const isFeedRoute = hiddenRoutes.includes(pathname || '');
     const showNav = !isAdminRoute && !isAuthRoute;
     const showTopBar = showNav && !isFeedRoute;
+
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const router = useRouter();
 
@@ -64,7 +65,7 @@ export default function ClientLayout({
         <AuthProviderWrapper>
             <CategoryProvider>
                 <ToastProvider>
-                    {showTopBar && <DynamicTopBar />}
+                    {showTopBar && <ImprovedNavbar onMenuOpen={() => setDrawerOpen(true)} />}
 
                     {/* Desktop sidebar */}
                     {showNav && (
@@ -105,6 +106,12 @@ export default function ClientLayout({
                     </main>
                     {showNav && <DynamicBottomNav />}
                     <FeedToastProvider />
+
+                    {/* HamburgerDrawer renders at root level, outside every sticky/transform container */}
+                    <HamburgerDrawer
+                        isOpen={drawerOpen}
+                        onClose={() => setDrawerOpen(false)}
+                    />
                 </ToastProvider>
             </CategoryProvider>
         </AuthProviderWrapper>

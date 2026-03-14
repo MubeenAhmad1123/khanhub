@@ -21,6 +21,10 @@ interface NavItem {
     icon: React.ReactNode;
 }
 
+interface ImprovedNavbarProps {
+    onMenuOpen: () => void;
+}
+
 // ─── NotificationBell (co-located, unexported) ────────────────────────────────
 function NotificationBell() {
     const { notifications, unreadCount, markAsRead } = useNotifications();
@@ -132,12 +136,11 @@ function Avatar({ avatarUrl, email, size = 'sm' }: { avatarUrl?: string | null; 
 }
 
 // ─── Main Navbar ──────────────────────────────────────────────────────────────
-export default function ImprovedNavbar() {
+export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
     const pathname = usePathname();
     const router = useRouter();
     // FIX: Removed unused `hasPaymentApproved` destructure
     const { user, loading } = useAuth();
-    const [drawerOpen, setDrawerOpen] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -344,7 +347,7 @@ export default function ImprovedNavbar() {
 
                         {/* Mobile Menu Toggle */}
                         <button
-                            onClick={() => setDrawerOpen(true)}
+                            onClick={onMenuOpen}
                             aria-label="Open navigation menu"
                             className="lg:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 active:scale-95 transition-all"
                         >
@@ -355,10 +358,6 @@ export default function ImprovedNavbar() {
             </div>
 
         </nav>
-            <HamburgerDrawer
-                isOpen={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-            />
         </>
     );
 }
