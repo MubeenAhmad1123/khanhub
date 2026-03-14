@@ -141,7 +141,12 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
     // FIX: Removed unused `hasPaymentApproved` destructure
     const { user, loading } = useAuth();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Search state
     const [searchOpen, setSearchOpen] = useState(false);
@@ -374,9 +379,9 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                           </button>
                         </div>
 
-                        {/* FIX: Avoid rendering anything auth-related while loading
-                            to prevent layout shift / flash of wrong state */}
-                        {!loading && (
+                        {/* FIX: Avoid rendering anything auth-related while loading or before mounting
+                            to prevent layout shift / flash of wrong state / hydration errors */}
+                        {mounted && !loading && (
                             <>
                                 {user ? (
                                     <div className="flex items-center gap-3 lg:gap-4">

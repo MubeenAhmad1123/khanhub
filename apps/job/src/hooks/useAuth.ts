@@ -106,21 +106,25 @@ const _startListener = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useAuth() {
-  // Initialize from cached state immediately (no flash of loading):
-  const [authState, setAuthState] = useState<AuthState>(_state);
+  // CRITICAL: Initialize with a fixed state to match server-side render.
+  // This prevents hydration mismatches by ensuring the first render on the client
+  // matches the "loading" state sent by the server.
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    firebaseUser: null,
+    loading: true,
+    error: null,
+  });
 
   useEffect(() => {
     // Start the singleton listener (idempotent — safe to call many times):
     _startListener();
 
+    // Immediately sync with the current singleton state after mount:
+    setAuthState(_state);
+
     // Subscribe this component to future state changes:
     _subscribers.add(setAuthState);
-
-    // If state already resolved (user navigated to page after login),
-    // apply it immediately so this component doesn't show stale loading:
-    if (!_state.loading) {
-      setAuthState(_state);
-    }
 
     // Cleanup — just unsubscribe this component, never kill the listener:
     return () => {

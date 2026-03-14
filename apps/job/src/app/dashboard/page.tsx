@@ -39,6 +39,11 @@ export default function JobSeekerDashboard() {
     const [userVideoStatus, setUserVideoStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
     const [hasSubmittedPayment, setHasSubmittedPayment] = useState(false);
     const [checkingPayment, setCheckingPayment] = useState(true);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         if (!loading && user && user.paymentStatus !== 'approved' && user.role !== 'admin') {
@@ -101,7 +106,7 @@ export default function JobSeekerDashboard() {
     }, [user?.uid]);
 
 
-    if (loading) {
+    if (!mounted || loading) {
         return (
             <div className="min-h-screen bg-[#F8FAFF] flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
