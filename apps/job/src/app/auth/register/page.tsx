@@ -17,9 +17,6 @@ export default function RegisterPage() {
         try {
             setLoading(true);
 
-            // ✅ Force sign out any stale session before re-authenticating
-            await signOut(auth);
-
             const provider = new GoogleAuthProvider();
             // Add this so Google always shows account picker
             provider.setCustomParameters({ prompt: 'select_account' });
@@ -64,7 +61,13 @@ export default function RegisterPage() {
             } else {
                 router.push('/feed');
             }
-        } catch (error) {
+        } catch (error: any) {
+            // ✅ Don't show error for popup-closed — user just dismissed it
+            if (error.code === 'auth/popup-closed-by-user' || 
+                error.code === 'auth/cancelled-popup-request') {
+                setLoading(false);
+                return;
+            }
             console.error('Registration error:', error);
         } finally {
             setLoading(false);

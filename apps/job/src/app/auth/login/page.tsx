@@ -17,9 +17,6 @@ export default function LoginPage() {
         try {
             setLoading(true);
 
-            // ✅ Force sign out any stale session before re-authenticating
-            await signOut(auth);
-
             const provider = new GoogleAuthProvider();
             // Add this so Google always shows account picker — important for multi-account users
             provider.setCustomParameters({ prompt: 'select_account' });
@@ -65,7 +62,13 @@ export default function LoginPage() {
             sessionStorage.setItem('authRedirect', 'true');
 
             router.push('/feed');
-        } catch (error) {
+        } catch (error: any) {
+            // ✅ Don't show error for popup-closed — user just dismissed it
+            if (error.code === 'auth/popup-closed-by-user' || 
+                error.code === 'auth/cancelled-popup-request') {
+                setLoading(false);
+                return;
+            }
             console.error('Login error:', error);
         } finally {
             setLoading(false);
