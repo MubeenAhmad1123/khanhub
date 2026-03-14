@@ -13,6 +13,17 @@ export default function FeedPage() {
         setMounted(true);
     }, []);
 
+    useEffect(() => {
+        if (mounted && user && typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('v')) {
+                // Remove the ?v= param without reloading the page
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, '', cleanUrl);
+            }
+        }
+    }, [mounted, user]);
+
     if (!mounted || loading) {
         return (
             <div style={{

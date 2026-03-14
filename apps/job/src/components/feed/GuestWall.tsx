@@ -3,9 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserPlus } from 'lucide-react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase/firebase-config';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
@@ -18,6 +16,7 @@ interface GuestWallProps {
 export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const { loginWithGoogle } = useAuth();
 
     // Round 0: user just hit 3 videos for the first time → show bypass button
     // Round 1: user has already used the bypass → show ONLY Google sign-in, no bypass
@@ -29,48 +28,15 @@ export function GuestWall({ isVisible, onContinue }: GuestWallProps) {
     const handleGoogleSignIn = async () => {
         setLoading(true);
         try {
-            const provider = new GoogleAuthProvider();
-            const result = await signInWithPopup(auth, provider);
-            const user = result.user;
-
-            const guestPrefs = JSON.parse(localStorage.getItem('jobreel_guest_prefs') || '{}');
-            const sessionId = localStorage.getItem('jobreel_session_id');
-
-            const userRef = doc(db, 'users', user.uid);
-            const userSnap = await getDoc(userRef);
-
-            if (!userSnap.exists()) {
-                await setDoc(userRef, {
-                    uid: user.uid,
-                    name: user.displayName,
-                    email: user.email,
-                    photoURL: user.photoURL,
-                    category: guestPrefs.category || 'jobs',
-                    role: guestPrefs.role || 'provider',
-                    city: '',
-                    phone: '',
-                    createdAt: serverTimestamp(),
-                    videosWatched: 0,
-                    savedVideos: [],
-                    profileComplete: false,
-                });
-            }
+            await loginWithGoogle('job_seeker'); // useAuth handles profile creation properly
 
             // Clear guest counters
             localStorage.removeItem('jobreel_videos_watched');
             localStorage.removeItem('jobreel_guest_round');
             localStorage.setItem('jobreel_registered', 'true');
 
-            if (sessionId) {
-                await updateDoc(doc(db, 'guest_sessions', sessionId), {
-                    converted: true,
-                    convertedAt: serverTimestamp(),
-                    uid: user.uid,
-                }).catch(() => { });
-            }
-
             onContinue();
-            router.push('/feed');
+            router.replace('/feed');
         } catch (error) {
             console.error('Google sign-in error:', error);
         } finally {

@@ -69,6 +69,12 @@ export function VideoFeed() {
     if (videoRefs.current.length < displayVideos.length) {
         videoRefs.current = [...videoRefs.current, ...new Array(displayVideos.length - videoRefs.current.length).fill(null)];
     }
+    useEffect(() => {
+        if (user) {
+            setShowGuestWall(false);
+        }
+    }, [user]);
+
     // Reset feed on signal (but NOT automatically on category change to prevent jumpiness)
     useEffect(() => {
         const resetRequested = sessionStorage.getItem('feed_reset_requested');
