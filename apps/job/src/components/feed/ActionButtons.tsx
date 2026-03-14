@@ -85,7 +85,7 @@ export function ActionButtons({
 
     const handleLike = async () => {
         if (!user?.uid) {
-            showToast('Sign in to like videos', 'info');
+            showToast('Sign in to like videos');
             return;
         }
         const newLiked = !liked;
@@ -122,7 +122,7 @@ export function ActionButtons({
 
     const handleSave = async () => {
         if (!user?.uid) {
-            showToast('Sign in to save videos', 'info');
+            showToast('Sign in to save videos');
             return;
         }
         const newSaved = !saved;
