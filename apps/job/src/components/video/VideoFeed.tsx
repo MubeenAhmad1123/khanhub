@@ -215,33 +215,28 @@ export function VideoFeed() {
         return () => unsubscribe();
     }, [activeCategory, activeTab, firestoreProfile, targetCategoryId, targetVideoId, activeRole]);
 
-    // ── Build Final Display List ───────────────────────────────────
+    // ── Display videos — NEVER filter, only soft-sort: ──
+    const buildDisplayList = useCallback((
+      videos: any[],
+      wIds: string[]
+    ): any[] => {
+      // If platform is small (< 20 videos) — show ALL, no sorting:
+      if (videos.length < 20) return videos;
+
+      // Enough content — push watched to back:
+      const unseen = videos.filter(v => !wIds.includes(v.id));
+      const seen   = videos.filter(v =>  wIds.includes(v.id));
+      return unseen.length >= 3 ? [...unseen, ...seen] : videos;
+    }, []);
+
+    // ── When videos load — set display list, NEVER touch activeIndex: ──
     useEffect(() => {
-        const baseVideos = [...firestoreVideos];
-        if (!user) {
-            setDisplayVideos(baseVideos);
-            return;
-        }
-
-        const getDisplayVideos = (all: any[], wIds: string[]) => {
-            if (!wIds || wIds.length === 0) return all;
-            const unwatched = all.filter((v: any) => !wIds.includes(v.id));
-            const watched = all.filter((v: any) => wIds.includes(v.id));
-
-            if (unwatched.length >= 5) {
-                return [...unwatched, ...watched];
-            }
-            if (unwatched.length === 0) {
-                return all;
-            }
-            return [...unwatched, ...watched];
-        };
-
-        const sorted = getDisplayVideos(baseVideos, watchedIds);
-        
-        console.log('[DISPLAY] displayVideos being set');
-        setDisplayVideos(sorted);
-    }, [firestoreVideos, watchedIds, user]);
+      if (!firestoreVideos.length) return;
+      const display = buildDisplayList(firestoreVideos, watchedIds);
+      setDisplayVideos(display);
+      // ❌ DO NOT call setActiveIndex here
+      // ❌ DO NOT call scrollToTop here
+    }, [firestoreVideos, watchedIds, buildDisplayList]);
 
     // ── Intersection Observer for Active Index & URL ───────────────
     useEffect(() => {
@@ -405,30 +400,38 @@ export function VideoFeed() {
         setShowStoriesBar(activeIndex === 0);
     }, [activeIndex]);
 
-    // ── View Tracking (Fix 2 & 4 Auth Guarded Timer) ────────────────
+    // ── Watched video tracking — SAFE version: ──
+    const markWatched = useCallback(async (videoId: string) => {
+      // Rule 1: guests never write:
+      if (!user?.uid) return;
+
+      // Rule 2: silent failure — never crash feed:
+      try {
+        await Promise.all([
+          updateDoc(doc(db, 'videos', videoId), {
+            views: increment(1)
+          }),
+          updateDoc(doc(db, 'users', user.uid), {
+            watchedVideos: arrayUnion(videoId)
+          })
+        ]);
+      } catch (_) {
+        // Silently ignore — permissions, offline, etc.
+      }
+    }, [user?.uid]);
+
+    // ── View Tracking Timer ────────────────
     useEffect(() => {
         if (!user?.uid || displayVideos.length === 0) return;
         const currentVideo = displayVideos[activeIndex];
         if (!currentVideo || currentVideo.isPlaceholder) return;
 
-        const markVideoWatched = async (videoId: string) => {
-            if (!user?.uid) return;
-            try {
-                await updateDoc(doc(db, 'videos', videoId), { views: increment(1) });
-                await updateDoc(doc(db, 'users', user.uid), { watchedVideos: arrayUnion(videoId) });
-            } catch (err) {
-                console.warn('View tracking skipped:', err);
-            }
-        };
-
         const timer = setTimeout(() => {
-            if (user?.uid) {
-                markVideoWatched(currentVideo.id);
-            }
+            markWatched(currentVideo.id);
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [activeIndex, displayVideos, user]);
+    }, [activeIndex, displayVideos, user, markWatched]);
 
     const getVideoState = (index: number) => {
         const distance = index - activeIndex;
