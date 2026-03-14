@@ -247,6 +247,9 @@ export function useAuth() {
     try {
       _broadcast({ ..._state, loading: true, error: null });
       const provider = new GoogleAuthProvider();
+      // ✅ Force account picker
+      provider.setCustomParameters({ prompt: 'select_account' });
+
       const userCredential = await signInWithPopup(auth, provider);
 
       let userProfile = await getUserProfile(userCredential.user.uid);
@@ -282,6 +285,12 @@ export function useAuth() {
         error: null,
       });
     } catch (error: any) {
+      // ✅ Silent handling for popup closure
+      if (error.code === 'auth/popup-closed-by-user' || 
+          error.code === 'auth/cancelled-popup-request') {
+        _broadcast({ ..._state, loading: false, error: null });
+        return;
+      }
       _broadcast({ ..._state, loading: false, error: error.message || 'Google login failed' });
       throw error;
     }

@@ -8,84 +8,45 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const { loginWithGoogle } = useAuth();
 
     const handleGoogleLogin = async () => {
         try {
             setLoading(true);
-            console.log('🔵 [Login] Step 1: Starting Google login...');
+            console.log('🔵 [Login] Step 1: Starting Google login via useAuth...');
 
-            const provider = new GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' });
-
-            console.log('🔵 [Login] Step 2: Opening popup...');
-            const result = await signInWithPopup(auth, provider);
+            // loginWithGoogle handles the popup, Firestore creation, and select_account
+            await loginWithGoogle('job_seeker');
             
-            console.log('✅ [Login] Step 3: Popup success! Firebase user:', {
-                uid: result.user.uid,
-                email: result.user.email,
-                displayName: result.user.displayName,
-            });
+            console.log('✅ [Login] Step 2: loginWithGoogle successful!');
 
-            const user = result.user;
-            const userRef = doc(db, 'users', user.uid);
-
-            console.log('🔵 [Login] Step 4: Checking Firestore for user doc...');
-            const userDoc = await getDoc(userRef);
-            console.log('✅ [Login] Step 5: Firestore result:', {
-                exists: userDoc.exists(),
-                data: userDoc.exists() ? userDoc.data() : 'NO DOC',
-            });
-
-            if (!userDoc.exists()) {
-                console.log('🔵 [Login] Step 6a: New user — creating Firestore doc...');
-                const guestPrefs = JSON.parse(localStorage.getItem('jobreel_guest_prefs') || '{}');
-                await setDoc(userRef, {
-                    uid: user.uid,
-                    name: user.displayName,
-                    email: user.email,
-                    photoURL: user.photoURL,
-                    category: guestPrefs.category || 'jobs',
-                    role: guestPrefs.role || 'provider',
-                    createdAt: serverTimestamp(),
-                    savedVideos: [],
-                    bio: '',
-                    skills: [],
-                    experience: [],
-                    education: [],
-                });
-                console.log('✅ [Login] Step 6a: Firestore doc created!');
-            } else {
-                console.log('✅ [Login] Step 6b: Existing user found, skipping creation.');
-                const data = userDoc.data();
-                if (data.category) {
-                    localStorage.setItem('jobreel_active_category', data.category);
-                }
+            // Post-login logic
+            const guestPrefs = JSON.parse(localStorage.getItem('jobreel_guest_prefs') || '{}');
+            if (guestPrefs.category) {
+                localStorage.setItem('jobreel_active_category', guestPrefs.category);
             }
 
             localStorage.removeItem('jobreel_videos_watched');
             localStorage.setItem('jobreel_registered', 'true');
             sessionStorage.setItem('authRedirect', 'true');
 
-            console.log('🔵 [Login] Step 7: Attempting router.push to /feed...');
+            console.log('🔵 [Login] Step 3: Navigating to /feed...');
             router.push('/feed');
-            console.log('✅ [Login] Step 8: router.push called!');
+            console.log('✅ [Login] Step 4: router.push called!');
 
         } catch (error: any) {
+            // Already handled in useAuth for silent closure, but catch here just in case
             if (error.code === 'auth/popup-closed-by-user' ||
                 error.code === 'auth/cancelled-popup-request') {
-                console.warn('⚠️ [Login] Popup closed by user — not an error.');
-                setLoading(false);
+                console.warn('⚠️ [Login] Popup cancelled — not an error.');
                 return;
             }
-            console.error('❌ [Login] FAILED at error:', {
-                code: error.code,
-                message: error.message,
-                fullError: error,
-            });
+            console.error('❌ [Login] FAILED:', error);
         } finally {
             setLoading(false);
         }

@@ -84,8 +84,10 @@ export default function LoginModal() {
 
     const handleGoogleLogin = async (role: 'job_seeker' | 'employer') => {
         setError('');
+        console.log(`🔵 [LoginModal] Starting Google login as ${role}...`);
         try {
             await loginWithGoogle(role);
+            console.log('✅ [LoginModal] Google login success!');
         } catch (err: any) {
             // popup-closed-by-user fires even on SUCCESS or benign cancellation — ignore it
             if (
@@ -93,11 +95,11 @@ export default function LoginModal() {
                 err.code === 'auth/cancelled-popup-request' ||
                 err.message?.includes('popup-closed-by-user')
             ) {
-                console.log('[Auth] Google popup closed or cancelled');
+                console.warn('⚠️ [LoginModal] Google popup closed or cancelled — ignoring.');
                 return;
             }
 
-            console.error('Google login error:', err);
+            console.error('❌ [LoginModal] Google login error:', err);
             if (err.message.includes('auth/operation-not-allowed')) {
               setError('Google sign-in is not enabled for this domain. Please contact admin.');
             } else {
