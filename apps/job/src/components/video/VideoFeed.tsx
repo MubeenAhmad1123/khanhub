@@ -63,6 +63,7 @@ export function VideoFeed() {
     }, []);
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const hasDeeplinked = useRef(false);
     const videoRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Ensure videoRefs array is scaled
@@ -72,6 +73,15 @@ export function VideoFeed() {
     useEffect(() => {
         if (user) {
             setShowGuestWall(false);
+            // Clear ?v= param to stop the deeplink loop on login
+            if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                if (url.searchParams.has('v')) {
+                    window.history.replaceState(null, '', url.pathname);
+                }
+            }
+            // Reset deeplink flag so it doesn't re-scroll on next category change
+            hasDeeplinked.current = false;
         }
     }, [user]);
 
@@ -207,17 +217,19 @@ export function VideoFeed() {
                     entries.forEach(entry => {
                         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
                             setActiveIndex(prev => prev === index ? prev : index);
-                            // Update URL
+
+                            // Update URL — but ONLY if auth has resolved (not loading)
                             const video = displayVideos[index];
-                            if (video && !video.isPlaceholder) {
+                            if (video && !video.isPlaceholder && !loading) {
                                 const url = new URL(window.location.href);
                                 if (url.searchParams.get('v') !== video.id) {
                                     url.searchParams.set('v', video.id);
                                     window.history.replaceState(null, '', url.pathname + url.search);
                                 }
                             }
-                            // Guest Wall Logic
-                            if (!user) {
+
+                            // Guest Wall Logic — ONLY if auth resolved AND user is confirmed null
+                            if (!user && !loading) {
                                 const watchedCount = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
                                 localStorage.setItem('jobreel_videos_watched', String(watchedCount));
                                 if (watchedCount >= 3) setShowGuestWall(true);
@@ -236,7 +248,7 @@ export function VideoFeed() {
         });
 
         return () => observers.forEach(o => o.disconnect());
-    }, [displayVideos, user]);
+    }, [displayVideos, user, loading]);
 
     // Method 2: Scroll event fallback (DevTools emulation backup)
     useEffect(() => {
@@ -302,10 +314,12 @@ export function VideoFeed() {
         });
 
         if (!targetVideoId || displayVideos.length === 0) return;
+        if (hasDeeplinked.current) return;
 
         const idx = displayVideos.findIndex(v => v.id === targetVideoId);
 
         if (idx !== -1) {
+            hasDeeplinked.current = true;
             // Video found in list — scroll to it
             if (idx !== activeIndex) {
                 setActiveIndex(idx);
@@ -334,6 +348,7 @@ export function VideoFeed() {
                             if (prev.some(v => v.id === targetVideoId)) return prev;
                             return [missingVideo, ...prev];
                         });
+                        hasDeeplinked.current = true;
                         // Scroll to index 0 after prepend
                         setTimeout(() => {
                             setActiveIndex(0);
