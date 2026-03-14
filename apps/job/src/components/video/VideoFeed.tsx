@@ -71,14 +71,13 @@ export function VideoFeed() {
     if (videoRefs.current.length < displayVideos.length) {
         videoRefs.current = [...videoRefs.current, ...new Array(displayVideos.length - videoRefs.current.length).fill(null)];
     }
-    // Reset feed on category change or signal
+    // Reset feed on signal (but NOT automatically on category change to prevent jumpiness)
     useEffect(() => {
         const resetRequested = sessionStorage.getItem('feed_reset_requested');
         
         if (resetRequested === 'true') {
             console.log('[RESET] Feed reset requested by CategoryStoriesBar');
             setActiveTab(2); // Back to For You
-            setActiveIndex(0);
             sessionStorage.removeItem('feed_reset_requested');
             
             // Scroll to top immediately
@@ -87,7 +86,7 @@ export function VideoFeed() {
             }, 50);
             return () => clearTimeout(timer);
         }
-    }, [activeCategory, searchParams]);
+    }, [searchParams]);
 
     // Ensure first video active on mount and preserve active index on list update
     const prevDisplayRef = useRef<any[]>([]);
@@ -220,23 +219,18 @@ export function VideoFeed() {
       videos: any[],
       wIds: string[]
     ): any[] => {
-      // If platform is small (< 20 videos) — show ALL, no sorting:
-      if (videos.length < 20) return videos;
-
-      // Enough content — push watched to back:
-      const unseen = videos.filter(v => !wIds.includes(v.id));
-      const seen   = videos.filter(v =>  wIds.includes(v.id));
-      return unseen.length >= 3 ? [...unseen, ...seen] : videos;
+      // Step A — Remove ALL watched video filtering:
+      return videos;
     }, []);
 
     // ── When videos load — set display list, NEVER touch activeIndex: ──
     useEffect(() => {
       if (!firestoreVideos.length) return;
-      const display = buildDisplayList(firestoreVideos, watchedIds);
-      setDisplayVideos(display);
+      // REPLACE setDisplayVideos with direct assignment:
+      setDisplayVideos(firestoreVideos);  // show ALL videos, no filtering
       // ❌ DO NOT call setActiveIndex here
       // ❌ DO NOT call scrollToTop here
-    }, [firestoreVideos, watchedIds, buildDisplayList]);
+    }, [firestoreVideos, buildDisplayList]);
 
     // ── Intersection Observer for Active Index & URL ───────────────
     useEffect(() => {
@@ -253,7 +247,7 @@ export function VideoFeed() {
                 (entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                            setActiveIndex(index);
+                            setActiveIndex(prev => prev === index ? prev : index);
                             // Update URL
                             const video = displayVideos[index];
                             if (video && !video.isPlaceholder) {
@@ -273,8 +267,8 @@ export function VideoFeed() {
                     });
                 },
                 {
-                    threshold: [0.5],
                     root: containerRef.current,
+                    threshold: 0.5,        // 50% visible = active
                     rootMargin: '0px',
                 }
             );
@@ -407,14 +401,10 @@ export function VideoFeed() {
 
       // Rule 2: silent failure — never crash feed:
       try {
-        await Promise.all([
-          updateDoc(doc(db, 'videos', videoId), {
-            views: increment(1)
-          }),
-          updateDoc(doc(db, 'users', user.uid), {
-            watchedVideos: arrayUnion(videoId)
-          })
-        ]);
+        await updateDoc(doc(db, 'videos', videoId), {
+          views: increment(1)
+        });
+        // ← NO watchedVideos write here
       } catch (_) {
         // Silently ignore — permissions, offline, etc.
       }
@@ -470,7 +460,7 @@ export function VideoFeed() {
                         <AnimatePresence>
                             {showStoriesBar && (
                                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                    <CategoryStoriesBar onCategoryChange={() => setActiveIndex(0)} />
+                                    <CategoryStoriesBar onCategoryChange={() => {}} />
                                 </motion.div>
                             )}
                         </AnimatePresence>
