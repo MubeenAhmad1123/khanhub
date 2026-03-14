@@ -70,10 +70,8 @@ export default function SavedVideosPage() {
         if (!videoUrl) return '';
         if (!videoUrl.includes('cloudinary.com')) return videoUrl;
         return videoUrl
-            .replace('/video/upload/', '/video/upload/so_0,w_400,h_711,c_fill,q_80/')
-            .replace('.mp4', '.jpg')
-            .replace('.webm', '.jpg')
-            .replace('.mov', '.jpg');
+            .replace('/video/upload/', '/video/upload/so_1,w_400,h_711,c_fill,f_jpg,q_80/')
+            .replace(/\.(mp4|mov|webm|avi)(\?.*)?$/i, '.jpg');
     };
 
     const formatCount = (n: number) => {
@@ -161,12 +159,15 @@ export default function SavedVideosPage() {
                                 className="relative aspect-[9/16] bg-slate-100 rounded-lg overflow-hidden cursor-pointer group"
                                 onClick={() => openFeedAtVideo(item.id)}
                             >
-                                <Image
+                                <img
                                     src={getCloudinaryThumbnail(item.cloudinaryUrl)}
                                     alt={item.title || 'Video thumbnail'}
-                                    fill
-                                    sizes="(max-width: 600px) 33vw, 200px"
-                                    className="object-cover transition-transform group-hover:scale-105"
+                                    loading="lazy"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    className="transition-transform group-hover:scale-105"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 

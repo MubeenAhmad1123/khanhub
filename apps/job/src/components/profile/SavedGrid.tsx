@@ -15,8 +15,8 @@ const getThumbnail = (video: any): string => {
     if (video.thumbnailUrl) return video.thumbnailUrl;
     if (video.cloudinaryUrl) {
         return video.cloudinaryUrl
-            .replace('/upload/', '/upload/so_0,w_400,h_711,c_fill,q_70/')
-            .replace(/\.(mp4|webm|mov)$/i, '.jpg');
+            .replace('/upload/', '/upload/so_1,w_400,h_711,c_fill,f_jpg,q_70/')
+            .replace(/\.(mp4|mov|webm|avi)(\?.*)?$/i, '.jpg');
     }
     const ytId = video.youtubeId || video.videoId;
     if (ytId) return `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
@@ -97,12 +97,15 @@ export default function SavedGrid({ savedIds, onVideoTap }: SavedGridProps) {
                     className="relative aspect-[9/16] bg-[#F0F0F0] overflow-hidden group cursor-pointer"
                     onClick={() => onVideoTap?.(index)}
                 >
-                    <Image
+                    <img
                         src={getThumbnail(vid)}
                         alt={vid.title || 'Saved video thumbnail'}
-                        fill
-                        sizes="(max-width: 600px) 33vw, 200px"
-                        className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all"
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        className="opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all"
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                        }}
                     />
                     <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white z-10">
                         <Play size={10} fill="white" />

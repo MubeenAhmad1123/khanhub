@@ -60,11 +60,13 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
     };
 
     const getThumbnail = (vid: any): string => {
+        if (vid.thumbnailUrl) return vid.thumbnailUrl;
         if (vid.cloudinaryUrl) {
             // Generate Cloudinary thumbnail from video URL
-            return vid.cloudinaryUrl.replace('/upload/', '/upload/so_0,w_400,h_600,c_fill/');
+            return vid.cloudinaryUrl
+                .replace('/upload/', '/upload/so_1,w_400,h_600,c_fill,f_jpg,q_auto/')
+                .replace(/\.(mp4|mov|webm|avi)(\?.*)?$/i, '.jpg');
         }
-        if (vid.thumbnailUrl) return vid.thumbnailUrl;
         if (vid.videoId) return `https://img.youtube.com/vi/${vid.videoId}/mqdefault.jpg`;
         return '';
     };
@@ -120,12 +122,15 @@ export default function VideosGrid({ uid, onVideoTap }: VideosGridProps) {
                         onClick={() => openVideoInFeed(index, vid.id)}
                     >
                         {thumb ? (
-                            <Image
+                            <img
                                 src={thumb}
                                 alt={vid.overlayData?.title || 'Video thumbnail'}
-                                fill
-                                sizes="(max-width: 600px) 33vw, 200px"
-                                className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                                loading="lazy"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                className="opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                }}
                             />
                         ) : (
                             /* Fallback when no thumbnail available yet */

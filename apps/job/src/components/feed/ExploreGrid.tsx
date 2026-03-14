@@ -96,7 +96,7 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
         if (!item.isPlaceholder && item.cloudinaryUrl) {
             return item.cloudinaryUrl
                 .replace('/upload/', '/upload/w_300,h_533,c_fill,f_jpg,so_1/')
-                .replace(/\.(mp4|mov|webm)$/i, '.jpg');
+                .replace(/\.(mp4|mov|webm|avi)(\?.*)?$/i, '.jpg');
         }
         return `https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`;
     };
@@ -151,14 +151,13 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
                         background: '#111',
                     }}
                 >
-                    <Image
+                    <img
                         src={getThumbnail(video)}
                         alt={video.title || 'Video thumbnail'}
-                        fill
-                        sizes="(max-width: 600px) 33vw, 200px"
-                        style={{
-                            objectFit: 'cover',
-                            display: 'block',
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
                         }}
                     />
 

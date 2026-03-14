@@ -224,8 +224,8 @@ export default function UserProfilePage() {
         if (video.thumbnailUrl) return video.thumbnailUrl;
         if (video.cloudinaryUrl) {
             return video.cloudinaryUrl
-                .replace('/upload/', '/upload/so_0,w_400,h_711,c_fill,q_80/')
-                .replace('.mp4', '.jpg').replace('.webm', '.jpg').replace('.mov', '.jpg');
+                .replace('/upload/', '/upload/so_1,w_400,h_711,c_fill,f_jpg,q_80/')
+                .replace(/\.(mp4|mov|webm|avi)(\?.*)?$/i, '.jpg');
         }
         if (video.youtubeId || video.videoId) {
             return `https://img.youtube.com/vi/${video.youtubeId || video.videoId}/mqdefault.jpg`;
@@ -434,11 +434,10 @@ export default function UserProfilePage() {
                         background: `linear-gradient(135deg, ${catConfig.accent}, #7638FA)`,
                         position: 'relative',
                     }}>
-                        <Image
+                        <img
                             src={profile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=eee&color=000&size=200`}
                             alt={profile.name}
-                            width={100}
-                            height={100}
+                            loading="lazy"
                             onClick={() => setShowDPZoom(true)}
                             style={{
                                 width: '100%', height: '100%',
@@ -623,13 +622,14 @@ export default function UserProfilePage() {
                                     }}
                                 >
                                     {getThumbnail(video) ? (
-                                        <Image
+                                        <img
                                             src={getThumbnail(video).replace('mqdefault.jpg', 'hqdefault.jpg')}
                                             alt=""
-                                            fill
-                                            sizes="(max-width: 600px) 33vw, 200px"
-                                            style={{ objectFit: 'cover' }}
-                                            priority={index < 6}
+                                            loading="lazy"
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                            }}
                                         />
                                     ) : (
                                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', fontSize: 24 }}>

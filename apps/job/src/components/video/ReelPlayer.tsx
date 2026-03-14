@@ -45,69 +45,85 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
         // User asked to disable manual muting/unmuting
     }, []);
 
-    // Play logic — correct sequence for iOS:
-    const attemptPlay = useCallback(() => {
-        const video = videoRef.current;
-        if (!video || !isActive) return;
-
-        // Step 1: Must be muted first (browser autoplay policy)
-        video.muted = true;
-        video.currentTime = 0;
-
-        // Step 2: Attempt play
-        const playAttempt = video.play();
-
-        if (playAttempt !== undefined) {
-            playAttempt
-                .then(() => {
-                    // Step 3: Unmute after play starts (100ms delay for iOS)
-                    setTimeout(() => {
-                        if (videoRef.current && isActive) {
-                            videoRef.current.muted = false;
-                            setIsMuted(false);
-                        }
-                    }, 100);
-                    setIsPaused(false);
-                })
-                .catch((err) => {
-                    // Autoplay blocked — show unmute button
-                    console.error('Autoplay failed:', err.message);
-                    video.muted = true;
-                    setIsMuted(true);
-                    setIsPaused(false);
-                });
-        }
-    }, [isActive]);
-
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        if (isActive) {
-            // Reset to start
-            video.currentTime = 0;
+        // Track if this effect is still valid (not cleaned up):
+        let cancelled = false;
+        let playAttemptTimeout: NodeJS.Timeout;
 
-            if (video.readyState >= 3) {
-                // Already have enough data to play
-                attemptPlay();
-            } else {
-                // Wait for enough data
-                const handleCanPlay = () => {
-                    attemptPlay();
-                    video.removeEventListener('canplay', handleCanPlay);
-                };
-                video.addEventListener('canplay', handleCanPlay);
-                return () => video.removeEventListener('canplay', handleCanPlay);
+        const attemptPlay = async () => {
+            if (cancelled || !videoRef.current) return;
+
+            try {
+                video.muted = true;
+
+                // Wait for video to be ready before calling play():
+                if (video.readyState < 2) {
+                    await new Promise<void>((resolve) => {
+                        const onCanPlay = () => {
+                            video.removeEventListener('canplay', onCanPlay);
+                            resolve();
+                        };
+                        video.addEventListener('canplay', onCanPlay);
+                        // Timeout fallback if canplay never fires:
+                        setTimeout(resolve, 3000);
+                    });
+                }
+
+                if (cancelled) return;  // ← Check AGAIN after await
+
+                await video.play();
+
+                if (cancelled) {
+                    // Effect was cleaned up during play() — pause immediately:
+                    video.pause();
+                    return;
+                }
+
+                // Unmute after confirmed playing:
+                setTimeout(() => {
+                    if (!cancelled && videoRef.current) {
+                        videoRef.current.muted = false;
+                        setIsMuted(false);
+                    }
+                }, 150);
+
+                setIsPaused(false);
+
+            } catch (err: any) {
+                if (cancelled) return;
+                // Only log non-abort errors:
+                if (err?.name !== 'AbortError') {
+                    video.muted = true;
+                    setIsMuted(true);
+                }
             }
+        };
+
+        if (isActive) {
+            // Small delay to let scroll settle before playing:
+            playAttemptTimeout = setTimeout(attemptPlay, 100);
         } else {
-            video.pause();
-            if (!isAdjacent) {
-                video.currentTime = 0;
-                setIsBuffering(true);
-            }
+            // Pause — but only if not in a play() promise:
+            const pauseVideo = () => {
+                if (video.paused) return;
+                try { video.pause(); } catch (_) {}
+                if (!isAdjacent) {
+                    video.currentTime = 0;
+                }
+            };
+            pauseVideo();
             if (hlsRef.current) hlsRef.current.stopLoad();
+            if (!isAdjacent) setIsBuffering(true);
         }
-    }, [isActive, attemptPlay, isAdjacent]);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(playAttemptTimeout);
+        };
+    }, [isActive, isAdjacent]);
 
     // Ensure the video src is actually set
     useEffect(() => {
@@ -175,6 +191,7 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
 
         let fallbackAttempts = 0;
         const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
+        const MAX_FALLBACK = 2; // stop after level 2, don't go to 3/4/5
 
         const stallTimeout = setInterval(() => {
             if (video.readyState < 3) {
@@ -184,11 +201,19 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
                     hlsRef.current.destroy();
                     hlsRef.current = null;
                 }
+                
+                if (fallbackAttempts >= MAX_FALLBACK) {
+                    // Final fallback: plain MP4 with Cloudinary optimization params
+                    video.src = cloudinaryUrl.replace('/upload/', '/upload/q_auto,f_auto,br_1m/');
+                    console.log('Video: using optimized MP4 final fallback');
+                    return;
+                }
+                
                 video.src = fallbackAttempts === 1 ? optimizedMp4 : cloudinaryUrl;
                 video.load();
                 video.play().catch(() => { });
             }
-        }, 6000);
+        }, 12000); // STALL_TIMEOUT_MS = 12000 was 6000
 
         return () => clearInterval(stallTimeout);
     }, [isActive, cloudinaryUrl]);
