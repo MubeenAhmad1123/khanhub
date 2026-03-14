@@ -16,20 +16,32 @@ export default function LoginPage() {
     const handleGoogleLogin = async () => {
         try {
             setLoading(true);
+            console.log('🔵 [Login] Step 1: Starting Google login...');
 
             const provider = new GoogleAuthProvider();
-            // Add this so Google always shows account picker — important for multi-account users
             provider.setCustomParameters({ prompt: 'select_account' });
 
+            console.log('🔵 [Login] Step 2: Opening popup...');
             const result = await signInWithPopup(auth, provider);
-            const user = result.user;
+            
+            console.log('✅ [Login] Step 3: Popup success! Firebase user:', {
+                uid: result.user.uid,
+                email: result.user.email,
+                displayName: result.user.displayName,
+            });
 
-            // Check if user exists in Firestore
+            const user = result.user;
             const userRef = doc(db, 'users', user.uid);
+
+            console.log('🔵 [Login] Step 4: Checking Firestore for user doc...');
             const userDoc = await getDoc(userRef);
+            console.log('✅ [Login] Step 5: Firestore result:', {
+                exists: userDoc.exists(),
+                data: userDoc.exists() ? userDoc.data() : 'NO DOC',
+            });
 
             if (!userDoc.exists()) {
-                // New user - create profile with guest prefs
+                console.log('🔵 [Login] Step 6a: New user — creating Firestore doc...');
                 const guestPrefs = JSON.parse(localStorage.getItem('jobreel_guest_prefs') || '{}');
                 await setDoc(userRef, {
                     uid: user.uid,
@@ -45,12 +57,9 @@ export default function LoginPage() {
                     experience: [],
                     education: [],
                 });
-
-                if (guestPrefs.category) {
-                    localStorage.setItem('jobreel_active_category', guestPrefs.category);
-                }
+                console.log('✅ [Login] Step 6a: Firestore doc created!');
             } else {
-                // Restore category from Firestore
+                console.log('✅ [Login] Step 6b: Existing user found, skipping creation.');
                 const data = userDoc.data();
                 if (data.category) {
                     localStorage.setItem('jobreel_active_category', data.category);
@@ -61,15 +70,22 @@ export default function LoginPage() {
             localStorage.setItem('jobreel_registered', 'true');
             sessionStorage.setItem('authRedirect', 'true');
 
+            console.log('🔵 [Login] Step 7: Attempting router.push to /feed...');
             router.push('/feed');
+            console.log('✅ [Login] Step 8: router.push called!');
+
         } catch (error: any) {
-            // ✅ Don't show error for popup-closed — user just dismissed it
-            if (error.code === 'auth/popup-closed-by-user' || 
+            if (error.code === 'auth/popup-closed-by-user' ||
                 error.code === 'auth/cancelled-popup-request') {
+                console.warn('⚠️ [Login] Popup closed by user — not an error.');
                 setLoading(false);
                 return;
             }
-            console.error('Login error:', error);
+            console.error('❌ [Login] FAILED at error:', {
+                code: error.code,
+                message: error.message,
+                fullError: error,
+            });
         } finally {
             setLoading(false);
         }

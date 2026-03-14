@@ -16,20 +16,32 @@ export default function RegisterPage() {
     const handleGoogleRegister = async () => {
         try {
             setLoading(true);
+            console.log('🔵 [Register] Step 1: Starting Google registration...');
 
             const provider = new GoogleAuthProvider();
-            // Add this so Google always shows account picker
             provider.setCustomParameters({ prompt: 'select_account' });
 
+            console.log('🔵 [Register] Step 2: Opening popup...');
             const result = await signInWithPopup(auth, provider);
-            const user = result.user;
+            
+            console.log('✅ [Register] Step 3: Popup success! Firebase user:', {
+                uid: result.user.uid,
+                email: result.user.email,
+                displayName: result.user.displayName,
+            });
 
-            // Check if user exists in Firestore
+            const user = result.user;
             const userRef = doc(db, 'users', user.uid);
+
+            console.log('🔵 [Register] Step 4: Checking Firestore for user doc...');
             const userDoc = await getDoc(userRef);
+            console.log('✅ [Register] Step 5: Firestore result:', {
+                exists: userDoc.exists(),
+                data: userDoc.exists() ? userDoc.data() : 'NO DOC',
+            });
 
             if (!userDoc.exists()) {
-                // New user - create profile, onboarding will handle the rest
+                console.log('🔵 [Register] Step 6a: New user — creating Firestore doc...');
                 await setDoc(userRef, {
                     uid: user.uid,
                     name: user.displayName,
@@ -43,8 +55,9 @@ export default function RegisterPage() {
                     experience: [],
                     education: [],
                 });
+                console.log('✅ [Register] Step 6a: Firestore doc created!');
             } else {
-                // Already registered
+                console.log('✅ [Register] Step 6b: Existing user found, skipping creation.');
                 const data = userDoc.data();
                 if (data.category) {
                     localStorage.setItem('jobreel_active_category', data.category);
@@ -55,20 +68,28 @@ export default function RegisterPage() {
             localStorage.setItem('jobreel_registered', 'true');
             sessionStorage.setItem('authRedirect', 'true');
 
-            // Redirect based on onboarding status
+            console.log('🔵 [Register] Step 7: Redirecting based on onboarding status...');
             if (!userDoc.exists()) {
+                console.log('🔵 [Register] Step 8a: Navigating to /auth/onboarding');
                 router.push('/auth/onboarding');
             } else {
+                console.log('🔵 [Register] Step 8b: Navigating to /feed');
                 router.push('/feed');
             }
+            console.log('✅ [Register] Step 9: router.push called!');
+
         } catch (error: any) {
-            // ✅ Don't show error for popup-closed — user just dismissed it
-            if (error.code === 'auth/popup-closed-by-user' || 
+            if (error.code === 'auth/popup-closed-by-user' ||
                 error.code === 'auth/cancelled-popup-request') {
+                console.warn('⚠️ [Register] Popup closed by user — not an error.');
                 setLoading(false);
                 return;
             }
-            console.error('Registration error:', error);
+            console.error('❌ [Register] FAILED at error:', {
+                code: error.code,
+                message: error.message,
+                fullError: error,
+            });
         } finally {
             setLoading(false);
         }
