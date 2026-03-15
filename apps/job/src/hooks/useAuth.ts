@@ -32,45 +32,42 @@ let _state: AuthState = {
   error: null,
 };
 
-// Track if we've successfully authenticated before (persist in localStorage)
-let _hasAuthenticatedBefore = typeof window !== 'undefined' && localStorage.getItem('jobreel_authenticated') === 'true';
+// FIX #3: Do NOT read localStorage at module level — causes React hydration error #418
+// because server renders with false but client has true → mismatch.
+// We only read it inside effects (client-only).
+let _hasAuthenticatedBefore = false;
 
 const _subscribers = new Set<(s: AuthState) => void>();
 
 const _broadcast = (newState: AuthState) => {
-  console.log('[useAuth] 📤 Broadcasting state change:', { 
-    hasUser: !!newState.user, 
-    hasFirebaseUser: !!newState.firebaseUser, 
+  console.log('[useAuth] 📤 Broadcasting state change:', {
+    hasUser: !!newState.user,
+    hasFirebaseUser: !!newState.firebaseUser,
     loading: newState.loading,
-    error: newState.error 
+    error: newState.error,
   });
-  
+
   _state = newState;
-  
-  // Track authentication state and persist to localStorage
+
   if (newState.firebaseUser) {
     _hasAuthenticatedBefore = true;
     if (typeof window !== 'undefined') {
       localStorage.setItem('jobreel_authenticated', 'true');
     }
-    console.log('[useAuth] ✅ User authenticated, localStorage updated');
-  } else if (newState.firebaseUser === null && newState.user === null && !newState.loading) {
-    // User logged out
+  } else if (!newState.loading && !newState.firebaseUser && !newState.user) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('jobreel_authenticated');
     }
     _hasAuthenticatedBefore = false;
     console.log('[useAuth] 👋 User logged out');
   }
-  
+
   _subscribers.forEach(fn => fn(newState));
 };
 
-// Single listener reference
 let _unsubscribeAuth: (() => void) | null = null;
 
 const _startListener = () => {
-  // Don't create multiple listeners - just ensure one is active
   if (_unsubscribeAuth) {
     console.log('[useAuth] 🎧 Auth listener already running');
     return;
@@ -85,44 +82,28 @@ const _startListener = () => {
     }
   }, 7000);
 
-  // This is Firebase's built-in auth state listener - it automatically triggers on login/logout
   _unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
     console.log('[useAuth] 📡 Firebase onAuthStateChanged triggered:', firebaseUser?.uid || 'null');
     clearTimeout(timeoutId);
 
     if (firebaseUser) {
-      console.log('[useAuth] 🔐 User detected from Firebase, fetching profile...');
-      
-      // Fetch user profile from Firestore
-      let userProfile = null;
-      let lastError = null;
+      console.log('[useAuth] 🔐 User detected, fetching profile...');
 
+      let userProfile = null;
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           userProfile = await getUserProfile(firebaseUser.uid);
-          lastError = null;
           break;
         } catch (err) {
-          lastError = err;
           console.warn(`[useAuth] getUserProfile attempt ${attempt} failed:`, err);
-          if (attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, attempt * 500));
-          }
+          if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500));
         }
       }
 
       if (userProfile) {
-        console.log('[useAuth] ✅ Profile loaded successfully');
-        _broadcast({
-          user: userProfile,
-          firebaseUser,
-          loading: false,
-          error: null,
-        });
+        _broadcast({ user: userProfile, firebaseUser, loading: false, error: null });
       } else {
-        // Profile doesn't exist - create fallback
-        console.warn('[useAuth] ⚠️ No profile found, using fallback');
-        const fallbackUser: any = {
+        const fallback: any = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName || 'User',
@@ -134,46 +115,26 @@ const _startListener = () => {
           followingCount: 0,
           totalLikes: 0,
         };
-
-        _broadcast({
-          user: fallbackUser,
-          firebaseUser,
-          loading: false,
-          error: 'profile_load_failed',
-        });
+        _broadcast({ user: fallback, firebaseUser, loading: false, error: 'profile_load_failed' });
       }
     } else {
-      // No user - logged out
       console.log('[useAuth] 👋 No user (logged out)');
-      _broadcast({
-        user: null,
-        firebaseUser: null,
-        loading: false,
-        error: null,
-      });
+      _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
     }
   });
 };
+
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Helper: Firestore-safe profile fetch/create ─────────────────────────────
-// All Firestore calls are wrapped so a 400/permission error never
-// breaks the login flow. The caller always gets a usable profile object.
-const _safeGetOrCreateProfile = async (
-  fbUser: FirebaseUser,
-  role: UserRole
-): Promise<any> => {
+const _safeGetOrCreateProfile = async (fbUser: FirebaseUser, role: UserRole): Promise<any> => {
   let userProfile: any = null;
 
-  // Step 1: try to fetch existing profile
   try {
     userProfile = await getUserProfile(fbUser.uid);
-    console.log('[useAuth] 🟢 getUserProfile success, exists:', !!userProfile);
   } catch (err) {
-    console.warn('[useAuth] 🔴 getUserProfile failed (Firestore error — rules not deployed?):', err);
+    console.warn('[useAuth] 🔴 getUserProfile failed:', err);
   }
 
-  // Step 2: if no profile found, try to create one
   if (!userProfile) {
     try {
       await createUserProfile({
@@ -193,13 +154,11 @@ const _safeGetOrCreateProfile = async (
         isBanned: false,
         onboardingCompleted: false,
       });
-      console.log('[useAuth] 🟢 createUserProfile success');
       userProfile = await getUserProfile(fbUser.uid);
     } catch (err) {
       console.warn('[useAuth] 🔴 createUserProfile failed:', err);
     }
   } else if (!userProfile.onboardingCompleted && userProfile.role !== role) {
-    // Step 3: update role if needed
     try {
       await updateUserProfile(fbUser.uid, { role });
       userProfile = await getUserProfile(fbUser.uid);
@@ -208,9 +167,7 @@ const _safeGetOrCreateProfile = async (
     }
   }
 
-  // Step 4: ultimate fallback — NEVER return null
   if (!userProfile) {
-    console.warn('[useAuth] ⚠️ All Firestore attempts failed. Using Firebase Auth fallback. Deploy firestore rules!');
     userProfile = {
       uid: fbUser.uid,
       email: fbUser.email!,
@@ -228,21 +185,27 @@ const _safeGetOrCreateProfile = async (
 
   return userProfile;
 };
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>(() => _state);
 
   useEffect(() => {
-    console.log('[useAuth] 🔄 Hook initialized, current state:', { 
-      hasUser: !!_state.user, 
-      hasFirebaseUser: !!_state.firebaseUser, 
+    // FIX #3 continued: read localStorage only on client (inside useEffect)
+    if (typeof window !== 'undefined') {
+      _hasAuthenticatedBefore = localStorage.getItem('jobreel_authenticated') === 'true';
+    }
+
+    console.log('[useAuth] 🔄 Hook initialized, current state:', {
+      hasUser: !!_state.user,
+      hasFirebaseUser: !!_state.firebaseUser,
       loading: _state.loading,
-      hasAuthenticatedBefore: _hasAuthenticatedBefore 
+      hasAuthenticatedBefore: _hasAuthenticatedBefore,
     });
-    
+
     _startListener();
-    setAuthState(_state);
+    setAuthState({ ..._state });
     _subscribers.add(setAuthState);
     return () => {
       _subscribers.delete(setAuthState);
@@ -258,32 +221,16 @@ export function useAuth() {
     const trimmedEmail = email.trim();
     try {
       _broadcast({ ..._state, loading: true, error: null });
-
       const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
       const displayName = additionalData.name || additionalData.displayName || 'User';
       await firebaseUpdateProfile(userCredential.user, { displayName });
       await sendEmailVerification(userCredential.user);
-
       await createUserProfile({
         uid: userCredential.user.uid,
         email: trimmedEmail,
         displayName,
         role,
         ...additionalData,
-        name: additionalData.name || additionalData.displayName,
-        phone: additionalData.phone,
-        city: additionalData.city,
-        skills: additionalData.skills || [],
-        education: additionalData.education || [],
-        experience: additionalData.experience || [],
-        industry: additionalData.industry || additionalData.desiredIndustry,
-        desiredJobTitle: additionalData.desiredJobTitle || additionalData.jobTitle,
-        totalExperience: additionalData.totalExperience,
-        professionalSummary: additionalData.professionalSummary || additionalData.bio,
-        careerLevel: additionalData.careerLevel,
-        gender: additionalData.gender,
-        dateOfBirth: additionalData.dateOfBirth,
-        languages: additionalData.languages || [],
         emailVerified: false,
         paymentStatus: 'pending',
         isPremium: false,
@@ -298,14 +245,8 @@ export function useAuth() {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-
       const userProfile = await getUserProfile(userCredential.user.uid);
-      _broadcast({
-        user: userProfile,
-        firebaseUser: userCredential.user,
-        loading: false,
-        error: null,
-      });
+      _broadcast({ user: userProfile, firebaseUser: userCredential.user, loading: false, error: null });
     } catch (error: any) {
       _broadcast({ ..._state, loading: false, error: error.message || 'Registration failed' });
       throw error;
@@ -318,15 +259,8 @@ export function useAuth() {
       _broadcast({ ..._state, loading: true, error: null });
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
       const userProfile = await getUserProfile(userCredential.user.uid);
-      if (userProfile) {
-        await updateUserProfile(userCredential.user.uid, { lastLoginAt: new Date() });
-      }
-      _broadcast({
-        user: userProfile,
-        firebaseUser: userCredential.user,
-        loading: false,
-        error: null,
-      });
+      if (userProfile) await updateUserProfile(userCredential.user.uid, { lastLoginAt: new Date() });
+      _broadcast({ user: userProfile, firebaseUser: userCredential.user, loading: false, error: null });
     } catch (error: any) {
       _broadcast({ ..._state, loading: false, error: error.message || 'Login failed' });
       throw error;
@@ -336,22 +270,23 @@ export function useAuth() {
   const loginWithGoogle = async (role: UserRole): Promise<void> => {
     try {
       console.log('[useAuth] 🔵 Opening Google popup...');
+      _broadcast({ ..._state, loading: true, error: null });
+
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
       const userCredential = await signInWithPopup(auth, provider);
       console.log('[useAuth] 🟢 Popup success, uid:', userCredential.user.uid);
 
-      // Get Firebase user immediately - don't wait for Firestore
       const fbUser = userCredential.user;
-      
-      // Create a temporary profile from Firebase data only
+
+      // Immediate broadcast with Firebase data so UI updates right away
       const tempProfile: any = {
         uid: fbUser.uid,
         email: fbUser.email,
         displayName: fbUser.displayName || 'User',
         photoURL: fbUser.photoURL,
-        role: role,
+        role,
         emailVerified: fbUser.emailVerified,
         onboardingCompleted: true,
         paymentStatus: 'approved',
@@ -369,30 +304,17 @@ export function useAuth() {
         updatedAt: new Date(),
       };
 
-      // Mark as authenticated
       _hasAuthenticatedBefore = true;
       localStorage.setItem('jobreel_authenticated', 'true');
 
-      // Update state immediately with Firebase user
-      _broadcast({
-        user: tempProfile,
-        firebaseUser: fbUser,
-        loading: false,
-        error: null,
-      });
+      _broadcast({ user: tempProfile, firebaseUser: fbUser, loading: false, error: null });
+      console.log('[useAuth] ✅ loginWithGoogle complete - user set immediately');
 
-      console.log('[useAuth] ✅ loginWithGoogle complete - user set from Firebase');
-
-      // Now try to get/create Firestore profile in background (don't await)
+      // Background Firestore profile sync (non-blocking)
       _safeGetOrCreateProfile(fbUser, role).then((profile) => {
         if (profile) {
           console.log('[useAuth] ✅ Firestore profile loaded in background');
-          _broadcast({
-            user: profile,
-            firebaseUser: fbUser,
-            loading: false,
-            error: null,
-          });
+          _broadcast({ user: profile, firebaseUser: fbUser, loading: false, error: null });
         }
       }).catch((err) => {
         console.warn('[useAuth] ⚠️ Firestore profile fetch failed (non-blocking):', err);
@@ -400,25 +322,25 @@ export function useAuth() {
 
     } catch (error: any) {
       console.error('[useAuth] ❌ Login failed:', error);
-      
-      // Handle popup closed / cancelled
-      if (error.code === 'auth/popup-closed-by-user' ||
-        error.code === 'auth/cancelled-popup-request') {
 
+      // FIX #1: popup cancelled cases
+      if (
+        error.code === 'auth/popup-closed-by-user' ||
+        error.code === 'auth/cancelled-popup-request'
+      ) {
+        // Check if Firebase actually did log in despite the popup error
         const currentUser = auth.currentUser;
         if (currentUser) {
-          console.log('[useAuth] ✅ User authenticated despite popup error');
-          
+          console.log('[useAuth] ✅ User authenticated despite popup close');
           _hasAuthenticatedBefore = true;
           localStorage.setItem('jobreel_authenticated', 'true');
-          
           _broadcast({
             user: {
               uid: currentUser.uid,
               email: currentUser.email,
               displayName: currentUser.displayName || 'User',
               photoURL: currentUser.photoURL,
-              role: role,
+              role,
               emailVerified: currentUser.emailVerified,
               onboardingCompleted: true,
               paymentStatus: 'approved',
@@ -439,12 +361,16 @@ export function useAuth() {
             loading: false,
             error: null,
           });
-          return;
+          return; // success — don't throw
         }
 
-        console.warn('[useAuth] ⚠️ Popup cancelled, no user authenticated.');
-        _broadcast({ ..._state, loading: false, error: null });
-        return;
+        // FIX #1 CORE: popup was genuinely cancelled with no user.
+        // MUST throw so the calling page (register/login) knows it failed.
+        // Before this fix, it was doing `return` which made the caller
+        // think login succeeded even though user is null!
+        console.warn('[useAuth] ⚠️ Popup cancelled, no user — throwing so caller can handle it.');
+        _broadcast({ ..._state, loading: false, error: 'Login cancelled' });
+        throw new Error('Login was cancelled. Please try again.');
       }
 
       _broadcast({ ..._state, loading: false, error: error.message || 'Login failed' });
@@ -455,7 +381,6 @@ export function useAuth() {
   const logout = async (): Promise<void> => {
     try {
       console.log('[useAuth] 🚪 Logging out...');
-      
       localStorage.removeItem('jobreel_registered');
       localStorage.removeItem('jobreel_active_category');
       localStorage.removeItem('jobreel_guest_prefs');
@@ -463,12 +388,8 @@ export function useAuth() {
       sessionStorage.removeItem('authRedirect');
 
       await firebaseSignOut(auth);
-      
-      // Reset state
       _hasAuthenticatedBefore = false;
-      
       _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
-      
       window.location.href = '/auth/login';
     } catch (error: any) {
       console.error('Logout error:', error);
@@ -526,7 +447,6 @@ export function useAuth() {
   };
 }
 
-// ── Helper hooks ──────────────────────────────────────────────────────────────
 export function usePaymentStatus() {
   const { user, loading } = useAuth();
   if (loading) return { paymentApproved: false, loading: true };
