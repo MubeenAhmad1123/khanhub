@@ -228,10 +228,12 @@ export function VideoFeed() {
                                 }
                             }
 
-                            // Guest Wall Logic — only trigger if user is completely unauthenticated
-                            // Check BOTH user (Firestore profile) AND firebaseUser (Firebase Auth)
+                            // Guest Wall Logic — show only if user is completely unauthenticated
+                            // Check firebaseUser (Firebase Auth) as primary auth check
                             // Also check !loading — auth may still be resolving on first render
-                            if (!user && !firebaseUser && !loading) {
+                            // If firebaseUser exists but user (Firestore profile) is null, still allow access
+                            // because the user is authenticated via Firebase (Firestore profile just failed to load)
+                            if (!firebaseUser && !loading) {
                                 const watchedCount = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
                                 localStorage.setItem('jobreel_videos_watched', String(watchedCount));
                                 if (watchedCount >= 3) {
@@ -577,8 +579,8 @@ export function VideoFeed() {
                 </div>
             </div>
 
-            {/* Only show wall if user is NOT logged in (both profile and firebase auth) */}
-            {!user && !firebaseUser && showGuestWall && (
+            {/* Only show wall if user is NOT logged in via Firebase Auth */}
+            {!firebaseUser && showGuestWall && (
                 <GuestWall isVisible={true} onContinue={() => {
                     localStorage.removeItem('jobreel_videos_watched');
                     setShowGuestWall(false);
