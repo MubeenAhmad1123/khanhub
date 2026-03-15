@@ -54,7 +54,7 @@ const _broadcast = (newState: AuthState) => {
       localStorage.setItem('jobreel_authenticated', 'true');
     }
     console.log('[useAuth] ✅ User authenticated, localStorage updated');
-  } else if (newState.firebaseUser === null && newState.user === null) {
+  } else if (newState.firebaseUser === null && newState.user === null && !newState.loading) {
     // User logged out
     if (typeof window !== 'undefined') {
       localStorage.removeItem('jobreel_authenticated');
@@ -66,16 +66,17 @@ const _broadcast = (newState: AuthState) => {
   _subscribers.forEach(fn => fn(newState));
 };
 
-let _listenerActive = false;
+// Single listener reference
+let _unsubscribeAuth: (() => void) | null = null;
 
 const _startListener = () => {
-  if (_listenerActive) {
-    console.log('[useAuth] Listener already active, skipping...');
+  // Don't create multiple listeners - just ensure one is active
+  if (_unsubscribeAuth) {
+    console.log('[useAuth] 🎧 Auth listener already running');
     return;
   }
-  _listenerActive = true;
 
-  console.log('[useAuth] 🎧 Starting auth listener, hasAuthenticatedBefore:', _hasAuthenticatedBefore);
+  console.log('[useAuth] 🎧 Starting auth listener');
 
   const timeoutId = setTimeout(() => {
     if (_state.loading) {
@@ -84,21 +85,15 @@ const _startListener = () => {
     }
   }, 7000);
 
-  onAuthStateChanged(auth, async (firebaseUser) => {
-    console.log('[useAuth] 📡 Auth state changed! firebaseUser:', firebaseUser?.uid || 'null');
+  // This is Firebase's built-in auth state listener - it automatically triggers on login/logout
+  _unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    console.log('[useAuth] 📡 Firebase onAuthStateChanged triggered:', firebaseUser?.uid || 'null');
     clearTimeout(timeoutId);
 
-    // If we already have a user from a previous session and Firebase also has a user,
-    // try to restore the profile from Firestore
-    if (firebaseUser && _hasAuthenticatedBefore) {
-      console.log('[useAuth] Restoring session for:', firebaseUser.uid);
-    }
-
     if (firebaseUser) {
-      if (!_state.loading || (_state.firebaseUser?.uid !== firebaseUser.uid)) {
-        _broadcast({ ..._state, firebaseUser, loading: true });
-      }
-
+      console.log('[useAuth] 🔐 User detected from Firebase, fetching profile...');
+      
+      // Fetch user profile from Firestore
       let userProfile = null;
       let lastError = null;
 
@@ -117,6 +112,7 @@ const _startListener = () => {
       }
 
       if (userProfile) {
+        console.log('[useAuth] ✅ Profile loaded successfully');
         _broadcast({
           user: userProfile,
           firebaseUser,
@@ -124,6 +120,8 @@ const _startListener = () => {
           error: null,
         });
       } else {
+        // Profile doesn't exist - create fallback
+        console.warn('[useAuth] ⚠️ No profile found, using fallback');
         const fallbackUser: any = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
@@ -137,7 +135,6 @@ const _startListener = () => {
           totalLikes: 0,
         };
 
-        console.warn('[useAuth] Using fallback user — Firestore profile unavailable');
         _broadcast({
           user: fallbackUser,
           firebaseUser,
@@ -146,6 +143,8 @@ const _startListener = () => {
         });
       }
     } else {
+      // No user - logged out
+      console.log('[useAuth] 👋 No user (logged out)');
       _broadcast({
         user: null,
         firebaseUser: null,
@@ -391,14 +390,21 @@ export function useAuth() {
 
   const logout = async (): Promise<void> => {
     try {
-      _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
-
+      console.log('[useAuth] 🚪 Logging out...');
+      
       localStorage.removeItem('jobreel_registered');
       localStorage.removeItem('jobreel_active_category');
       localStorage.removeItem('jobreel_guest_prefs');
+      localStorage.removeItem('jobreel_authenticated');
       sessionStorage.removeItem('authRedirect');
 
       await firebaseSignOut(auth);
+      
+      // Reset state
+      _hasAuthenticatedBefore = false;
+      
+      _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
+      
       window.location.href = '/auth/login';
     } catch (error: any) {
       console.error('Logout error:', error);
