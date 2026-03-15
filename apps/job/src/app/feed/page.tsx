@@ -13,25 +13,30 @@ export default function FeedPage() {
         setMounted(true);
     }, []);
 
-    // ── CRITICAL FIX: Clear guest watch counter when user is detected ──
-    useEffect(() => {
-        if (firebaseUser) {
-            localStorage.removeItem('jobreel_videos_watched');
-        }
-    }, [firebaseUser]);
+    // Don't render anything until mounted to avoid hydration mismatch
+    if (!mounted) {
+        return (
+            <div style={{
+                height: '100dvh', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: '#000'
+            }}>
+                <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    border: '3px solid #333', borderTop: '3px solid #FF0069',
+                    animation: 'spin 0.75s linear infinite'
+                }} />
+                <style>{`
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
 
-    useEffect(() => {
-        if (mounted && user && typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            if (params.has('v')) {
-                // Remove the ?v= param without reloading the page
-                const cleanUrl = window.location.pathname;
-                window.history.replaceState({}, '', cleanUrl);
-            }
-        }
-    }, [mounted, user]);
-
-    if (!mounted || loading) {
+    if (loading) {
         return (
             <div style={{
                 height: '100dvh', display: 'flex',
