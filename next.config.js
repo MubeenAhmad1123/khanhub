@@ -2,18 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  async rewrites() {
-    return [
-      {
-        source: '/__/auth/:path*',
-        destination: 'https://khanhub-5e552.firebaseapp.com/__/auth/:path*',
-      },
-      {
-        source: '/__/firebase/:path*',
-        destination: 'https://khanhub-5e552.firebaseapp.com/__/firebase/:path*',
-      },
-    ];
-  },
   images: {
     remotePatterns: [
       {
