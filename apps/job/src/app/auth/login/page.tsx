@@ -40,15 +40,18 @@ export default function LoginPage() {
             console.log('✅ [Login] Step 4: router.push called!');
 
         } catch (error: any) {
-            if (error.code === 'auth/popup-closed-by-user' ||
-                error.code === 'auth/cancelled-popup-request') {
-                
-                // ✅ THE KEY FIX: check if user actually got logged in despite the error
+            // Our useAuth throws a plain Error for cancellations, not a FirebaseError
+            const isCancelled =
+                error.code === 'auth/popup-closed-by-user' ||
+                error.code === 'auth/cancelled-popup-request' ||
+                error.message?.includes('cancelled');
+
+            if (isCancelled) {
                 const currentUser = auth.currentUser;
                 if (currentUser) {
                     console.log('✅ [Login] User authenticated despite popup error — continuing...');
                     
-                    // Post-login logic (duplicated from above for safety, or we could extract it)
+                    // Post-login logic
                     const guestPrefs = JSON.parse(localStorage.getItem('jobreel_guest_prefs') || '{}');
                     if (guestPrefs.category) {
                         localStorage.setItem('jobreel_active_category', guestPrefs.category);
@@ -61,9 +64,8 @@ export default function LoginPage() {
                     router.push('/feed');
                     return;
                 }
-
                 console.warn('⚠️ [Login] Popup cancelled or closed.');
-                return;
+                return; // Silently ignore
             }
             console.error('❌ [Login] FAILED:', error);
         } finally {

@@ -41,24 +41,24 @@ export default function RegisterPage() {
             console.log('✅ [Register] Step 4: router.push called!');
 
         } catch (error: any) {
-            if (error.code === 'auth/popup-closed-by-user' ||
-                error.code === 'auth/cancelled-popup-request') {
-                
-                // ✅ THE KEY FIX: check if user actually got logged in despite the error
+            // Our useAuth throws a plain Error for cancellations, not a FirebaseError
+            const isCancelled =
+                error.code === 'auth/popup-closed-by-user' ||
+                error.code === 'auth/cancelled-popup-request' ||
+                error.message?.includes('cancelled');
+
+            if (isCancelled) {
                 const currentUser = auth.currentUser;
                 if (currentUser) {
                     console.log('✅ [Register] User authenticated despite popup error — continuing...');
-                    
                     localStorage.removeItem('jobreel_videos_watched');
                     localStorage.setItem('jobreel_registered', 'true');
                     sessionStorage.setItem('authRedirect', 'true');
-
                     router.push('/feed');
                     return;
                 }
-
                 console.warn('⚠️ [Register] Popup cancelled or closed.');
-                return;
+                return; // Silently ignore
             }
             console.error('❌ [Register] FAILED:', error);
         } finally {

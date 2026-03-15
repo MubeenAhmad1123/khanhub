@@ -90,28 +90,28 @@ export default function LoginModal() {
             await loginWithGoogle(role);
             console.log('✅ [LoginModal] Google login success!');
         } catch (err: any) {
-            // popup-closed-by-user fires even on SUCCESS or benign cancellation — ignore if auth succeeded
-            if (
+            // Check both Firebase error codes AND our custom cancellation message
+            const isCancelled = 
                 err.code === 'auth/popup-closed-by-user' ||
                 err.code === 'auth/cancelled-popup-request' ||
-                err.message?.includes('popup-closed-by-user')
-            ) {
+                err.message?.includes('cancelled') ||
+                err.message?.includes('popup-closed-by-user');
+
+            if (isCancelled) {
                 const currentUser = auth.currentUser;
                 if (currentUser) {
                     console.log('✅ [LoginModal] User authenticated despite popup error.');
-                    // The useEffect in LoginModal handles navigation when 'user' changes
                     return;
                 }
-
-                console.warn('⚠️ [LoginModal] Google popup closed or cancelled.');
+                console.warn('⚠️ [LoginModal] Popup cancelled.');
                 return;
             }
 
             console.error('❌ [LoginModal] Google login error:', err);
-            if (err.message.includes('auth/operation-not-allowed')) {
-              setError('Google sign-in is not enabled for this domain. Please contact admin.');
+            if (err.message?.includes('operation-not-allowed')) {
+                setError('Google sign-in is not enabled. Please contact admin.');
             } else {
-              setError(err.message || 'Failed to login with Google');
+                setError(err.message || 'Failed to login with Google');
             }
         }
     };
