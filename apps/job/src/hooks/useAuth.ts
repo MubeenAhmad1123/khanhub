@@ -31,8 +31,7 @@ let _state: AuthState = {
   error: null,
 };
 
-// FIX: Do NOT read localStorage at module level — causes React hydration
-// error #418 because server renders false but client has true → mismatch.
+// Do NOT read localStorage at module level — causes React hydration error #418
 let _hasAuthenticatedBefore = false;
 
 const _subscribers = new Set<(s: AuthState) => void>();
@@ -63,6 +62,9 @@ const _broadcast = (newState: AuthState) => {
   _subscribers.forEach(fn => fn(newState));
 };
 
+// null  = not started yet
+// ()=>{} = started but waiting for persistence (placeholder)
+// real fn = fully active
 let _unsubscribeAuth: (() => void) | null = null;
 
 const _startListener = () => {
@@ -70,6 +72,11 @@ const _startListener = () => {
     console.log('[useAuth] 🎧 Auth listener already running');
     return;
   }
+
+  // Set placeholder IMMEDIATELY before setTimeout so any second hook
+  // call within 100ms sees it as already running and doesn't create
+  // a duplicate listener — this was causing double onAuthStateChanged
+  _unsubscribeAuth = () => { };
 
   console.log('[useAuth] 🎧 Starting auth listener');
 
@@ -81,6 +88,7 @@ const _startListener = () => {
       }
     }, 7000);
 
+    // Replace placeholder with real Firebase unsubscribe
     _unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log('[useAuth] 📡 Firebase onAuthStateChanged triggered:', firebaseUser?.uid || 'null');
       clearTimeout(timeoutId);
@@ -103,7 +111,7 @@ const _startListener = () => {
           console.log('[useAuth] ✅ Profile loaded successfully');
           _broadcast({ user: userProfile, firebaseUser, loading: false, error: null });
         } else {
-          console.warn('[useAuth] ⚠️ No profile found, using fallback');
+          console.warn('[useAuth] ⚠️ No profile, using fallback');
           const fallback: any = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
@@ -125,10 +133,9 @@ const _startListener = () => {
     });
   };
 
-  // FIX: Give setPersistence ~100ms to complete before attaching the listener.
-  // Without this delay, onAuthStateChanged fires before localStorage is checked,
-  // returns null even for users who were previously logged in, and the session
-  // is lost on every page refresh.
+  // Give setPersistence 100ms to resolve before we attach the listener.
+  // Without this, onAuthStateChanged fires before localStorage is read
+  // and returns null even for previously logged-in users.
   if (typeof window !== 'undefined') {
     setTimeout(attachListener, 100);
   } else {
@@ -200,7 +207,7 @@ export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>(() => _state);
 
   useEffect(() => {
-    // FIX: Read localStorage only on client inside useEffect — never at module level
+    // Read localStorage only on client inside useEffect — never at module level
     if (typeof window !== 'undefined') {
       _hasAuthenticatedBefore = localStorage.getItem('jobreel_authenticated') === 'true';
     }
@@ -313,11 +320,10 @@ export function useAuth() {
 
       _hasAuthenticatedBefore = true;
       localStorage.setItem('jobreel_authenticated', 'true');
-
       _broadcast({ user: tempProfile, firebaseUser: fbUser, loading: false, error: null });
       console.log('[useAuth] ✅ loginWithGoogle complete - user set immediately');
 
-      // Background Firestore sync — don't block the UI
+      // Background Firestore sync — non-blocking
       _safeGetOrCreateProfile(fbUser, role).then((profile) => {
         if (profile) {
           console.log('[useAuth] ✅ Firestore profile loaded in background');
@@ -369,8 +375,8 @@ export function useAuth() {
           return;
         }
 
-        // FIX: Must throw here — not return — so the calling page knows login failed.
-        // The old `return` made the register page think login succeeded with a null user.
+        // Must THROW here (not return) so the calling page knows login failed.
+        // Old code had `return` which made the register page think success with null user.
         console.warn('[useAuth] ⚠️ Popup cancelled with no user.');
         _broadcast({ ..._state, loading: false, error: 'Login cancelled' });
         throw new Error('Login was cancelled. Please try again.');
@@ -389,7 +395,6 @@ export function useAuth() {
       localStorage.removeItem('jobreel_guest_prefs');
       localStorage.removeItem('jobreel_authenticated');
       sessionStorage.removeItem('authRedirect');
-
       await firebaseSignOut(auth);
       _hasAuthenticatedBefore = false;
       _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
