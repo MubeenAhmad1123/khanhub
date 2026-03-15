@@ -32,10 +32,28 @@ let _state: AuthState = {
   error: null,
 };
 
+// Track if we've successfully authenticated before (persist in localStorage)
+let _hasAuthenticatedBefore = typeof window !== 'undefined' && localStorage.getItem('jobreel_authenticated') === 'true';
+
 const _subscribers = new Set<(s: AuthState) => void>();
 
 const _broadcast = (newState: AuthState) => {
   _state = newState;
+  
+  // Track authentication state and persist to localStorage
+  if (newState.firebaseUser) {
+    _hasAuthenticatedBefore = true;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('jobreel_authenticated', 'true');
+    }
+  } else if (newState.firebaseUser === null && newState.user === null) {
+    // User logged out
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('jobreel_authenticated');
+    }
+    _hasAuthenticatedBefore = false;
+  }
+  
   _subscribers.forEach(fn => fn(newState));
 };
 
@@ -54,6 +72,12 @@ const _startListener = () => {
 
   onAuthStateChanged(auth, async (firebaseUser) => {
     clearTimeout(timeoutId);
+
+    // If we already have a user from a previous session and Firebase also has a user,
+    // try to restore the profile from Firestore
+    if (firebaseUser && _hasAuthenticatedBefore) {
+      console.log('[useAuth] Restoring session for:', firebaseUser.uid);
+    }
 
     if (firebaseUser) {
       if (!_state.loading || (_state.firebaseUser?.uid !== firebaseUser.uid)) {
@@ -302,6 +326,9 @@ export function useAuth() {
       // A Firestore 400 / permission-denied will NO LONGER throw here —
       // we get a fallback user object instead, so router.push always runs.
       const userProfile = await _safeGetOrCreateProfile(userCredential.user, role);
+
+      // Mark as authenticated so session persists across navigations
+      _hasAuthenticatedBefore = true;
 
       _broadcast({
         user: userProfile,
