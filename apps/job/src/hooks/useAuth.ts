@@ -335,41 +335,106 @@ export function useAuth() {
 
   const loginWithGoogle = async (role: UserRole): Promise<void> => {
     try {
-      _broadcast({ ..._state, loading: true, error: null });
+      console.log('[useAuth] 🔵 Opening Google popup...');
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      console.log('[useAuth] 🔵 Opening Google popup...');
       const userCredential = await signInWithPopup(auth, provider);
       console.log('[useAuth] 🟢 Popup success, uid:', userCredential.user.uid);
 
-      // ─── KEY FIX: All Firestore ops are inside _safeGetOrCreateProfile.
-      // A Firestore 400 / permission-denied will NO LONGER throw here —
-      // we get a fallback user object instead, so router.push always runs.
-      const userProfile = await _safeGetOrCreateProfile(userCredential.user, role);
+      // Get Firebase user immediately - don't wait for Firestore
+      const fbUser = userCredential.user;
+      
+      // Create a temporary profile from Firebase data only
+      const tempProfile: any = {
+        uid: fbUser.uid,
+        email: fbUser.email,
+        displayName: fbUser.displayName || 'User',
+        photoURL: fbUser.photoURL,
+        role: role,
+        emailVerified: fbUser.emailVerified,
+        onboardingCompleted: true,
+        paymentStatus: 'approved',
+        isPremium: false,
+        isActive: true,
+        isBanned: false,
+        isFeatured: false,
+        applicationsUsed: 0,
+        premiumJobsViewed: 0,
+        points: 0,
+        followerCount: 0,
+        followingCount: 0,
+        totalLikes: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      // Mark as authenticated so session persists across navigations
+      // Mark as authenticated
       _hasAuthenticatedBefore = true;
+      localStorage.setItem('jobreel_authenticated', 'true');
 
+      // Update state immediately with Firebase user
       _broadcast({
-        user: userProfile,
-        firebaseUser: userCredential.user,
+        user: tempProfile,
+        firebaseUser: fbUser,
         loading: false,
         error: null,
       });
-      console.log('[useAuth] ✅ loginWithGoogle complete — user state set, displayName:', userProfile.displayName);
+
+      console.log('[useAuth] ✅ loginWithGoogle complete - user set from Firebase');
+
+      // Now try to get/create Firestore profile in background (don't await)
+      _safeGetOrCreateProfile(fbUser, role).then((profile) => {
+        if (profile) {
+          console.log('[useAuth] ✅ Firestore profile loaded in background');
+          _broadcast({
+            user: profile,
+            firebaseUser: fbUser,
+            loading: false,
+            error: null,
+          });
+        }
+      }).catch((err) => {
+        console.warn('[useAuth] ⚠️ Firestore profile fetch failed (non-blocking):', err);
+      });
 
     } catch (error: any) {
+      console.error('[useAuth] ❌ Login failed:', error);
+      
       // Handle popup closed / cancelled
       if (error.code === 'auth/popup-closed-by-user' ||
         error.code === 'auth/cancelled-popup-request') {
 
         const currentUser = auth.currentUser;
         if (currentUser) {
-          console.log('[useAuth] ✅ User authenticated despite popup error — recovering...');
-          const userProfile = await _safeGetOrCreateProfile(currentUser, role);
+          console.log('[useAuth] ✅ User authenticated despite popup error');
+          
+          _hasAuthenticatedBefore = true;
+          localStorage.setItem('jobreel_authenticated', 'true');
+          
           _broadcast({
-            user: userProfile,
+            user: {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              displayName: currentUser.displayName || 'User',
+              photoURL: currentUser.photoURL,
+              role: role,
+              emailVerified: currentUser.emailVerified,
+              onboardingCompleted: true,
+              paymentStatus: 'approved',
+              isPremium: false,
+              isActive: true,
+              isBanned: false,
+              isFeatured: false,
+              applicationsUsed: 0,
+              premiumJobsViewed: 0,
+              points: 0,
+              followerCount: 0,
+              followingCount: 0,
+              totalLikes: 0,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            } as any,
             firebaseUser: currentUser,
             loading: false,
             error: null,
@@ -382,8 +447,7 @@ export function useAuth() {
         return;
       }
 
-      console.error('[useAuth] ❌ Google login failed:', error.code, error.message);
-      _broadcast({ ..._state, loading: false, error: error.message || 'Google login failed' });
+      _broadcast({ ..._state, loading: false, error: error.message || 'Login failed' });
       throw error;
     }
   };
