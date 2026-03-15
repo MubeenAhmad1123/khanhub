@@ -33,6 +33,18 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   swcMinify: true,
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: 'https://khanhub-5e552.firebaseapp.com/__/auth/:path*',
+      },
+      {
+        source: '/__/firebase/:path*',
+        destination: 'https://khanhub-5e552.firebaseapp.com/__/firebase/:path*',
+      },
+    ];
+  },
   async headers() {
     return [
       {
