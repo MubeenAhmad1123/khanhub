@@ -42,11 +42,20 @@ const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
 
-if (typeof window !== 'undefined') {
-    setPersistence(auth, browserLocalPersistence)
-        .then(() => console.log('✅ Firebase Auth persistence set to LOCAL'))
-        .catch((err) => console.error('❌ Persistence error:', err));
-}
+// Export a promise that resolves AFTER persistence is configured.
+// useAuth waits for this before attaching onAuthStateChanged —
+// without this, Firebase checks localStorage before persistence is set
+// and always returns null even for logged-in users.
+export const persistenceReady: Promise<void> =
+    typeof window !== 'undefined'
+        ? setPersistence(auth, browserLocalPersistence)
+            .then(() => {
+                console.log('✅ Firebase Auth persistence set to LOCAL');
+            })
+            .catch((err) => {
+                console.error('❌ Persistence error:', err);
+            })
+        : Promise.resolve();
 
 export { app, auth, db, storage, firebaseConfig };
 export default app;

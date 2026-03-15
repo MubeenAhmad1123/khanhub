@@ -13,7 +13,7 @@ import {
   GoogleAuthProvider,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase/firebase-config';
+import { auth, persistenceReady } from '@/lib/firebase/firebase-config';
 import { getUserProfile, createUserProfile, updateUserProfile } from '@/lib/firebase/auth';
 import { User, UserRole } from '@/types/user';
 
@@ -62,9 +62,9 @@ const _broadcast = (newState: AuthState) => {
   _subscribers.forEach(fn => fn(newState));
 };
 
-// null  = not started yet
-// ()=>{} = started but waiting for persistence (placeholder)
-// real fn = fully active
+// null     = not started
+// () => {} = started (placeholder to block duplicate calls during async wait)
+// real fn  = fully active listener
 let _unsubscribeAuth: (() => void) | null = null;
 
 const _startListener = () => {
@@ -73,14 +73,19 @@ const _startListener = () => {
     return;
   }
 
-  // Set placeholder IMMEDIATELY before setTimeout so any second hook
-  // call within 100ms sees it as already running and doesn't create
-  // a duplicate listener — this was causing double onAuthStateChanged
+  // Set placeholder IMMEDIATELY so any second hook call that arrives
+  // while we await persistenceReady does not create a duplicate listener
   _unsubscribeAuth = () => { };
 
-  console.log('[useAuth] 🎧 Starting auth listener');
+  console.log('[useAuth] 🎧 Starting auth listener — waiting for persistence...');
 
-  const attachListener = () => {
+  // KEY FIX: wait for setPersistence to finish BEFORE calling onAuthStateChanged.
+  // Previously, the listener attached before persistence was ready, so Firebase
+  // read from the wrong storage, found no session, and returned null immediately
+  // even for users who were logged in.
+  persistenceReady.then(() => {
+    console.log('[useAuth] 🎧 Persistence ready — attaching onAuthStateChanged');
+
     const timeoutId = setTimeout(() => {
       if (_state.loading) {
         console.warn('[useAuth] ⏱️ Auth timed out. Forcing interactive state.');
@@ -88,7 +93,7 @@ const _startListener = () => {
       }
     }, 7000);
 
-    // Replace placeholder with real Firebase unsubscribe
+    // Replace placeholder with real Firebase unsubscribe function
     _unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log('[useAuth] 📡 Firebase onAuthStateChanged triggered:', firebaseUser?.uid || 'null');
       clearTimeout(timeoutId);
@@ -131,16 +136,7 @@ const _startListener = () => {
         _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
       }
     });
-  };
-
-  // Give setPersistence 100ms to resolve before we attach the listener.
-  // Without this, onAuthStateChanged fires before localStorage is read
-  // and returns null even for previously logged-in users.
-  if (typeof window !== 'undefined') {
-    setTimeout(attachListener, 100);
-  } else {
-    attachListener();
-  }
+  });
 };
 
 const _safeGetOrCreateProfile = async (fbUser: FirebaseUser, role: UserRole): Promise<any> => {
@@ -294,7 +290,6 @@ export function useAuth() {
       console.log('[useAuth] 🟢 Popup success, uid:', userCredential.user.uid);
 
       const fbUser = userCredential.user;
-
       const tempProfile: any = {
         uid: fbUser.uid,
         email: fbUser.email,
@@ -321,7 +316,7 @@ export function useAuth() {
       _hasAuthenticatedBefore = true;
       localStorage.setItem('jobreel_authenticated', 'true');
       _broadcast({ user: tempProfile, firebaseUser: fbUser, loading: false, error: null });
-      console.log('[useAuth] ✅ loginWithGoogle complete - user set immediately');
+      console.log('[useAuth] ✅ loginWithGoogle complete');
 
       // Background Firestore sync — non-blocking
       _safeGetOrCreateProfile(fbUser, role).then((profile) => {
@@ -330,7 +325,7 @@ export function useAuth() {
           _broadcast({ user: profile, firebaseUser: fbUser, loading: false, error: null });
         }
       }).catch((err) => {
-        console.warn('[useAuth] ⚠️ Firestore profile fetch failed (non-blocking):', err);
+        console.warn('[useAuth] ⚠️ Firestore profile fetch failed:', err);
       });
 
     } catch (error: any) {
@@ -375,9 +370,8 @@ export function useAuth() {
           return;
         }
 
-        // Must THROW here (not return) so the calling page knows login failed.
-        // Old code had `return` which made the register page think success with null user.
-        console.warn('[useAuth] ⚠️ Popup cancelled with no user.');
+        // MUST throw — not return — so calling page knows login failed
+        console.warn('[useAuth] ⚠️ Popup cancelled, no user.');
         _broadcast({ ..._state, loading: false, error: 'Login cancelled' });
         throw new Error('Login was cancelled. Please try again.');
       }
