@@ -38,6 +38,13 @@ let _hasAuthenticatedBefore = typeof window !== 'undefined' && localStorage.getI
 const _subscribers = new Set<(s: AuthState) => void>();
 
 const _broadcast = (newState: AuthState) => {
+  console.log('[useAuth] 📤 Broadcasting state change:', { 
+    hasUser: !!newState.user, 
+    hasFirebaseUser: !!newState.firebaseUser, 
+    loading: newState.loading,
+    error: newState.error 
+  });
+  
   _state = newState;
   
   // Track authentication state and persist to localStorage
@@ -46,12 +53,14 @@ const _broadcast = (newState: AuthState) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('jobreel_authenticated', 'true');
     }
+    console.log('[useAuth] ✅ User authenticated, localStorage updated');
   } else if (newState.firebaseUser === null && newState.user === null) {
     // User logged out
     if (typeof window !== 'undefined') {
       localStorage.removeItem('jobreel_authenticated');
     }
     _hasAuthenticatedBefore = false;
+    console.log('[useAuth] 👋 User logged out');
   }
   
   _subscribers.forEach(fn => fn(newState));
@@ -60,17 +69,23 @@ const _broadcast = (newState: AuthState) => {
 let _listenerActive = false;
 
 const _startListener = () => {
-  if (_listenerActive) return;
+  if (_listenerActive) {
+    console.log('[useAuth] Listener already active, skipping...');
+    return;
+  }
   _listenerActive = true;
+
+  console.log('[useAuth] 🎧 Starting auth listener, hasAuthenticatedBefore:', _hasAuthenticatedBefore);
 
   const timeoutId = setTimeout(() => {
     if (_state.loading) {
-      console.warn('[useAuth] Auth session resolution timed out. Forcing interactive state.');
+      console.warn('[useAuth] ⏱️ Auth session resolution timed out. Forcing interactive state.');
       _broadcast({ ..._state, loading: false });
     }
   }, 7000);
 
   onAuthStateChanged(auth, async (firebaseUser) => {
+    console.log('[useAuth] 📡 Auth state changed! firebaseUser:', firebaseUser?.uid || 'null');
     clearTimeout(timeoutId);
 
     // If we already have a user from a previous session and Firebase also has a user,
@@ -220,6 +235,13 @@ export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>(() => _state);
 
   useEffect(() => {
+    console.log('[useAuth] 🔄 Hook initialized, current state:', { 
+      hasUser: !!_state.user, 
+      hasFirebaseUser: !!_state.firebaseUser, 
+      loading: _state.loading,
+      hasAuthenticatedBefore: _hasAuthenticatedBefore 
+    });
+    
     _startListener();
     setAuthState(_state);
     _subscribers.add(setAuthState);

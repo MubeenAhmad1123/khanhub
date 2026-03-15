@@ -10,6 +10,7 @@ export default function FeedPage() {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        console.log('[FeedPage] Auth state changed:', { hasUser: !!user, hasFirebaseUser: !!firebaseUser, loading, error });
         setMounted(true);
     }, []);
 
