@@ -6,8 +6,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   sendEmailVerification,
@@ -83,18 +81,7 @@ const _startListener = async () => {
   // KEY FIX: wait for setPersistence to finish BEFORE calling onAuthStateChanged.
   await persistenceReady;
 
-  console.log('[useAuth] 🎧 Persistence ready — checking redirect result...');
-
-  try {
-    const result = await getRedirectResult(auth);
-    if (result?.user) {
-      console.log('[useAuth] 🎯 getRedirectResult user detected:', result.user.uid);
-      const userProfile = await _safeGetOrCreateProfile(result.user, 'job_seeker');
-      _broadcast({ user: userProfile, firebaseUser: result.user, loading: false, error: null });
-    }
-  } catch (err) {
-    console.warn('[useAuth] getRedirectResult error:', err);
-  }
+  console.log('[useAuth] 🎧 Persistence ready — checking redirect & attaching onAuthStateChanged');
 
   const timeoutId = setTimeout(() => {
     if (_state.loading) {
@@ -294,18 +281,10 @@ export function useAuth() {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      // Detect mobile: narrow screen OR mobile user agent
-      const isMobile = (typeof window !== 'undefined' && window.innerWidth < 768) || 
-                       /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-
-      if (isMobile) {
-        console.log('[useAuth] 📱 Mobile detected, using redirect...');
-        if (typeof window !== 'undefined') sessionStorage.setItem('google_auth_role', role);
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-
-      console.log('[useAuth] 🖥️ Desktop detected, opening Google popup...');
+      // ── Popup for ALL devices (desktop + mobile) ──
+      // COOP header removed from next.config.js so popup works on mobile too.
+      // Redirect was removed — it added complexity with no benefit.
+      console.log('[useAuth] 🔵 Opening Google popup...');
       const userCredential = await signInWithPopup(auth, provider);
       console.log('[useAuth] 🟢 Popup success, uid:', userCredential.user.uid);
 
