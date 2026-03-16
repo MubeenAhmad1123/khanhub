@@ -66,92 +66,85 @@ const _broadcast = (newState: AuthState) => {
   _subscribers.forEach(fn => fn(newState));
 };
 
-// null     = not started
-// () => {} = started (placeholder to block duplicate calls during async wait)
-// real fn  = fully active listener
+// Flag to prevent duplicate listener initialization
+let _listenerStarted = false;
 let _unsubscribeAuth: (() => void) | null = null;
 
-const _startListener = () => {
-  if (_unsubscribeAuth) {
+const _startListener = async () => {
+  if (_listenerStarted) {
     console.log('[useAuth] 🎧 Auth listener already running');
     return;
   }
 
-  // Set placeholder IMMEDIATELY so any second hook call that arrives
-  // while we await persistenceReady does not create a duplicate listener
-  _unsubscribeAuth = () => { };
+  _listenerStarted = true;
 
   console.log('[useAuth] 🎧 Starting auth listener — waiting for persistence...');
 
   // KEY FIX: wait for setPersistence to finish BEFORE calling onAuthStateChanged.
-  // Previously, the listener attached before persistence was ready, so Firebase
-  // read from the wrong storage, found no session, and returned null immediately
-  // even for users who were logged in.
-  persistenceReady.then(async () => {
-    console.log('[useAuth] 🎧 Persistence ready — checking redirect & attaching onAuthStateChanged');
+  await persistenceReady;
 
-    // 1. ADD THIS: Check for redirect result BEFORE attaching onAuthStateChanged
-    try {
-      const result = await getRedirectResult(auth);
-      if (result?.user) {
-        console.log('[useAuth] 🎯 getRedirectResult user detected:', result.user.uid);
-        const userProfile = await _safeGetOrCreateProfile(result.user, 'job_seeker');
-        _broadcast({ user: userProfile, firebaseUser: result.user, loading: false, error: null });
-      }
-    } catch (err) {
-      console.warn('[useAuth] getRedirectResult error:', err);
+  console.log('[useAuth] 🎧 Persistence ready — checking redirect result...');
+
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      console.log('[useAuth] 🎯 getRedirectResult user detected:', result.user.uid);
+      const userProfile = await _safeGetOrCreateProfile(result.user, 'job_seeker');
+      _broadcast({ user: userProfile, firebaseUser: result.user, loading: false, error: null });
     }
+  } catch (err) {
+    console.warn('[useAuth] getRedirectResult error:', err);
+  }
 
-    const timeoutId = setTimeout(() => {
-      if (_state.loading) {
-        console.warn('[useAuth] ⏱️ Auth timed out. Forcing interactive state.');
-        _broadcast({ ..._state, loading: false });
+  const timeoutId = setTimeout(() => {
+    if (_state.loading) {
+      console.warn('[useAuth] ⏱️ Auth timed out. Forcing interactive state.');
+      _broadcast({ ..._state, loading: false });
+    }
+  }, 7000);
+
+  // Attach the ongoing listener after checking for redirect result
+  _unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    console.log('[useAuth] 📡 Firebase onAuthStateChanged triggered:', firebaseUser?.uid || 'null');
+    clearTimeout(timeoutId);
+
+    if (firebaseUser) {
+      console.log('[useAuth] 🔐 User detected, fetching profile...');
+
+      let userProfile = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          userProfile = await getUserProfile(firebaseUser.uid);
+          break;
+        } catch (err) {
+          console.warn(`[useAuth] getUserProfile attempt ${attempt} failed:`, err);
+          if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500));
+        }
       }
-    }, 7000);
 
-    // Replace placeholder with real Firebase unsubscribe function
-    _unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('[useAuth] 📡 Firebase onAuthStateChanged triggered:', firebaseUser?.uid || 'null');
-      clearTimeout(timeoutId);
-
-      if (firebaseUser) {
-        console.log('[useAuth] 🔐 User detected, fetching profile...');
-
-        let userProfile = null;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            userProfile = await getUserProfile(firebaseUser.uid);
-            break;
-          } catch (err) {
-            console.warn(`[useAuth] getUserProfile attempt ${attempt} failed:`, err);
-            if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500));
-          }
-        }
-
-        if (userProfile) {
-          console.log('[useAuth] ✅ Profile loaded successfully');
-          _broadcast({ user: userProfile, firebaseUser, loading: false, error: null });
-        } else {
-          console.warn('[useAuth] ⚠️ No profile, using fallback');
-          const fallback: any = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || 'User',
-            photoURL: firebaseUser.photoURL,
-            role: 'user',
-            onboardingCompleted: true,
-            paymentStatus: 'approved',
-            followerCount: 0,
-            followingCount: 0,
-            totalLikes: 0,
-          };
-          _broadcast({ user: fallback, firebaseUser, loading: false, error: 'profile_load_failed' });
-        }
+      if (userProfile) {
+        console.log('[useAuth] ✅ Profile loaded successfully');
+        _broadcast({ user: userProfile, firebaseUser, loading: false, error: null });
       } else {
-        console.log('[useAuth] 👋 No user (logged out)');
-        _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
+        console.warn('[useAuth] ⚠️ No profile, using fallback');
+        const fallback: any = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || 'User',
+          photoURL: firebaseUser.photoURL,
+          role: 'user',
+          onboardingCompleted: true,
+          paymentStatus: 'approved',
+          followerCount: 0,
+          followingCount: 0,
+          totalLikes: 0,
+        };
+        _broadcast({ user: fallback, firebaseUser, loading: false, error: 'profile_load_failed' });
       }
-    });
+    } else {
+      console.log('[useAuth] 👋 No user (logged out)');
+      _broadcast({ user: null, firebaseUser: null, loading: false, error: null });
+    }
   });
 };
 
