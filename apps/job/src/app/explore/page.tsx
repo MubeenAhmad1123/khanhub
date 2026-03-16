@@ -67,7 +67,7 @@ export default function ExplorePage() {
                 padding: '12px 16px',
                 background: '#fff',
                 position: 'sticky',
-                top: '64px',
+                top: '58px', // Slightly below navbar
                 zIndex: 40,
                 borderBottom: '1px solid #F0F0F0',
             }} className="no-scrollbar">

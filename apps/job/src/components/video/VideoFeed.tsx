@@ -441,7 +441,7 @@ export function VideoFeed() {
                 }}>
                     {/* Give pointer events back to interactive elements */}
                     <div style={{ pointerEvents: 'all' }}>
-                        <div className="flex items-center p-2 pt-6">
+                        <div className="flex items-center p-2 pt-[62px]">
                             <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
                         </div>
                         <AnimatePresence>

@@ -104,9 +104,10 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
 
         if (isActive) {
             // Reset user-paused flag ONLY when scrolling to a NEW video:
-            // (not when re-rendering the same video)
             userPausedRef.current = false;
-            playTimeout = setTimeout(attemptPlay, 100);
+            if (!userPausedRef.current) {
+                attemptPlay();
+            }
         } else {
             try { video.pause(); } catch (_) {}
             if (!isAdjacent) video.currentTime = 0;
@@ -281,7 +282,7 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
                 poster={thumbnailUrl}
                 playsInline
                 muted
-                autoPlay={false}
+                autoPlay
                 loop
                 preload={isActive || isAdjacent ? 'auto' : 'metadata'}
                 onCanPlay={() => setIsBuffering(false)}

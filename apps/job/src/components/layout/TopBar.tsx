@@ -86,6 +86,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
             background: isFeed ? 'transparent' : '#FFFFFF',
             backdropFilter: isFeed ? 'none' : 'blur(10px)',
             borderBottom: isFeed ? 'none' : '1px solid #F0F0F0',
+            boxShadow: isFeed ? 'none' : 'none',
             // Mobile edge-to-edge fix:
             marginLeft: '-1px', marginRight: '-1px',
             padding: '0 4px',

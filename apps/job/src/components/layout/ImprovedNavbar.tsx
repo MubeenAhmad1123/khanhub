@@ -12,6 +12,10 @@ import {
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import HamburgerDrawer from '@/components/layout/HamburgerDrawer';
+import { useCategory } from '@/context/CategoryContext';
+import { CATEGORY_CONFIG, CategoryKey, CategoryConfig } from '@/lib/categories';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface NavItem {
@@ -138,11 +142,21 @@ function Avatar({ avatarUrl, email, size = 'sm' }: { avatarUrl?: string | null; 
 export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
     const pathname = usePathname();
     const router = useRouter();
-    // FIX: Removed unused `hasPaymentApproved` destructure
     const { user, loading } = useAuth();
+    const { activeCategory, categoryConfig, setCategory } = useCategory();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [mounted, setMounted] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
+
+    // Category Switcher state
+    const [showSwitcher, setShowSwitcher] = useState(false);
+    const switcherRef = useRef<HTMLDivElement>(null);
+    const switcherTriggerRef = useRef<HTMLButtonElement>(null);
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+
+    useClickOutside([switcherRef, switcherTriggerRef], () => setShowSwitcher(false), showSwitcher);
+
+    const isFeed = pathname === '/feed' || pathname.startsWith('/feed');
 
     useEffect(() => {
         setMounted(true);
@@ -272,7 +286,11 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
         <nav
             role="navigation"
             aria-label="Main navigation"
-            className="sticky top-0 z-[100] w-full border-b border-gray-100 bg-white/80 backdrop-blur-md"
+            className={`sticky top-0 z-[100] w-full transition-all duration-300 ${
+                isFeed 
+                    ? 'bg-transparent border-transparent' 
+                    : 'bg-white/80 backdrop-blur-md border-b border-gray-100'
+            }`}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16 lg:h-20">
@@ -285,26 +303,94 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                             </h1>
                         </Link>
 
-                        <div className="hidden lg:flex items-center gap-0.5 ml-8">
-                            {navItems.map((item) => (
-                                <Link
-                                    key={item.path}
-                                    href={item.path}
-                                    className={`px-3 py-2 rounded-xl text-sm font-black transition-all flex items-center gap-2 tracking-tight ${
-                                        isActive(item.path)
-                                            ? 'text-blue-600 bg-blue-50'
-                                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <span className="opacity-70">{item.icon}</span>
-                                    {item.name}
-                                </Link>
-                            ))}
-                        </div>
                     </div>
 
                     {/* ── Right: Actions ───────────────────────────────────── */}
                     <div className="flex items-center gap-2 lg:gap-3">
+                        {/* Category Dropdown (Left of Search) */}
+                        <div className="relative">
+                            <button
+                                ref={switcherTriggerRef}
+                                onClick={() => {
+                                    if (!showSwitcher && switcherTriggerRef.current) {
+                                        const rect = switcherTriggerRef.current.getBoundingClientRect();
+                                        const dropdownWidth = 240; 
+                                        let leftPos = rect.left;
+                                        if (leftPos + dropdownWidth > window.innerWidth - 16) {
+                                            leftPos = window.innerWidth - dropdownWidth - 16;
+                                        }
+                                        if (leftPos < 8) leftPos = 8;
+                                        setDropdownPos({
+                                            top: rect.bottom + 8,
+                                            left: leftPos,
+                                        });
+                                    }
+                                    setShowSwitcher(!showSwitcher);
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all border min-h-[40px] ${
+                                    isFeed 
+                                        ? 'bg-white/10 border-white/20 hover:border-white/40' 
+                                        : 'bg-gray-50 border-gray-100 hover:border-blue-400'
+                                }`}
+                            >
+                                <span className={`text-[11px] font-black uppercase tracking-wider ${isFeed ? 'text-white' : 'text-gray-900'}`}>
+                                    Connect: {categoryConfig?.label || 'All'}
+                                </span>
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSwitcher ? 'rotate-180' : ''} ${isFeed ? 'text-white' : 'text-gray-900'}`} />
+                            </button>
+
+                            <AnimatePresence>
+                                {showSwitcher && (
+                                    <motion.div
+                                        ref={switcherRef}
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        style={{
+                                            position: 'fixed',
+                                            top: dropdownPos.top,
+                                            left: dropdownPos.left,
+                                            minWidth: '200px',
+                                            width: 'max-content',
+                                            maxWidth: '240px',
+                                            zIndex: 9999,
+                                        }}
+                                        className="bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 overflow-hidden"
+                                    >
+                                        <div className="px-5 py-3 border-b border-[#F0F0F0] mb-2">
+                                            <p className="text-[10px] font-black text-[#FF0069] uppercase tracking-[0.2em] mb-1">Connect</p>
+                                            <span className="text-[12px] font-black text-slate-400 uppercase tracking-wider">Select Category</span>
+                                        </div>
+                                        {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => {
+                                                    setShowSwitcher(false);
+                                                    setCategory(key as CategoryKey);
+                                                }}
+                                                className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all whitespace-nowrap ${activeCategory === key
+                                                    ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'
+                                                    : 'hover:bg-black/5 text-[#444444]'
+                                                    }`}
+                                            >
+                                                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10">
+                                                    {config.imageUrl ? (
+                                                        <Image src={config.imageUrl} alt={config.label} fill className="object-cover" />
+                                                    ) : (
+                                                        <span className="text-sm">{config.emoji}</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A] whitespace-nowrap">{config.label}</span>
+                                                {activeCategory === key && (
+                                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
                         <div ref={searchContainerRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                           {/* Animated search bar */}
                           <div style={{
@@ -454,10 +540,10 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                         )}
 
                         {/* Mobile Menu Toggle */}
-                        <button
+                         <button
                             onClick={onMenuOpen}
                             aria-label="Open navigation menu"
-                            className="lg:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 active:scale-95 transition-all"
+                            className={`lg:hidden p-2 rounded-xl active:scale-95 transition-all ${isFeed ? 'text-white hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'}`}
                         >
                             <Menu className="w-6 h-6" />
                         </button>
