@@ -1,6 +1,6 @@
 'use client'
 import { useRouter, usePathname } from 'next/navigation'
-import { Home, Compass, Bookmark, User, X, Video, LogOut, Settings, LayoutDashboard, CirclePlus, Users, CreditCard, BarChart2 } from 'lucide-react'
+import { Home, Compass, Bookmark, User, X, Video, LogOut, Settings, LayoutDashboard, PlusCircle, Users, CreditCard, BarChart2 } from 'lucide-react'
 import { getAuth, signOut } from 'firebase/auth'
 import { useAuth } from '@/hooks/useAuth'
 import Image from 'next/image'
@@ -19,7 +19,7 @@ const employerMenuItems = [
   { label: 'Home', icon: Home, href: '/feed' },
   { label: 'Explore', icon: Compass, href: '/explore' },
   { label: 'Dashboard', icon: LayoutDashboard, href: '/employer/dashboard' },
-  { label: 'Post Job', icon: CirclePlus, href: '/employer/post-job' },
+  { label: 'Post Job', icon: PlusCircle, href: '/employer/post-job' },
   { label: 'Candidates', icon: Users, href: '/browse' },
   { label: 'Settings', icon: Settings, href: '/employer/settings' },
 ]
