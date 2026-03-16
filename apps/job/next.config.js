@@ -45,23 +45,9 @@ const nextConfig = {
       },
     ];
   },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin',
-          },
-          {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'credentialless',
-          },
-        ],
-      },
-    ];
-  },
+  // ✅ COOP/COEP headers removed — they break Google OAuth popups.
+  // COOP: same-origin isolates the popup window, preventing Firebase from
+  // receiving the OAuth callback, causing auth/popup-closed-by-user.
 };
 
 module.exports = nextConfig;
