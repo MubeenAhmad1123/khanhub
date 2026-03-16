@@ -90,22 +90,16 @@ const _startListener = () => {
   persistenceReady.then(async () => {
     console.log('[useAuth] 🎧 Persistence ready — checking redirect & attaching onAuthStateChanged');
 
+    // 1. ADD THIS: Check for redirect result BEFORE attaching onAuthStateChanged
     try {
       const result = await getRedirectResult(auth);
       if (result?.user) {
-        console.log('[useAuth] 🎯 Redirect login successful, user:', result.user.uid);
-        const role = (typeof window !== 'undefined' ? sessionStorage.getItem('google_auth_role') : null) as UserRole || 'job_seeker';
-        if (typeof window !== 'undefined') sessionStorage.removeItem('google_auth_role');
-
-        _hasAuthenticatedBefore = true;
-        if (typeof window !== 'undefined') localStorage.setItem('jobreel_authenticated', 'true');
-
-        const profile = await _safeGetOrCreateProfile(result.user, role);
-        _broadcast({ user: profile, firebaseUser: result.user, loading: false, error: null });
+        console.log('[useAuth] 🎯 getRedirectResult user detected:', result.user.uid);
+        const userProfile = await _safeGetOrCreateProfile(result.user, 'job_seeker');
+        _broadcast({ user: userProfile, firebaseUser: result.user, loading: false, error: null });
       }
-    } catch (error: any) {
-      console.error('[useAuth] ❌ Redirect result error:', error);
-      _broadcast({ ..._state, loading: false, error: 'Google login failed' });
+    } catch (err) {
+      console.warn('[useAuth] getRedirectResult error:', err);
     }
 
     const timeoutId = setTimeout(() => {
@@ -307,7 +301,9 @@ export function useAuth() {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      // Detect mobile: narrow screen OR mobile user agent
+      const isMobile = (typeof window !== 'undefined' && window.innerWidth < 768) || 
+                       /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
       if (isMobile) {
         console.log('[useAuth] 📱 Mobile detected, using redirect...');

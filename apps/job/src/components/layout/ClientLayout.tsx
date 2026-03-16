@@ -28,10 +28,9 @@ export default function ClientLayout({
     const isAuthRoute = pathname?.startsWith('/auth');
 
     // Show new navigation only on non-admin and non-auth pages (main app area)
-    const hiddenRoutes: string[] = []; // No longer hiding on feed
-    const isFeedRoute = pathname === '/feed';
+    const isFeedRoute = pathname?.startsWith('/feed');
     const showNav = !isAdminRoute && !isAuthRoute;
-    const showTopBar = showNav; // Show always when showNav is true
+    const showTopBar = showNav && !isFeedRoute; // Hide ImprovedNavbar on feed
 
     const [drawerOpen, setDrawerOpen] = useState(false);
 

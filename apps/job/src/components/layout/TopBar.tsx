@@ -140,6 +140,11 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                 setShowSwitcher(!showSwitcher);
                             }}
                             className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-4 py-2 rounded-full hover:border-[--accent] transition-all min-h-[44px]"
+                            style={{
+                                opacity: searchOpen ? 0 : 1,
+                                pointerEvents: searchOpen ? 'none' : 'auto',
+                                transition: 'opacity 0.2s ease',
+                            }}
                         >
                             <span className="text-[11px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">
                                 Connect: {categoryConfig?.label || 'All'}
@@ -208,7 +213,7 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                         <div style={{
                             overflow: 'hidden',
                             width: searchOpen ? '100%' : '0px',
-                            maxWidth: searchOpen ? 'calc(100vw - 140px)' : '0px', // Prevent overflow
+                            maxWidth: searchOpen ? 'calc(100vw - 160px)' : '0px', // Prevent overflow on small screens
                             transition: 'width 0.3s ease, max-width 0.3s ease',
                             marginRight: searchOpen ? '8px' : '0px',
                         }}>
