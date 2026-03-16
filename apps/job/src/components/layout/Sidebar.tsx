@@ -8,7 +8,7 @@ import { getAuth, signOut } from 'firebase/auth';
 import Image from 'next/image';
 import {
     LayoutDashboard, Search, User, Video,
-    Users, PlusCircle, BookmarkCheck, Settings,
+    Users, CirclePlus, BookmarkCheck, Settings,
     CreditCard, BarChart2, LogOut, ShieldCheck,
 } from 'lucide-react';
 
@@ -23,7 +23,7 @@ const seekerMenu = [
 
 const employerMenu = [
     { name: 'Dashboard', path: '/employer/dashboard', icon: LayoutDashboard },
-    { name: 'Post Job', path: '/employer/post-job', icon: PlusCircle },
+    { name: 'Post Job', path: '/employer/post-job', icon: CirclePlus },
     { name: 'Candidates', path: '/browse', icon: Users },
     { name: 'Reveals', path: '/employer/connections', icon: BookmarkCheck },
     { name: 'Settings', path: '/employer/settings', icon: Settings },

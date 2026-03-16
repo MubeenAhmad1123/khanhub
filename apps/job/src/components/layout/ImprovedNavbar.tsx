@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import {
     LogOut, User, Users, Settings, LayoutDashboard,
-    Search, Briefcase, PlusCircle, BookmarkCheck,
+    Search, Briefcase, CirclePlus, BookmarkCheck,
     Shield, Menu, X, ChevronDown, Sparkles, Bell
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -229,7 +229,7 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
         if (!user || pathname === '/') {
             return [
                 { name: 'Browse Videos', path: '/browse', icon: <Search className="w-4 h-4" /> },
-                { name: 'How It Works', path: '#how-it-works', icon: <PlusCircle className="w-4 h-4" /> },
+                { name: 'How It Works', path: '#how-it-works', icon: <CirclePlus className="w-4 h-4" /> },
                 { name: 'Categories', path: '#categories', icon: <Briefcase className="w-4 h-4" /> },
             ];
         }
@@ -245,7 +245,7 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
         if (pathname?.startsWith('/employer') || user.role === 'employer') {
             return [
                 { name: 'Dashboard', path: '/employer/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-                { name: 'Post Job', path: '/employer/post-job', icon: <PlusCircle className="w-4 h-4" /> },
+                { name: 'Post Job', path: '/employer/post-job', icon: <CirclePlus className="w-4 h-4" /> },
                 { name: 'Candidates', path: '/browse', icon: <Users className="w-4 h-4" /> },
                 { name: 'Reveals', path: '/employer/connections', icon: <BookmarkCheck className="w-4 h-4" /> },
                 { name: 'Settings', path: '/employer/settings', icon: <Settings className="w-4 h-4" /> },
@@ -254,7 +254,7 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
         return [
             { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
             { name: 'Candidates', path: '/browse', icon: <Users className="w-4 h-4" /> },
-            { name: 'My Video', path: '/dashboard/upload-video', icon: <PlusCircle className="w-4 h-4" /> },
+            { name: 'My Video', path: '/dashboard/upload-video', icon: <CirclePlus className="w-4 h-4" /> },
             { name: 'Profile', path: '/dashboard/profile', icon: <User className="w-4 h-4" /> },
             { name: 'Settings', path: '/dashboard/settings', icon: <Settings className="w-4 h-4" /> },
         ];

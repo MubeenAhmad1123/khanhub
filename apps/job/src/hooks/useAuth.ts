@@ -6,6 +6,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   sendEmailVerification,
@@ -52,11 +54,13 @@ const _broadcast = (newState: AuthState) => {
       localStorage.setItem('jobreel_authenticated', 'true');
     }
   } else if (!newState.loading && !newState.firebaseUser && !newState.user) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('jobreel_authenticated');
+    if (_hasAuthenticatedBefore) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('jobreel_authenticated');
+      }
+      _hasAuthenticatedBefore = false;
+      console.log('[useAuth] 👋 User logged out');
     }
-    _hasAuthenticatedBefore = false;
-    console.log('[useAuth] 👋 User logged out');
   }
 
   _subscribers.forEach(fn => fn(newState));
@@ -83,8 +87,26 @@ const _startListener = () => {
   // Previously, the listener attached before persistence was ready, so Firebase
   // read from the wrong storage, found no session, and returned null immediately
   // even for users who were logged in.
-  persistenceReady.then(() => {
-    console.log('[useAuth] 🎧 Persistence ready — attaching onAuthStateChanged');
+  persistenceReady.then(async () => {
+    console.log('[useAuth] 🎧 Persistence ready — checking redirect & attaching onAuthStateChanged');
+
+    try {
+      const result = await getRedirectResult(auth);
+      if (result?.user) {
+        console.log('[useAuth] 🎯 Redirect login successful, user:', result.user.uid);
+        const role = (typeof window !== 'undefined' ? sessionStorage.getItem('google_auth_role') : null) as UserRole || 'job_seeker';
+        if (typeof window !== 'undefined') sessionStorage.removeItem('google_auth_role');
+
+        _hasAuthenticatedBefore = true;
+        if (typeof window !== 'undefined') localStorage.setItem('jobreel_authenticated', 'true');
+
+        const profile = await _safeGetOrCreateProfile(result.user, role);
+        _broadcast({ user: profile, firebaseUser: result.user, loading: false, error: null });
+      }
+    } catch (error: any) {
+      console.error('[useAuth] ❌ Redirect result error:', error);
+      _broadcast({ ..._state, loading: false, error: 'Google login failed' });
+    }
 
     const timeoutId = setTimeout(() => {
       if (_state.loading) {
@@ -280,12 +302,21 @@ export function useAuth() {
 
   const loginWithGoogle = async (role: UserRole): Promise<void> => {
     try {
-      console.log('[useAuth] 🔵 Opening Google popup...');
       _broadcast({ ..._state, loading: true, error: null });
 
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        console.log('[useAuth] 📱 Mobile detected, using redirect...');
+        if (typeof window !== 'undefined') sessionStorage.setItem('google_auth_role', role);
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+
+      console.log('[useAuth] 🖥️ Desktop detected, opening Google popup...');
       const userCredential = await signInWithPopup(auth, provider);
       console.log('[useAuth] 🟢 Popup success, uid:', userCredential.user.uid);
 
@@ -335,41 +366,6 @@ export function useAuth() {
         error.code === 'auth/popup-closed-by-user' ||
         error.code === 'auth/cancelled-popup-request'
       ) {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          console.log('[useAuth] ✅ User authenticated despite popup close');
-          _hasAuthenticatedBefore = true;
-          localStorage.setItem('jobreel_authenticated', 'true');
-          _broadcast({
-            user: {
-              uid: currentUser.uid,
-              email: currentUser.email,
-              displayName: currentUser.displayName || 'User',
-              photoURL: currentUser.photoURL,
-              role,
-              emailVerified: currentUser.emailVerified,
-              onboardingCompleted: true,
-              paymentStatus: 'approved',
-              isPremium: false,
-              isActive: true,
-              isBanned: false,
-              isFeatured: false,
-              applicationsUsed: 0,
-              premiumJobsViewed: 0,
-              points: 0,
-              followerCount: 0,
-              followingCount: 0,
-              totalLikes: 0,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            } as any,
-            firebaseUser: currentUser,
-            loading: false,
-            error: null,
-          });
-          return;
-        }
-
         console.warn('[useAuth] ⚠️ Popup cancelled, no user.');
         _broadcast({ ..._state, loading: false, error: 'Login cancelled' });
         throw new Error('Login cancelled');
