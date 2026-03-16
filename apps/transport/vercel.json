@@ -1,5 +1,5 @@
 {
   "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "ignoreBuildStep": "git diff HEAD^ HEAD --quiet ."
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet ."
 }
