@@ -101,13 +101,16 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                     <Link
                         href="/"
                         style={{
-                            fontSize: '16px',
-                            fontWeight: 800,
+                            fontSize: '14px', // Reduced for better mobile fit
+                            fontWeight: 900,
                             letterSpacing: '-0.5px',
                             color: iconColor,
                             textTransform: 'uppercase',
                             fontStyle: 'italic',
-                            textDecoration: 'none'
+                            textDecoration: 'none',
+                            minHeight: '44px',
+                            display: 'flex',
+                            alignItems: 'center',
                         }}
                     >
                         KHAN HUB
@@ -135,10 +138,10 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                 }
                                 setShowSwitcher(!showSwitcher);
                             }}
-                            className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full hover:border-[--accent] transition-all"
+                            className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-4 py-2 rounded-full hover:border-[--accent] transition-all min-h-[44px]"
                         >
                             <span className="text-[11px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A]">
-                                {categoryConfig?.label || 'All'}
+                                Connect: {categoryConfig?.label || 'All'}
                             </span>
                             <ChevronDown className={`w-3.5 h-3.5 text-[#333333] transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />
                         </button>
@@ -161,8 +164,9 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                                     }}
                                     className="bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 overflow-hidden"
                                 >
-                                    <div className="px-4 py-2 mb-1">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Select Category</span>
+                                    <div className="px-5 py-3 border-b border-[#F0F0F0] mb-2">
+                                        <p className="text-[10px] font-black text-[#FF0069] uppercase tracking-[0.2em] mb-1">Connect</p>
+                                        <span className="text-[12px] font-black text-slate-400 uppercase tracking-wider">Select Category</span>
                                     </div>
                                     {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
                                         <button
@@ -202,8 +206,9 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                     <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
                         <div style={{
                             overflow: 'hidden',
-                            width: searchOpen ? '180px' : '0px',
-                            transition: 'width 0.3s ease',
+                            width: searchOpen ? '100%' : '0px',
+                            maxWidth: searchOpen ? 'calc(100vw - 140px)' : '0px', // Prevent overflow
+                            transition: 'width 0.3s ease, max-width 0.3s ease',
                             marginRight: searchOpen ? '8px' : '0px',
                         }}>
                             <input
@@ -240,14 +245,15 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                             onClick={handleSearchToggle}
                             style={{
                                 background: 'none', border: 'none',
-                                cursor: 'pointer', padding: '4px',
+                                cursor: 'pointer', padding: '10px', // Larger tap target
                                 display: 'flex', alignItems: 'center',
                                 color: iconColor,
+                                minWidth: '44px', minHeight: '44px',
                             }}
                         >
                             {searchOpen
-                                ? <X size={20} />
-                                : <Search size={20} />
+                                ? <X size={22} />
+                                : <Search size={22} />
                             }
                         </button>
                     </div>
@@ -258,11 +264,12 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                         onClick={() => setNotifOpen(prev => !prev)}
                         style={{
                             position: 'relative', background: 'none',
-                            border: 'none', cursor: 'pointer', padding: '4px',
+                            border: 'none', cursor: 'pointer', padding: '10px',
                             display: 'flex', alignItems: 'center',
+                            minWidth: '44px', minHeight: '44px',
                         }}
                     >
-                        <Bell size={20} color={iconColor} />
+                        <Bell size={22} color={iconColor} />
                         {unreadCount > 0 && (
                             <span style={{
                                 position: 'absolute', top: '0px', right: '0px',
@@ -287,11 +294,12 @@ export function TopBar({ hideCategorySwitcher = false }: { hideCategorySwitcher?
                         onClick={() => setDrawerOpen(true)}
                         style={{
                             background: 'none', border: 'none',
-                            cursor: 'pointer', padding: '4px',
+                            cursor: 'pointer', padding: '10px',
                             display: 'flex', alignItems: 'center',
+                            minWidth: '44px', minHeight: '44px',
                         }}
                     >
-                        <Menu size={22} color={iconColor} />
+                        <Menu size={24} color={iconColor} />
                     </button>
 
                     <HamburgerDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
