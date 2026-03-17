@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { CATEGORY_CONFIG } from '@/lib/categories';
 
 // Helper: resolve badge label from video doc
@@ -29,6 +30,7 @@ interface VideoOverlayProps {
 }
 
 export function VideoOverlay({ data }: VideoOverlayProps) {
+    const router = useRouter();
     const overlay = data?.overlayData || {};
     const title = overlay.title || data.title || '';
     const field1 = overlay.field1 || data.field1;
@@ -36,6 +38,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
     const location = overlay.location || data.location || data.city || '';
     const userPhoto = overlay.userPhoto || data.userPhoto;
     const userName = overlay.userName || data.userName;
+    const userId = data?.userId;
 
     const roleLabel = resolveRoleLabel(data);
     const category = data?.category || '';
@@ -44,8 +47,42 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
     // Check if user is verified
     const isVerified = data?.isVerified || data?.verified || false;
 
+    const handleConnectClick = () => {
+        if (userId) {
+            router.push(`/profile/landing/${userId}`);
+        }
+    };
+
     return (
         <div className="w-full px-4 pb-2 pointer-events-none">
+            {/* Connect Button - Above username */}
+            {userId && (
+                <div style={{ marginBottom: 8, pointerEvents: 'auto' }}>
+                    <button
+                        onClick={handleConnectClick}
+                        className="relative inline-flex h-8 active:scale-95 transition overflow-hidden rounded-md"
+                        style={{ width: '100%', maxWidth: 160 }}
+                    >
+                        <span style={{
+                            position: 'absolute', inset: 0,
+                            background: 'linear-gradient(90deg, #e7029a, #f472b6, #bd5fff)',
+                            animation: 'spin 2s linear infinite'
+                        }} />
+                        <span style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: '100%', height: '100%', background: '#1a1a1a', borderRadius: 'md',
+                            fontSize: 12, fontWeight: 600, color: '#fff', gap: 6, position: 'relative'
+                        }}>
+                            Connect
+                            <svg stroke="currentColor" fill="currentColor" strokeWidth={0} viewBox="0 0 448 512" height="12" width="12">
+                                <path d="M429.6 92.1c4.9-11.9 2.1-25.6-7-34.7s-22.8-11.9-34.7-7l-352 144c-14.2 5.8-22.2 20.8-19.3 35.8s16.1 25.8 31.4 25.8H224V432c0 15.3 10.8 28.4 25.8 31.4s30-5.1 35.8-19.3l144-352z" />
+                            </svg>
+                        </span>
+                    </button>
+                    <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+                </div>
+            )}
+
             {/* Uploader avatar + name + contact icon */}
             {(userPhoto || userName) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
