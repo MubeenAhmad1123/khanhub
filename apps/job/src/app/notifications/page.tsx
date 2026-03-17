@@ -84,20 +84,20 @@ export default function NotificationsPage() {
 
     if (authLoading || loading) {
         return (
-            <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid #333', borderTop: '3px solid #FF0069', animation: 'spin 0.75s linear infinite' }} />
+            <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid #eee', borderTop: '3px solid #FF0069', animation: 'spin 0.75s linear infinite' }} />
                 <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
             </div>
         );
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: '#000', color: '#fff' }}>
+        <div style={{ minHeight: '100vh', background: '#fff', color: '#0A0A0A' }}>
             {/* Header */}
             <div style={{
                 position: 'sticky', top: 0,
-                background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
-                borderBottom: '1px solid #222',
+                background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)',
+                borderBottom: '1px solid #eee',
                 padding: '16px', display: 'flex', alignItems: 'center', gap: 12,
                 zIndex: 50
             }}>
@@ -105,7 +105,7 @@ export default function NotificationsPage() {
                     onClick={() => router.back()}
                     style={{
                         background: 'none', border: 'none',
-                        color: '#fff', cursor: 'pointer',
+                        color: '#0A0A0A', cursor: 'pointer',
                         padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                         minWidth: 40, minHeight: 40,
                     }}
@@ -121,7 +121,7 @@ export default function NotificationsPage() {
                     height: 'calc(100vh - 80px)',
                     display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center',
-                    gap: 16, color: '#666'
+                    gap: 16, color: '#999'
                 }}>
                     <Bell size={48} style={{ opacity: 0.3 }} />
                     <p style={{ fontSize: 16 }}>No notifications yet</p>
@@ -133,8 +133,8 @@ export default function NotificationsPage() {
                             key={notification.id}
                             style={{
                                 display: 'flex', gap: 12, padding: '16px',
-                                background: notification.isRead ? 'transparent' : 'rgba(255,0,105,0.05)',
-                                borderBottom: '1px solid #222',
+                                background: notification.isRead ? 'transparent' : 'rgba(255,0,105,0.03)',
+                                borderBottom: '1px solid #f0f0f0',
                                 cursor: 'pointer',
                             }}
                         >
@@ -153,7 +153,7 @@ export default function NotificationsPage() {
                             <div style={{
                                 width: 40, height: 40,
                                 borderRadius: '50%',
-                                background: 'rgba(255,255,255,0.1)',
+                                background: '#f5f5f5',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 fontSize: 18, flexShrink: 0,
                             }}>
@@ -164,14 +164,15 @@ export default function NotificationsPage() {
                             <div style={{ flex: 1 }}>
                                 <p style={{
                                     fontSize: 14,
-                                    color: notification.isRead ? '#888' : '#fff',
+                                    color: notification.isRead ? '#666' : '#0A0A0A',
                                     lineHeight: 1.4,
+                                    fontWeight: notification.isRead ? 400 : 500,
                                 }}>
                                     {notification.message}
                                 </p>
                                 <div style={{
                                     display: 'flex', alignItems: 'center', gap: 4,
-                                    marginTop: 4, color: '#666', fontSize: 12
+                                    marginTop: 4, color: '#999', fontSize: 12
                                 }}>
                                     <Clock size={12} />
                                     <span>

@@ -277,8 +277,8 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                                         : 'bg-gray-50 border-gray-100 hover:border-blue-400'
                                 }`}
                             >
-                                <span className={`text-[11px] font-black uppercase tracking-wider ${isFeed ? 'text-white' : 'text-gray-900'}`}>
-                                    Connect: {categoryConfig?.label || 'All'}
+                                    <span className={`text-[11px] font-black uppercase tracking-wider ${isFeed ? 'text-white' : 'text-gray-900'}`}>
+                                    {categoryConfig?.emoji || '🎯'} {categoryConfig?.label || 'All'}
                                 </span>
                                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSwitcher ? 'rotate-180' : ''} ${isFeed ? 'text-white' : 'text-gray-900'}`} />
                             </button>
@@ -302,7 +302,6 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                                         className="bg-white border border-[#E5E5E5] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-3 grid grid-cols-1 gap-1 overflow-hidden"
                                     >
                                         <div className="px-5 py-3 border-b border-[#F0F0F0] mb-2">
-                                            <p className="text-[10px] font-black text-[#FF0069] uppercase tracking-[0.2em] mb-1">Connect</p>
                                             <span className="text-[12px] font-black text-slate-400 uppercase tracking-wider">Select Category</span>
                                         </div>
                                         {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
@@ -317,16 +316,12 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                                                     : 'hover:bg-black/5 text-[#444444]'
                                                     }`}
                                             >
-                                                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/10">
-                                                    {config.imageUrl ? (
-                                                        <Image src={config.imageUrl} alt={config.label} fill className="object-cover" />
-                                                    ) : (
-                                                        <span className="text-sm">{config.emoji}</span>
-                                                    )}
+                                                <div className="w-8 h-8 rounded-full bg-[#f5f5f5] flex items-center justify-center">
+                                                    <span className="text-lg">{config.emoji}</span>
                                                 </div>
                                                 <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A] whitespace-nowrap">{config.label}</span>
                                                 {activeCategory === key && (
-                                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#FF0069]" />
                                                 )}
                                             </button>
                                         ))}
