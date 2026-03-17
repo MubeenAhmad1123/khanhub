@@ -13,6 +13,8 @@ import SavedGrid from '@/components/profile/SavedGrid';
 import SkillsSection from '@/components/profile/SkillsSection';
 import ExperienceSection from '@/components/profile/ExperienceSection';
 import EducationSection from '@/components/profile/EducationSection';
+import { BookmarkPlusIcon } from '@/components/icons/BookmarkPlusIcon';
+import { LayoutGridIcon } from '@/components/icons/LayoutGridIcon';
 
 // Profile tabs — like TikTok
 type ProfileTab = 'videos' | 'saved' | 'info';
@@ -171,8 +173,8 @@ export default function ProfilePage() {
                 position: 'sticky', top: 0, background: '#FFFFFF', zIndex: 10,
             }}>
                 {[
-                    { key: 'videos', icon: '⊞', label: 'Videos' },
-                    { key: 'saved', icon: '🔖', label: 'Saved' },
+                    { key: 'videos', icon: <LayoutGridIcon size={18} />, label: 'Videos' },
+                    { key: 'saved', icon: <BookmarkPlusIcon size={18} />, label: 'Saved' },
                     { key: 'info', icon: '👤', label: 'About' },
                 ].map((tab) => (
                     <button
