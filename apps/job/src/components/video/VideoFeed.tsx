@@ -217,6 +217,9 @@ export function VideoFeed() {
 
 
 
+    // Track last updated video ID to prevent unnecessary URL updates
+    const lastUpdatedVideoRef = useRef<string | null>(null);
+
     // ── Intersection Observer for Active Index & URL ───────────────
     useEffect(() => {
         if (displayVideos.length === 0) return;
@@ -230,13 +233,20 @@ export function VideoFeed() {
                 (entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                            setActiveIndex(index); // Set active index directly
+                            const currentVideo = displayVideos[index];
+                            if (!currentVideo || currentVideo.isPlaceholder) return;
+                            
+                            setActiveIndex(index);
 
-                            // FIX: Remove infinite scroll append that causes duplicates and scroll resets
-                            // Just let videos loop naturally via the Firestore query
-
-                            // FIX: Don't update URL on scroll to prevent re-renders
-                            // (Deeplinking handled separately on mount)
+                            // Update URL only when video changes (not on every scroll)
+                            if (currentVideo.id !== lastUpdatedVideoRef.current && typeof window !== 'undefined') {
+                                lastUpdatedVideoRef.current = currentVideo.id;
+                                const url = new URL(window.location.href);
+                                if (url.searchParams.get('v') !== currentVideo.id) {
+                                    url.searchParams.set('v', currentVideo.id);
+                                    window.history.replaceState(null, '', url.pathname + url.search);
+                                }
+                            }
 
                             // Guest Wall Logic — only trigger if user is completely unauthenticated
                             if (!user && !firebaseUser && !loading) {

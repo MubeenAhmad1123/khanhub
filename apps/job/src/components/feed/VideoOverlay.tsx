@@ -41,9 +41,12 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
     const category = data?.category || '';
     const catConfig = category ? getCatConfig(category) : null;
 
+    // Check if user is verified
+    const isVerified = data?.isVerified || data?.verified || false;
+
     return (
         <div className="w-full px-4 pb-2 pointer-events-none">
-            {/* Uploader avatar + name */}
+            {/* Uploader avatar + name + contact icon */}
             {(userPhoto || userName) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     {userPhoto && (
@@ -61,8 +64,35 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                         />
                     )}
                     {userName && (
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans' }}>
-                            {userName}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans' }}>
+                                {userName}
+                            </div>
+                            {/* Contact/Message icon - appears next to username */}
+                            <span style={{ 
+                                fontSize: 12, 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                color: '#fff',
+                                background: 'rgba(255,255,255,0.2)',
+                                borderRadius: '50%',
+                                width: 18,
+                                height: 18,
+                                justifyContent: 'center',
+                            }} title="Contact">
+                                💬
+                            </span>
+                            {/* Verified badge */}
+                            {isVerified && (
+                                <span style={{ 
+                                    fontSize: 10, 
+                                    display: 'flex', 
+                                    alignItems: 'center',
+                                    color: '#00C853',
+                                }} title="Verified">
+                                    ✓
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>

@@ -110,7 +110,7 @@ export default function UserProfilePage() {
                     if (snap.exists()) {
                         const data = snap.data();
                         setCounts({
-                            followers: data.followersCount || 0,
+                            followers: data.followerCount || data.followersCount || 0,
                             following: data.followingCount || 0,
                             likes: data.totalLikes || 0
                         });
