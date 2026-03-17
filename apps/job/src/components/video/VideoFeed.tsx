@@ -505,7 +505,7 @@ export function VideoFeed() {
     }, [displayVideos, activeIndex, isMuted, userHasInteracted, activeCategory, activeRole, router]);
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: '#000', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000', display: 'flex', justifyContent: 'center' }}>
 
             {/* Desktop UI Arrows (Side) */}
             <div className="hidden md:flex flex-col justify-center gap-4 fixed left-8 z-50">
@@ -527,17 +527,26 @@ export function VideoFeed() {
                     top: 0, left: 0, right: 0,
                     zIndex: 100,
                     // Gradient fades to transparent so video visible below stories
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%)',
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 30%, transparent 100%)',
                     pointerEvents: 'none',    // clicks pass through to video
                 }}>
                     {/* Give pointer events back to interactive elements */}
                     <div style={{ pointerEvents: 'all' }}>
-                        <div className="flex items-center p-2 pt-[62px]">
+                        <div className="flex items-center p-2 pt-14">
                             <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
                         </div>
                         <AnimatePresence>
                             {showStoriesBar && (
-                                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                                <motion.div 
+                                    initial={{ opacity: 0, y: -10 }} 
+                                    animate={{ opacity: 1, y: 0 }} 
+                                    exit={{ opacity: 0, y: -10 }}
+                                    style={{
+                                        background: 'rgba(0, 0, 0, 0.6)',
+                                        backdropFilter: 'blur(8px)',
+                                        paddingBottom: 8,
+                                    }}
+                                >
                                     <CategoryStoriesBar onCategoryChange={() => { }} />
                                 </motion.div>
                             )}

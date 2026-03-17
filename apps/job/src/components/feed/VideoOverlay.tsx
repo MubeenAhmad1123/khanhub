@@ -55,34 +55,6 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
 
     return (
         <div className="w-full px-4 pb-2 pointer-events-none">
-            {/* Connect Button - Above username */}
-            {userId && (
-                <div style={{ marginBottom: 8, pointerEvents: 'auto' }}>
-                    <button
-                        onClick={handleConnectClick}
-                        className="relative inline-flex h-8 active:scale-95 transition overflow-hidden rounded-md"
-                        style={{ width: '100%', maxWidth: 160 }}
-                    >
-                        <span style={{
-                            position: 'absolute', inset: 0,
-                            background: 'linear-gradient(90deg, #e7029a, #f472b6, #bd5fff)',
-                            animation: 'spin 2s linear infinite'
-                        }} />
-                        <span style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            width: '100%', height: '100%', background: '#1a1a1a', borderRadius: 'md',
-                            fontSize: 12, fontWeight: 600, color: '#fff', gap: 6, position: 'relative'
-                        }}>
-                            Connect
-                            <svg stroke="currentColor" fill="currentColor" strokeWidth={0} viewBox="0 0 448 512" height="12" width="12">
-                                <path d="M429.6 92.1c4.9-11.9 2.1-25.6-7-34.7s-22.8-11.9-34.7-7l-352 144c-14.2 5.8-22.2 20.8-19.3 35.8s16.1 25.8 31.4 25.8H224V432c0 15.3 10.8 28.4 25.8 31.4s30-5.1 35.8-19.3l144-352z" />
-                            </svg>
-                        </span>
-                    </button>
-                    <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-                </div>
-            )}
-
             {/* Uploader avatar + name + contact icon */}
             {(userPhoto || userName) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -172,6 +144,40 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                     </span>
                 )}
             </div>
+
+            {/* Connect Button - Before Title */}
+            {userId && title && (
+                <div style={{ marginBottom: 8, pointerEvents: 'auto' }}>
+                    <button
+                        onClick={handleConnectClick}
+                        style={{
+                            background: '#4169E1',
+                            border: 'none',
+                            borderRadius: 16,
+                            padding: '8px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                        }}
+                    >
+                        <div style={{
+                            width: 20,
+                            height: 20,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={16} height={16}>
+                                <path fill="none" d="M0 0h24v24H0z" />
+                                <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
+                            </svg>
+                        </div>
+                        <span style={{ color: '#fff', fontSize: 14, fontWeight: 500 }}>Send</span>
+                    </button>
+                </div>
+            )}
 
             {/* Title */}
             <h3 style={{
