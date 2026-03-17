@@ -503,7 +503,13 @@ export function VideoFeed() {
                 <button onClick={() => videoRefs.current[activeIndex + 1]?.scrollIntoView({ behavior: 'smooth' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↓</button>
             </div>
 
-            <div style={{ width: '100%', maxWidth: 450, height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ 
+                width: '100%', 
+                maxWidth: '100%',
+                height: '100dvh', 
+                position: 'relative', 
+                overflow: 'hidden',
+            }}>
 
                 {/* Overlay layer — floats above video */}
                 <div style={{
