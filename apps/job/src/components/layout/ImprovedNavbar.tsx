@@ -253,7 +253,7 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                     <div className="flex items-center gap-2 lg:gap-3">
                         {/* Category Dropdown (Left of Search) */}
                         <div className="relative">
-                            <button
+                            <motion.button
                                 ref={switcherTriggerRef}
                                 onClick={() => {
                                     if (!showSwitcher && switcherTriggerRef.current) {
@@ -271,17 +271,34 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                                     }
                                     setShowSwitcher(!showSwitcher);
                                 }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all border min-h-[40px] ${
-                                    isFeed 
-                                        ? 'bg-white/10 border-white/20 hover:border-white/40' 
-                                        : 'bg-gray-50 border-gray-100 hover:border-blue-400'
-                                }`}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all border min-h-[40px]"
+                                style={{
+                                    background: isFeed 
+                                        ? `${categoryConfig?.accent || '#FF0069'}20` 
+                                        : `${categoryConfig?.accent || '#FF0069'}10`,
+                                    borderColor: isFeed 
+                                        ? 'rgba(255,255,255,0.3)' 
+                                        : `${categoryConfig?.accent || '#FF0069'}40`,
+                                }}
                             >
-                                    <span className={`text-[11px] font-black uppercase tracking-wider ${isFeed ? 'text-white' : 'text-gray-900'}`}>
-                                    {categoryConfig?.emoji || '🎯'} {categoryConfig?.label || 'All'}
+                                <span 
+                                    className="text-[11px] font-black uppercase tracking-wider"
+                                    style={{ color: isFeed ? '#fff' : categoryConfig?.accent || '#FF0069' }}
+                                >
+                                {categoryConfig?.emoji || '🎯'} {categoryConfig?.label || 'All'}
                                 </span>
-                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSwitcher ? 'rotate-180' : ''} ${isFeed ? 'text-white' : 'text-gray-900'}`} />
-                            </button>
+                                <motion.div
+                                    animate={{ rotate: showSwitcher ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <ChevronDown 
+                                        className="w-3.5 h-3.5" 
+                                        style={{ color: isFeed ? '#fff' : categoryConfig?.accent || '#FF0069' }} 
+                                    />
+                                </motion.div>
+                            </motion.button>
 
                             <AnimatePresence>
                                 {showSwitcher && (
@@ -305,25 +322,43 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                                             <span className="text-[12px] font-black text-slate-400 uppercase tracking-wider">Select Category</span>
                                         </div>
                                         {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
-                                            <button
+                                            <motion.button
                                                 key={key}
                                                 onClick={() => {
                                                     setShowSwitcher(false);
                                                     setCategory(key as CategoryKey);
                                                 }}
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
                                                 className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all whitespace-nowrap ${activeCategory === key
-                                                    ? 'bg-[#F0F0F0] border border-[#E5E5E5] text-[#0A0A0A]'
+                                                    ? 'text-[#0A0A0A]'
                                                     : 'hover:bg-black/5 text-[#444444]'
                                                     }`}
+                                                style={{
+                                                    background: activeCategory === key ? `${config.accent}15` : 'transparent',
+                                                    border: activeCategory === key ? `1px solid ${config.accent}40` : '1px solid transparent',
+                                                }}
                                             >
-                                                <div className="w-8 h-8 rounded-full bg-[#f5f5f5] flex items-center justify-center">
+                                                <motion.div 
+                                                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                                                    style={{
+                                                        background: `${config.accent}20`,
+                                                    }}
+                                                    whileHover={{ scale: 1.1 }}
+                                                >
                                                     <span className="text-lg">{config.emoji}</span>
-                                                </div>
+                                                </motion.div>
                                                 <span className="text-[10px] font-black font-poppins uppercase tracking-wider text-[#0A0A0A] whitespace-nowrap">{config.label}</span>
                                                 {activeCategory === key && (
-                                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#FF0069]" />
+                                                    <motion.div 
+                                                        className="ml-auto w-2 h-2 rounded-full" 
+                                                        style={{ background: config.accent }}
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                                    />
                                                 )}
-                                            </button>
+                                            </motion.button>
                                         ))}
                                     </motion.div>
                                 )}
