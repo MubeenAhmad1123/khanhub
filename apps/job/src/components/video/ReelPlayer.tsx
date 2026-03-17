@@ -220,7 +220,16 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
     return (
         <div
             onClick={handleVideoTap}
-            style={{ position: 'absolute', inset: 0, cursor: 'pointer' }}
+            style={{ 
+                position: 'absolute', 
+                inset: 0, 
+                cursor: 'pointer',
+                background: '#000',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflow: 'hidden',
+            }}
             className="video-slide"
         >
             {/* Buffering spinner */}
@@ -289,10 +298,10 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
                 onWaiting={() => setIsBuffering(true)}
                 onPlaying={() => setIsBuffering(false)}
                 style={{
-                    position: 'absolute', inset: 0, zIndex: 0,
-                    width: '100%', height: '100%', objectFit: 'cover',
-                    WebkitTransform: 'translateZ(0)',
-                    transform: 'translateZ(0)',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    background: '#000',
                 }}
             />
         </div>
