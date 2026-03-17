@@ -10,8 +10,10 @@ import {
 import { db } from '@/lib/firebase/firebase-config';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeedToast } from '@/components/ui/FeedToast';
-import { Heart, Bookmark, Send, MoreVertical } from 'lucide-react';
+import { Heart, Bookmark, Send, MoreVertical, Check } from 'lucide-react';
 import { createNotification } from '@/lib/createNotification';
+import { followUser, unfollowUser, checkIsFollowing } from '@/lib/followSystem';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ActionButtonsProps {
     videoId: string;
@@ -48,6 +50,7 @@ export function ActionButtons({
 
     const [liked, setLiked] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [following, setFollowing] = useState(false);
     const [likeCount, setLikeCount] = useState(likes);
     const [saveCount, setSaveCount] = useState(saves);
     const [showMenu, setShowMenu] = useState(false);
@@ -73,6 +76,11 @@ export function ActionButtons({
         
         // Check if liked
         checkIsLiked(user.uid, videoId).then(setLiked);
+
+        // Check if following
+        if (isRealUser && videoUserId) {
+            checkIsFollowing(user.uid, videoUserId).then(setFollowing);
+        }
 
         // Check saved list in user doc
         if (user && user.uid) {
@@ -143,6 +151,41 @@ export function ActionButtons({
         router.push(`/profile/${videoUserRole || 'user'}/${videoUserId}`);
     };
 
+    const handleFollow = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user?.uid) {
+            showToast('Sign in to follow creators');
+            return;
+        }
+        if (!isRealUser || !videoUserId) {
+            showToast('🎬 Cannot follow demo accounts');
+            return;
+        }
+
+        const newFollowing = !following;
+        setFollowing(newFollowing);
+
+        try {
+            if (newFollowing) {
+                await followUser(user.uid, videoUserId);
+                await createNotification(
+                    videoUserId,
+                    'follow',
+                    'New Follower',
+                    `${user.displayName || 'Someone'} started following you`,
+                    'profile'
+                );
+                showToast('✅ Following');
+            } else {
+                await unfollowUser(user.uid, videoUserId);
+                showToast('Unfollowed');
+            }
+        } catch (err) {
+            console.error('Follow error:', err);
+            setFollowing(!newFollowing);
+        }
+    };
+
     const handleMenuAction = async (action: string) => {
         setShowMenu(false);
         switch (action) {
@@ -155,6 +198,22 @@ export function ActionButtons({
                     });
                 }
                 showToast('🚩 Report submitted. Thank you.');
+                break;
+            case 'interested':
+                if (!user) { router.push('/auth/register?from=interested'); return; }
+                if (!isPlaceholder) {
+                    await addDoc(collection(db, 'interests'), {
+                        videoId,
+                        userId: user.uid,
+                        authorId: videoUserId || '',
+                        createdAt: serverTimestamp(),
+                    });
+                    // Also increment interest count on video maybe? User didn't specify but good practice
+                    await updateDoc(doc(db, 'videos', videoId), {
+                        interestedCount: increment(1)
+                    });
+                }
+                showToast('✨ Added to interests!');
                 break;
             case 'not_interested':
                 const hidden = JSON.parse(localStorage.getItem('jobreel_hidden_videos') || '[]');
@@ -195,22 +254,29 @@ export function ActionButtons({
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                     </div>
-                    {/* + badge */}
-                    <div
-                        onClick={(e) => { e.stopPropagation(); onConnect?.(); }}
-                        style={{
-                            position: 'absolute', bottom: -7, left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: 18, height: 18, borderRadius: '50%',
-                            background: 'var(--accent, #FF0069)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 13, color: '#fff', fontWeight: 800,
-                            border: '1.5px solid #000',
-                            filter: ICON_SHADOW,
-                        }}
-                    >
-                        +
-                    </div>
+                    {/* + / check badge */}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={following ? 'check' : 'plus'}
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            onClick={handleFollow}
+                            style={{
+                                position: 'absolute', bottom: -7, left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: 20, height: 20, borderRadius: '50%',
+                                background: following ? '#00C853' : 'var(--accent, #FF0069)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 13, color: '#fff', fontWeight: 800,
+                                border: '1.5px solid #000',
+                                filter: ICON_SHADOW,
+                                zIndex: 2,
+                            }}
+                        >
+                            {following ? <Check size={12} strokeWidth={4} /> : '+'}
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
 
                 {/* ── LIKE ── */}
@@ -312,6 +378,7 @@ export function ActionButtons({
                             background: '#E5E5E5', margin: '0 auto 16px',
                         }} />
                         {[
+                            { icon: '✨', label: 'Interested', sub: 'Add to your career interests', action: 'interested', color: '#7638FA' },
                             { icon: '🚩', label: 'Report', sub: 'Flag inappropriate content', action: 'report', color: '#FF3B30' },
                             { icon: '🚫', label: 'Not Interested', sub: 'See less like this', action: 'not_interested', color: '#0A0A0A' },
                             { icon: '🔗', label: 'Copy Link', sub: 'Share uploader profile', action: 'copy_link', color: '#0A0A0A' },
