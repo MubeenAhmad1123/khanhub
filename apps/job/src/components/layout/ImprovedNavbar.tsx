@@ -28,84 +28,28 @@ interface ImprovedNavbarProps {
     onMenuOpen: () => void;
 }
 
-// ─── NotificationBell (co-located, unexported) ────────────────────────────────
+// ─── NotificationBell (navigates to notifications page) ────────────────────────────────
 function NotificationBell() {
-    const { notifications, unreadCount, markAsRead } = useNotifications();
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleNotificationClick = useCallback(async (notification: any) => {
-        if (!notification.isRead) await markAsRead(notification.id);
-        setIsOpen(false);
-    }, [markAsRead]);
+    const { unreadCount } = useNotifications();
+    const router = useRouter();
 
     return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => setIsOpen(prev => !prev)}
-                aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
-                className="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full ring-2 ring-white">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                )}
-            </button>
-
-            {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[110] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                    <div className="px-4 py-3 border-b border-gray-50 flex justify-between items-center">
-                        <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
-                        {unreadCount > 0 && (
-                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                                {unreadCount} New
-                            </span>
-                        )}
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                        {notifications.length > 0 ? (
-                            notifications.map((notification) => (
-                                <div
-                                    key={notification.id}
-                                    onClick={() => handleNotificationClick(notification)}
-                                    className={`px-4 py-3 border-b border-gray-50 last:border-none cursor-pointer hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-blue-50/30' : ''}`}
-                                >
-                                    <div className="flex gap-3">
-                                        <div className={`mt-1 flex-shrink-0 w-2 h-2 rounded-full ${!notification.isRead ? 'bg-blue-500' : 'bg-transparent'}`} />
-                                        <div>
-                                            <p className={`text-sm ${!notification.isRead ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
-                                                {notification.message}
-                                            </p>
-                                            <p className="text-[10px] text-gray-400 mt-1">
-                                                {notification.createdAt?.toDate
-                                                    ? new Date(notification.createdAt.toDate()).toLocaleDateString()
-                                                    : 'Just now'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                                No notifications yet
-                            </div>
-                        )}
-                    </div>
-                </div>
+        <button
+            onClick={() => router.push('/notifications')}
+            aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+            className="relative flex items-center justify-center w-10 h-10 rounded-full text-gray-600 hover:bg-gray-100 transition-all focus:outline-none"
+            style={{ minWidth: 40, minHeight: 40 }}
+        >
+            <Bell className="w-6 h-6" style={{ width: 24, height: 24 }} />
+            {unreadCount > 0 && (
+                <span 
+                    className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full"
+                    style={{ minWidth: 20, minHeight: 20, padding: 2 }}
+                >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
             )}
-        </div>
+        </button>
     );
 }
 

@@ -186,12 +186,14 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                         </span>
                     </div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#00C853' }}>
-                    <span style={{ fontSize: 11 }}>✓</span>
-                    <span style={{ fontSize: 10, fontFamily: 'Poppins', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        Verified
-                    </span>
-                </div>
+                {isVerified && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#00C853' }}>
+                        <span style={{ fontSize: 11 }}>✓</span>
+                        <span style={{ fontSize: 10, fontFamily: 'Poppins', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            Verified
+                        </span>
+                    </div>
+                )}
             </div>
         </div>
     );

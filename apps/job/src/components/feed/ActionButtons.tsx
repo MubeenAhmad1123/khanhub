@@ -346,11 +346,20 @@ export function ActionButtons({
 
                 {/* ── THREE DOTS ── */}
                 <button onClick={() => setShowMenu(true)} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 8,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 40,
+                    minHeight: 40,
                     WebkitTapHighlightColor: 'transparent',
                 }}>
                     <MoreVertical
-                        size={26}
+                        size={24}
                         stroke="#fff"
                         strokeWidth={2.5}
                         style={{ filter: ICON_SHADOW }}
