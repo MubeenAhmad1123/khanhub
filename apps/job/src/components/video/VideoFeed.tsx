@@ -121,8 +121,11 @@ export function VideoFeed() {
     // ── Fetch Firestore Videos ────────────────────────────────────
     useEffect(() => {
         const fetchVideos = async () => {
-            hasLoadedOnce.current = false; // Reset for new category/tab
-            setVideosLoading(true);
+            // ONLY show hard spinner if we don't have videos yet or category/tab changed
+            if (displayVideos.length === 0) {
+                setVideosLoading(true);
+            }
+            hasLoadedOnce.current = false;
             const isForYou = activeTab === 2;
 
             let q;
@@ -208,7 +211,8 @@ export function VideoFeed() {
         };
 
         fetchVideos();
-    }, [activeCategory, activeTab, targetCategoryId, targetVideoId]); // Problem 3 Fix: Primitives only
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeCategory, activeTab]); // Problem 1 & 3 Fix: Remove URL params from deps
 
 
 
@@ -220,8 +224,6 @@ export function VideoFeed() {
         const observers: IntersectionObserver[] = [];
         const refs = videoRefs.current;
 
-
-
         refs.forEach((ref, index) => {
             if (!ref) return;
             const observer = new IntersectionObserver(
@@ -230,30 +232,13 @@ export function VideoFeed() {
                         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
                             setActiveIndex(index); // Set active index directly
 
-                            // FIX 2: Append more videos when near the end (infinite loop)
-                            if (index >= displayVideos.length - 2 && allVideosRef.current.length > 0) {
-                                setDisplayVideos(prev => {
-                                    const combined = [...prev, ...allVideosRef.current];
-                                    // Cap at 100 to prevent memory issues — trim from front
-                                    return combined.length > 100 
-                                        ? combined.slice(combined.length - 100) 
-                                        : combined;
-                                });
-                            }
+                            // FIX: Remove infinite scroll append that causes duplicates and scroll resets
+                            // Just let videos loop naturally via the Firestore query
 
-                            // Update URL — but ONLY if auth has resolved (not loading)
-                            const video = displayVideos[index];
-                            if (video && !video.isPlaceholder && !loading) {
-                                const url = new URL(window.location.href);
-                                if (url.searchParams.get('v') !== video.id) {
-                                    url.searchParams.set('v', video.id);
-                                    window.history.replaceState(null, '', url.pathname + url.search);
-                                }
-                            }
+                            // FIX: Don't update URL on scroll to prevent re-renders
+                            // (Deeplinking handled separately on mount)
 
                             // Guest Wall Logic — only trigger if user is completely unauthenticated
-                            // Check BOTH user (Firestore profile) AND firebaseUser (Firebase Auth)
-                            // Also check !loading — auth may still be resolving on first render
                             if (!user && !firebaseUser && !loading) {
                                 const watchedCount = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
                                 localStorage.setItem('jobreel_videos_watched', String(watchedCount));
