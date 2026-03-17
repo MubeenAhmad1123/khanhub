@@ -51,6 +51,7 @@ export function VideoFeed() {
     const [userHasInteracted, setUserHasInteracted] = useState(false);
     const [videosLoading, setVideosLoading] = useState(true);
     const allVideosRef = useRef<any[]>([]);
+    const hasLoadedOnce = useRef(false);
 
     useEffect(() => {
         const markInteracted = () => setUserHasInteracted(true);
@@ -120,6 +121,7 @@ export function VideoFeed() {
     // ── Fetch Firestore Videos ────────────────────────────────────
     useEffect(() => {
         const fetchVideos = async () => {
+            hasLoadedOnce.current = false; // Reset for new category/tab
             setVideosLoading(true);
             const isForYou = activeTab === 2;
 
@@ -191,7 +193,13 @@ export function VideoFeed() {
 
                 setFirestoreVideos(videos);
                 allVideosRef.current = videos;
-                setDisplayVideos(videos);
+                
+                // Problem 1 Fix: Only set displayVideos if it's the first load for this query
+                if (!hasLoadedOnce.current) {
+                    setDisplayVideos(videos);
+                    hasLoadedOnce.current = true;
+                }
+                
                 setVideosLoading(false);
             } catch (error: any) {
                 console.warn('[VideoFeed Videos] Fetch error:', error.message);
@@ -200,7 +208,7 @@ export function VideoFeed() {
         };
 
         fetchVideos();
-    }, [activeCategory, activeTab, targetCategoryId, targetVideoId, activeRole, user?.uid]);
+    }, [activeCategory, activeTab, targetCategoryId, targetVideoId]); // Problem 3 Fix: Primitives only
 
 
 
@@ -434,6 +442,73 @@ export function VideoFeed() {
         return { isActive: false, isAdjacent: false };
     };
 
+    // Problem 2 Fix: Memoize video list to prevent remounting/animation replay
+    // Strictly following Rules of Hooks - must be at top level
+    const renderedVideos = useMemo(() => {
+        return displayVideos.map((video, index) => {
+            const { isActive, isAdjacent } = getVideoState(index);
+            const isVisible = Math.abs(index - activeIndex) <= 3;
+
+            return (
+                <div
+                    key={video.id}
+                    ref={el => { videoRefs.current[index] = el; }}
+                    style={{
+                        height: '100dvh',
+                        minHeight: '100vh',         // fallback
+                        scrollSnapAlign: 'start',
+                        scrollSnapStop: 'always',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        background: '#000',
+                        flexShrink: 0,
+                    }}
+                >
+                    {isVisible ? (
+                        <>
+                            <ReelPlayer
+                                cloudinaryUrl={video.cloudinaryUrl}
+                                thumbnailUrl={video.thumbnailUrl}
+                                isActive={isActive}
+                                isAdjacent={isAdjacent}
+                                videoId={video.id}
+                                isMuted={isMuted}
+                                userHasInteracted={userHasInteracted}
+                            />
+                            <div style={{ position: 'absolute', bottom: 80, left: 0, right: 0, zIndex: 20, pointerEvents: 'none' }}>
+                                <VideoOverlay data={video} />
+                            </div>
+                            <div style={{ position: 'absolute', right: 12, bottom: 100, zIndex: 20 }}>
+                                <ActionButtons
+                                    videoUserId={video.userId}
+                                    videoUserPhoto={video.userPhoto}
+                                    videoUserRole={video.userRole}
+                                    onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
+                                    connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
+                                    likes={video.likes || 0}
+                                    saves={video.saves || 0}
+                                    shares={video.shares || 0}
+                                    videoId={video.id}
+                                />
+                            </div>
+                            {index === displayVideos.length - 1 && (
+                                <div style={{
+                                    position: 'absolute', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
+                                    background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '8px 16px', borderRadius: '20px',
+                                    fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
+                                }}>
+                                    You're all caught up ✓
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
+                    )}
+                </div>
+            );
+        });
+    }, [displayVideos, activeIndex, isMuted, userHasInteracted, activeCategory, activeRole, router]);
+
     return (
         <div style={{ position: 'fixed', inset: 0, background: '#000', display: 'flex', justifyContent: 'center' }}>
 
@@ -531,68 +606,9 @@ export function VideoFeed() {
                                 Be the first one to upload a video in this category.
                             </p>
                         </div>
-                    ) : displayVideos.map((video, index) => {
-                        const { isActive, isAdjacent } = getVideoState(index);
-                        const isVisible = Math.abs(index - activeIndex) <= 3;
-
-                        return (
-                            <div
-                                key={video.id}
-                                ref={el => { videoRefs.current[index] = el; }}
-                                style={{
-                                    height: '100dvh',
-                                    minHeight: '100vh',         // fallback
-                                    scrollSnapAlign: 'start',
-                                    scrollSnapStop: 'always',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    background: '#000',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                {isVisible ? (
-                                    <>
-                                        <ReelPlayer
-                                            cloudinaryUrl={video.cloudinaryUrl}
-                                            thumbnailUrl={video.thumbnailUrl}
-                                            isActive={isActive}
-                                            isAdjacent={isAdjacent}
-                                            videoId={video.id}
-                                            isMuted={isMuted}
-                                            userHasInteracted={userHasInteracted}
-                                        />
-                                        <div style={{ position: 'absolute', bottom: 80, left: 0, right: 0, zIndex: 20, pointerEvents: 'none' }}>
-                                            <VideoOverlay data={video} />
-                                        </div>
-                                        <div style={{ position: 'absolute', right: 12, bottom: 100, zIndex: 20 }}>
-                                            <ActionButtons
-                                                videoUserId={video.userId}
-                                                videoUserPhoto={video.userPhoto}
-                                                videoUserRole={video.userRole}
-                                                onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
-                                                connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
-                                                likes={video.likes || 0}
-                                                saves={video.saves || 0}
-                                                shares={video.shares || 0}
-                                                videoId={video.id}
-                                            />
-                                        </div>
-                                        {index === displayVideos.length - 1 && (
-                                            <div style={{
-                                                position: 'absolute', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
-                                                background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '8px 16px', borderRadius: '20px',
-                                                fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
-                                            }}>
-                                                You're all caught up ✓
-                                            </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
-                                )}
-                            </div>
-                        );
-                    })}
+                    ) : (
+                        renderedVideos
+                    )}
                 </div>
             </div>
 
