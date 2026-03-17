@@ -205,19 +205,19 @@ export default function UserProfilePage() {
     }, [id]);
 
     const getCategoryConfig = (cat: string) => {
-        const configs: Record<string, { label: string; emoji: string; accent: string }> = {
-            jobs: { label: 'Jobs', emoji: '💼', accent: '#FF0069' },
-            healthcare: { label: 'Healthcare', emoji: '🏥', accent: '#00C896' },
-            education: { label: 'Education', emoji: '🎓', accent: '#FFD600' },
-            marriage: { label: 'Marriage', emoji: '💍', accent: '#FF6B9D' },
-            legal: { label: 'Legal', emoji: '⚖️', accent: '#4A90D9' },
-            realestate: { label: 'Real Estate', emoji: '🏠', accent: '#7638FA' },
-            transport: { label: 'Transport', emoji: '🚛', accent: '#FF8C00' },
-            travel: { label: 'Travel', emoji: '✈️', accent: '#00BFFF' },
-            agriculture: { label: 'Agriculture', emoji: '🌾', accent: '#4CAF50' },
-            sellbuy: { label: 'Sell & Buy', emoji: '🛍️', accent: '#FF5722' },
+        const configs: Record<string, { label: string; emoji: string; accent: string; providerLabel: string; seekerLabel: string }> = {
+            jobs:        { label: 'Jobs',           emoji: '💼', accent: '#FF0069', providerLabel: 'Job Seeker',    seekerLabel: 'Employer' },
+            healthcare:  { label: 'Healthcare',     emoji: '🏥', accent: '#00C896', providerLabel: 'Doctor',        seekerLabel: 'Patient' },
+            education:   { label: 'Education',      emoji: '🎓', accent: '#FFD600', providerLabel: 'Teacher',       seekerLabel: 'Student' },
+            marriage:    { label: 'Marriage',       emoji: '💍', accent: '#FF6B9D', providerLabel: 'Groom',         seekerLabel: 'Bride' },
+            legal:       { label: 'Legal',          emoji: '⚖️', accent: '#4A90D9', providerLabel: 'Lawyer',        seekerLabel: 'Client' },
+            realestate:  { label: 'Real Estate',    emoji: '🏠', accent: '#7638FA', providerLabel: 'Agent',         seekerLabel: 'Buyer' },
+            transport:   { label: 'Transport',      emoji: '🚛', accent: '#FF8C00', providerLabel: 'Driver',        seekerLabel: 'Passenger' },
+            travel:      { label: 'Travel',         emoji: '✈️', accent: '#00BFFF', providerLabel: 'Agency',        seekerLabel: 'Traveler' },
+            agriculture: { label: 'Agriculture',    emoji: '🌾', accent: '#4CAF50', providerLabel: 'Farmer',        seekerLabel: 'Buyer' },
+            sellbuy:     { label: 'Sell & Buy',     emoji: '🛍️', accent: '#FF5722', providerLabel: 'Seller',        seekerLabel: 'Buyer' },
         };
-        return configs[cat] || { label: cat, emoji: '👤', accent: '#FF0069' };
+        return configs[cat] || { label: cat, emoji: '👤', accent: '#FF0069', providerLabel: 'Provider', seekerLabel: 'Seeker' };
     };
 
     const getThumbnail = (video: any) => {
@@ -608,7 +608,7 @@ export default function UserProfilePage() {
                             gap: 2,
                         }}>
                             {videos.map((video, index) => (
-                                <div
+                        <div
                                     key={video.id}
                                     onClick={() => openVideo(index)}
 
@@ -636,6 +636,50 @@ export default function UserProfilePage() {
                                             ▶
                                         </div>
                                     )}
+
+                                    {/* Category + Role tags — top left */}
+                                    {video.category && (() => {
+                                        const cfg = getCategoryConfig(video.category);
+                                        const roleLabel = video.userRole === 'provider'
+                                            ? cfg.providerLabel
+                                            : video.userRole === 'seeker'
+                                                ? cfg.seekerLabel
+                                                : '';
+                                        return (
+                                            <div style={{
+                                                position: 'absolute', top: 5, left: 5,
+                                                display: 'flex', flexDirection: 'column', gap: 3,
+                                                pointerEvents: 'none',
+                                            }}>
+                                                {/* Category pill */}
+                                                <span style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: 2,
+                                                    background: 'rgba(0,0,0,0.65)',
+                                                    backdropFilter: 'blur(4px)',
+                                                    color: '#fff', fontSize: 8, fontWeight: 700,
+                                                    padding: '2px 5px', borderRadius: 4,
+                                                    fontFamily: 'DM Sans',
+                                                    whiteSpace: 'nowrap',
+                                                }}>
+                                                    {cfg.emoji} {cfg.label}
+                                                </span>
+                                                {/* Role pill */}
+                                                {roleLabel && (
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        background: `${cfg.accent}CC`,
+                                                        color: '#fff', fontSize: 8, fontWeight: 700,
+                                                        padding: '2px 5px', borderRadius: 4,
+                                                        fontFamily: 'DM Sans',
+                                                        whiteSpace: 'nowrap',
+                                                    }}>
+                                                        {roleLabel}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
                                     {/* View count */}
                                     <div style={{
                                         position: 'absolute', bottom: 6, left: 6,

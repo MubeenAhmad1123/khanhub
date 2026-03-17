@@ -1,31 +1,55 @@
 'use client';
 
 import React from 'react';
-import { MapPin, ShieldCheck, Zap } from 'lucide-react';
 import Image from 'next/image';
+import { CATEGORY_CONFIG } from '@/lib/categories';
+
+// Helper: resolve badge label from video doc
+function resolveBadge(data: any): string {
+    // overlayData.badge is the human-readable role set at upload time
+    return data?.overlayData?.badge || data?.badge || '';
+}
+
+// Helper: get category config safely
+function getCatConfig(category: string) {
+    return (CATEGORY_CONFIG as any)[category] || { label: category, emoji: '📹', accent: '#FF0069', providerLabel: 'Provider', seekerLabel: 'Seeker' };
+}
+
+// Helper: role label from category + userRole
+function resolveRoleLabel(data: any): string {
+    const badge = resolveBadge(data);
+    if (badge) return badge;
+    if (!data?.category || !data?.userRole) return '';
+    const cfg = getCatConfig(data.category);
+    return data.userRole === 'provider' ? cfg.providerLabel : cfg.seekerLabel;
+}
 
 interface VideoOverlayProps {
-    data: {
-        title: string;
-        badge: string;
-        field1?: string;
-        field2?: string;
-        location: string;
-        userPhoto?: string;
-        userName?: string;
-    };
+    data: Record<string, any>;
 }
 
 export function VideoOverlay({ data }: VideoOverlayProps) {
+    const overlay = data?.overlayData || {};
+    const title = overlay.title || data.title || '';
+    const field1 = overlay.field1 || data.field1;
+    const field2 = overlay.field2 || data.field2;
+    const location = overlay.location || data.location || data.city || '';
+    const userPhoto = overlay.userPhoto || data.userPhoto;
+    const userName = overlay.userName || data.userName;
+
+    const roleLabel = resolveRoleLabel(data);
+    const category = data?.category || '';
+    const catConfig = category ? getCatConfig(category) : null;
+
     return (
         <div className="w-full px-4 pb-2 pointer-events-none">
             {/* Uploader avatar + name */}
-            {(data.userPhoto || data.userName) && (
+            {(userPhoto || userName) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    {data.userPhoto && (
+                    {userPhoto && (
                         <Image
-                            src={data.userPhoto}
-                            alt={data.userName || 'User profile'}
+                            src={userPhoto}
+                            alt={userName || 'User profile'}
                             width={32}
                             height={32}
                             style={{
@@ -36,40 +60,53 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                             }}
                         />
                     )}
-                    {data.userName && (
+                    {userName && (
                         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans' }}>
-                            {data.userName}
+                            {userName}
                         </div>
                     )}
                 </div>
             )}
-            {/* Badge — color based on role intent */}
-            {(() => {
-                const b = data.badge?.toLowerCase() || '';
-                const isProf = b === 'employer' || b === 'hiring' || b === 'doctor' || b === 'teacher' || b === 'lawyer' || b === 'agent' || b === 'freelancer';
-                return (
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        background: isProf ? '#00C853' : 'var(--accent)',
-                        padding: '2px 8px', borderRadius: 999,
-                        marginBottom: 6,
+
+            {/* Category pill + Role badge — side by side */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                {catConfig && (
+                    <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 3,
+                        background: 'rgba(0,0,0,0.55)',
+                        backdropFilter: 'blur(6px)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        padding: '3px 8px', borderRadius: 999,
                     }}>
+                        <span style={{ fontSize: 10 }}>{catConfig.emoji}</span>
                         <span style={{
-                            fontSize: 9,
-                            fontWeight: 800,
-                            color: isProf ? '#fff' : '#000',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
+                            fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.9)',
+                            textTransform: 'uppercase', letterSpacing: '0.06em',
                             fontFamily: 'Poppins'
                         }}>
-                            {data.badge}
+                            {catConfig.label}
                         </span>
-                    </div>
-                );
-            })()}
+                    </span>
+                )}
+                {roleLabel && (
+                    <span style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        background: catConfig ? `${catConfig.accent}DD` : '#FF0069DD',
+                        padding: '3px 8px', borderRadius: 999,
+                    }}>
+                        <span style={{
+                            fontSize: 9, fontWeight: 800,
+                            color: '#fff',
+                            textTransform: 'uppercase', letterSpacing: '0.06em',
+                            fontFamily: 'Poppins'
+                        }}>
+                            {roleLabel}
+                        </span>
+                    </span>
+                )}
+            </div>
 
-
-            {/* Title — REDUCED from 24px to 17px */}
+            {/* Title */}
             <h3 style={{
                 fontFamily: 'Poppins',
                 fontWeight: 700,
@@ -80,24 +117,23 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                 textShadow: '0 1px 4px rgba(0,0,0,0.8)',
                 maxWidth: '85%',
             }}>
-                {data.title}
+                {title}
             </h3>
 
-            {/* Fields — smaller */}
-            {data.field1 && (
+            {/* Fields */}
+            {field1 && (
                 <p style={{
-                    fontSize: 13,         // ← was 14px
+                    fontSize: 13,
                     color: 'rgba(255,255,255,0.85)',
                     margin: '0 0 2px',
                     fontFamily: 'DM Sans',
                     display: 'flex', alignItems: 'center', gap: 6,
                 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
-                    {data.field1}
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: catConfig?.accent || 'var(--accent)', flexShrink: 0 }} />
+                    {field1}
                 </p>
             )}
-
-            {data.field2 && (
+            {field2 && (
                 <p style={{
                     fontSize: 12,
                     color: 'rgba(255,255,255,0.7)',
@@ -106,17 +142,17 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                     display: 'flex', alignItems: 'center', gap: 6,
                 }}>
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
-                    {data.field2}
+                    {field2}
                 </p>
             )}
 
-            {/* Location + Verified — smaller */}
+            {/* Location + Verified */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {data.location && (
+                {location && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(255,255,255,0.8)' }}>
                         <span style={{ fontSize: 11 }}>📍</span>
                         <span style={{ fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            {data.location}
+                            {location}
                         </span>
                     </div>
                 )}
@@ -126,7 +162,6 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                         Verified
                     </span>
                 </div>
-
             </div>
         </div>
     );
