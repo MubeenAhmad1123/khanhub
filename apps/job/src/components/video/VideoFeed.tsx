@@ -49,6 +49,7 @@ export function VideoFeed() {
     const [displayVideos, setDisplayVideos] = useState<any[]>([]);
     const [isMuted, setIsMuted] = useState(true);
     const [userHasInteracted, setUserHasInteracted] = useState(false);
+    const [videosLoading, setVideosLoading] = useState(true);
 
     useEffect(() => {
         const markInteracted = () => setUserHasInteracted(true);
@@ -117,6 +118,7 @@ export function VideoFeed() {
 
     // ── Fetch Firestore Videos ────────────────────────────────────
     useEffect(() => {
+        setVideosLoading(true);
         const isForYou = activeTab === 2;
 
         let q;
@@ -169,15 +171,20 @@ export function VideoFeed() {
                     ...d
                 }));
 
-            // Shuffle if For You tab — ONLY on first load:
-            setFirestoreVideos(prev => {
-                if (isForYou && prev.length === 0) {
-                    return shuffleArray(videos);
-                }
-                return videos;
-            });
+            // For You tab: prioritise selected category, shuffle the rest
+            if (isForYou) {
+                const priority = videos.filter(v => v.category === activeCategory);
+                const rest = videos.filter(v => v.category !== activeCategory);
+                videos = priority.length > 0
+                    ? [...priority, ...shuffleArray(rest)]
+                    : shuffleArray(videos);
+            }
+
+            setFirestoreVideos(videos);
+            setVideosLoading(false);
         }, (error) => {
             console.warn('[VideoFeed Videos] Snapshot error:', error.message);
+            setVideosLoading(false);
         });
 
         return () => unsubscribe();
@@ -470,7 +477,25 @@ export function VideoFeed() {
                         background: '#000',
                     }}
                 >
-                    {displayVideos.length === 0 ? (
+                    {videosLoading ? (
+                        /* ── Loading spinner while Firestore fetches ── */
+                        <div style={{
+                            height: '100dvh',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#000',
+                        }}>
+                            <div style={{
+                                width: 36, height: 36, borderRadius: '50%',
+                                border: '3px solid #333',
+                                borderTop: '3px solid #FF0069',
+                                animation: 'spin 0.75s linear infinite'
+                            }} />
+                            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+                        </div>
+                    ) : displayVideos.length === 0 ? (
+                        /* ── Empty state after fetch resolves with 0 results ── */
                         <div style={{
                             height: '100dvh',
                             display: 'flex',
@@ -483,34 +508,20 @@ export function VideoFeed() {
                             color: '#fff'
                         }}>
                             <div style={{
-                                width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.05)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+                                width: 80, height: 80, borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.05)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                marginBottom: 24,
                                 border: '1px solid rgba(255,255,255,0.1)'
                             }}>
                                 <span style={{ fontSize: 32 }}>📹</span>
                             </div>
                             <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, fontFamily: 'Poppins' }}>
-                                No videos yet
+                                No videos in this category
                             </h3>
-                            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 32, lineHeight: 1.5 }}>
-                                Be the first one to upload video in this category.
+                            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+                                Be the first one to upload a video in this category.
                             </p>
-                            <button
-                                onClick={() => router.push('/dashboard/upload-video')}
-                                style={{
-                                    background: 'var(--accent)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '16px',
-                                    padding: '16px 32px',
-                                    fontSize: 15,
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    boxShadow: '0 8px 16px var(--accent-glow)'
-                                }}
-                            >
-                                Upload Video
-                            </button>
                         </div>
                     ) : displayVideos.map((video, index) => {
                         const { isActive, isAdjacent } = getVideoState(index);

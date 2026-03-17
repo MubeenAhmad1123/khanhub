@@ -78,6 +78,22 @@ export default function LoginPage() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#FF0069] rounded-full blur-[150px] opacity-10 pointer-events-none" />
 
             <div className="w-full max-w-sm text-center relative z-10 bg-[#F8F8F8] p-8 rounded-2xl border border-[#E5E5E5]">
+                {/* Back button — top left */}
+                <div className="flex items-center mb-6 -mt-2">
+                    <button
+                        onClick={() => router.back()}
+                        className="flex items-center gap-1.5 text-[#888888] hover:text-[#0A0A0A] transition-colors group"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    >
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 32, height: 32, borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.06)', fontSize: 16, transition: 'background 0.2s'
+                        }}>←</span>
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">Back</span>
+                    </button>
+                </div>
+
                 <Link href="/" className="inline-block mb-12">
                     <span className="font-poppins font-black text-3xl tracking-tighter italic">
                         <span className="text-[#FF0069]">KHAN</span> <span className="text-[#0A0A0A]">HUB</span>
@@ -113,15 +129,6 @@ export default function LoginPage() {
                             Create Account →
                         </Link>
                     </div>
-                </div>
-
-                <div className="mt-20">
-                    <Link
-                        href="/"
-                        className="text-[10px] font-black uppercase tracking-[0.4em] text-[#888888] hover:text-[#0A0A0A] transition-colors"
-                    >
-                        ← Back to Home
-                    </Link>
                 </div>
             </div>
 
