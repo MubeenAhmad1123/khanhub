@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 // import { CategoryDropdown } from '@/components/feed/CategoryDropdown'; // Removed for inline placement
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
-import { collection, query, where, orderBy, onSnapshot, doc, limit, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, doc, limit, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
 // Shuffle helper:
@@ -50,6 +50,7 @@ export function VideoFeed() {
     const [isMuted, setIsMuted] = useState(true);
     const [userHasInteracted, setUserHasInteracted] = useState(false);
     const [videosLoading, setVideosLoading] = useState(true);
+    const allVideosRef = useRef<any[]>([]);
 
     useEffect(() => {
         const markInteracted = () => setUserHasInteracted(true);
@@ -118,95 +119,91 @@ export function VideoFeed() {
 
     // ── Fetch Firestore Videos ────────────────────────────────────
     useEffect(() => {
-        setVideosLoading(true);
-        const isForYou = activeTab === 2;
+        const fetchVideos = async () => {
+            setVideosLoading(true);
+            const isForYou = activeTab === 2;
 
-        let q;
-        if (isForYou) {
-            // ── FOR YOU: mixed categories, newest first ──
-            q = query(
-                collection(db, 'videos'),
-                where('is_live', '==', true),
-                where('admin_status', '==', 'approved'),
-                orderBy('createdAt', 'desc'),
-                limit(50)
-            );
-        } else {
-            const qCategory = (targetCategoryId && targetVideoId)
-                ? targetCategoryId
-                : activeCategory;
-
-            q = query(
-                collection(db, 'videos'),
-                where('is_live', '==', true),
-                where('admin_status', '==', 'approved'),
-                where('category', '==', qCategory),
-                orderBy('createdAt', 'desc'),
-                limit(30)
-            );
-        }
-
-        const getTabFilter = (tabIndex: number) => {
-            if (tabIndex === 2) return null; // 'For You' — no role filter
-            if (activeCategory === 'jobs') return tabIndex === 0 ? 'seeker' : 'provider';
-            return tabIndex === 0 ? 'provider' : 'seeker';
-        };
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const roleFilter = getTabFilter(activeTab);
-            let videos = snapshot.docs
-                .map(d => ({ id: d.id, ...d.data() } as any))
-                .filter(d => {
-                    const matchesCategory = isForYou || d.category === (targetCategoryId || activeCategory);
-                    const matchesRole = !roleFilter || d.userRole === roleFilter;
-                    const url = d.cloudinaryUrl;
-                    const isValidCloudinary = url && url.includes('cloudinary.com') && !url.includes('youtube.com');
-                    return d.admin_status === 'approved' && matchesCategory && matchesRole && isValidCloudinary;
-                })
-                .map(d => ({
-                    id: d.id,
-                    isPlaceholder: false,
-                    cloudinaryUrl: d.cloudinaryUrl,
-                    thumbnailUrl: d.thumbnailUrl || d.userPhoto || '',
-                    ...d
-                }));
-
-            // For You tab: prioritise selected category, shuffle the rest
+            let q;
             if (isForYou) {
-                const priority = videos.filter(v => v.category === activeCategory);
-                const rest = videos.filter(v => v.category !== activeCategory);
-                videos = priority.length > 0
-                    ? [...priority, ...shuffleArray(rest)]
-                    : shuffleArray(videos);
+                // ── FOR YOU: mixed categories, newest first ──
+                q = query(
+                    collection(db, 'videos'),
+                    where('is_live', '==', true),
+                    where('admin_status', '==', 'approved'),
+                    orderBy('createdAt', 'desc'),
+                    limit(50)
+                );
+            } else {
+                const qCategory = (targetCategoryId && targetVideoId)
+                    ? targetCategoryId
+                    : activeCategory;
+
+                q = query(
+                    collection(db, 'videos'),
+                    where('is_live', '==', true),
+                    where('admin_status', '==', 'approved'),
+                    where('category', '==', qCategory),
+                    orderBy('createdAt', 'desc'),
+                    limit(30)
+                );
             }
 
-            setFirestoreVideos(videos);
-            setVideosLoading(false);
-        }, (error) => {
-            console.warn('[VideoFeed Videos] Snapshot error:', error.message);
-            setVideosLoading(false);
-        });
+            const getTabFilter = (tabIndex: number) => {
+                if (tabIndex === 2) return null; // 'For You' — no role filter
+                if (activeCategory === 'jobs') return tabIndex === 0 ? 'seeker' : 'provider';
+                return tabIndex === 0 ? 'provider' : 'seeker';
+            };
 
-        return () => unsubscribe();
-    }, [activeCategory, activeTab, targetCategoryId, targetVideoId, activeRole]);
+            try {
+                const snapshot = await getDocs(q);
+                const roleFilter = getTabFilter(activeTab);
+                let videos = snapshot.docs
+                    .map(d => ({ id: d.id, ...(d.data() as object) } as any))
+                    .filter(d => {
+                        const matchesCategory = isForYou || d.category === (targetCategoryId || activeCategory);
+                        const matchesRole = !roleFilter || d.userRole === roleFilter;
+                        const url = d.cloudinaryUrl;
+                        const isValidCloudinary = url && url.includes('cloudinary.com') && !url.includes('youtube.com');
+                        return d.admin_status === 'approved' && matchesCategory && matchesRole && isValidCloudinary;
+                    })
+                    .map(d => ({
+                        id: d.id,
+                        isPlaceholder: false,
+                        cloudinaryUrl: d.cloudinaryUrl,
+                        thumbnailUrl: d.thumbnailUrl || d.userPhoto || '',
+                        ...d
+                    }));
 
-    // ── Display videos — NEVER filter, only soft-sort: ──
-    const buildDisplayList = useCallback((
-        videos: any[],
-        wIds: string[]
-    ): any[] => {
-        // Step A — Remove ALL watched video filtering:
-        return videos;
-    }, []);
+                // FIX 3: For You priority sort
+                const priority = videos.filter(v => v.category === activeCategory);
+                const rest = videos.filter(v => v.category !== activeCategory);
+                videos = priority.length > 0 
+                    ? [...priority, ...shuffleArray(rest)] 
+                    : shuffleArray(videos);
 
-    // ── When videos load — set display list, NEVER touch activeIndex: ──
-    useEffect(() => {
-        if (!firestoreVideos.length) return;
-        // REPLACE setDisplayVideos with direct assignment:
-        setDisplayVideos(firestoreVideos);  // show ALL videos, no filtering
-        // ❌ DO NOT call setActiveIndex here
-        // ❌ DO NOT call scrollToTop here
-    }, [firestoreVideos, buildDisplayList]);
+                // FIX 4: New videos first, seen videos later
+                if (user?.uid) {
+                    const watchedIds: string[] = user.watchedVideos || [];
+                    const unseen = videos.filter(v => !watchedIds.includes(v.id));
+                    const seen = videos.filter(v => watchedIds.includes(v.id));
+                    videos = [...unseen, ...seen];
+                }
+
+                setFirestoreVideos(videos);
+                allVideosRef.current = videos;
+                setDisplayVideos(videos);
+                setVideosLoading(false);
+            } catch (error: any) {
+                console.warn('[VideoFeed Videos] Fetch error:', error.message);
+                setVideosLoading(false);
+            }
+        };
+
+        fetchVideos();
+    }, [activeCategory, activeTab, targetCategoryId, targetVideoId, activeRole, user?.uid]);
+
+
+
 
     // ── Intersection Observer for Active Index & URL ───────────────
     useEffect(() => {
@@ -215,7 +212,7 @@ export function VideoFeed() {
         const observers: IntersectionObserver[] = [];
         const refs = videoRefs.current;
 
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
 
         refs.forEach((ref, index) => {
             if (!ref) return;
@@ -223,7 +220,18 @@ export function VideoFeed() {
                 (entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                            setActiveIndex(prev => prev === index ? prev : index);
+                            setActiveIndex(index); // Set active index directly
+
+                            // FIX 2: Append more videos when near the end (infinite loop)
+                            if (index >= displayVideos.length - 2 && allVideosRef.current.length > 0) {
+                                setDisplayVideos(prev => {
+                                    const combined = [...prev, ...allVideosRef.current];
+                                    // Cap at 100 to prevent memory issues — trim from front
+                                    return combined.length > 100 
+                                        ? combined.slice(combined.length - 100) 
+                                        : combined;
+                                });
+                            }
 
                             // Update URL — but ONLY if auth has resolved (not loading)
                             const video = displayVideos[index];

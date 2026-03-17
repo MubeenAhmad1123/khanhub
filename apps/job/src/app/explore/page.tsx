@@ -61,13 +61,13 @@ export default function ExplorePage() {
             {/* Filter chips — horizontal scroll */}
             <div style={{
                 display: 'flex',
-                gap: '8px',
+                gap: '4px',
                 overflowX: 'auto',
                 scrollbarWidth: 'none',
-                padding: '12px 16px',
+                padding: '4px 16px 12px',
                 background: '#fff',
                 position: 'sticky',
-                top: '58px', // Slightly below navbar
+                top: '64px', // Keep under navbar
                 zIndex: 40,
                 borderBottom: '1px solid #F0F0F0',
             }} className="no-scrollbar">

@@ -322,6 +322,7 @@ export interface User {
     savedVideos: string[];
     likedVideos: string[];
     isVerified: boolean;
+    watchedVideos: string[];
 }
 
 // ==================== ROLE-SPECIFIC USER TYPES ====================

@@ -1,11 +1,10 @@
 import { db } from './firebase/firebase-config'
 import { 
   doc, 
-  collection, 
   setDoc, 
   deleteDoc, 
   getDoc, 
-  updateDoc, 
+  writeBatch,
   increment, 
   serverTimestamp 
 } from 'firebase/firestore'
@@ -16,23 +15,29 @@ import {
 export async function followUser(followerUid: string, targetUid: string) {
   if (followerUid === targetUid) return
 
+  const batch = writeBatch(db);
   const followId = `${followerUid}_${targetUid}`
   const followRef = doc(db, 'follows', followId)
 
   // 1. Create follow relationship
-  await setDoc(followRef, {
+  batch.set(followRef, {
     followerId: followerUid,
     targetId: targetUid,
     createdAt: serverTimestamp()
   })
 
   // 2. Increment counts on both users
-  await updateDoc(doc(db, 'users', followerUid), {
+  const followerRef = doc(db, 'users', followerUid);
+  batch.update(followerRef, {
     followingCount: increment(1)
   })
-  await updateDoc(doc(db, 'users', targetUid), {
-    followersCount: increment(1)
+
+  const targetRef = doc(db, 'users', targetUid);
+  batch.update(targetRef, {
+    followerCount: increment(1)
   })
+
+  await batch.commit();
 }
 
 /**
@@ -45,16 +50,23 @@ export async function unfollowUser(followerUid: string, targetUid: string) {
   const snap = await getDoc(followRef)
   if (!snap.exists()) return
 
+  const batch = writeBatch(db);
+
   // 1. Delete follow relationship
-  await deleteDoc(followRef)
+  batch.delete(followRef)
 
   // 2. Decrement counts
-  await updateDoc(doc(db, 'users', followerUid), {
+  const followerRef = doc(db, 'users', followerUid);
+  batch.update(followerRef, {
     followingCount: increment(-1)
   })
-  await updateDoc(doc(db, 'users', targetUid), {
-    followersCount: increment(-1)
+
+  const targetRef = doc(db, 'users', targetUid);
+  batch.update(targetRef, {
+    followerCount: increment(-1)
   })
+
+  await batch.commit();
 }
 
 /**

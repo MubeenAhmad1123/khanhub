@@ -133,5 +133,11 @@ service cloud.firestore {
     match /adminSettings/{doc} {
       allow read, write: if isAdmin();
     }
+
+    // ── Likes (Fallback rule) ─────────────────────────
+    match /likes/{likeId} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
   }
 }
