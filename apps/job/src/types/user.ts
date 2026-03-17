@@ -186,6 +186,10 @@ export interface User {
     premiumEndDate?: Date | Timestamp;
     premiumExpiresAt?: Date | Timestamp;
 
+    // Social Counts
+    followerCount?: number;
+    followingCount?: number;
+
     // Unified Registration/Onboarding Fields (Flat Schema)
     registrationMethod?: 'email' | 'google';
 

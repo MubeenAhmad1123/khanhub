@@ -162,6 +162,9 @@ const _safeGetOrCreateProfile = async (fbUser: FirebaseUser, role: UserRole): Pr
         isFeatured: false,
         isBanned: false,
         onboardingCompleted: false,
+        followerCount: 0,
+        followingCount: 0,
+        totalLikes: 0,
       });
       userProfile = await getUserProfile(fbUser.uid);
     } catch (err) {
