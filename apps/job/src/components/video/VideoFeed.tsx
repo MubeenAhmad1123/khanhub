@@ -162,9 +162,11 @@ export function VideoFeed() {
             try {
                 const snapshot = await getDocs(q);
                 const roleFilter = getTabFilter(activeTab);
+                const hiddenIds = JSON.parse(localStorage.getItem('jobreel_hidden_videos') || '[]');
                 let videos = snapshot.docs
                     .map(d => ({ id: d.id, ...(d.data() as object) } as any))
                     .filter(d => {
+                        if (hiddenIds.includes(d.id)) return false;
                         const matchesCategory = isForYou || d.category === (targetCategoryId || activeCategory);
                         const matchesRole = !roleFilter || d.userRole === roleFilter;
                         const url = d.cloudinaryUrl;
@@ -479,6 +481,12 @@ export function VideoFeed() {
                                     videoUserPhoto={video.userPhoto}
                                     videoUserRole={video.userRole}
                                     onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
+                                    onNotInterested={() => {
+                                        // Scroll to next video
+                                        if (index < displayVideos.length - 1) {
+                                            videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
+                                        }
+                                    }}
                                     connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
                                     likes={video.likes || 0}
                                     saves={video.saves || 0}

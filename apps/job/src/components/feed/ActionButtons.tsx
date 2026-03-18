@@ -24,6 +24,7 @@ interface ActionButtonsProps {
     saves?: number;
     shares?: number;
     onConnect?: () => void;
+    onNotInterested?: () => void;
     connectLabel?: string;
 }
 
@@ -42,7 +43,7 @@ import { likeVideo, unlikeVideo, checkIsLiked } from '@/lib/likeSystem';
 
 export function ActionButtons({
     videoId, videoUserId, videoUserPhoto, videoUserRole,
-    likes = 0, saves = 0, shares = 0, onConnect
+    likes = 0, saves = 0, shares = 0, onConnect, onNotInterested
 }: ActionButtonsProps) {
     const { user } = useAuth();
     const router = useRouter();
@@ -55,6 +56,8 @@ export function ActionButtons({
     const [saveCount, setSaveCount] = useState(saves);
     const [showMenu, setShowMenu] = useState(false);
     const [showShareMenu, setShowShareMenu] = useState(false);
+    const [showReportReasons, setShowReportReasons] = useState(false);
+    const [showNegativeFeedback, setShowNegativeFeedback] = useState(false);
 
     const isPlaceholder = !videoId || videoId.startsWith('placeholder') || videoId.startsWith('manual_') || videoId.length < 10;
     const isRealUser = videoUserId && !videoUserId.startsWith('placeholder') && !videoUserId.startsWith('manual_') && !videoUserId.startsWith('ph-') && videoUserId !== 'undefined' && videoUserId.length >= 10;
@@ -187,19 +190,43 @@ export function ActionButtons({
     };
 
     const handleMenuAction = async (action: string) => {
-        setShowMenu(false);
         switch (action) {
             case 'report':
-                if (!user) { router.push('/auth/register?from=report'); return; }
-                if (!isPlaceholder) {
-                    await addDoc(collection(db, 'reports'), {
-                        videoId, reportedBy: user.uid,
-                        reportedAt: serverTimestamp(), type: 'video', status: 'pending',
-                    });
+                setShowMenu(false);
+                setShowReportReasons(true);
+                break;
+            case 'not_interested':
+                setShowMenu(false);
+                // 1. Call callback to scroll feed immediately (Premium feel)
+                onNotInterested?.();
+                setShowNegativeFeedback(true);
+                setTimeout(() => setShowNegativeFeedback(false), 1500);
+                
+                // 2. Save to Firestore for large scale usage/personalization
+                if (user && !isPlaceholder) {
+                    try {
+                        await addDoc(collection(db, 'video_feedback'), {
+                            videoId,
+                            userId: user.uid,
+                            action: 'not_interested',
+                            timestamp: serverTimestamp(),
+                        });
+                    } catch (err) {
+                        console.error('Feedback error:', err);
+                    }
                 }
-                showToast('🚩 Report submitted. Thank you.');
+                
+                // 3. Persistent local storage for quick filtering
+                const hidden = JSON.parse(localStorage.getItem('jobreel_hidden_videos') || '[]');
+                if (!hidden.includes(videoId)) {
+                    hidden.push(videoId);
+                    localStorage.setItem('jobreel_hidden_videos', JSON.stringify(hidden));
+                }
+                
+                showToast("Got it. You'll see less of this.");
                 break;
             case 'interested':
+                setShowMenu(false);
                 if (!user) { router.push('/auth/register?from=interested'); return; }
                 if (!isPlaceholder) {
                     await addDoc(collection(db, 'interests'), {
@@ -208,24 +235,39 @@ export function ActionButtons({
                         authorId: videoUserId || '',
                         createdAt: serverTimestamp(),
                     });
-                    // Also increment interest count on video maybe? User didn't specify but good practice
                     await updateDoc(doc(db, 'videos', videoId), {
                         interestedCount: increment(1)
                     });
                 }
                 showToast('✨ Added to interests!');
                 break;
-            case 'not_interested':
-                const hidden = JSON.parse(localStorage.getItem('jobreel_hidden_videos') || '[]');
-                hidden.push(videoId);
-                localStorage.setItem('jobreel_hidden_videos', JSON.stringify(hidden));
-                showToast("Got it. You'll see less of this.");
-                break;
             case 'copy_link':
+                setShowMenu(false);
                 const link = `${window.location.origin}/feed?v=${videoId}`;
                 navigator.clipboard.writeText(link).then(() => showToast('🔗 Video link copied!'));
                 break;
         }
+    };
+
+    const submitReport = async (reason: string) => {
+        setShowReportReasons(false);
+        if (!user) { router.push('/auth/register?from=report'); return; }
+        
+        if (!isPlaceholder) {
+            try {
+                await addDoc(collection(db, 'reports'), {
+                    videoId, 
+                    reportedBy: user.uid,
+                    reason,
+                    reportedAt: serverTimestamp(), 
+                    type: 'video', 
+                    status: 'pending',
+                });
+            } catch (err) {
+                console.error('Report error:', err);
+            }
+        }
+        showToast('🚩 Thank you. Your report has been submitted.');
     };
 
     return (
@@ -498,6 +540,96 @@ export function ActionButtons({
                     </div>
                 </>
             )}
+            {/* ── REPORT REASONS MENU ── */}
+            <AnimatePresence>
+                {showReportReasons && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowReportReasons(false)} 
+                            style={{ position: 'fixed', inset: 0, zIndex: 101, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} 
+                        />
+                        <motion.div 
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            style={{
+                                position: 'fixed', bottom: 0, left: 0, right: 0,
+                                background: '#fff', borderRadius: '24px 24px 0 0',
+                                padding: '20px 0 40px', zIndex: 102,
+                                maxWidth: 500, margin: '0 auto',
+                                boxShadow: '0 -10px 40px rgba(0,0,0,0.2)',
+                            }}
+                        >
+                            <div style={{ width: 40, height: 5, borderRadius: 999, background: '#DDD', margin: '0 auto 20px' }} />
+                            
+                            <h3 style={{ textAlign: 'center', fontFamily: 'Poppins', fontWeight: 800, fontSize: 18, marginBottom: 10 }}>Report Content</h3>
+                            <p style={{ textAlign: 'center', fontSize: 13, color: '#666', marginBottom: 20, padding: '0 40px' }}>Why are you reporting this video?</p>
+
+                            <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 16px' }}>
+                                {[
+                                    'Inappropriate content',
+                                    'Spam or misleading',
+                                    'Offensive or hateful',
+                                    'Harassment or bullying',
+                                    'Intellectual property violation',
+                                    'Other'
+                                ].map((reason) => (
+                                    <motion.button
+                                        key={reason}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => submitReport(reason)}
+                                        style={{
+                                            width: '100%', padding: '16px',
+                                            background: '#F8F9FA', border: 'none',
+                                            borderRadius: '16px', marginBottom: 8,
+                                            display: 'flex', alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            cursor: 'pointer', textAlign: 'left',
+                                            fontFamily: 'DM Sans', fontWeight: 600,
+                                            fontSize: 15, color: '#1A1A1A'
+                                        }}
+                                    >
+                                        {reason}
+                                        <span style={{ color: '#CCC' }}>→</span>
+                                    </motion.button>
+                                ))}
+                            </div>
+
+                            <button onClick={() => setShowReportReasons(false)} style={{
+                                width: '100%', marginTop: 12, padding: '14px', background: 'none',
+                                border: 'none', color: '#999',
+                                fontFamily: 'DM Sans', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                            }}>
+                                Cancel
+                            </button>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+            {/* ── NEGATIVE FEEDBACK OVERLAY (Mobile/Desktop) ── */}
+            <AnimatePresence>
+                {showNegativeFeedback && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.5 }}
+                        style={{
+                            position: 'fixed', top: '50%', left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            background: 'rgba(0,0,0,0.8)',
+                            padding: '30px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 200, pointerEvents: 'none',
+                        }}
+                    >
+                        <div style={{ fontSize: 60 }}>🚫</div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </>
     );
 }
