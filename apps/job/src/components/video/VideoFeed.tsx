@@ -515,10 +515,11 @@ export function VideoFeed() {
 
             <div style={{ 
                 width: '100%', 
-                maxWidth: '100%',
+                maxWidth: '480px', // Constrain on desktop for better reel experience
                 height: '100dvh', 
                 position: 'relative', 
                 overflow: 'hidden',
+                boxShadow: '0 0 100px rgba(0,0,0,0.5)', // Add depth on desktop
             }}>
 
                 {/* Overlay layer — floats above video */}

@@ -30,10 +30,23 @@ export default function StructuredData({ type = 'Organization', data }: Structur
         }
     };
 
+    const breadcrumbJsonLd = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": data?.items?.map((item: any, index: number) => ({
+            "@type": "ListItem",
+            "position": index + 1,
+            "name": item.name,
+            "item": `https://jobs.khanhub.com${item.path}`
+        }))
+    };
+
     let schema: any = organizationJsonLd;
 
     if (type === 'WebSite') {
         schema = websiteJsonLd;
+    } else if (type === 'BreadcrumbList' && data?.items) {
+        schema = breadcrumbJsonLd;
     } else if (data) {
         schema = {
             "@context": "https://schema.org",

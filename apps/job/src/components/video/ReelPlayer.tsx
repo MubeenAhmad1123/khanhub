@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import Hls from 'hls.js';
 import { getHlsUrl, getOptimizedVideoUrl } from '@/lib/services/cloudinary';
 
@@ -14,7 +14,7 @@ interface ReelPlayerProps {
     userHasInteracted?: boolean;
 }
 
-export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, userHasInteracted }: ReelPlayerProps) {
+const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, userHasInteracted }: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const userPausedRef = useRef(false);
@@ -306,4 +306,6 @@ export default function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAd
             />
         </div>
     );
-}
+});
+
+export default ReelPlayer;

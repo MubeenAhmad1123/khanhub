@@ -57,14 +57,24 @@ export default function Footer() {
                         </ul>
                     </div>
 
+                    {/* Categories Column (NEW for SEO) */}
+                    <div>
+                        <h4 className="font-black text-xs uppercase tracking-[0.3em] mb-10 text-slate-500">Categories</h4>
+                        <ul className="space-y-5">
+                            <li><Link href="/browse?c=healthcare" className="text-slate-300 hover:text-blue-400 font-medium hover:pl-2 transition-all">Healthcare Professionals</Link></li>
+                            <li><Link href="/browse?c=education" className="text-slate-300 hover:text-blue-400 font-medium hover:pl-2 transition-all">Education & Teaching</Link></li>
+                            <li><Link href="/browse?c=it" className="text-slate-300 hover:text-blue-400 font-medium hover:pl-2 transition-all">IT & Software</Link></li>
+                            <li><Link href="/browse?c=real-estate" className="text-slate-300 hover:text-blue-400 font-medium hover:pl-2 transition-all">Real Estate</Link></li>
+                        </ul>
+                    </div>
+
                     {/* Support Column */}
                     <div>
                         <h4 className="font-black text-xs uppercase tracking-[0.3em] mb-10 text-slate-500">Support & Legal</h4>
                         <ul className="space-y-5">
-                            <li><Link href="#how-it-works" className="text-slate-300 hover:text-blue-400 font-medium hover:pl-2 transition-all">How It Works</Link></li>
                             <li><Link href="/privacy-policy" className="text-slate-300 hover:text-blue-400 font-medium hover:pl-2 transition-all">Privacy Policy</Link></li>
                             <li><Link href="/terms" className="text-slate-300 hover:text-blue-400 font-medium hover:pl-2 transition-all">Terms of Service</Link></li>
-                            <li className="pt-4">
+                             <li className="pt-4">
                                 <span className="text-[10px] font-black text-slate-600 block mb-2 uppercase tracking-widest">Network Email</span>
                                 <span className="text-sm font-bold text-slate-300">khanhubnetwork@gmail.com</span>
                             </li>
