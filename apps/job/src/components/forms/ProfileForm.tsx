@@ -228,7 +228,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
                     onChange={handleChange}
                     rows={4}
                     className="w-full border border-gray-300 rounded-lg p-3 resize-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="Tell employers about yourself... · پیشہ ورانہ تعارف"
+                    placeholder="Tell companies about yourself... · پیشہ ورانہ تعارف"
                 />
             </div>
 

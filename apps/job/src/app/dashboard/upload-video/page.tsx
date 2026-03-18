@@ -83,7 +83,7 @@ function buildOverlayData(formData: Record<string, any>, category: string, role:
     const map: Record<string, Record<string, any>> = {
         jobs: {
             worker: { title: formData.specialization || '', badge: 'Job Seeker', field1: formData.specialization || '', field2: formData.experienceLevel || '' },
-            hiring: { title: formData.companyName || '', badge: 'Employer', field1: formData.city || '', field2: formData.phone || '' },
+            hiring: { title: formData.companyName || '', badge: 'Company', field1: formData.city || '', field2: formData.phone || '' },
         },
         healthcare: {
             doctor: { title: formData.specialization || '', badge: 'Healthcare', field1: formData.specialization || '', field2: formData.city || '' },

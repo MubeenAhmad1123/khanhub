@@ -31,7 +31,7 @@ const CATEGORY_ROLES: Record<string, {
 }> = {
     jobs: {
         providerKey: 'worker', providerLabel: 'Job Seeker', providerDesc: 'I am looking for a job', providerIcon: '👨‍💼',
-        seekerKey: 'hiring', seekerLabel: 'Employer', seekerDesc: 'I want to hire people', seekerIcon: '🏢'
+        seekerKey: 'hiring', seekerLabel: 'Company', seekerDesc: 'I want to hire people', seekerIcon: '🏢'
     },
     healthcare: {
         providerKey: 'doctor', providerLabel: 'Healthcare Provider', providerDesc: 'I am a doctor or clinic', providerIcon: '🏥',

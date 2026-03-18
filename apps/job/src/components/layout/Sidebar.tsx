@@ -102,7 +102,7 @@ export default function Sidebar() {
                     marginTop: '4px',
                 }}>
                     {user?.role === 'admin' ? 'Admin Panel' :
-                     user?.role === 'employer' ? 'Employer Dashboard' :
+                     user?.role === 'employer' ? 'Company Dashboard' :
                      'Candidate Dashboard'}
                 </p>
             </div>

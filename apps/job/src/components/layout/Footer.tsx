@@ -48,7 +48,7 @@ export default function Footer() {
 
                     {/* Employers Column */}
                     <div>
-                        <h4 className="font-black text-xs uppercase tracking-[0.3em] mb-10 text-slate-500">For Employers</h4>
+                        <h4 className="font-black text-xs uppercase tracking-[0.3em] mb-10 text-slate-500">For Companies</h4>
                         <ul className="space-y-5">
                             <li><Link href="/browse" className="text-slate-300 hover:text-orange-400 font-medium hover:pl-2 transition-all">Browse Candidates</Link></li>
                             <li><Link href="/auth/register?role=employer" className="text-slate-300 hover:text-orange-400 font-medium hover:pl-2 transition-all">Register Company</Link></li>

@@ -74,14 +74,14 @@ export const CATEGORY_CONFIG: Record<CategoryKey, CategoryConfig> = {
         emoji: '💼',
         imageUrl: '/jobs.webp',
         accent: '#FF0069',
-        providerLabel: 'Employer',
+        providerLabel: 'Company',
         seekerLabel: 'Job Seeker',
         providerDescription: 'I am looking to hire talent',
         seekerDescription: 'I am looking for a job',
         placeholderVideos: CATEGORY_PLACEHOLDERS.jobs,
         roles: {
             worker: { label: 'Job Seeker' },
-            hiring: { label: 'Employer' }
+            hiring: { label: 'Company' }
         }
     },
     healthcare: {

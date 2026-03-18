@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
@@ -102,7 +103,7 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
     };
 
     const providerBadges = ['Doctor', 'Teacher', 'Agent', 'Freelancer', 'Job Seeker', 'Helper', 'Lawyer', 'Profile', 'Worker', 'Agency', 'Farmer', 'Seller', 'Driver', 'Presenting'];
-    const seekerBadges = ['Patient', 'Student', 'Buyer / Renter', 'Client', 'Company', 'Household', 'Hiring', 'Seeking', 'Looking', 'Employer', 'Buyer', 'Passenger', 'Traveler'];
+    const seekerBadges = ['Patient', 'Student', 'Buyer / Renter', 'Client', 'Company', 'Household', 'Hiring', 'Seeking', 'Looking', 'Company', 'Buyer', 'Passenger', 'Traveler'];
 
     const filteredItems = videos.filter(item => {
         let matchesFilter = true;
@@ -140,8 +141,11 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
             padding: '0 0 80px',
         }}>
             {filteredItems.map((video, index) => (
-                <div
+                <motion.div
                     key={video.id + '-' + index}
+                    whileHover={{ scale: 1.05, y: -5 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                     onClick={() => openFeedAtVideo(video.id, video.category || 'jobs')}
                     style={{
                         position: 'relative',
@@ -149,6 +153,8 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
                         overflow: 'hidden',
                         cursor: 'pointer',
                         background: '#111',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                     }}
                 >
                     <img
@@ -161,14 +167,34 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
                         }}
                     />
 
+                    {/* Gradient Overlay */}
                     <div style={{
-                        position: 'absolute', bottom: '2px', left: '2px',
-                        color: '#fff', fontSize: '10px', fontWeight: 'bold',
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%)',
+                        opacity: 1
+                    }} />
+
+                    <div style={{
+                        position: 'absolute', bottom: '8px', left: '8px', right: '8px',
+                        color: '#fff', fontSize: '11px', fontWeight: 'bold',
                         textShadow: '0 1px 2px rgba(0,0,0,0.8)',
                     }}>
-                        ▶ {formatCount(video.views)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>▶ {formatCount(video.views)}</span>
+                        </div>
+                        <div style={{ 
+                            fontSize: '10px', 
+                            opacity: 0.9, 
+                            marginTop: '2px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {video.title}
+                        </div>
                     </div>
-                </div>
+                </motion.div>
             ))}
         </div>
     );

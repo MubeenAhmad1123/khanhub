@@ -3,7 +3,7 @@
 import React from 'react';
 
 const ITEMS = [
-    { provider: "Job Seekers", seeker: "Employers" },
+    { provider: "Job Seekers", seeker: "Companies" },
     { provider: "Doctors & Clinics", seeker: "Patients" },
     { provider: "Teachers & Tutors", seeker: "Students & Parents" },
     { provider: "Marriage Proposals", seeker: "Looking to Marry" },

@@ -255,7 +255,7 @@ export default function VideoUploadPage() {
                 status: 'pending', // Functional status
                 admin_status: 'pending', // Moderation status for admin page
                 title: user.role === 'employer' ? 'Company Introduction' : 'Personal Introduction',
-                description: user.role === 'employer' ? 'Employer introduction video' : 'Candidate introduction video',
+                description: user.role === 'employer' ? 'Company introduction video' : 'Candidate introduction video',
                 duration: result.duration || 0,
                 format: result.format,
                 size: result.bytes,

@@ -113,38 +113,87 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                 {/* Contact Button Moved Here */}
                 {userId && (
                     <motion.button
-                        whileTap={{ scale: 0.92 }}
+                        initial="rest"
+                        whileHover="hover"
+                        animate="rest"
+                        whileTap={{ scale: 0.95 }}
                         onClick={handleConnectClick}
                         style={{
                             background: '#4169E1',
                             border: 'none',
-                            borderRadius: 999,
-                            padding: '4px 12px',
+                            borderRadius: '16px',
+                            padding: '10px 20px',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 6,
+                            gap: '8px',
                             cursor: 'pointer',
                             pointerEvents: 'auto',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                            boxShadow: '0 4px 15px rgba(65, 105, 225, 0.3)',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            transition: 'all 0.3s ease',
                         }}
                     >
-                        <div style={{
-                            width: 14,
-                            height: 14,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={12} height={12}>
+                        {/* SVG Wrapper with bobbing animation */}
+                        <motion.div 
+                            variants={{
+                                rest: { x: 0, rotate: 0, scale: 1 },
+                                hover: { 
+                                    x: 55, 
+                                    rotate: 45, 
+                                    scale: 1.2,
+                                    transition: { type: 'spring', stiffness: 300, damping: 20 }
+                                }
+                            }}
+                            style={{
+                                width: 24,
+                                height: 24,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 2,
+                            }}
+                        >
+                            <motion.svg 
+                                animate={{ 
+                                    y: [0, -2, 0] 
+                                }}
+                                transition={{ 
+                                    duration: 1.5, 
+                                    repeat: Infinity, 
+                                    ease: "easeInOut" 
+                                }}
+                                xmlns="http://www.w3.org/2000/svg" 
+                                viewBox="0 0 24 24" 
+                                width={20} 
+                                height={20}
+                            >
                                 <path fill="none" d="M0 0h24v24H0z" />
                                 <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
-                            </svg>
-                        </div>
-                        <span style={{ color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Contact</span>
+                            </motion.svg>
+                        </motion.div>
+                        
+                        <motion.span 
+                            variants={{
+                                rest: { x: 0, opacity: 1 },
+                                hover: { x: 100, opacity: 0 }
+                            }}
+                            style={{ 
+                                color: '#fff', 
+                                fontSize: '14px', 
+                                fontWeight: 700, 
+                                fontFamily: 'Poppins',
+                                whiteSpace: 'nowrap',
+                                zIndex: 1,
+                            }}
+                        >
+                            Contact
+                        </motion.span>
                     </motion.button>
                 )}
 
-                {catConfig && (
+                {/* Category pill - Hidden as per user request to show only role */}
+                {/* catConfig && (
                     <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 3,
                         background: 'rgba(0,0,0,0.55)',
@@ -161,7 +210,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                             {catConfig.label}
                         </span>
                     </span>
-                )}
+                ) */}
                 {roleLabel && (
                     <span style={{
                         display: 'inline-flex', alignItems: 'center',

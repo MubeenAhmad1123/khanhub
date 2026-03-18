@@ -61,7 +61,7 @@ export default function VideoModal({
                             role === 'job_seeker' ? "bg-blue-600 text-white" : "bg-orange-600 text-white"
                         )}>
                             {role === 'job_seeker' ? <User className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
-                            {role === 'job_seeker' ? 'Candidate' : 'Employer'}
+                            {role === 'job_seeker' ? 'Candidate' : 'Company'}
                         </span>
                         <span className="text-white/60 text-xs font-bold uppercase tracking-widest">{industry}</span>
                     </div>

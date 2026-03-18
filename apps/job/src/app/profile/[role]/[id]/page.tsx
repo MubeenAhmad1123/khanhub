@@ -12,6 +12,7 @@ import { createNotification } from '@/lib/createNotification';
 import { followUser, unfollowUser, checkIsFollowing } from '@/lib/followSystem';
 import { RevealContactSheet } from '@/components/feed/RevealContactSheet';
 import { useFeedToast } from '@/components/ui/FeedToast';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 export default function UserProfilePage() {
@@ -206,7 +207,7 @@ export default function UserProfilePage() {
 
     const getCategoryConfig = (cat: string) => {
         const configs: Record<string, { label: string; emoji: string; accent: string; providerLabel: string; seekerLabel: string }> = {
-            jobs:        { label: 'Jobs',           emoji: '💼', accent: '#FF0069', providerLabel: 'Job Seeker',    seekerLabel: 'Employer' },
+            jobs:        { label: 'Jobs',           emoji: '💼', accent: '#FF0069', providerLabel: 'Job Seeker',    seekerLabel: 'Company' },
             healthcare:  { label: 'Healthcare',     emoji: '🏥', accent: '#00C896', providerLabel: 'Doctor',        seekerLabel: 'Patient' },
             education:   { label: 'Education',      emoji: '🎓', accent: '#FFD600', providerLabel: 'Teacher',       seekerLabel: 'Student' },
             marriage:    { label: 'Marriage',       emoji: '💍', accent: '#FF6B9D', providerLabel: 'Groom',         seekerLabel: 'Bride' },
@@ -546,21 +547,55 @@ export default function UserProfilePage() {
                     >
                         {followingLoading ? '...' : (isFollowing ? 'Following' : 'Follow')}
                     </button>
-                    <button
+                    <motion.button
+                        initial="rest"
+                        whileHover="hover"
+                        animate="rest"
+                        whileTap={{ scale: 0.96 }}
                         onClick={() => contactRevealed ? setShowContactModal(true) : setShowRevealSheet(true)}
                         style={{
-                            flex: 1, padding: '12px', borderRadius: 12,
+                            flex: 1, 
+                            padding: '12px', 
+                            borderRadius: 12,
                             background: contactRevealed ? catConfig.accent : 'transparent',
                             border: `2px solid ${catConfig.accent}`,
                             color: contactRevealed ? '#fff' : catConfig.accent,
-                            fontFamily: 'Poppins', fontWeight: 700,
-                            fontSize: 'clamp(13px, 3.5vw, 15px)', cursor: 'pointer',
+                            fontFamily: 'Poppins', 
+                            fontWeight: 700,
+                            fontSize: 'clamp(13px, 3.5vw, 15px)', 
+                            cursor: 'pointer',
                             boxShadow: contactRevealed ? `0 8px 24px ${catConfig.accent}33` : 'none',
-                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                            overflow: 'hidden',
+                            position: 'relative',
                         }}
                     >
-                        {checkingUnlock ? '...' : contactRevealed ? '📞 Contact' : '🔓 Connect'}
-                    </button>
+                        <motion.div
+                            variants={{
+                                rest: { x: 0, rotate: 0 },
+                                hover: { x: 40, rotate: 45, scale: 1.1 }
+                            }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        >
+                            {checkingUnlock ? '...' : contactRevealed ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={16} height={16}>
+                                    <path fill="none" d="M0 0h24v24H0z" />
+                                    <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
+                                </svg>
+                            ) : '🔓'}
+                        </motion.div>
+                        <motion.span
+                            variants={{
+                                rest: { x: 0, opacity: 1 },
+                                hover: { x: 80, opacity: 0 }
+                            }}
+                        >
+                             {checkingUnlock ? '' : contactRevealed ? 'Contact' : 'Connect'}
+                        </motion.span>
+                    </motion.button>
                 </div>
             </div>
 
@@ -608,10 +643,12 @@ export default function UserProfilePage() {
                             gap: 2,
                         }}>
                             {videos.map((video, index) => (
-                        <div
-                                    key={video.id}
+                                <motion.div
+                                    key={video.id + '-' + index}
+                                    whileHover={{ scale: 1.05, y: -4, zIndex: 10 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                                     onClick={() => openVideo(index)}
-
                                     style={{
                                         aspectRatio: '9/16',
                                         overflow: 'hidden',
@@ -619,14 +656,17 @@ export default function UserProfilePage() {
                                         position: 'relative',
                                         background: '#111',
                                         borderRadius: 8,
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                                     }}
+                                    className="group"
                                 >
                                     {getThumbnail(video) ? (
                                         <img
                                             src={getThumbnail(video).replace('mqdefault.jpg', 'hqdefault.jpg')}
                                             alt=""
                                             loading="lazy"
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                                            className="group-hover:scale-110"
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).style.display = 'none';
                                             }}
@@ -636,6 +676,17 @@ export default function UserProfilePage() {
                                             ▶
                                         </div>
                                     )}
+
+                                    {/* Premium Shimmer Overlay */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: '-100%',
+                                        width: '100%',
+                                        height: '100%',
+                                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                                        transition: 'left 0.8s ease',
+                                    }} className="group-hover:left-[100%]" />
 
                                     {/* Category + Role tags — top left */}
                                     {video.category && (() => {
@@ -651,8 +702,8 @@ export default function UserProfilePage() {
                                                 display: 'flex', flexDirection: 'column', gap: 3,
                                                 pointerEvents: 'none',
                                             }}>
-                                                {/* Category pill */}
-                                                <span style={{
+                                                {/* Category pill - Hidden as per user request */}
+                                                {/* <span style={{
                                                     display: 'inline-flex', alignItems: 'center', gap: 2,
                                                     background: 'rgba(0,0,0,0.65)',
                                                     backdropFilter: 'blur(4px)',
@@ -662,7 +713,7 @@ export default function UserProfilePage() {
                                                     whiteSpace: 'nowrap',
                                                 }}>
                                                     {cfg.emoji} {cfg.label}
-                                                </span>
+                                                </span> */}
                                                 {/* Role pill */}
                                                 {roleLabel && (
                                                     <span style={{
@@ -692,7 +743,7 @@ export default function UserProfilePage() {
                                     }}>
                                         <span style={{ fontSize: 8 }}>▶</span> {formatCount(video.views || 0)}
                                     </div>
-                                </div>
+                                </motion.div>
 
                             ))}
                         </div>

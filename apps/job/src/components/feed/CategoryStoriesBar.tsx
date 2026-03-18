@@ -99,16 +99,21 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                         }}
                     >
                         {/* Circle with accent border */}
-                        <div style={{
-                            width: '52px', height: '52px', borderRadius: '50%',
-                            border: `2px solid ${isActive
-                                ? cat.accent
-                                : 'rgba(255,255,255,0.4)'}`,
-                            padding: '2px',
-                            background: 'rgba(0,0,0,0.3)',   // ← dark translucent, NOT white
-                            transition: 'all 0.25s ease',
-                            transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                        }}>
+                        <motion.div 
+                            whileHover={{ scale: 1.15, y: -2 }}
+                            whileTap={{ scale: 0.9 }}
+                            style={{
+                                width: '52px', height: '52px', borderRadius: '50%',
+                                border: `2px solid ${isActive
+                                    ? cat.accent
+                                    : 'rgba(255,255,255,0.4)'}`,
+                                padding: '2px',
+                                background: 'rgba(0,0,0,0.3)',   // ← dark translucent, NOT white
+                                transition: 'all 0.25s ease',
+                                transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                                boxShadow: isActive ? `0 0 15px ${cat.accent}66` : 'none',
+                            }}
+                        >
                             <div style={{
                                 width: '100%', height: '100%',
                                 borderRadius: '50%', background: 'rgba(0,0,0,0.2)',
@@ -117,7 +122,7 @@ export function CategoryStoriesBar({ onCategoryChange }: CategoryStoriesBarProps
                             }}>
                                 {cat.emoji}
                             </div>
-                        </div>
+                        </motion.div>
                         {/* Label — white text, visible on dark video */}
                         <span style={{
                             fontSize: '10px', fontWeight: 500,
