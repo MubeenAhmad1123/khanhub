@@ -472,10 +472,20 @@ export function VideoFeed() {
                                 isMuted={isMuted}
                                 userHasInteracted={userHasInteracted}
                             />
-                            <div style={{ position: 'absolute', bottom: 80, left: 0, right: 0, zIndex: 20, pointerEvents: 'none' }}>
+                            <div style={{ 
+                                position: 'absolute', 
+                                bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))', 
+                                left: 0, right: 0, zIndex: 20, 
+                                pointerEvents: 'none' 
+                            }}>
                                 <VideoOverlay data={video} />
                             </div>
-                            <div style={{ position: 'absolute', right: 12, bottom: 100, zIndex: 20 }}>
+                            <div style={{ 
+                                position: 'absolute', 
+                                right: 'calc(12px + env(safe-area-inset-right, 0px))', 
+                                bottom: 'calc(100px + env(safe-area-inset-bottom, 0px))', 
+                                zIndex: 20 
+                            }}>
                                 <ActionButtons
                                     videoUserId={video.userId}
                                     videoUserPhoto={video.userPhoto}

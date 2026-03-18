@@ -559,7 +559,8 @@ export function ActionButtons({
                             style={{
                                 position: 'fixed', bottom: 0, left: 0, right: 0,
                                 background: '#fff', borderRadius: '24px 24px 0 0',
-                                padding: '20px 0 40px', zIndex: 102,
+                                padding: '20px 0 calc(40px + env(safe-area-inset-bottom, 0px))', 
+                                zIndex: 102,
                                 maxWidth: 500, margin: '0 auto',
                                 boxShadow: '0 -10px 40px rgba(0,0,0,0.2)',
                             }}

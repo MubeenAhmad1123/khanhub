@@ -139,5 +139,24 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuth();
     }
+
+    // ── Video Feedback (Not Interested etc) ───────────
+    match /video_feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // ── Reports ───────────────────────────────────────
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isAuth() && request.resource.data.reportedBy == request.auth.uid;
+    }
+
+    // ── Interests ─────────────────────────────────────
+    match /interests/{interestId} {
+      allow read: if isAdmin() || (isAuth() && resource.data.userId == request.auth.uid);
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
   }
 }

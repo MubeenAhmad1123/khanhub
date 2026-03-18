@@ -55,7 +55,10 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
     };
 
     return (
-        <div className="w-full px-4 pb-2 pointer-events-none">
+        <div 
+            className="w-full px-4 pb-2 pointer-events-none"
+            style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}
+        >
             {/* Uploader avatar + name + contact icon */}
             {(userPhoto || userName) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
