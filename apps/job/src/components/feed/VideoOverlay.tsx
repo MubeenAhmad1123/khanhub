@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { CATEGORY_CONFIG } from '@/lib/categories';
 
 // Helper: resolve badge label from video doc
@@ -107,8 +108,42 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                 </div>
             )}
 
-            {/* Category pill + Role badge — side by side */}
+            {/* Category pill + Role badge + Contact Button — side by side */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                {/* Contact Button Moved Here */}
+                {userId && (
+                    <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        onClick={handleConnectClick}
+                        style={{
+                            background: '#4169E1',
+                            border: 'none',
+                            borderRadius: 999,
+                            padding: '4px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            cursor: 'pointer',
+                            pointerEvents: 'auto',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        }}
+                    >
+                        <div style={{
+                            width: 14,
+                            height: 14,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={12} height={12}>
+                                <path fill="none" d="M0 0h24v24H0z" />
+                                <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
+                            </svg>
+                        </div>
+                        <span style={{ color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Contact</span>
+                    </motion.button>
+                )}
+
                 {catConfig && (
                     <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -144,40 +179,6 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                     </span>
                 )}
             </div>
-
-            {/* Connect Button - Before Title */}
-            {userId && title && (
-                <div style={{ marginBottom: 8, pointerEvents: 'auto' }}>
-                    <button
-                        onClick={handleConnectClick}
-                        style={{
-                            background: '#4169E1',
-                            border: 'none',
-                            borderRadius: 16,
-                            padding: '8px 16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                        }}
-                    >
-                        <div style={{
-                            width: 20,
-                            height: 20,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={16} height={16}>
-                                <path fill="none" d="M0 0h24v24H0z" />
-                                <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
-                            </svg>
-                        </div>
-                        <span style={{ color: '#fff', fontSize: 14, fontWeight: 500 }}>Send</span>
-                    </button>
-                </div>
-            )}
 
             {/* Title */}
             <h3 style={{
@@ -239,5 +240,6 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                 )}
             </div>
         </div>
+
     );
 }
