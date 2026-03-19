@@ -466,7 +466,7 @@ export function VideoFeed() {
                 >
                     {isVisible ? (
                         <>
-                            {/* 3:4 Video — clean, no overlay on top */}
+                            {/* 3:4 video — only ReelPlayer, no overlay on top */}
                             <div style={{
                                 position: 'relative',
                                 width: '100%',
@@ -485,6 +485,32 @@ export function VideoFeed() {
                                     isMuted={isMuted}
                                     userHasInteracted={userHasInteracted}
                                 />
+
+                                {/* Avatar + Like + Save — floating on video, right side */}
+                                <div style={{
+                                    position: 'absolute',
+                                    right: 12,
+                                    bottom: 20,
+                                    zIndex: 20,
+                                }}>
+                                    <ActionButtons
+                                        mode="video"
+                                        videoUserId={video.userId}
+                                        videoUserPhoto={video.userPhoto}
+                                        videoUserRole={video.userRole}
+                                        onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
+                                        onNotInterested={() => {
+                                            if (index < displayVideos.length - 1) {
+                                                videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
+                                            }
+                                        }}
+                                        connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
+                                        likes={video.likes || 0}
+                                        saves={video.saves || 0}
+                                        shares={video.shares || 0}
+                                        videoId={video.id}
+                                    />
+                                </div>
                             </div>
 
                             {/* Black info bar below video */}
@@ -493,20 +519,23 @@ export function VideoFeed() {
                                 flex: 1,
                                 background: '#000',
                                 display: 'flex',
-                                alignItems: 'flex-start',
+                                alignItems: 'center',
                                 justifyContent: 'space-between',
+                                paddingLeft: 0,
+                                paddingRight: 12,
                                 paddingTop: 8,
                                 paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
                                 overflow: 'hidden',
                             }}>
-                                {/* Overlay text — left side */}
+                                {/* VideoOverlay — left, takes remaining space */}
                                 <div style={{ flex: 1, minWidth: 0, pointerEvents: 'auto' }}>
                                     <VideoOverlay data={video} />
                                 </div>
 
-                                {/* Action buttons — right side */}
-                                <div style={{ flexShrink: 0, paddingRight: 12, paddingTop: 4 }}>
+                                {/* Share + Three dots — right side */}
+                                <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                                     <ActionButtons
+                                        mode="bar"
                                         videoUserId={video.userId}
                                         videoUserPhoto={video.userPhoto}
                                         videoUserRole={video.userRole}
