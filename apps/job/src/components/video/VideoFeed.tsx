@@ -467,13 +467,14 @@ export function VideoFeed() {
                 >
                     {isVisible ? (
                         <>
-
+                            {/* BLACK SPACE above video — absorbs all extra height */}
+                            <div style={{ flex: 1 }} />
                             {/* VIDEO BOX — 3:4 ratio */}
                             <div style={{
                                 position: 'relative',
                                 width: '100%',
                                 aspectRatio: '3 / 4',
-                                maxHeight: '68vh',
+                                maxHeight: '62vh',
                                 overflow: 'hidden',
                                 background: '#000',
                                 flexShrink: 0,
