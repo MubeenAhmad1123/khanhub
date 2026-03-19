@@ -78,7 +78,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                     )}
                     {userName && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans' }}>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans' }}>
                                 {userName}
                             </div>
                             {/* Contact/Message icon - appears next to username */}
@@ -236,12 +236,12 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             <h3 style={{
                 fontFamily: 'Poppins',
                 fontWeight: 700,
-                fontSize: 17,
+                fontSize: 15,
                 color: '#fff',
-                margin: '0 0 4px',
-                lineHeight: 1.3,
+                margin: '0 0 3px',
+                lineHeight: 1.2,
                 textShadow: '0 1px 4px rgba(0,0,0,0.8)',
-                maxWidth: '85%',
+                maxWidth: '90%',
             }}>
                 {title}
             </h3>
@@ -249,25 +249,25 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             {/* Fields */}
             {field1 && (
                 <p style={{
-                    fontSize: 13,
+                    fontSize: 11,
                     color: 'rgba(255,255,255,0.85)',
                     margin: '0 0 2px',
                     fontFamily: 'DM Sans',
                     display: 'flex', alignItems: 'center', gap: 6,
                 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: catConfig?.accent || 'var(--accent)', flexShrink: 0 }} />
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: catConfig?.accent || 'var(--accent)', flexShrink: 0 }} />
                     {field1}
                 </p>
             )}
             {field2 && (
                 <p style={{
-                    fontSize: 12,
+                    fontSize: 10,
                     color: 'rgba(255,255,255,0.7)',
                     margin: '0 0 6px',
                     fontFamily: 'DM Sans',
                     display: 'flex', alignItems: 'center', gap: 6,
                 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
                     {field2}
                 </p>
             )}
@@ -276,16 +276,16 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {location && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(255,255,255,0.8)' }}>
-                        <span style={{ fontSize: 11 }}>📍</span>
-                        <span style={{ fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        <span style={{ fontSize: 10 }}>📍</span>
+                        <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                             {location}
                         </span>
                     </div>
                 )}
                 {isVerified && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#00C853' }}>
-                        <span style={{ fontSize: 11 }}>✓</span>
-                        <span style={{ fontSize: 10, fontFamily: 'Poppins', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        <span style={{ fontSize: 10 }}>✓</span>
+                        <span style={{ fontSize: 9, fontFamily: 'Poppins', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                             Verified
                         </span>
                     </div>

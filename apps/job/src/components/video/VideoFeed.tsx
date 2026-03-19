@@ -466,14 +466,15 @@ export function VideoFeed() {
                 >
                     {isVisible ? (
                         <>
-                            {/* 3:4 video container — crops 9:16 videos automatically */}
+                            {/* 3:4 Video — clean, no overlay on top */}
                             <div style={{
                                 position: 'relative',
                                 width: '100%',
                                 aspectRatio: '3 / 4',
-                                maxHeight: 'calc(100dvh - 60px - env(safe-area-inset-bottom, 16px))',
+                                maxHeight: 'calc(100dvh - 60px - env(safe-area-inset-bottom, 16px) - 110px)',
                                 overflow: 'hidden',
                                 background: '#000',
+                                flexShrink: 0,
                             }}>
                                 <ReelPlayer
                                     cloudinaryUrl={video.cloudinaryUrl}
@@ -484,27 +485,27 @@ export function VideoFeed() {
                                     isMuted={isMuted}
                                     userHasInteracted={userHasInteracted}
                                 />
+                            </div>
 
-                                {/* VideoOverlay — pinned to bottom of 3:4 container */}
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: 0,
-                                    left: 0,
-                                    right: 0,
-                                    zIndex: 20,
-                                    pointerEvents: 'none',
-                                    background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
-                                }}>
+                            {/* Black info bar below video */}
+                            <div style={{
+                                width: '100%',
+                                flex: 1,
+                                background: '#000',
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                justifyContent: 'space-between',
+                                paddingTop: 8,
+                                paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+                                overflow: 'hidden',
+                            }}>
+                                {/* Overlay text — left side */}
+                                <div style={{ flex: 1, minWidth: 0, pointerEvents: 'auto' }}>
                                     <VideoOverlay data={video} />
                                 </div>
 
-                                {/* ActionButtons — pinned to right side of 3:4 container */}
-                                <div style={{
-                                    position: 'absolute',
-                                    right: 12,
-                                    bottom: 80,
-                                    zIndex: 20,
-                                }}>
+                                {/* Action buttons — right side */}
+                                <div style={{ flexShrink: 0, paddingRight: 12, paddingTop: 4 }}>
                                     <ActionButtons
                                         videoUserId={video.userId}
                                         videoUserPhoto={video.userPhoto}
@@ -522,18 +523,18 @@ export function VideoFeed() {
                                         videoId={video.id}
                                     />
                                 </div>
-
-                                {/* End of feed message */}
-                                {index === displayVideos.length - 1 && (
-                                    <div style={{
-                                        position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-                                        background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '8px 16px', borderRadius: '20px',
-                                        fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
-                                    }}>
-                                        You're all caught up ✓
-                                    </div>
-                                )}
                             </div>
+
+                            {/* End of feed */}
+                            {index === displayVideos.length - 1 && (
+                                <div style={{
+                                    position: 'absolute', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
+                                    background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '8px 16px', borderRadius: '20px',
+                                    fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
+                                }}>
+                                    You're all caught up ✓
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
