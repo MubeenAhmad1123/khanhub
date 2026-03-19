@@ -452,67 +452,88 @@ export function VideoFeed() {
                     ref={el => { videoRefs.current[index] = el; }}
                     style={{
                         height: '100dvh',
-                        minHeight: '100vh',         // fallback
+                        minHeight: '100vh',
                         scrollSnapAlign: 'start',
                         scrollSnapStop: 'always',
                         position: 'relative',
-                        overflow: 'hidden',
                         background: '#000',
                         flexShrink: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                     }}
                 >
                     {isVisible ? (
                         <>
-                            <ReelPlayer
-                                cloudinaryUrl={video.cloudinaryUrl}
-                                thumbnailUrl={video.thumbnailUrl}
-                                isActive={isActive}
-                                isAdjacent={isAdjacent}
-                                videoId={video.id}
-                                isMuted={isMuted}
-                                userHasInteracted={userHasInteracted}
-                            />
-                            <div style={{ 
-                                position: 'absolute', 
-                                bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))', 
-                                left: 0, right: 0, zIndex: 20, 
-                                pointerEvents: 'none' 
+                            {/* 3:4 video container — crops 9:16 videos automatically */}
+                            <div style={{
+                                position: 'relative',
+                                width: '100%',
+                                aspectRatio: '3 / 4',
+                                maxHeight: 'calc(100dvh - 60px - env(safe-area-inset-bottom, 16px))',
+                                overflow: 'hidden',
+                                background: '#000',
                             }}>
-                                <VideoOverlay data={video} />
-                            </div>
-                            <div style={{ 
-                                position: 'absolute', 
-                                right: 'calc(12px + env(safe-area-inset-right, 0px))', 
-                                bottom: 'calc(100px + env(safe-area-inset-bottom, 0px))', 
-                                zIndex: 20 
-                            }}>
-                                <ActionButtons
-                                    videoUserId={video.userId}
-                                    videoUserPhoto={video.userPhoto}
-                                    videoUserRole={video.userRole}
-                                    onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
-                                    onNotInterested={() => {
-                                        // Scroll to next video
-                                        if (index < displayVideos.length - 1) {
-                                            videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
-                                        }
-                                    }}
-                                    connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
-                                    likes={video.likes || 0}
-                                    saves={video.saves || 0}
-                                    shares={video.shares || 0}
+                                <ReelPlayer
+                                    cloudinaryUrl={video.cloudinaryUrl}
+                                    thumbnailUrl={video.thumbnailUrl}
+                                    isActive={isActive}
+                                    isAdjacent={isAdjacent}
                                     videoId={video.id}
+                                    isMuted={isMuted}
+                                    userHasInteracted={userHasInteracted}
                                 />
-                            </div>
-                            {index === displayVideos.length - 1 && (
+
+                                {/* VideoOverlay — pinned to bottom of 3:4 container */}
                                 <div style={{
-                                    position: 'absolute', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
-                                    background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '8px 16px', borderRadius: '20px',
-                                    fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    zIndex: 20,
+                                    pointerEvents: 'none',
+                                    background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
                                 }}>
-                                    You're all caught up ✓
+                                    <VideoOverlay data={video} />
                                 </div>
-                            )}
+
+                                {/* ActionButtons — pinned to right side of 3:4 container */}
+                                <div style={{
+                                    position: 'absolute',
+                                    right: 12,
+                                    bottom: 80,
+                                    zIndex: 20,
+                                }}>
+                                    <ActionButtons
+                                        videoUserId={video.userId}
+                                        videoUserPhoto={video.userPhoto}
+                                        videoUserRole={video.userRole}
+                                        onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
+                                        onNotInterested={() => {
+                                            if (index < displayVideos.length - 1) {
+                                                videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
+                                            }
+                                        }}
+                                        connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
+                                        likes={video.likes || 0}
+                                        saves={video.saves || 0}
+                                        shares={video.shares || 0}
+                                        videoId={video.id}
+                                    />
+                                </div>
+
+                                {/* End of feed message */}
+                                {index === displayVideos.length - 1 && (
+                                    <div style={{
+                                        position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+                                        background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '8px 16px', borderRadius: '20px',
+                                        fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
+                                    }}>
+                                        You're all caught up ✓
+                                    </div>
+                                )}
+                            </div>
                         </>
                     ) : (
                         <div style={{ position: 'absolute', inset: 0, background: '#111' }} />

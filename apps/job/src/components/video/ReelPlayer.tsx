@@ -300,7 +300,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'contain',
+                    objectFit: 'cover',
                     background: '#000',
                 }}
             />

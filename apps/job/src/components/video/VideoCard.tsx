@@ -158,7 +158,7 @@ export default function VideoCard({
                 onClick={handleCardClick}
             >
                 {/* Video Area */}
-                <div className="relative aspect-[9/16] bg-slate-950 overflow-hidden">
+                <div className="relative aspect-[3/4] bg-slate-950 overflow-hidden">
                     {/* Video Element - Always present but opacity changes for smooth transition */}
                     <video
                         ref={videoRef}
