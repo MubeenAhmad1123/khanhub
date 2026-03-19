@@ -461,96 +461,107 @@ export function VideoFeed() {
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+                        paddingTop: '90px',   /* space for top bar */
+                        paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',  /* space for bottom nav */
                     }}
                 >
                     {isVisible ? (
                         <>
-                            {/* Centered inner block: video + info bar */}
+                            {/* BLACK SPACE above video — absorbs all extra height */}
+                            <div style={{ flex: 1 }} />
+
+                            {/* VIDEO BOX — 3:4 ratio */}
+                            <div style={{
+                                position: 'relative',
+                                width: '100%',
+                                aspectRatio: '3 / 4',
+                                maxHeight: '62vh',
+                                overflow: 'hidden',
+                                background: '#000',
+                                flexShrink: 0,
+                            }}>
+                                <ReelPlayer
+                                    cloudinaryUrl={video.cloudinaryUrl}
+                                    thumbnailUrl={video.thumbnailUrl}
+                                    isActive={isActive}
+                                    isAdjacent={isAdjacent}
+                                    videoId={video.id}
+                                    isMuted={isMuted}
+                                    userHasInteracted={userHasInteracted}
+                                />
+
+                                {/* Avatar + Like + Save — floating right side of video */}
+                                <div style={{
+                                    position: 'absolute',
+                                    right: 10,
+                                    bottom: 16,
+                                    zIndex: 20,
+                                }}>
+                                    <ActionButtons
+                                        mode="video"
+                                        videoUserId={video.userId}
+                                        videoUserPhoto={video.userPhoto}
+                                        videoUserRole={video.userRole}
+                                        onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
+                                        onNotInterested={() => {
+                                            if (index < displayVideos.length - 1) {
+                                                videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
+                                            }
+                                        }}
+                                        connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
+                                        likes={video.likes || 0}
+                                        saves={video.saves || 0}
+                                        shares={video.shares || 0}
+                                        videoId={video.id}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* INFO ROW — below video, in black space */}
                             <div style={{
                                 width: '100%',
                                 display: 'flex',
-                                flexDirection: 'column',
                                 alignItems: 'center',
+                                justifyContent: 'space-between',
+                                paddingTop: 10,
+                                flexShrink: 0,
                             }}>
-
-                                {/* 3:4 Video box */}
-                                <div style={{
-                                    position: 'relative',
-                                    width: '100%',
-                                    aspectRatio: '3 / 4',
-                                    maxHeight: 'calc(100dvh - 60px - env(safe-area-inset-bottom, 0px) - 120px)',
-                                    overflow: 'hidden',
-                                    background: '#000',
-                                    flexShrink: 0,
-                                }}>
-                                    <ReelPlayer
-                                        cloudinaryUrl={video.cloudinaryUrl}
-                                        thumbnailUrl={video.thumbnailUrl}
-                                        isActive={isActive}
-                                        isAdjacent={isAdjacent}
-                                        videoId={video.id}
-                                        isMuted={isMuted}
-                                        userHasInteracted={userHasInteracted}
-                                    />
-
-                                    {/* ALL action buttons float on video right side */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        right: 10,
-                                        bottom: 16,
-                                        zIndex: 20,
-                                    }}>
-                                        <ActionButtons
-                                            videoUserId={video.userId}
-                                            videoUserPhoto={video.userPhoto}
-                                            videoUserRole={video.userRole}
-                                            onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
-                                            onNotInterested={() => {
-                                                if (index < displayVideos.length - 1) {
-                                                    videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
-                                                }
-                                            }}
-                                            connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
-                                            likes={video.likes || 0}
-                                            saves={video.saves || 0}
-                                            shares={video.shares || 0}
-                                            videoId={video.id}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Info bar below video — VideoOverlay only */}
-                                <div style={{
-                                    width: '100%',
-                                    background: '#000',
-                                    minHeight: 110,
-                                    paddingTop: 10,
-                                    paddingBottom: 8,
-                                    pointerEvents: 'auto',
-                                }}>
+                                {/* VideoOverlay — left side */}
+                                <div style={{ flex: 1, minWidth: 0, pointerEvents: 'auto' }}>
                                     <VideoOverlay data={video} />
                                 </div>
 
+                                {/* Share + ThreeDots — right side */}
+                                <div style={{ flexShrink: 0, paddingRight: 12, paddingBottom: 8 }}>
+                                    <ActionButtons
+                                        mode="bar"
+                                        videoUserId={video.userId}
+                                        videoUserPhoto={video.userPhoto}
+                                        videoUserRole={video.userRole}
+                                        onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
+                                        onNotInterested={() => {
+                                            if (index < displayVideos.length - 1) {
+                                                videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
+                                            }
+                                        }}
+                                        connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
+                                        likes={video.likes || 0}
+                                        saves={video.saves || 0}
+                                        shares={video.shares || 0}
+                                        videoId={video.id}
+                                    />
+                                </div>
                             </div>
 
-                            {/* End of feed */}
+                            {/* End of feed label */}
                             {index === displayVideos.length - 1 && (
                                 <div style={{
-                                    position: 'absolute',
-                                    bottom: '80px',
-                                    left: '50%',
+                                    position: 'absolute', bottom: '70px', left: '50%',
                                     transform: 'translateX(-50%)',
-                                    background: 'rgba(0,0,0,0.6)',
-                                    color: '#fff',
-                                    padding: '8px 16px',
-                                    borderRadius: '20px',
-                                    fontSize: '13px',
-                                    fontWeight: 600,
-                                    whiteSpace: 'nowrap',
-                                    zIndex: 20,
-                                    pointerEvents: 'none',
+                                    background: 'rgba(0,0,0,0.6)', color: '#fff',
+                                    padding: '8px 16px', borderRadius: '20px',
+                                    fontSize: '13px', fontWeight: 600,
+                                    whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
                                 }}>
                                     You're all caught up ✓
                                 </div>

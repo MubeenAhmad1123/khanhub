@@ -26,6 +26,7 @@ interface ActionButtonsProps {
     onConnect?: () => void;
     onNotInterested?: () => void;
     connectLabel?: string;
+    mode?: 'video' | 'bar';
 }
 
 // Format numbers: 1200 → 1.2K
@@ -43,7 +44,8 @@ import { likeVideo, unlikeVideo, checkIsLiked } from '@/lib/likeSystem';
 
 export function ActionButtons({
     videoId, videoUserId, videoUserPhoto, videoUserRole,
-    likes = 0, saves = 0, shares = 0, onConnect, onNotInterested
+    likes = 0, saves = 0, shares = 0, onConnect, onNotInterested,
+    mode = 'video'
 }: ActionButtonsProps) {
     const { user } = useAuth();
     const router = useRouter();
@@ -272,143 +274,146 @@ export function ActionButtons({
 
     return (
         <>
-            <div style={{
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: 20,
-            }}>
+            {mode === 'bar' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
 
-                {/* ── AVATAR ── */}
-                <div
-                    onClick={handleAvatarTap}
-                    style={{ position: 'relative', cursor: 'pointer' }}
-                >
-                    <div style={{
-                        width: 48, height: 48, borderRadius: '50%',
-                        overflow: 'hidden',
-                        border: '2px solid #fff',
-                        filter: ICON_SHADOW,
+                    {/* ── SHARE ── */}
+                    <button onClick={() => setShowShareMenu(true)} style={{
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                        WebkitTapHighlightColor: 'transparent',
                     }}>
-                        <Image
-                            src={videoUserPhoto || `https://ui-avatars.com/api/?name=U&background=333&color=fff`}
-                            alt="User profile"
-                            width={48}
-                            height={48}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        <Send
+                            size={26}
+                            stroke="#fff"
+                            strokeWidth={2.5}
+                            style={{ filter: ICON_SHADOW }}
                         />
-                    </div>
-                    {/* + / check badge */}
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={following ? 'check' : 'plus'}
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0, opacity: 0 }}
-                            onClick={handleFollow}
-                            style={{
-                                position: 'absolute', bottom: -7, left: '50%',
-                                transform: 'translateX(-50%)',
-                                width: 20, height: 20, borderRadius: '50%',
-                                background: following ? '#00C853' : 'var(--accent, #FF0069)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 13, color: '#fff', fontWeight: 800,
-                                border: '1.5px solid #000',
-                                filter: ICON_SHADOW,
-                                zIndex: 2,
-                            }}
-                        >
-                            {following ? <Check size={12} strokeWidth={4} /> : '+'}
-                        </motion.div>
-                    </AnimatePresence>
+                        <span style={{
+                            color: '#fff', fontSize: 11,
+                            fontFamily: 'DM Sans', fontWeight: 700,
+                            textShadow: TEXT_SHADOW,
+                        }}>
+                            Share
+                        </span>
+                    </button>
+
+                    {/* ── THREE DOTS ── */}
+                    <button onClick={() => setShowMenu(true)} style={{
+                        background: 'rgba(0,0,0,0.45)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 7,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        WebkitTapHighlightColor: 'transparent',
+                    }}>
+                        <MoreVertical
+                            size={22}
+                            stroke="#fff"
+                            strokeWidth={2.5}
+                            style={{ filter: ICON_SHADOW }}
+                        />
+                    </button>
+
                 </div>
-
-                {/* ── LIKE ── */}
-                <button onClick={handleLike} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                    WebkitTapHighlightColor: 'transparent',
+            ) : (
+                <div style={{
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', gap: 20,
                 }}>
-                    <Heart
-                        size={32}
-                        fill={liked ? '#FF0069' : 'none'}
-                        stroke={liked ? '#FF0069' : '#fff'}
-                        strokeWidth={liked ? 0 : 2.5}
-                        style={{ filter: ICON_SHADOW }}
-                    />
-                    <span style={{
-                        color: '#fff', fontSize: 13,
-                        fontFamily: 'DM Sans', fontWeight: 700,
-                        textShadow: TEXT_SHADOW,
+
+                    {/* ── AVATAR ── */}
+                    <div
+                        onClick={handleAvatarTap}
+                        style={{ position: 'relative', cursor: 'pointer' }}
+                    >
+                        <div style={{
+                            width: 48, height: 48, borderRadius: '50%',
+                            overflow: 'hidden',
+                            border: '2px solid #fff',
+                            filter: ICON_SHADOW,
+                        }}>
+                            <Image
+                                src={videoUserPhoto || `https://ui-avatars.com/api/?name=U&background=333&color=fff`}
+                                alt="User profile"
+                                width={48}
+                                height={48}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                        </div>
+                        {/* + / check badge */}
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={following ? 'check' : 'plus'}
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                onClick={handleFollow}
+                                style={{
+                                    position: 'absolute', bottom: -7, left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    width: 20, height: 20, borderRadius: '50%',
+                                    background: following ? '#00C853' : 'var(--accent, #FF0069)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 13, color: '#fff', fontWeight: 800,
+                                    border: '1.5px solid #000',
+                                    filter: ICON_SHADOW,
+                                    zIndex: 2,
+                                }}
+                            >
+                                {following ? <Check size={12} strokeWidth={4} /> : '+'}
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+
+                    {/* ── LIKE ── */}
+                    <button onClick={handleLike} style={{
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                        WebkitTapHighlightColor: 'transparent',
                     }}>
-                        {fmt(likeCount)}
-                    </span>
-                </button>
+                        <Heart
+                            size={32}
+                            fill={liked ? '#FF0069' : 'none'}
+                            stroke={liked ? '#FF0069' : '#fff'}
+                            strokeWidth={liked ? 0 : 2.5}
+                            style={{ filter: ICON_SHADOW }}
+                        />
+                        <span style={{
+                            color: '#fff', fontSize: 13,
+                            fontFamily: 'DM Sans', fontWeight: 700,
+                            textShadow: TEXT_SHADOW,
+                        }}>
+                            {fmt(likeCount)}
+                        </span>
+                    </button>
 
-                {/* ── SAVE ── */}
-                <button onClick={handleSave} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                    WebkitTapHighlightColor: 'transparent',
-                }}>
-                    <Bookmark
-                        size={30}
-                        fill={saved ? '#fff' : 'none'}
-                        stroke="#fff"
-                        strokeWidth={2.5}
-                        style={{ filter: ICON_SHADOW }}
-                    />
-                    <span style={{
-                        color: '#fff', fontSize: 13,
-                        fontFamily: 'DM Sans', fontWeight: 700,
-                        textShadow: TEXT_SHADOW,
+                    {/* ── SAVE ── */}
+                    <button onClick={handleSave} style={{
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                        WebkitTapHighlightColor: 'transparent',
                     }}>
-                        {fmt(saveCount)}
-                    </span>
-                </button>
-
-                {/* ── SHARE ── */}
-                <button onClick={() => setShowShareMenu(true)} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                    WebkitTapHighlightColor: 'transparent',
-                }}>
-                    <Send
-                        size={28}
-                        stroke="#fff"
-                        strokeWidth={2.5}
-                        style={{ filter: ICON_SHADOW }}
-                    />
-                    <span style={{
-                        color: '#fff', fontSize: 13,
-                        fontFamily: 'DM Sans', fontWeight: 700,
-                        textShadow: TEXT_SHADOW,
-                    }}>
-                        Share
-                    </span>
-                </button>
-
-                {/* ── THREE DOTS ── */}
-                <button onClick={() => setShowMenu(true)} style={{
-                    background: 'rgba(0,0,0,0.5)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 8,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: 40,
-                    minHeight: 40,
-                    WebkitTapHighlightColor: 'transparent',
-                }}>
-                    <MoreVertical
-                        size={24}
-                        stroke="#fff"
-                        strokeWidth={2.5}
-                        style={{ filter: ICON_SHADOW }}
-                    />
-                </button>
-
-            </div>
+                        <Bookmark
+                            size={30}
+                            fill={saved ? '#fff' : 'none'}
+                            stroke="#fff"
+                            strokeWidth={2.5}
+                            style={{ filter: ICON_SHADOW }}
+                        />
+                        <span style={{
+                            color: '#fff', fontSize: 13,
+                            fontFamily: 'DM Sans', fontWeight: 700,
+                            textShadow: TEXT_SHADOW,
+                        }}>
+                            {fmt(saveCount)}
+                        </span>
+                    </button>
+                </div>
+            )}
 
             {/* ── THREE DOTS MENU SHEET ── */}
             {showMenu && (
