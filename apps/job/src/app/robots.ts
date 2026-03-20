@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
         rules: {
             userAgent: '*',
             allow: '/',
-            disallow: ['/admin/', '/api/'],
+            disallow: ['/admin', '/dashboard', '/api'],
         },
-        sitemap: 'https://jobs.khanhub.com.pk/sitemap.xml',
+        sitemap: 'https://job.khanhub.com.pk/sitemap.xml',
     };
 }

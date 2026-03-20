@@ -17,14 +17,11 @@ export function constructMetadata({
     noIndex = false,
     canonicalUrlRelative = '',
 }: SEOProps = {}): Metadata {
-    const baseTitle = 'KHAN HUB | Pakistan\'s Video-First Connection Platform';
-    const finalTitle = title ? `${title} | KHAN HUB` : baseTitle;
-    const baseDescription = 'Pakistan\'s first video-first connection platform. Bridging Jobs, Healthcare, Education, Marriage, Domestic Help, Legal, Real Estate, and IT & Tech. Scroll. Watch. Connect.';
+    const baseTitle = 'KhanHub — Pakistan\'s #1 Video Job Platform';
+    const finalTitle = title ? `${title} | KhanHub` : baseTitle;
+    const baseDescription = 'Find jobs, hire talent, and grow your career through short video profiles. Healthcare, Tech, Education, Real Estate and more across Pakistan.';
     const finalDescription = description || baseDescription;
-    const baseKeywords = [
-        'khan hub', 'video jobs', 'pakistan hiring', 'doctors pakistan', 'teachers pakistan', 'rishta pakistan', 
-        'real estate pakistan', 'it freelancers', 'ملازمت', 'پاکستان میں نوکریاں', 'اردو ریسٹہ', 'ڈاکٹر پاکستان'
-    ];
+    const baseKeywords = ['jobs in pakistan', 'job search pakistan', 'hire talent pakistan', 'video resume pakistan', 'healthcare jobs pakistan', 'tech jobs pakistan'];
     const finalKeywords = keywords ? [...baseKeywords, ...keywords] : baseKeywords;
 
     return {
@@ -37,15 +34,15 @@ export function constructMetadata({
         applicationName: 'KhanHub',
         category: 'Professional Services',
         referrer: 'origin-when-cross-origin',
-        metadataBase: new URL('https://jobs.khanhub.com'),
+        metadataBase: new URL('https://job.khanhub.com.pk'),
         alternates: {
-            canonical: canonicalUrlRelative || '/',
+            canonical: canonicalUrlRelative || 'https://job.khanhub.com.pk',
         },
         openGraph: {
             title: finalTitle,
             description: finalDescription,
-            url: `https://jobs.khanhub.com${canonicalUrlRelative}`,
-            siteName: 'KHAN HUB',
+            url: `https://job.khanhub.com.pk${canonicalUrlRelative}`,
+            siteName: 'KhanHub',
             images: [
                 {
                     url: image,
@@ -54,7 +51,7 @@ export function constructMetadata({
                     alt: finalTitle,
                 },
             ],
-            locale: 'en_US',
+            locale: 'en_PK',
             type: 'website',
         },
         twitter: {
@@ -72,11 +69,9 @@ export function constructMetadata({
             google: 'google-site-verification-placeholder',
             yandex: 'yandex-verification-placeholder',
         },
-        ...(noIndex && {
-            robots: {
-                index: false,
-                follow: false,
-            },
-        }),
+        robots: {
+            index: !noIndex,
+            follow: !noIndex,
+        },
     };
 }

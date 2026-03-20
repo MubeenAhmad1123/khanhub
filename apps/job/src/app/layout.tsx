@@ -48,6 +48,13 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" className={`${poppins.variable} ${dmSans.variable} ${jetbrains.variable}`}>
+            <head>
+                <link rel="preconnect" href="https://res.cloudinary.com" />
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
+                <meta name="theme-color" content="#000000" />
+                <meta name="application-name" content="KhanHub" />
+            </head>
             <body style={{ background: '#fff', color: '#0A0A0A' }} className="antialiased">
                 <Suspense fallback={null}>
                     <RouteProgressBar />

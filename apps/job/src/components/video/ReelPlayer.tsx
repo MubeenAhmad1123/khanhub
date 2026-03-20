@@ -23,6 +23,45 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
     const [isBuffering, setIsBuffering] = useState(true);
     const [showTapIcon, setShowTapIcon] = useState(false);
     const [loadingTooLong, setLoadingTooLong] = useState(false);
+    const [isOffline, setIsOffline] = useState(false);
+    const [isSlowConnection, setIsSlowConnection] = useState(false);
+    const [showRetry, setShowRetry] = useState(false);
+
+    useEffect(() => {
+        // Offline detection
+        const onOffline = () => setIsOffline(true);
+        const onOnline = () => setIsOffline(false);
+        window.addEventListener('offline', onOffline);
+        window.addEventListener('online', onOnline);
+
+        // Slow connection detection
+        const conn = (navigator as any).connection;
+        if (conn) {
+            const checkSpeed = () => {
+                const slow = ['slow-2g', '2g'].includes(conn.effectiveType);
+                setIsSlowConnection(slow);
+            };
+            checkSpeed();
+            conn.addEventListener('change', checkSpeed);
+            return () => {
+                window.removeEventListener('offline', onOffline);
+                window.removeEventListener('online', onOnline);
+                conn.removeEventListener('change', checkSpeed);
+            };
+        }
+        return () => {
+            window.removeEventListener('offline', onOffline);
+            window.removeEventListener('online', onOnline);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!isActive) { setShowRetry(false); return; }
+        const timer = setTimeout(() => {
+            if (isBuffering) setShowRetry(true);
+        }, 15000);
+        return () => clearTimeout(timer);
+    }, [isActive, isBuffering]);
 
     // Tap handler — toggle pause/play
     const handleVideoTap = useCallback(() => {
@@ -261,6 +300,32 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 </div>
             )}
 
+            {showRetry && (
+                <div style={{
+                    position: 'absolute', bottom: '160px', left: '50%',
+                    transform: 'translateX(-50%)', zIndex: 15,
+                }}>
+                    <button
+                        onClick={() => {
+                            const video = videoRef.current;
+                            if (!video) return;
+                            setShowRetry(false);
+                            video.load();
+                            video.play().catch(() => { });
+                        }}
+                        style={{
+                            background: '#FF0069', border: 'none',
+                            color: '#fff', padding: '10px 24px',
+                            borderRadius: 999, fontSize: 13,
+                            fontFamily: 'Poppins', fontWeight: 700,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        ↺ Tap to retry
+                    </button>
+                </div>
+            )}
+
             {/* Pause indicator */}
             {(isPaused || showTapIcon) && (
                 <div style={{
@@ -304,6 +369,37 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                     background: '#000',
                 }}
             />
+
+            {/* Offline banner */}
+            {isOffline && (
+                <div style={{
+                    position: 'absolute', top: 12, left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(0,0,0,0.85)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff', padding: '6px 14px',
+                    borderRadius: 999, fontSize: 12,
+                    fontFamily: 'DM Sans', fontWeight: 600,
+                    zIndex: 30, whiteSpace: 'nowrap',
+                }}>
+                    📶 You're offline
+                </div>
+            )}
+
+            {/* Slow connection banner — auto hides after 5s */}
+            {isSlowConnection && isBuffering && (
+                <div style={{
+                    position: 'absolute', top: 12, left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(180,120,0,0.9)',
+                    color: '#fff', padding: '6px 14px',
+                    borderRadius: 999, fontSize: 12,
+                    fontFamily: 'DM Sans', fontWeight: 600,
+                    zIndex: 30, whiteSpace: 'nowrap',
+                }}>
+                    ⚡ Slow connection — buffering
+                </div>
+            )}
         </div>
     );
 });

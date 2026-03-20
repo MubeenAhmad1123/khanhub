@@ -7,25 +7,26 @@ export default function StructuredData({ type = 'Organization', data }: Structur
     const organizationJsonLd = {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "KhanHub Jobs",
-        "url": "https://jobs.khanhub.com",
-        "logo": "https://jobs.khanhub.com/logo.webp",
-        "description": "Pakistan's leading job portal connecting talent with opportunity.",
+        "name": "KhanHub",
+        "url": "https://job.khanhub.com.pk",
+        "logo": "https://job.khanhub.com.pk/logo.webp",
+        "description": "KhanHub is Pakistan's #1 Video Job Platform. Find jobs, hire talent, and grow your career through short video profiles.",
         "address": {
             "@type": "PostalAddress",
             "addressLocality": "Islamabad",
             "addressCountry": "PK"
-        }
+        },
+        "sameAs": []
     };
 
     const websiteJsonLd = {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "KhanHub Jobs",
-        "url": "https://jobs.khanhub.com",
+        "name": "KhanHub",
+        "url": "https://job.khanhub.com.pk",
         "potentialAction": {
             "@type": "SearchAction",
-            "target": "https://jobs.khanhub.com/browse?q={search_term_string}",
+            "target": "https://job.khanhub.com.pk/explore?q={search_term_string}",
             "query-input": "required name=search_term_string"
         }
     };

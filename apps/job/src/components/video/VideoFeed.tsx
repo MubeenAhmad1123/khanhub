@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
 import { collection, query, where, orderBy, getDocs, doc, limit, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
-import { start } from 'nprogress';
+
 
 // Shuffle helper:
 const shuffleArray = <T,>(arr: T[]): T[] => {
@@ -40,7 +40,9 @@ export function VideoFeed() {
     const targetVideoId = searchParams.get('v');
     const targetCategoryId = searchParams.get('c');
 
-    console.log('[DEEPLINK] URL params on mount →', { targetVideoId, targetCategoryId });
+    if (process.env.NODE_ENV === 'development') {
+        console.log('[DEEPLINK] URL params on mount →', { targetVideoId, targetCategoryId });
+    }
 
     const [activeIndex, setActiveIndex] = useState(0);
     const [activeTab, setActiveTab] = useState(2); // Default to 'For You'
@@ -117,7 +119,9 @@ export function VideoFeed() {
         const resetRequested = sessionStorage.getItem('feed_reset_requested');
 
         if (resetRequested === 'true') {
-            console.log('[RESET] Feed reset requested by CategoryStoriesBar');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[RESET] Feed reset requested by CategoryStoriesBar');
+            }
             setActiveTab(2); // Back to For You
             sessionStorage.removeItem('feed_reset_requested');
 
@@ -268,7 +272,9 @@ export function VideoFeed() {
 
                 setVideosLoading(false);
             } catch (error: any) {
+            if (process.env.NODE_ENV === 'development') {
                 console.warn('[VideoFeed Videos] Fetch error:', error.message);
+            }
                 setVideosLoading(false);
             }
         };
@@ -392,12 +398,14 @@ export function VideoFeed() {
 
     // 2. Sync Video Index
     useEffect(() => {
-        console.log('[SCROLL] Sync Video Index triggered →', {
-            mountVideoId: mountVideoId.current,
-            displayVideosCount: displayVideos.length,
-            foundAtIndex: displayVideos.findIndex(v => v.id === mountVideoId.current),
-            currentActiveIndex: activeIndex
-        });
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[SCROLL] Sync Video Index triggered →', {
+                mountVideoId: mountVideoId.current,
+                displayVideosCount: displayVideos.length,
+                foundAtIndex: displayVideos.findIndex(v => v.id === mountVideoId.current),
+                currentActiveIndex: activeIndex
+            });
+        }
 
         if (!mountVideoId.current || displayVideos.length === 0) return;
         if (hasDeeplinked.current) return;
@@ -442,7 +450,9 @@ export function VideoFeed() {
                         }, 150);
                     }
                 } catch (err) {
-                    console.warn('[DEEPLINK] Failed to fetch missing video:', err);
+                    if (process.env.NODE_ENV === 'development') {
+                        console.warn('[DEEPLINK] Failed to fetch missing video:', err);
+                    }
                 }
             };
             fetchAndPrepend();
@@ -486,7 +496,9 @@ export function VideoFeed() {
     // Fix D: If user logs in while GuestWall is showing — hide it immediately
     useEffect(() => {
         if (firebaseUser && showGuestWall) {
-            console.log('[VideoFeed] User authenticated — hiding GuestWall');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[VideoFeed] User authenticated — hiding GuestWall');
+            }
             setShowGuestWall(false);
             localStorage.removeItem('jobreel_videos_watched');
         }
