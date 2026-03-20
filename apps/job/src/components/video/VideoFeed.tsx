@@ -98,7 +98,13 @@ export function VideoFeed() {
         }
     }, [user]);
 
+    const isMountedRef = useRef(false);
     useEffect(() => {
+        if (!isMountedRef.current) {
+            isMountedRef.current = true;
+            return; // skip first run on mount
+        }
+        // Only runs on actual tab/category CHANGE, not on mount
         hasDeeplinked.current = false;
         mountVideoId.current = null;
         mountCategoryId.current = null;
