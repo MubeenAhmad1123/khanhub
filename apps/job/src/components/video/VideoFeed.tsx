@@ -53,6 +53,11 @@ export function VideoFeed() {
     const [videosLoading, setVideosLoading] = useState(true);
     const allVideosRef = useRef<any[]>([]);
     const hasLoadedOnce = useRef(false);
+    const sessionResumeId = useRef<string | null>(
+        typeof window !== 'undefined'
+            ? sessionStorage.getItem('jobreel_last_video')
+            : null
+    );
 
     useEffect(() => {
         const markInteracted = () => setUserHasInteracted(true);
@@ -88,6 +93,10 @@ export function VideoFeed() {
             hasDeeplinked.current = false;
         }
     }, [user]);
+
+    useEffect(() => {
+        hasDeeplinked.current = false;
+    }, [activeCategory, activeTab]);
 
     // Reset feed on signal (but NOT automatically on category change to prevent jumpiness)
     useEffect(() => {
@@ -129,9 +138,15 @@ export function VideoFeed() {
             hasLoadedOnce.current = false;
             const isForYou = activeTab === 2;
 
+            // Clear resume on intentional tab/category change
+            if (hasLoadedOnce.current) {
+                sessionResumeId.current = null;
+                sessionStorage.removeItem('jobreel_last_video');
+            }
+
             let q;
-            if (isForYou) {
-                // ── FOR YOU: mixed categories, newest first ──
+            if (isForYou && !targetVideoId) {
+                // Pure For You — no deep link active
                 q = query(
                     collection(db, 'videos'),
                     where('is_live', '==', true),
@@ -139,7 +154,26 @@ export function VideoFeed() {
                     orderBy('createdAt', 'desc'),
                     limit(50)
                 );
-            } else {
+            } else if (isForYou && targetVideoId && targetCategoryId) {
+                // Deep link from Explore — fetch that category so clicked video is in results
+                q = query(
+                    collection(db, 'videos'),
+                    where('is_live', '==', true),
+                    where('admin_status', '==', 'approved'),
+                    where('category', '==', targetCategoryId),
+                    orderBy('createdAt', 'desc'),
+                    limit(30)
+                );
+            } else if (isForYou && targetVideoId && !targetCategoryId) {
+                // Deep link but no category — fetch all
+                q = query(
+                    collection(db, 'videos'),
+                    where('is_live', '==', true),
+                    where('admin_status', '==', 'approved'),
+                    orderBy('createdAt', 'desc'),
+                    limit(50)
+                );
+            } else if (!isForYou) {
                 const qCategory = (targetCategoryId && targetVideoId)
                     ? targetCategoryId
                     : activeCategory;
@@ -206,6 +240,18 @@ export function VideoFeed() {
                     hasLoadedOnce.current = true;
                 }
 
+                // Session resume — scroll to last watched video on refresh
+                if (!targetVideoId && sessionResumeId.current && !hasDeeplinked.current) {
+                    const resumeIdx = videos.findIndex(v => v.id === sessionResumeId.current);
+                    if (resumeIdx > 0) {
+                        hasDeeplinked.current = true;
+                        setTimeout(() => {
+                            setActiveIndex(resumeIdx);
+                            videoRefs.current[resumeIdx]?.scrollIntoView({ behavior: 'instant' });
+                        }, 150);
+                    }
+                }
+
                 setVideosLoading(false);
             } catch (error: any) {
                 console.warn('[VideoFeed Videos] Fetch error:', error.message);
@@ -240,6 +286,7 @@ export function VideoFeed() {
                             if (!currentVideo || currentVideo.isPlaceholder) return;
 
                             setActiveIndex(index);
+                            sessionStorage.setItem('jobreel_last_video', currentVideo.id);
 
                             // Update URL only when video changes (not on every scroll)
                             if (currentVideo.id !== lastUpdatedVideoRef.current && typeof window !== 'undefined') {

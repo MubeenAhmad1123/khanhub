@@ -122,6 +122,8 @@ export function ExploreGrid({ category, filter, searchQuery = '' }: ExploreGridP
 
     const openFeedAtVideo = (videoId: string, videoCategory: string) => {
         if (!videoId) return;
+        // Clear any existing session resume so deep link takes priority
+        sessionStorage.removeItem('jobreel_last_video');
         const catParam = videoCategory ? `&c=${videoCategory}` : '';
         router.push(`/feed?v=${videoId}${catParam}`);
     };
