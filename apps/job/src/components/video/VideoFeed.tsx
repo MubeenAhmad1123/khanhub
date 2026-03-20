@@ -53,6 +53,17 @@ export function VideoFeed() {
     const [videosLoading, setVideosLoading] = useState(true);
     const allVideosRef = useRef<any[]>([]);
     const hasLoadedOnce = useRef(false);
+    // Capture deep link params ONCE on mount — never lost
+    const mountVideoId = useRef<string | null>(
+        typeof window !== 'undefined'
+            ? new URL(window.location.href).searchParams.get('v')
+            : null
+    );
+    const mountCategoryId = useRef<string | null>(
+        typeof window !== 'undefined'
+            ? new URL(window.location.href).searchParams.get('c')
+            : null
+    );
     const sessionResumeId = useRef<string | null>(
         typeof window !== 'undefined'
             ? sessionStorage.getItem('jobreel_last_video')
@@ -82,13 +93,6 @@ export function VideoFeed() {
     useEffect(() => {
         if (user) {
             setShowGuestWall(false);
-            // Clear ?v= param to stop the deeplink loop on login
-            if (typeof window !== 'undefined') {
-                const url = new URL(window.location.href);
-                if (url.searchParams.has('v')) {
-                    window.history.replaceState(null, '', url.pathname);
-                }
-            }
             // Reset deeplink flag so it doesn't re-scroll on next category change
             hasDeeplinked.current = false;
         }
@@ -96,6 +100,10 @@ export function VideoFeed() {
 
     useEffect(() => {
         hasDeeplinked.current = false;
+        mountVideoId.current = null;
+        mountCategoryId.current = null;
+        sessionResumeId.current = null;
+        sessionStorage.removeItem('jobreel_last_video');
     }, [activeCategory, activeTab]);
 
     // Reset feed on signal (but NOT automatically on category change to prevent jumpiness)
@@ -145,7 +153,7 @@ export function VideoFeed() {
             }
 
             let q;
-            if (isForYou && !targetVideoId) {
+            if (isForYou && !mountVideoId.current) {
                 // Pure For You — no deep link active
                 q = query(
                     collection(db, 'videos'),
@@ -154,17 +162,17 @@ export function VideoFeed() {
                     orderBy('createdAt', 'desc'),
                     limit(50)
                 );
-            } else if (isForYou && targetVideoId && targetCategoryId) {
+            } else if (isForYou && mountVideoId.current && mountCategoryId.current) {
                 // Deep link from Explore — fetch that category so clicked video is in results
                 q = query(
                     collection(db, 'videos'),
                     where('is_live', '==', true),
                     where('admin_status', '==', 'approved'),
-                    where('category', '==', targetCategoryId),
+                    where('category', '==', mountCategoryId.current),
                     orderBy('createdAt', 'desc'),
                     limit(30)
                 );
-            } else if (isForYou && targetVideoId && !targetCategoryId) {
+            } else if (isForYou && mountVideoId.current && !mountCategoryId.current) {
                 // Deep link but no category — fetch all
                 q = query(
                     collection(db, 'videos'),
@@ -174,8 +182,8 @@ export function VideoFeed() {
                     limit(50)
                 );
             } else if (!isForYou) {
-                const qCategory = (targetCategoryId && targetVideoId)
-                    ? targetCategoryId
+                const qCategory = (mountCategoryId.current && mountVideoId.current)
+                    ? mountCategoryId.current
                     : activeCategory;
 
                 q = query(
@@ -202,7 +210,7 @@ export function VideoFeed() {
                     .map(d => ({ id: d.id, ...(d.data() as object) } as any))
                     .filter(d => {
                         if (hiddenIds.includes(d.id)) return false;
-                        const matchesCategory = isForYou || d.category === (targetCategoryId || activeCategory);
+                        const matchesCategory = isForYou || d.category === (mountCategoryId.current || activeCategory);
                         const matchesRole = !roleFilter || d.userRole === roleFilter;
                         const url = d.cloudinaryUrl;
                         const isValidCloudinary = url && url.includes('cloudinary.com') && !url.includes('youtube.com');
@@ -241,7 +249,7 @@ export function VideoFeed() {
                 }
 
                 // Session resume — scroll to last watched video on refresh
-                if (!targetVideoId && sessionResumeId.current && !hasDeeplinked.current) {
+                if (!mountVideoId.current && sessionResumeId.current && !hasDeeplinked.current) {
                     const resumeIdx = videos.findIndex(v => v.id === sessionResumeId.current);
                     if (resumeIdx > 0) {
                         hasDeeplinked.current = true;
@@ -379,16 +387,16 @@ export function VideoFeed() {
     // 2. Sync Video Index
     useEffect(() => {
         console.log('[SCROLL] Sync Video Index triggered →', {
-            targetVideoId,
+            mountVideoId: mountVideoId.current,
             displayVideosCount: displayVideos.length,
-            foundAtIndex: displayVideos.findIndex(v => v.id === targetVideoId),
+            foundAtIndex: displayVideos.findIndex(v => v.id === mountVideoId.current),
             currentActiveIndex: activeIndex
         });
 
-        if (!targetVideoId || displayVideos.length === 0) return;
+        if (!mountVideoId.current || displayVideos.length === 0) return;
         if (hasDeeplinked.current) return;
 
-        const idx = displayVideos.findIndex(v => v.id === targetVideoId);
+        const idx = displayVideos.findIndex(v => v.id === mountVideoId.current);
 
         if (idx !== -1) {
             hasDeeplinked.current = true;
@@ -404,7 +412,7 @@ export function VideoFeed() {
             // Fetch it directly by document ID and prepend it to the feed
             const fetchAndPrepend = async () => {
                 try {
-                    const docSnap = await getDoc(doc(db, 'videos', targetVideoId));
+                    const docSnap = await getDoc(doc(db, 'videos', mountVideoId.current!));
                     if (docSnap.exists()) {
                         const data = docSnap.data() as any;
                         const missingVideo = {
@@ -417,7 +425,7 @@ export function VideoFeed() {
                         // Prepend the missing video so it becomes index 0
                         setDisplayVideos(prev => {
                             // Avoid duplicates in case of race condition
-                            if (prev.some(v => v.id === targetVideoId)) return prev;
+                            if (prev.some(v => v.id === mountVideoId.current)) return prev;
                             return [missingVideo, ...prev];
                         });
                         hasDeeplinked.current = true;
@@ -433,7 +441,7 @@ export function VideoFeed() {
             };
             fetchAndPrepend();
         }
-    }, [targetVideoId, displayVideos]);
+    }, [displayVideos]);
 
     // ── Stories Bar Visibility ────────────────────────────────────
     useEffect(() => {
