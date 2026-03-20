@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
 import { collection, query, where, orderBy, getDocs, doc, limit, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
+import { start } from 'nprogress';
 
 // Shuffle helper:
 const shuffleArray = <T,>(arr: T[]): T[] => {
@@ -184,8 +185,8 @@ export function VideoFeed() {
                 // FIX 3: For You priority sort
                 const priority = videos.filter(v => v.category === activeCategory);
                 const rest = videos.filter(v => v.category !== activeCategory);
-                videos = priority.length > 0 
-                    ? [...priority, ...shuffleArray(rest)] 
+                videos = priority.length > 0
+                    ? [...priority, ...shuffleArray(rest)]
                     : shuffleArray(videos);
 
                 // FIX 4: New videos first, seen videos later
@@ -198,13 +199,13 @@ export function VideoFeed() {
 
                 setFirestoreVideos(videos);
                 allVideosRef.current = videos;
-                
+
                 // Problem 1 Fix: Only set displayVideos if it's the first load for this query
                 if (!hasLoadedOnce.current) {
                     setDisplayVideos(videos);
                     hasLoadedOnce.current = true;
                 }
-                
+
                 setVideosLoading(false);
             } catch (error: any) {
                 console.warn('[VideoFeed Videos] Fetch error:', error.message);
@@ -237,7 +238,7 @@ export function VideoFeed() {
                         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
                             const currentVideo = displayVideos[index];
                             if (!currentVideo || currentVideo.isPlaceholder) return;
-                            
+
                             setActiveIndex(index);
 
                             // Update URL only when video changes (not on every scroll)
@@ -461,20 +462,19 @@ export function VideoFeed() {
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        paddingTop: '90px',   /* space for top bar */
-                        paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',  /* space for bottom nav */
+                        paddingTop: '50px',
+                        paddingBottom: '60px',
                     }}
                 >
                     {isVisible ? (
                         <>
                             {/* BLACK SPACE above video — absorbs all extra height */}
-                            <div style={{ flex: 1 }} />
+
                             {/* VIDEO BOX — 3:4 ratio */}
                             <div style={{
                                 position: 'relative',
                                 width: '100%',
-                                aspectRatio: '3 / 4',
-                                maxHeight: '62vh',
+                                flex: 1,
                                 overflow: 'hidden',
                                 background: '#000',
                                 flexShrink: 0,
@@ -522,8 +522,10 @@ export function VideoFeed() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                                paddingTop: 10,
+                                paddingTop: 8,
+                                paddingBottom: 8,
                                 flexShrink: 0,
+                                minHeight: 100,
                             }}>
                                 {/* VideoOverlay — left side */}
                                 <div style={{ flex: 1, minWidth: 0, pointerEvents: 'auto' }}>
@@ -583,11 +585,11 @@ export function VideoFeed() {
                 <button onClick={() => videoRefs.current[activeIndex + 1]?.scrollIntoView({ behavior: 'smooth' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↓</button>
             </div>
 
-            <div style={{ 
-                width: '100%', 
+            <div style={{
+                width: '100%',
                 maxWidth: '480px', // Constrain on desktop for better reel experience
-                height: '100dvh', 
-                position: 'relative', 
+                height: '100dvh',
+                position: 'absolute',
                 overflow: 'hidden',
                 boxShadow: '0 0 100px rgba(0,0,0,0.5)', // Add depth on desktop
             }}>
@@ -608,9 +610,9 @@ export function VideoFeed() {
                         </div>
                         <AnimatePresence>
                             {showStoriesBar && (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: -10 }} 
-                                    animate={{ opacity: 1, y: 0 }} 
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     style={{
                                         background: 'rgba(0, 0, 0, 0.6)',
