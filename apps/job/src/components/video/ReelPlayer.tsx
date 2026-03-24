@@ -14,11 +14,21 @@ interface ReelPlayerProps {
     userHasInteracted?: boolean;
 }
 
-const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, userHasInteracted }: ReelPlayerProps) {
+const ReelPlayer = memo(function ReelPlayer({
+    cloudinaryUrl,
+    thumbnailUrl,
+    isActive,
+    isAdjacent,
+    videoId,
+    userHasInteracted,
+}: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const userPausedRef = useRef(false);
-    const [isMuted, setIsMuted] = useState(false);      // Default to unmuted
+
+    // Always start muted so iOS allows autoplay —
+    // we unmute immediately after first user interaction.
+    const [isMuted, setIsMuted] = useState(true);
     const [isPaused, setIsPaused] = useState(false);
     const [isBuffering, setIsBuffering] = useState(true);
     const [showTapIcon, setShowTapIcon] = useState(false);
@@ -27,20 +37,27 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
     const [isSlowConnection, setIsSlowConnection] = useState(false);
     const [showRetry, setShowRetry] = useState(false);
 
+    // ── Unmute as soon as the user touches anything ───────────────
+    // iOS Safari hard-blocks autoplay with sound until a user gesture.
+    // We respect that rule: start muted, then silently unmute on first touch.
     useEffect(() => {
-        // Offline detection
+        if (!userHasInteracted) return;
+        const video = videoRef.current;
+        if (!video) return;
+        video.muted = false;
+        setIsMuted(false);
+    }, [userHasInteracted]);
+
+    // ── Network / connection detection ────────────────────────────
+    useEffect(() => {
         const onOffline = () => setIsOffline(true);
         const onOnline = () => setIsOffline(false);
         window.addEventListener('offline', onOffline);
         window.addEventListener('online', onOnline);
 
-        // Slow connection detection
         const conn = (navigator as any).connection;
         if (conn) {
-            const checkSpeed = () => {
-                const slow = ['slow-2g', '2g'].includes(conn.effectiveType);
-                setIsSlowConnection(slow);
-            };
+            const checkSpeed = () => setIsSlowConnection(['slow-2g', '2g'].includes(conn.effectiveType));
             checkSpeed();
             conn.addEventListener('change', checkSpeed);
             return () => {
@@ -55,25 +72,24 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         };
     }, []);
 
+    // ── Retry button after long buffer ────────────────────────────
     useEffect(() => {
         if (!isActive) { setShowRetry(false); return; }
-        const timer = setTimeout(() => {
-            if (isBuffering) setShowRetry(true);
-        }, 15000);
+        const timer = setTimeout(() => { if (isBuffering) setShowRetry(true); }, 15000);
         return () => clearTimeout(timer);
     }, [isActive, isBuffering]);
 
-    // Tap handler — toggle pause/play
+    // ── Tap to pause / resume ─────────────────────────────────────
     const handleVideoTap = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
 
         if (video.paused) {
-            userPausedRef.current = false;   // user wants to play
+            userPausedRef.current = false;
             video.play().catch(() => { });
             setIsPaused(false);
         } else {
-            userPausedRef.current = true;    // user wants to pause — RESPECT THIS
+            userPausedRef.current = true;
             video.pause();
             setIsPaused(true);
             setShowTapIcon(true);
@@ -81,36 +97,26 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         }
     }, []);
 
-    // Mute toggle — disabled as per request
-    const handleMuteTap = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        // User asked to disable manual muting/unmuting
-    }, []);
-
+    // ── Play / pause based on isActive ────────────────────────────
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
 
         let cancelled = false;
-        let playTimeout: NodeJS.Timeout;
 
         const attemptPlay = async () => {
             if (cancelled || !videoRef.current) return;
-
-            // CRITICAL: if user manually paused this video, don't resume:
             if (userPausedRef.current) return;
 
             try {
+                // Must be muted for iOS autoplay policy
                 video.muted = true;
 
                 if (video.readyState < 2) {
                     await new Promise<void>((resolve) => {
-                        const onCanPlay = () => {
-                            video.removeEventListener('canplay', onCanPlay);
-                            resolve();
-                        };
+                        const onCanPlay = () => { video.removeEventListener('canplay', onCanPlay); resolve(); };
                         video.addEventListener('canplay', onCanPlay);
-                        setTimeout(resolve, 3000);
+                        setTimeout(resolve, 3000); // don't wait forever
                     });
                 }
 
@@ -118,22 +124,20 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
 
                 await video.play();
 
-                if (cancelled) {
-                    video.pause();
-                    return;
-                }
+                if (cancelled) { video.pause(); return; }
 
-                setTimeout(() => {
-                    if (!cancelled && !userPausedRef.current && videoRef.current) {
-                        videoRef.current.muted = false;
-                        setIsMuted(false);
-                    }
-                }, 150);
+                // Now that play succeeded, unmute if the user has already interacted.
+                // If they haven't yet, the userHasInteracted effect above will unmute later.
+                if (userHasInteracted && !cancelled) {
+                    video.muted = false;
+                    setIsMuted(false);
+                }
 
                 setIsPaused(false);
 
             } catch (err: any) {
                 if (cancelled) return;
+                // On autoplay failure, stay muted and try again silently
                 if (err?.name !== 'AbortError') {
                     video.muted = true;
                     setIsMuted(true);
@@ -142,33 +146,24 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         };
 
         if (isActive) {
-            // Reset user-paused flag ONLY when scrolling to a NEW video:
             userPausedRef.current = false;
-            if (!userPausedRef.current) {
-                attemptPlay();
-            }
+            attemptPlay();
         } else {
             try { video.pause(); } catch (_) { }
             if (!isAdjacent) video.currentTime = 0;
             if (hlsRef.current) hlsRef.current.stopLoad();
             if (!isAdjacent) setIsBuffering(true);
-            // Reset flag when video leaves view:
             userPausedRef.current = false;
         }
 
-        return () => {
-            cancelled = true;
-            clearTimeout(playTimeout);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isActive]); // ONLY isActive
+        return () => { cancelled = true; };
+    }, [isActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Ensure the video src is actually set
+    // ── Load video source (HLS → MP4 fallback) ───────────────────
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !cloudinaryUrl || (!isActive && !isAdjacent)) return;
 
-        // If video has no src yet — set it:
         if (!video.src || video.src === window.location.href) {
             const hlsUrl = getHlsUrl(cloudinaryUrl);
             const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
@@ -194,7 +189,6 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
 
                 hls.on(Hls.Events.ERROR, (_, data) => {
                     if (data.fatal) {
-                        console.warn('HLS Fatal Error, falling back to MP4');
                         hls.destroy();
                         hlsRef.current = null;
                         video.src = optimizedMp4;
@@ -210,68 +204,53 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         }
     }, [cloudinaryUrl, isActive, isAdjacent]);
 
-    // Loading feedback
+    // ── Long-buffer feedback ──────────────────────────────────────
     useEffect(() => {
-        if (!isActive) {
-            setLoadingTooLong(false);
-            return;
-        }
-        const timer = setTimeout(() => {
-            if (isBuffering) setLoadingTooLong(true);
-        }, 8000);
+        if (!isActive) { setLoadingTooLong(false); return; }
+        const timer = setTimeout(() => { if (isBuffering) setLoadingTooLong(true); }, 8000);
         return () => clearTimeout(timer);
     }, [isActive, isBuffering]);
 
-    // Status monitoring for stall
+    // ── Stall watchdog → fallback to MP4 ─────────────────────────
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !isActive) return;
 
         let fallbackAttempts = 0;
         const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
-        const MAX_FALLBACK = 2; // stop after level 2, don't go to 3/4/5
+        const MAX_FALLBACK = 2;
 
         const stallTimeout = setInterval(() => {
             if (video.readyState < 3) {
                 fallbackAttempts++;
-                console.log(`Video stalled — fallback level ${fallbackAttempts}`);
-                if (hlsRef.current) {
-                    hlsRef.current.destroy();
-                    hlsRef.current = null;
-                }
+                if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
 
                 if (fallbackAttempts >= MAX_FALLBACK) {
-                    // Final fallback: plain MP4 with Cloudinary optimization params
                     video.src = cloudinaryUrl.replace('/upload/', '/upload/q_auto,f_auto,br_1m/');
-                    console.log('Video: using optimized MP4 final fallback');
                     return;
                 }
-
                 video.src = fallbackAttempts === 1 ? optimizedMp4 : cloudinaryUrl;
                 video.load();
                 video.play().catch(() => { });
             }
-        }, 12000); // STALL_TIMEOUT_MS = 12000 was 6000
+        }, 12000);
 
         return () => clearInterval(stallTimeout);
     }, [isActive, cloudinaryUrl]);
 
+    // ─────────────────────────────────────────────────────────────
     return (
         <div
             onClick={handleVideoTap}
             style={{
-                position: 'absolute',
-                inset: 0,
-                cursor: 'pointer',
+                position: 'absolute', inset: 0, cursor: 'pointer',
                 background: '#000',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
                 overflow: 'hidden',
             }}
             className="video-slide"
         >
-            {/* Buffering spinner */}
+            {/* Buffering spinner + thumbnail placeholder */}
             {isBuffering && (
                 <div style={{
                     position: 'absolute', inset: 0, zIndex: 2,
@@ -279,7 +258,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                     <div style={{
-                        width: '40px', height: '40px', borderRadius: '50%',
+                        width: 40, height: 40, borderRadius: '50%',
                         border: '3px solid rgba(255,255,255,0.3)',
                         borderTop: '3px solid white',
                         animation: 'spin 0.75s linear infinite',
@@ -287,24 +266,22 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 </div>
             )}
 
-            {/* Loading Feedback */}
+            {/* Slow connection message */}
             {loadingTooLong && (
                 <div style={{
-                    position: 'absolute', bottom: '200px', left: '50%',
+                    position: 'absolute', bottom: 200, left: '50%',
                     transform: 'translateX(-50%)',
-                    background: 'rgba(0,0,0,0.7)', borderRadius: '20px',
+                    background: 'rgba(0,0,0,0.7)', borderRadius: 20,
                     padding: '8px 16px', zIndex: 15,
-                    color: 'white', fontSize: '13px', whiteSpace: 'nowrap',
+                    color: '#fff', fontSize: 13, whiteSpace: 'nowrap',
                 }}>
                     Slow connection — loading...
                 </div>
             )}
 
+            {/* Retry button */}
             {showRetry && (
-                <div style={{
-                    position: 'absolute', bottom: '160px', left: '50%',
-                    transform: 'translateX(-50%)', zIndex: 15,
-                }}>
+                <div style={{ position: 'absolute', bottom: 160, left: '50%', transform: 'translateX(-50%)', zIndex: 15 }}>
                     <button
                         onClick={() => {
                             const video = videoRef.current;
@@ -317,8 +294,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                             background: '#FF0069', border: 'none',
                             color: '#fff', padding: '10px 24px',
                             borderRadius: 999, fontSize: 13,
-                            fontFamily: 'Poppins', fontWeight: 700,
-                            cursor: 'pointer',
+                            fontFamily: 'Poppins', fontWeight: 700, cursor: 'pointer',
                         }}
                     >
                         ↺ Tap to retry
@@ -326,7 +302,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 </div>
             )}
 
-            {/* Pause indicator */}
+            {/* Pause / play icon flash */}
             {(isPaused || showTapIcon) && (
                 <div style={{
                     position: 'absolute', inset: 0, zIndex: 10,
@@ -334,67 +310,56 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                     pointerEvents: 'none',
                 }}>
                     <div style={{
-                        width: '60px', height: '60px', borderRadius: '50%',
+                        width: 60, height: 60, borderRadius: '50%',
                         background: 'rgba(0,0,0,0.55)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                         {isPaused
-                            ? <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '18px solid white', marginLeft: '4px' }} />
-                            : <div style={{ display: 'flex', gap: '5px' }}>
-                                <div style={{ width: '4px', height: '18px', background: 'white', borderRadius: '2px' }} />
-                                <div style={{ width: '4px', height: '18px', background: 'white', borderRadius: '2px' }} />
+                            ? <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '18px solid white', marginLeft: 4 }} />
+                            : <div style={{ display: 'flex', gap: 5 }}>
+                                <div style={{ width: 4, height: 18, background: 'white', borderRadius: 2 }} />
+                                <div style={{ width: 4, height: 18, background: 'white', borderRadius: 2 }} />
                             </div>
                         }
                     </div>
                 </div>
             )}
 
-            {/* User requested removal of "Tap to unmute" prompt and Mute button */}
-
+            {/* THE VIDEO — muted attr required for iOS autoplay; we unmute via JS after interaction */}
             <video
                 ref={videoRef}
                 poster={thumbnailUrl}
-                playsInline
-                muted
+                playsInline       // required on iOS — prevents fullscreen takeover
+                muted             // required for autoplay on iOS — JS unmutes after first touch
                 autoPlay
                 loop
                 preload={isActive || isAdjacent ? 'auto' : 'metadata'}
                 onCanPlay={() => setIsBuffering(false)}
                 onWaiting={() => setIsBuffering(true)}
                 onPlaying={() => setIsBuffering(false)}
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    background: '#000',
-                }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
             />
 
             {/* Offline banner */}
             {isOffline && (
                 <div style={{
-                    position: 'absolute', top: 12, left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(0,0,0,0.85)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: '#fff', padding: '6px 14px',
-                    borderRadius: 999, fontSize: 12,
-                    fontFamily: 'DM Sans', fontWeight: 600,
+                    position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+                    background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff', padding: '6px 14px', borderRadius: 999,
+                    fontSize: 12, fontFamily: 'DM Sans', fontWeight: 600,
                     zIndex: 30, whiteSpace: 'nowrap',
                 }}>
                     📶 You're offline
                 </div>
             )}
 
-            {/* Slow connection banner — auto hides after 5s */}
+            {/* Slow connection banner */}
             {isSlowConnection && isBuffering && (
                 <div style={{
-                    position: 'absolute', top: 12, left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(180,120,0,0.9)',
-                    color: '#fff', padding: '6px 14px',
-                    borderRadius: 999, fontSize: 12,
-                    fontFamily: 'DM Sans', fontWeight: 600,
+                    position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+                    background: 'rgba(180,120,0,0.9)', color: '#fff',
+                    padding: '6px 14px', borderRadius: 999,
+                    fontSize: 12, fontFamily: 'DM Sans', fontWeight: 600,
                     zIndex: 30, whiteSpace: 'nowrap',
                 }}>
                     ⚡ Slow connection — buffering
