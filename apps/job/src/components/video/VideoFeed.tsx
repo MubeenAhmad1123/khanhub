@@ -536,7 +536,7 @@ export function VideoFeed() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         paddingTop: '50px',
-                        paddingBottom: '60px',
+                        paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
                     }}
                 >
                     {isVisible ? (
@@ -630,7 +630,7 @@ export function VideoFeed() {
                             {/* End of feed label */}
                             {index === displayVideos.length - 1 && (
                                 <div style={{
-                                    position: 'absolute', bottom: '70px', left: '50%',
+                                    position: 'absolute', bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))', left: '50%',
                                     transform: 'translateX(-50%)',
                                     background: 'rgba(0,0,0,0.6)', color: '#fff',
                                     padding: '8px 16px', borderRadius: '20px',
