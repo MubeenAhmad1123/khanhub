@@ -272,9 +272,9 @@ export function VideoFeed() {
 
                 setVideosLoading(false);
             } catch (error: any) {
-            if (process.env.NODE_ENV === 'development') {
-                console.warn('[VideoFeed Videos] Fetch error:', error.message);
-            }
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn('[VideoFeed Videos] Fetch error:', error.message);
+                }
                 setVideosLoading(false);
             }
         };
@@ -734,7 +734,7 @@ export function VideoFeed() {
                     <div style={{
                         position: 'fixed',
                         right: 10,
-                        bottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
+                        bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
                         zIndex: 201,
                         display: 'flex',
                         flexDirection: 'column',
