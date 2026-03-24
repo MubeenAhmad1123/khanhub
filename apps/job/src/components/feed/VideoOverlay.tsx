@@ -33,12 +33,12 @@ interface VideoOverlayProps {
 export function VideoOverlay({ data }: VideoOverlayProps) {
     const router = useRouter();
     const overlay = data?.overlayData || {};
-    const title = overlay.title || data.title || '';
-    const field1 = overlay.field1 || data.field1;
-    const field2 = overlay.field2 || data.field2;
-    const location = overlay.location || data.location || data.city || '';
+    const title = overlay.title || data.title || 'No title added';
+    const field1 = overlay.field1 || data.field1 || 'No skills listed';
+    const field2 = overlay.field2 || data.field2 || 'No salary info';
+    const location = overlay.location || data.location || data.city || 'Location not added';
     const userPhoto = overlay.userPhoto || data.userPhoto;
-    const userName = overlay.userName || data.userName;
+    const userName = overlay.userName || data.userName || 'Anonymous';
     const userId = data?.userId;
 
     const roleLabel = resolveRoleLabel(data);
@@ -125,7 +125,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                             background: '#4169E1',
                             border: 'none',
                             borderRadius: '16px',
-                            padding: '10px 20px',
+                            padding: '7px 16px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
@@ -183,7 +183,7 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
                             }}
                             style={{ 
                                 color: '#fff', 
-                                fontSize: '14px', 
+                                fontSize: '13px', 
                                 fontWeight: 700, 
                                 fontFamily: 'Poppins',
                                 whiteSpace: 'nowrap',
@@ -247,41 +247,35 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
             </h3>
 
             {/* Fields */}
-            {field1 && (
-                <p style={{
-                    fontSize: 11,
-                    color: 'rgba(255,255,255,0.85)',
-                    margin: '0 0 2px',
-                    fontFamily: 'DM Sans',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: catConfig?.accent || 'var(--accent)', flexShrink: 0 }} />
-                    {field1}
-                </p>
-            )}
-            {field2 && (
-                <p style={{
-                    fontSize: 10,
-                    color: 'rgba(255,255,255,0.7)',
-                    margin: '0 0 6px',
-                    fontFamily: 'DM Sans',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
-                    {field2}
-                </p>
-            )}
+            <p style={{
+                fontSize: 11,
+                color: 'rgba(255,255,255,0.85)',
+                margin: '0 0 2px',
+                fontFamily: 'DM Sans',
+                display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: catConfig?.accent || '#FF0069', flexShrink: 0 }} />
+                {field1}
+            </p>
+            <p style={{
+                fontSize: 10,
+                color: 'rgba(255,255,255,0.7)',
+                margin: '0 0 6px',
+                fontFamily: 'DM Sans',
+                display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
+                {field2}
+            </p>
 
             {/* Location + Verified */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {location && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(255,255,255,0.8)' }}>
-                        <span style={{ fontSize: 10 }}>📍</span>
-                        <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            {location}
-                        </span>
-                    </div>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(255,255,255,0.8)' }}>
+                    <span style={{ fontSize: 10 }}>📍</span>
+                    <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        {location}
+                    </span>
+                </div>
                 {isVerified && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#00C853' }}>
                         <span style={{ fontSize: 10 }}>✓</span>

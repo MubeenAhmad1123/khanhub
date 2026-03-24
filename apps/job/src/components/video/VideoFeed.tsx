@@ -536,7 +536,7 @@ export function VideoFeed() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         paddingTop: '50px',
-                        paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+                        paddingBottom: '0px',
                     }}
                 >
                     {isVisible ? (
@@ -566,7 +566,7 @@ export function VideoFeed() {
                                 <div style={{
                                     position: 'absolute',
                                     right: 10,
-                                    bottom: 16,
+                                    bottom: 'calc(16px + 110px)',
                                     zIndex: 20,
                                 }}>
                                     <ActionButtons
@@ -589,48 +589,10 @@ export function VideoFeed() {
                                 </div>
                             </div>
 
-                            {/* INFO ROW — below video, in black space */}
-                            <div style={{
-                                width: '100%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                paddingTop: 8,
-                                paddingBottom: 8,
-                                flexShrink: 0,
-                                minHeight: 100,
-                            }}>
-                                {/* VideoOverlay — left side */}
-                                <div style={{ flex: 1, minWidth: 0, pointerEvents: 'auto' }}>
-                                    <VideoOverlay data={video} />
-                                </div>
-
-                                {/* Share + ThreeDots — right side */}
-                                <div style={{ flexShrink: 0, paddingRight: 12, paddingBottom: 8 }}>
-                                    <ActionButtons
-                                        mode="bar"
-                                        videoUserId={video.userId}
-                                        videoUserPhoto={video.userPhoto}
-                                        videoUserRole={video.userRole}
-                                        onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
-                                        onNotInterested={() => {
-                                            if (index < displayVideos.length - 1) {
-                                                videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
-                                            }
-                                        }}
-                                        connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
-                                        likes={video.likes || 0}
-                                        saves={video.saves || 0}
-                                        shares={video.shares || 0}
-                                        videoId={video.id}
-                                    />
-                                </div>
-                            </div>
-
                             {/* End of feed label */}
                             {index === displayVideos.length - 1 && (
                                 <div style={{
-                                    position: 'absolute', bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))', left: '50%',
+                                    position: 'absolute', bottom: 'calc(180px + env(safe-area-inset-bottom, 0px))', left: '50%',
                                     transform: 'translateX(-50%)',
                                     background: 'rgba(0,0,0,0.6)', color: '#fff',
                                     padding: '8px 16px', borderRadius: '20px',
@@ -766,6 +728,51 @@ export function VideoFeed() {
                         renderedVideos
                     )}
                 </div>
+
+                {/* ── FIXED INFO BAR — always above bottom nav, never scrolls ── */}
+                {displayVideos[activeIndex] && !displayVideos[activeIndex].isPlaceholder && (
+                    <div style={{
+                        position: 'fixed',
+                        left: 0,
+                        right: 0,
+                        bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+                        zIndex: 200,
+                        maxWidth: '480px',
+                        margin: '0 auto',
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'space-between',
+                        paddingBottom: '10px',
+                        pointerEvents: 'none',
+                    }}>
+                        {/* Left: VideoOverlay */}
+                        <div style={{ flex: 1, minWidth: 0, pointerEvents: 'auto' }}>
+                            <VideoOverlay data={displayVideos[activeIndex]} />
+                        </div>
+                        {/* Right: Share + Three dots */}
+                        <div style={{ flexShrink: 0, paddingRight: 12, paddingBottom: 8, pointerEvents: 'auto' }}>
+                            <ActionButtons
+                                mode="bar"
+                                videoUserId={displayVideos[activeIndex].userId}
+                                videoUserPhoto={displayVideos[activeIndex].userPhoto}
+                                videoUserRole={displayVideos[activeIndex].userRole}
+                                onConnect={() => router.push(`/profile/${displayVideos[activeIndex].userRole || 'user'}/${displayVideos[activeIndex].userId}`)}
+                                onNotInterested={() => {
+                                    const next = activeIndex + 1;
+                                    if (next < displayVideos.length) {
+                                        videoRefs.current[next]?.scrollIntoView({ behavior: 'smooth' });
+                                    }
+                                }}
+                                connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
+                                likes={displayVideos[activeIndex].likes || 0}
+                                saves={displayVideos[activeIndex].saves || 0}
+                                shares={displayVideos[activeIndex].shares || 0}
+                                videoId={displayVideos[activeIndex].id}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Only show wall if user is NOT logged in (both profile and firebase auth) */}
