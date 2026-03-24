@@ -26,7 +26,7 @@ interface ActionButtonsProps {
     onConnect?: () => void;
     onNotInterested?: () => void;
     connectLabel?: string;
-    mode?: 'video' | 'bar';
+    mode?: 'video' | 'bar' | 'like-only' | 'save-only' | 'share-only' | 'dots-only';
 }
 
 // Format numbers: 1200 → 1.2K
@@ -271,6 +271,93 @@ export function ActionButtons({
         }
         showToast('🚩 Thank you. Your report has been submitted.');
     };
+
+    if (mode === 'like-only') {
+        return (
+            <div onClick={handleLike} style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 4,
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+            }}>
+                <Heart
+                    size={26}
+                    fill={liked ? '#FF0069' : 'none'}
+                    stroke={liked ? '#FF0069' : '#fff'}
+                    strokeWidth={liked ? 0 : 2.5}
+                    style={{ filter: ICON_SHADOW }}
+                />
+                <span style={{ fontSize: 12, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
+                    {fmt(likeCount)}
+                </span>
+            </div>
+        );
+    }
+
+    if (mode === 'save-only') {
+        return (
+            <div onClick={handleSave} style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 4,
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+            }}>
+                <Bookmark
+                    size={26}
+                    fill={saved ? '#fff' : 'none'}
+                    stroke="#fff"
+                    strokeWidth={2.5}
+                    style={{ filter: ICON_SHADOW }}
+                />
+                <span style={{ fontSize: 12, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
+                    {fmt(saveCount)}
+                </span>
+            </div>
+        );
+    }
+
+    if (mode === 'share-only') {
+        return (
+            <div onClick={() => setShowShareMenu(true)} style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 4,
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+            }}>
+                <Send
+                    size={26}
+                    stroke="#fff"
+                    strokeWidth={2.5}
+                    style={{ filter: ICON_SHADOW }}
+                />
+                <span style={{ fontSize: 12, color: '#fff', fontWeight: 600, textShadow: TEXT_SHADOW }}>
+                    {fmt(shares)}
+                </span>
+            </div>
+        );
+    }
+
+    if (mode === 'dots-only') {
+        return (
+            <div onClick={() => setShowMenu(true)} style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 4,
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+            }}>
+                <div style={{
+                    background: 'rgba(0,0,0,0.45)',
+                    padding: 8,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                    <MoreVertical size={26} stroke="#fff" strokeWidth={2.5} />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>

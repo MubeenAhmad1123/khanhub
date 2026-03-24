@@ -562,31 +562,7 @@ export function VideoFeed() {
                                     userHasInteracted={userHasInteracted}
                                 />
 
-                                {/* Avatar + Like + Save — floating right side of video */}
-                                <div style={{
-                                    position: 'absolute',
-                                    right: 10,
-                                    bottom: 'calc(16px + 110px)',
-                                    zIndex: 20,
-                                }}>
-                                    <ActionButtons
-                                        mode="video"
-                                        videoUserId={video.userId}
-                                        videoUserPhoto={video.userPhoto}
-                                        videoUserRole={video.userRole}
-                                        onConnect={() => router.push(`/profile/${video.userRole || 'user'}/${video.userId}`)}
-                                        onNotInterested={() => {
-                                            if (index < displayVideos.length - 1) {
-                                                videoRefs.current[index + 1]?.scrollIntoView({ behavior: 'smooth' });
-                                            }
-                                        }}
-                                        connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
-                                        likes={video.likes || 0}
-                                        saves={video.saves || 0}
-                                        shares={video.shares || 0}
-                                        videoId={video.id}
-                                    />
-                                </div>
+                                {/* Avatar + Like + Save — moved to fixed column */}
                             </div>
 
                             {/* End of feed label */}
@@ -750,27 +726,90 @@ export function VideoFeed() {
                         <div style={{ flex: 1, minWidth: 0, pointerEvents: 'auto' }}>
                             <VideoOverlay data={displayVideos[activeIndex]} />
                         </div>
-                        {/* Right: Share + Three dots */}
-                        <div style={{ flexShrink: 0, paddingRight: 12, paddingBottom: 8, pointerEvents: 'auto' }}>
-                            <ActionButtons
-                                mode="bar"
-                                videoUserId={displayVideos[activeIndex].userId}
-                                videoUserPhoto={displayVideos[activeIndex].userPhoto}
-                                videoUserRole={displayVideos[activeIndex].userRole}
-                                onConnect={() => router.push(`/profile/${displayVideos[activeIndex].userRole || 'user'}/${displayVideos[activeIndex].userId}`)}
-                                onNotInterested={() => {
-                                    const next = activeIndex + 1;
-                                    if (next < displayVideos.length) {
-                                        videoRefs.current[next]?.scrollIntoView({ behavior: 'smooth' });
-                                    }
-                                }}
-                                connectLabel={activeCategory === 'jobs' ? (activeRole === 'provider' ? 'Hire 🤝' : 'Apply ✋') : 'Connect'}
-                                likes={displayVideos[activeIndex].likes || 0}
-                                saves={displayVideos[activeIndex].saves || 0}
-                                shares={displayVideos[activeIndex].shares || 0}
-                                videoId={displayVideos[activeIndex].id}
+                    </div>
+                )}
+
+                {/* ── TOP 3 BUTTONS: Avatar + Like + Save (above info bar) ── */}
+                {displayVideos[activeIndex] && !displayVideos[activeIndex].isPlaceholder && (
+                    <div style={{
+                        position: 'fixed',
+                        right: 10,
+                        bottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
+                        zIndex: 201,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 20,
+                    }}>
+                        {/* Avatar */}
+                        <div
+                            onClick={() => router.push(`/profile/${displayVideos[activeIndex].userRole || 'user'}/${displayVideos[activeIndex].userId}`)}
+                            style={{ position: 'relative', cursor: 'pointer' }}
+                        >
+                            <img
+                                src={displayVideos[activeIndex].userPhoto || '/default-avatar.svg'}
+                                alt="profile"
+                                style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid #fff', objectFit: 'cover' }}
                             />
+                            <div style={{
+                                position: 'absolute', bottom: -6, left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: 18, height: 18, borderRadius: '50%',
+                                background: '#FF0069',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 12, color: '#fff', fontWeight: 700,
+                            }}>+</div>
                         </div>
+
+                        {/* Like */}
+                        <ActionButtons
+                            mode="like-only"
+                            videoId={displayVideos[activeIndex].id}
+                            videoUserId={displayVideos[activeIndex].userId}
+                            likes={displayVideos[activeIndex].likes || 0}
+                        />
+
+                        {/* Save */}
+                        <ActionButtons
+                            mode="save-only"
+                            videoId={displayVideos[activeIndex].id}
+                            videoUserId={displayVideos[activeIndex].userId}
+                            saves={displayVideos[activeIndex].saves || 0}
+                        />
+                    </div>
+                )}
+
+                {/* ── BOTTOM 2 BUTTONS: Share + Three Dots (right side of info bar zone) ── */}
+                {displayVideos[activeIndex] && !displayVideos[activeIndex].isPlaceholder && (
+                    <div style={{
+                        position: 'fixed',
+                        right: 10,
+                        bottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 20px)',
+                        zIndex: 201,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 20,
+                    }}>
+                        {/* Share */}
+                        <ActionButtons
+                            mode="share-only"
+                            videoId={displayVideos[activeIndex].id}
+                            shares={displayVideos[activeIndex].shares || 0}
+                        />
+
+                        {/* Three Dots */}
+                        <ActionButtons
+                            mode="dots-only"
+                            videoId={displayVideos[activeIndex].id}
+                            videoUserId={displayVideos[activeIndex].userId}
+                            onNotInterested={() => {
+                                const next = activeIndex + 1;
+                                if (next < displayVideos.length) {
+                                    videoRefs.current[next]?.scrollIntoView({ behavior: 'smooth' });
+                                }
+                            }}
+                        />
                     </div>
                 )}
             </div>
