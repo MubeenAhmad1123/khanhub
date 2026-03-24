@@ -331,7 +331,7 @@ export function VideoFeed() {
                 },
                 {
                     root: containerRef.current,
-                    threshold: 0.5,        // 50% visible = active
+                    threshold: 0.8,        // video must be 80% visible before it becomes active
                     rootMargin: '0px',
                 }
             );
@@ -369,12 +369,12 @@ export function VideoFeed() {
             if (e.key === 'ArrowDown') {
                 const next = activeIndex + 1;
                 if (next < displayVideos.length) {
-                    videoRefs.current[next]?.scrollIntoView({ behavior: 'smooth' });
+                    videoRefs.current[next]?.scrollIntoView({ behavior: 'instant' });
                 }
             } else if (e.key === 'ArrowUp') {
                 const prev = activeIndex - 1;
                 if (prev >= 0) {
-                    videoRefs.current[prev]?.scrollIntoView({ behavior: 'smooth' });
+                    videoRefs.current[prev]?.scrollIntoView({ behavior: 'instant' });
                 }
             }
         };
@@ -592,8 +592,8 @@ export function VideoFeed() {
 
             {/* Desktop UI Arrows (Side) */}
             <div className="hidden md:flex flex-col justify-center gap-4 fixed left-8 z-50">
-                <button onClick={() => videoRefs.current[activeIndex - 1]?.scrollIntoView({ behavior: 'smooth' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↑</button>
-                <button onClick={() => videoRefs.current[activeIndex + 1]?.scrollIntoView({ behavior: 'smooth' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↓</button>
+                <button onClick={() => videoRefs.current[activeIndex - 1]?.scrollIntoView({ behavior: 'instant' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↑</button>
+                <button onClick={() => videoRefs.current[activeIndex + 1]?.scrollIntoView({ behavior: 'instant' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↓</button>
             </div>
 
             <div style={{
@@ -806,7 +806,7 @@ export function VideoFeed() {
                             onNotInterested={() => {
                                 const next = activeIndex + 1;
                                 if (next < displayVideos.length) {
-                                    videoRefs.current[next]?.scrollIntoView({ behavior: 'smooth' });
+                                    videoRefs.current[next]?.scrollIntoView({ behavior: 'instant' });
                                 }
                             }}
                         />

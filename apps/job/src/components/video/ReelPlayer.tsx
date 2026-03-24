@@ -123,12 +123,12 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                     return;
                 }
 
-                setTimeout(() => {
-                    if (!cancelled && !userPausedRef.current && videoRef.current) {
-                        videoRef.current.muted = false;
-                        setIsMuted(false);
-                    }
-                }, 150);
+                // Only unmute if STILL active and not cancelled — prevents race condition
+                // where a slow play() resolves after user has scrolled to next video
+                if (userHasInteracted && !cancelled && isActive) {
+                    video.muted = false;
+                    setIsMuted(false);
+                }
 
                 setIsPaused(false);
 
@@ -148,7 +148,13 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 attemptPlay();
             }
         } else {
-            try { video.pause(); } catch (_) { }
+            // Immediately mute AND pause — prevents in-flight play() promises
+            // from producing sound after user scrolls away
+            try {
+                video.muted = true;
+                video.pause();
+            } catch (_) { }
+            setIsMuted(true);
             if (!isAdjacent) video.currentTime = 0;
             if (hlsRef.current) hlsRef.current.stopLoad();
             if (!isAdjacent) setIsBuffering(true);
@@ -209,6 +215,15 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
             }
         }
     }, [cloudinaryUrl, isActive, isAdjacent]);
+ 
+    useEffect(() => {
+        if (!userHasInteracted) return;
+        if (!isActive) return; // ONLY unmute if this video is currently active
+        const video = videoRef.current;
+        if (!video) return;
+        video.muted = false;
+        setIsMuted(false);
+    }, [userHasInteracted, isActive]);
 
     // Loading feedback
     useEffect(() => {
