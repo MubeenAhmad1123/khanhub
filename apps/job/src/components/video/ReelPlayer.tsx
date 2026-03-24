@@ -148,7 +148,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 attemptPlay();
             }
         } else {
-            try { video.pause(); } catch (_) {}
+            try { video.pause(); } catch (_) { }
             if (!isAdjacent) video.currentTime = 0;
             if (hlsRef.current) hlsRef.current.stopLoad();
             if (!isAdjacent) setIsBuffering(true);
@@ -239,14 +239,14 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                     hlsRef.current.destroy();
                     hlsRef.current = null;
                 }
-                
+
                 if (fallbackAttempts >= MAX_FALLBACK) {
                     // Final fallback: plain MP4 with Cloudinary optimization params
                     video.src = cloudinaryUrl.replace('/upload/', '/upload/q_auto,f_auto,br_1m/');
                     console.log('Video: using optimized MP4 final fallback');
                     return;
                 }
-                
+
                 video.src = fallbackAttempts === 1 ? optimizedMp4 : cloudinaryUrl;
                 video.load();
                 video.play().catch(() => { });
@@ -259,9 +259,9 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
     return (
         <div
             onClick={handleVideoTap}
-            style={{ 
-                position: 'absolute', 
-                inset: 0, 
+            style={{
+                position: 'absolute',
+                inset: 0,
                 cursor: 'pointer',
                 background: '#000',
                 display: 'flex',
