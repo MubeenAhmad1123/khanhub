@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { createPatient } from '@/lib/rehab/patients';
 
 export default function NewPatientPage() {
   const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -14,6 +16,14 @@ export default function NewPatientPage() {
     packageAmount: '',
     diagnosis: ''
   });
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
+  }, [user, sessionLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +45,8 @@ export default function NewPatientPage() {
       setLoading(false);
     }
   };
+
+  if (sessionLoading) return <div className="p-20 text-center animate-pulse">Initializing...</div>;
 
   return (
     <div className="max-w-3xl mx-auto pb-20">

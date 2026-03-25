@@ -2,15 +2,17 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { getPatient, getPatientFeeRecord, getPatientCanteen, getPatientVideos } from '@/lib/rehab/patients';
 import PatientCard from '@/components/rehab/PatientCard';
 import FeeTracker from '@/components/rehab/FeeTracker';
 import CanteenWallet from '@/components/rehab/CanteenWallet';
-import type { Patient, FeeRecord, CanteenRecord, RehabUser } from '@/types/rehab';
+import type { Patient, FeeRecord, CanteenRecord } from '@/types/rehab';
 
 export default function FamilyDashboardPage() {
   const { patientId } = useParams();
   const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [fee, setFee] = useState<FeeRecord | null>(null);
   const [canteen, setCanteen] = useState<CanteenRecord | null>(null);
@@ -18,16 +20,13 @@ export default function FamilyDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const raw = localStorage.getItem('rehab_session');
-      if (!raw) return;
-      
-      const user = JSON.parse(raw) as RehabUser;
-      if (user.role !== 'family' && user.role !== 'admin' && user.role !== 'superadmin') {
-        router.push('/departments/rehab/login');
-        return;
-      }
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'family' && user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
 
+    const fetchData = async () => {
       const currentMonth = new Date().toISOString().slice(0, 7); // "2025-01"
       
       try {
@@ -50,9 +49,9 @@ export default function FamilyDashboardPage() {
     };
 
     fetchData();
-  }, [patientId, router]);
+  }, [patientId, router, user, sessionLoading]);
 
-  if (loading) return <div className="space-y-6"><div className="h-32 bg-gray-100 rounded-3xl animate-pulse" /><div className="grid grid-cols-2 gap-6"><div className="h-64 bg-gray-100 rounded-3xl animate-pulse" /><div className="h-64 bg-gray-100 rounded-3xl animate-pulse" /></div></div>;
+  if (sessionLoading || loading) return <div className="space-y-6"><div className="h-32 bg-gray-100 rounded-3xl animate-pulse" /><div className="grid grid-cols-2 gap-6"><div className="h-64 bg-gray-100 rounded-3xl animate-pulse" /><div className="h-64 bg-gray-100 rounded-3xl animate-pulse" /></div></div>;
   if (!patient) return <div className="p-12 text-center text-gray-400 font-bold uppercase tracking-widest">Patient not found</div>;
 
   return (
@@ -89,7 +88,6 @@ export default function FamilyDashboardPage() {
             {videos.map((video) => (
               <div key={video.id} className="group relative bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all">
                 <div className="aspect-video bg-gray-900 relative">
-                  {/* Thumbnail logic would go here */}
                   <img src={video.thumbnailUrl || '/api/placeholder/400/225'} alt="video thumbnail" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <button className="w-16 h-16 bg-[#1D9E75] rounded-full flex items-center justify-center text-white shadow-2xl scale-90 group-hover:scale-100 transition-transform">

@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { getTransactionsByDateRange } from '@/lib/rehab/transactions';
 import type { Transaction } from '@/types/rehab';
 
 export default function AdminFinancePage() {
+  const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState({
@@ -25,11 +29,18 @@ export default function AdminFinancePage() {
   };
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [router, user, sessionLoading]);
 
   const totalIncome = transactions.filter(t => t.type === 'income' && t.status === 'approved').reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense' && t.status === 'approved').reduce((sum, t) => sum + t.amount, 0);
+
+  if (sessionLoading || loading) return <div className="p-20 text-center animate-pulse">Synchronizing Ledger...</div>;
 
   return (
     <div className="space-y-10 pb-20">

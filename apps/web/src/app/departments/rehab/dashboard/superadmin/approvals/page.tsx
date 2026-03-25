@@ -1,25 +1,18 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { getPendingTransactions, approveTransaction, rejectTransaction } from '@/lib/rehab/transactions';
-import type { Transaction, RehabUser } from '@/types/rehab';
+import type { Transaction } from '@/types/rehab';
 
 export default function SuperAdminApprovalsPage() {
+  const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [pending, setPending] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [adminId, setAdminId] = useState('');
 
   const fetchData = async () => {
-    const raw = localStorage.getItem('rehab_session');
-    if (raw) {
-      const user = JSON.parse(raw) as RehabUser;
-      if (user.role !== 'superadmin') {
-        window.location.href = '/departments/rehab/login';
-        return;
-      }
-      setAdminId(user.uid);
-    }
-
     try {
       const data = await getPendingTransactions();
       setPending(data);
@@ -31,15 +24,21 @@ export default function SuperAdminApprovalsPage() {
   };
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || user.role !== 'superadmin') {
+      router.push('/departments/rehab/login');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [router, user, sessionLoading]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
+    if (!user) return;
     try {
       if (action === 'approve') {
-        await approveTransaction(id, adminId);
+        await approveTransaction(id, user.uid);
       } else {
-        await rejectTransaction(id, adminId);
+        await rejectTransaction(id, user.uid);
       }
       fetchData();
     } catch (err) {
@@ -47,7 +46,7 @@ export default function SuperAdminApprovalsPage() {
     }
   };
 
-  if (loading) return <div className="space-y-8 animate-pulse"><div className="h-16 bg-gray-100 rounded-2xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
+  if (sessionLoading || loading) return <div className="p-20 text-center animate-pulse">Syncing Approval Queue...</div>;
 
   return (
     <div className="space-y-10 pb-20">
@@ -58,7 +57,7 @@ export default function SuperAdminApprovalsPage() {
         </div>
         <div className="bg-orange-50 px-6 py-3 rounded-2xl border border-orange-100 font-black text-[#f97316] text-sm uppercase tracking-widest flex items-center gap-3">
           <span className="w-6 h-6 bg-orange-200 rounded-lg flex items-center justify-center text-xs">!</span>
-          {pending.length} Pending Requets
+          {pending.length} Pending Requests
         </div>
       </div>
 

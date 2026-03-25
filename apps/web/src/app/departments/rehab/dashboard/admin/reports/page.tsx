@@ -1,9 +1,24 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import ReportGenerator from '@/components/rehab/ReportGenerator';
 
 export default function AdminReportsPage() {
+  const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
+  }, [user, sessionLoading, router]);
+
+  if (sessionLoading) return <div className="p-20 text-center animate-pulse">Initializing Analytics Hub...</div>;
+
   return (
     <div className="space-y-10 pb-20">
       <div className="flex justify-between items-end">

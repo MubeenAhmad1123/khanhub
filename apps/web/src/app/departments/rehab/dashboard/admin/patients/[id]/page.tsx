@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { getPatient, getPatientFeeRecord, getPatientCanteen, getPatientVideos, updatePatient } from '@/lib/rehab/patients';
 import PatientCard from '@/components/rehab/PatientCard';
 import FeeTracker from '@/components/rehab/FeeTracker';
@@ -13,6 +14,7 @@ import { db } from '@/lib/firebase';
 export default function AdminPatientDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [fee, setFee] = useState<FeeRecord | null>(null);
   const [canteen, setCanteen] = useState<CanteenRecord | null>(null);
@@ -41,8 +43,13 @@ export default function AdminPatientDetailPage() {
   };
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
     fetchData();
-  }, [id]);
+  }, [id, user, sessionLoading, router]);
 
   const handleUploadVideo = async () => {
     const url = prompt('Enter video URL:');
@@ -63,7 +70,7 @@ export default function AdminPatientDetailPage() {
     }
   };
 
-  if (loading) return <div className="space-y-6 animate-pulse"><div className="h-32 bg-gray-100 rounded-3xl" /><div className="grid grid-cols-2 gap-6"><div className="h-64 bg-gray-100 rounded-3xl" /><div className="h-64 bg-gray-100 rounded-3xl" /></div></div>;
+  if (sessionLoading || loading) return <div className="space-y-6 animate-pulse"><div className="h-32 bg-gray-100 rounded-3xl" /><div className="grid grid-cols-2 gap-6"><div className="h-64 bg-gray-100 rounded-3xl" /><div className="h-64 bg-gray-100 rounded-3xl" /></div></div>;
   if (!patient) return <div className="p-12 text-center text-gray-400 font-bold uppercase tracking-widest">Patient not found</div>;
 
   return (
@@ -95,7 +102,6 @@ export default function AdminPatientDetailPage() {
              Finance & Fees
           </h2>
           <FeeTracker feeRecord={fee} />
-          {/* List of all historical fees could go here */}
         </section>
 
         <section className="space-y-6">

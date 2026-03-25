@@ -1,24 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { overrideAttendance } from '@/lib/rehab/attendance';
-import type { StaffMember, AttendanceRecord, RehabUser } from '@/types/rehab';
+import type { StaffMember, AttendanceRecord } from '@/types/rehab';
 
 export default function AdminStaffPage() {
+  const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord>>({});
   const [loading, setLoading] = useState(true);
-  const [adminId, setAdminId] = useState('');
 
   const fetchData = async () => {
-    const raw = localStorage.getItem('rehab_session');
-    if (raw) {
-      const user = JSON.parse(raw) as RehabUser;
-      setAdminId(user.uid);
-    }
-
     try {
       const staffSnap = await getDocs(collection(db, 'rehab_staff'));
       const staffList = staffSnap.docs.map(doc => ({ 
@@ -46,20 +43,26 @@ export default function AdminStaffPage() {
   };
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [router, user, sessionLoading]);
 
   const handleOverride = async (staffId: string, status: 'present' | 'absent' | 'leave') => {
+    if (!user) return;
     const today = new Date().toISOString().split('T')[0];
     try {
-      await overrideAttendance(staffId, today, status, adminId);
+      await overrideAttendance(staffId, today, status, user.uid);
       fetchData();
     } catch (err) {
       alert('Error overriding attendance');
     }
   };
 
-  if (loading) return <div className="space-y-8 animate-pulse"><div className="h-16 bg-gray-100 rounded-2xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
+  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="h-16 bg-gray-100 rounded-2xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
 
   return (
     <div className="space-y-10 pb-20">

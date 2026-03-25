@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isRehabUser() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid));
+    }
+    function getRehabRole() {
+      return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.role;
+    }
+    function isRole(role) {
+      return isRehabUser() && getRehabRole() == role;
+    }
+    function isAdminOrAbove() {
+      return isRehabUser() && (getRehabRole() == 'admin' || getRehabRole() == 'superadmin');
+    }
+    function isSuperAdmin() {
+      return isRole('superadmin');
+    }
+
+    // Setup meta — only readable, not writable from client after setup
+    match /rehab_meta/{doc} {
+      allow read: if true;
+      allow write: if false; // only server action can write this
+    }
+
+    // User profiles
+    match /rehab_users/{uid} {
+      allow read: if request.auth.uid == uid || isAdminOrAbove();
+      allow write: if false; // only server action creates/updates users
+    }
+
+    // Patients
+    match /rehab_patients/{patientId} {
+      allow read: if isAdminOrAbove() ||
+        (isRole('family') &&
+         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId == patientId);
+      allow create, update: if isAdminOrAbove();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Fee records
+    match /rehab_fees/{docId} {
+      allow read: if isAdminOrAbove() ||
+        (isRole('family') &&
+         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId == resource.data.patientId);
+      allow write: if isRole('cashier') || isSuperAdmin();
+    }
+
+    // Canteen records
+    match /rehab_canteen/{docId} {
+      allow read: if isAdminOrAbove() ||
+        (isRole('family') &&
+         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId == resource.data.patientId);
+      allow write: if isRole('cashier') || isSuperAdmin();
+    }
+
+    // Transactions
+    match /rehab_transactions/{docId} {
+      allow read: if isAdminOrAbove() || isRole('cashier');
+      allow create: if isRole('cashier') || isSuperAdmin();
+      allow update: if isSuperAdmin(); // only superadmin approves/rejects
+      allow delete: if false;
+    }
+
+    // Staff profiles
+    match /rehab_staff/{staffId} {
+      allow read: if isAdminOrAbove() ||
+        (isRole('staff') &&
+         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.staffId == staffId);
+      allow write: if isAdminOrAbove();
+    }
+
+    // Attendance
+    match /rehab_attendance/{docId} {
+      allow read: if isAdminOrAbove() ||
+        (isRole('staff') &&
+         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.staffId == resource.data.staffId);
+      allow create: if isRole('staff') || isAdminOrAbove();
+      allow update: if isAdminOrAbove(); // only admin can override
+      allow delete: if false;
+    }
+
+    // Videos
+    match /rehab_videos/{docId} {
+      allow read: if isAdminOrAbove() ||
+        (isRole('family') &&
+         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId == resource.data.patientId);
+      allow write: if isAdminOrAbove();
+    }
+  }
+}

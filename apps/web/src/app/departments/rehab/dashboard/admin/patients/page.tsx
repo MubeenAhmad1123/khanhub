@@ -2,15 +2,25 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { getPatients } from '@/lib/rehab/patients';
 import type { Patient } from '@/types/rehab';
 
 export default function AdminPatientsPage() {
+  const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
+
     const fetchPatients = async () => {
       try {
         const data = await getPatients();
@@ -22,11 +32,11 @@ export default function AdminPatientsPage() {
       }
     };
     fetchPatients();
-  }, []);
+  }, [router, user, sessionLoading]);
 
   const filtered = patients.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  if (loading) return <div className="space-y-8 animate-pulse"><div className="h-16 bg-gray-100 rounded-2xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
+  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="h-16 bg-gray-100 rounded-2xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
 
   return (
     <div className="space-y-8 pb-12">

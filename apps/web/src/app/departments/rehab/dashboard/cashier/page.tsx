@@ -2,27 +2,19 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { getTodayTransactions } from '@/lib/rehab/transactions';
 import TransactionForm from '@/components/rehab/TransactionForm';
-import type { Transaction, RehabUser } from '@/types/rehab';
+import type { Transaction } from '@/types/rehab';
 
 export default function CashierDashboardPage() {
   const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<RehabUser | null>(null);
 
   const fetchData = async () => {
-    const raw = localStorage.getItem('rehab_session');
-    if (!raw) return;
-    const user = JSON.parse(raw) as RehabUser;
-    setSession(user);
-
-    if (user.role !== 'cashier' && user.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
-      return;
-    }
-
+    if (!user) return;
     try {
       const data = await getTodayTransactions(user.uid);
       setTransactions(data);
@@ -34,13 +26,18 @@ export default function CashierDashboardPage() {
   };
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'cashier' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
     fetchData();
-  }, [router]);
+  }, [router, user, sessionLoading]);
 
   const todayIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const todayExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
-  if (loading) return <div className="space-y-8 animate-pulse"><div className="h-48 bg-gray-100 rounded-3xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
+  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="h-48 bg-gray-100 rounded-3xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
 
   return (
     <div className="space-y-10 pb-12">
@@ -63,7 +60,7 @@ export default function CashierDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
         <div className="lg:col-span-2">
-          {session && <TransactionForm cashierId={session.uid} onSuccess={fetchData} />}
+          {user && <TransactionForm cashierId={user.uid} onSuccess={fetchData} />}
         </div>
 
         <div className="lg:col-span-3 space-y-6">

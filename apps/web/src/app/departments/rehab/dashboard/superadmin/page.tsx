@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
-import type { RehabUser } from '@/types/rehab';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 
 export default function SuperAdminDashboardPage() {
   const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [stats, setStats] = useState({
     pendingApprovals: 0,
     activeUsers: 0,
@@ -17,15 +18,13 @@ export default function SuperAdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const raw = localStorage.getItem('rehab_session');
-      if (!raw) return;
-      const user = JSON.parse(raw) as RehabUser;
-      if (user.role !== 'superadmin') {
-        router.push('/departments/rehab/login');
-        return;
-      }
+    if (sessionLoading) return;
+    if (!user || user.role !== 'superadmin') {
+      router.push('/departments/rehab/login');
+      return;
+    }
 
+    const fetchData = async () => {
       try {
         const [pendingSnap, usersSnap, transSnap] = await Promise.all([
           getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
@@ -48,9 +47,9 @@ export default function SuperAdminDashboardPage() {
     };
 
     fetchData();
-  }, [router]);
+  }, [router, user, sessionLoading]);
 
-  if (loading) return <div className="space-y-8 animate-pulse"><div className="grid grid-cols-3 gap-6"><div className="h-48 bg-gray-100 rounded-[2.5rem]" /><div className="h-48 bg-gray-100 rounded-[2.5rem]" /><div className="h-48 bg-gray-100 rounded-[2.5rem]" /></div></div>;
+  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="grid grid-cols-3 gap-6"><div className="h-48 bg-gray-100 rounded-[2.5rem]" /><div className="h-48 bg-gray-100 rounded-[2.5rem]" /><div className="h-48 bg-gray-100 rounded-[2.5rem]" /></div></div>;
 
   return (
     <div className="space-y-12 pb-20">
@@ -83,6 +82,7 @@ export default function SuperAdminDashboardPage() {
         <h2 className="text-2xl font-black text-gray-900">Administrative Hubs</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           <HubCard title="Staff Roster" icon="⚕️" href="/departments/rehab/dashboard/admin/staff" />
+          <HubCard title="User Access" icon="🔐" href="/departments/rehab/dashboard/superadmin/users" />
           <HubCard title="Patient Registry" icon="🏥" href="/departments/rehab/dashboard/admin/patients" />
           <HubCard title="Finance Logs" icon="📉" href="/departments/rehab/dashboard/admin/finance" />
           <HubCard title="Global Reports" icon="📑" href="/departments/rehab/dashboard/superadmin/reports" />
@@ -94,7 +94,7 @@ export default function SuperAdminDashboardPage() {
 
 function HubCard({ title, icon, href }: { title: string, icon: string, href: string }) {
   return (
-    <Link href={href} className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 hover:bg-white hover:shadow-xl hover:shadow-gray-100 transition-all text-center">
+    <Link href={href} className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 hover:bg-white hover:shadow-xl hover:shadow-gray-200/50 transition-all text-center">
       <div className="text-3xl mb-3">{icon}</div>
       <p className="font-black text-gray-800 text-sm uppercase tracking-widest leading-tight">{title}</p>
     </Link>

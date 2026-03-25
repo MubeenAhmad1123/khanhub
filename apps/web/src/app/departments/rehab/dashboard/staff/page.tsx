@@ -2,33 +2,29 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { getMonthlyAttendance } from '@/lib/rehab/attendance';
 import AttendanceMarker from '@/components/rehab/AttendanceMarker';
-import type { StaffMember, AttendanceRecord, RehabUser } from '@/types/rehab';
+import type { StaffMember, AttendanceRecord } from '@/types/rehab';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function StaffDashboardPage() {
   const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [staff, setStaff] = useState<StaffMember | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<RehabUser | null>(null);
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'staff' && user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
+
     const fetchData = async () => {
-      const raw = localStorage.getItem('rehab_session');
-      if (!raw) return;
-      const user = JSON.parse(raw) as RehabUser;
-      setSession(user);
-
-      if (user.role !== 'staff' && user.role !== 'admin' && user.role !== 'superadmin') {
-        router.push('/departments/rehab/login');
-        return;
-      }
-
       try {
-        // Fetch staff profile from rehab_staff (using customId or uid as link)
         const snap = await getDoc(doc(db, 'rehab_staff', user.uid));
         if (snap.exists()) {
           const data = snap.data();
@@ -50,9 +46,9 @@ export default function StaffDashboardPage() {
     };
 
     fetchData();
-  }, [router]);
+  }, [router, user, sessionLoading]);
 
-  if (loading) return <div className="space-y-8 animate-pulse"><div className="h-48 bg-gray-100 rounded-3xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
+  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="h-48 bg-gray-100 rounded-3xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
 
   return (
     <div className="space-y-8 pb-12">
@@ -89,14 +85,14 @@ export default function StaffDashboardPage() {
                 </div>
                 <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">System ID</p>
-                    <p className="text-sm font-bold text-gray-700">{session?.customId}</p>
+                    <p className="text-sm font-bold text-gray-700">{user?.customId}</p>
                 </div>
             </div>
           </div>
         </div>
       )}
 
-      {session && <AttendanceMarker staffId={session.uid} />}
+      {user && <AttendanceMarker staffId={user.uid} />}
 
       <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
         <h2 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
@@ -105,7 +101,6 @@ export default function StaffDashboardPage() {
         </h2>
         
         <div className="grid grid-cols-7 gap-3">
-          {/* Simple visualization of days */}
           {Array.from({ length: 31 }, (_, i) => {
             const day = (i + 1).toString().padStart(2, '0');
             const dateStr = `${new Date().toISOString().slice(0, 8)}${day}`;

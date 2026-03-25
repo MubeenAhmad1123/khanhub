@@ -3,13 +3,15 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getRecentTransactions } from '@/lib/rehab/transactions';
-import type { Transaction, RehabUser } from '@/types/rehab';
+import type { Transaction } from '@/types/rehab';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
   const [stats, setStats] = useState({
     totalPatients: 0,
     activePatients: 0,
@@ -20,15 +22,13 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const raw = localStorage.getItem('rehab_session');
-      if (!raw) return;
-      const user = JSON.parse(raw) as RehabUser;
-      if (user.role !== 'admin' && user.role !== 'superadmin') {
-        router.push('/departments/rehab/login');
-        return;
-      }
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
 
+    const fetchData = async () => {
       try {
         const [patientsSnap, staffSnap, pendingSnap, recentData] = await Promise.all([
           getDocs(collection(db, 'rehab_patients')),
@@ -52,13 +52,14 @@ export default function AdminDashboardPage() {
     };
 
     fetchData();
-  }, [router]);
+  }, [router, user, sessionLoading]);
 
-  if (loading) return <div className="space-y-8 animate-pulse"><div className="grid grid-cols-4 gap-6"><div className="h-32 bg-gray-100 rounded-3xl" /><div className="h-32 bg-gray-100 rounded-3xl" /><div className="h-32 bg-gray-100 rounded-3xl" /><div className="h-32 bg-gray-100 rounded-3xl" /></div><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
+  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="grid grid-cols-4 gap-6"><div className="h-32 bg-gray-100 rounded-3xl" /><div className="h-32 bg-gray-100 rounded-3xl" /><div className="h-32 bg-gray-100 rounded-3xl" /><div className="h-32 bg-gray-100 rounded-3xl" /></div><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
 
   const quickLinks = [
     { label: 'Patients', href: '/departments/rehab/dashboard/admin/patients', icon: '👤', color: 'bg-blue-50 text-blue-600' },
     { label: 'Staff members', href: '/departments/rehab/dashboard/admin/staff', icon: '👨‍⚕️', color: 'bg-green-50 text-green-600' },
+    { label: 'User Management', href: '/departments/rehab/dashboard/admin/users', icon: '🔐', color: 'bg-red-50 text-red-600' },
     { label: 'Finance records', href: '/departments/rehab/dashboard/admin/finance', icon: '💰', color: 'bg-orange-50 text-orange-600' },
     { label: 'Monthly Reports', href: '/departments/rehab/dashboard/admin/reports', icon: '📊', color: 'bg-purple-50 text-purple-600' },
   ];

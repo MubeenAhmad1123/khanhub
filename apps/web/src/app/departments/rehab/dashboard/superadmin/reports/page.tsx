@@ -1,9 +1,24 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import ReportGenerator from '@/components/rehab/ReportGenerator';
 
 export default function SuperAdminReportsPage() {
+  const router = useRouter();
+  const { user, loading: sessionLoading } = useRehabSession();
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || user.role !== 'superadmin') {
+      router.push('/departments/rehab/login');
+      return;
+    }
+  }, [user, sessionLoading, router]);
+
+  if (sessionLoading) return <div className="p-20 text-center animate-pulse">Initializing Global Audit Hub...</div>;
+
   return (
     <div className="space-y-12 pb-20">
       <div>
@@ -29,7 +44,7 @@ export default function SuperAdminReportsPage() {
             </div>
             <div className="bg-gray-50 p-8 rounded-[2.5rem] border border-gray-100">
                <h3 className="text-lg font-black text-gray-900 mb-2 uppercase tracking-tight">System Integrity</h3>
-               <p className="text-xs text-gray-500 font-medium leading-relaxed">The ledger is immutable for all approved transactions. Any corrections must be made via a reversal entry approved by a second superadmin.</p>
+               <p className="text-xs text-gray-500 font-medium leading-relaxed">The ledger is immutable for all approved transactions. Any corrections must be made via a reversal entry approved by a superadmin.</p>
             </div>
          </div>
       </div>
