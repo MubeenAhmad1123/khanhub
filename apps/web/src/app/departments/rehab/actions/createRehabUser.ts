@@ -3,16 +3,16 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { RehabRole } from '@/types/rehab';
 
-// Prevent multiple initialization with this specific name
+const firebaseConfig = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+};
+
 const adminApp = getApps().find(a => a.name === 'rehab-admin')
   || initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
+    credential: cert(firebaseConfig),
   }, 'rehab-admin');
 
 const adminAuth = getAuth(adminApp);
@@ -26,10 +26,20 @@ const DOMAIN = '@rehab.khanhub';
 export async function createRehabUserServer(
   customId: string,
   password: string,
-  role: string, // Accept string to be flexible with RehabRole
+  role: string,
   displayName: string,
   patientId?: string
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
+  // STEP 4: Safety check for environment variables
+  if (!process.env.FIREBASE_PROJECT_ID || 
+      !process.env.FIREBASE_CLIENT_EMAIL || 
+      !process.env.FIREBASE_PRIVATE_KEY) {
+    return { 
+      success: false, 
+      error: 'Missing Firebase Admin environment variables. Check .env.local' 
+    };
+  }
+
   try {
     const email = `${customId.toLowerCase()}${DOMAIN}`;
     const userRecord = await adminAuth.createUser({
@@ -58,6 +68,15 @@ export async function createRehabUserServer(
  * Deactivates a user's Auth account and marks them inactive in Firestore.
  */
 export async function deactivateRehabUser(uid: string): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.FIREBASE_PROJECT_ID || 
+      !process.env.FIREBASE_CLIENT_EMAIL || 
+      !process.env.FIREBASE_PRIVATE_KEY) {
+    return { 
+      success: false, 
+      error: 'Missing Firebase Admin environment variables. Check .env.local' 
+    };
+  }
+
   try {
     await adminAuth.updateUser(uid, { disabled: true });
     await adminDb.collection('rehab_users').doc(uid).update({ isActive: false });
@@ -71,6 +90,15 @@ export async function deactivateRehabUser(uid: string): Promise<{ success: boole
  * Resets a user's password to a new one.
  */
 export async function resetRehabPassword(uid: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.FIREBASE_PROJECT_ID || 
+      !process.env.FIREBASE_CLIENT_EMAIL || 
+      !process.env.FIREBASE_PRIVATE_KEY) {
+    return { 
+      success: false, 
+      error: 'Missing Firebase Admin environment variables. Check .env.local' 
+    };
+  }
+
   try {
     await adminAuth.updateUser(uid, { password: newPassword });
     return { success: true };
