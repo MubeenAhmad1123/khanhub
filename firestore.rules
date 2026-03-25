@@ -2,93 +2,295 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isRehabUser() {
-      return request.auth != null &&
-        exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid));
+    // ═══════════════════════════════════════════════════════════
+    //  SHARED HELPERS  (job platform — do not modify)
+    // ═══════════════════════════════════════════════════════════
+
+    function isAuth() {
+      return request.auth != null;
     }
-    function getRehabRole() {
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.get('role', '') == 'admin';
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JOB PLATFORM COLLECTIONS  (unchanged — do not modify)
+    // ═══════════════════════════════════════════════════════════
+
+    // ── Users ─────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid)
+        || isAdmin()
+        || (isAuth() && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly([
+              'followerCount', 'followingCount',
+              'likedVideos', 'savedVideos',
+              'interestedVideos', 'notInterestedVideos',
+              'totalLikes', 'watchedVideos'
+            ]));
+      allow delete: if isAdmin();
+    }
+
+    // ── Videos ───────────────────────────────────────
+    match /videos/{videoId} {
+      allow read: if true;
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isAuth() && resource.data.userId == request.auth.uid)
+        || (isAuth() && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['views', 'likes', 'likedBy']));
+      allow delete: if isAdmin();
+    }
+
+    // ── Follows ───────────────────────────────────────
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if isAuth()
+        && request.resource.data.followerId == request.auth.uid;
+      allow delete: if isAuth()
+        && resource.data.followerId == request.auth.uid;
+    }
+
+    // ── Notifications ─────────────────────────────────
+    match /notifications/{notifId} {
+      allow read: if isAuth()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuth();
+      allow update: if isAuth()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuth()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ── Payments ──────────────────────────────────────
+    match /payments/{payId} {
+      allow read: if isAuth()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuth();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Payment Requests ──────────────────────────────
+    match /paymentRequests/{reqId} {
+      allow read: if isAuth()
+        && (resource.data.requestedBy == request.auth.uid || isAdmin());
+      allow create: if isAuth()
+        && request.resource.data.requestedBy == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Video Payments ────────────────────────────────
+    match /videoPayments/{reqId} {
+      allow read: if isAuth()
+        && (resource.data.requestedBy == request.auth.uid || isAdmin());
+      allow create: if isAuth()
+        && request.resource.data.requestedBy == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Jobs ──────────────────────────────────────────
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow create: if isAuth();
+      allow update: if isAuth()
+        && (resource.data.employerId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ── Applications ──────────────────────────────────
+    match /applications/{appId} {
+      allow read: if isAuth()
+        && (resource.data.applicantId == request.auth.uid
+            || resource.data.employerId == request.auth.uid
+            || isAdmin());
+      allow create: if isAuth();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Connections ───────────────────────────────────
+    match /connections/{conId} {
+      allow read: if isAuth()
+        && (resource.data.seekerId == request.auth.uid
+            || resource.data.employerId == request.auth.uid
+            || isAdmin());
+      allow create: if isAuth();
+      allow update: if isAuth()
+        && (resource.data.seekerId == request.auth.uid
+            || resource.data.employerId == request.auth.uid
+            || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ── Admin Settings ────────────────────────────────
+    match /adminSettings/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Likes (Fallback rule) ─────────────────────────
+    match /likes/{likeId} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+
+    // ── Video Feedback ────────────────────────────────
+    match /video_feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // ── Reports ───────────────────────────────────────
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isAuth()
+        && request.resource.data.reportedBy == request.auth.uid;
+    }
+
+    // ── Interests ─────────────────────────────────────
+    match /interests/{interestId} {
+      allow read: if isAdmin()
+        || (isAuth() && resource.data.userId == request.auth.uid);
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuth()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  REHAB PORTAL HELPERS
+    //  Separate from job platform — uses rehab_users collection
+    //  The isAdmin() above checks /users/ — these check /rehab_users/
+    // ═══════════════════════════════════════════════════════════
+
+    function isRehabAuth() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid));
+    }
+    function rehabRole() {
       return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.role;
     }
-    function isRole(role) {
-      return isRehabUser() && getRehabRole() == role;
+    function isRehabRole(role) {
+      return isRehabAuth() && rehabRole() == role;
     }
-    function isAdminOrAbove() {
-      return isRehabUser() && (getRehabRole() == 'admin' || getRehabRole() == 'superadmin');
+    function isRehabAdminOrAbove() {
+      return isRehabAuth()
+        && (rehabRole() == 'admin' || rehabRole() == 'superadmin');
     }
-    function isSuperAdmin() {
-      return isRole('superadmin');
+    function isRehabSuperAdmin() {
+      return isRehabRole('superadmin');
+    }
+    function rehabPatientId() {
+      return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId;
+    }
+    function rehabStaffId() {
+      return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.staffId;
     }
 
-    // Setup meta — only readable, not writable from client after setup
+    // ═══════════════════════════════════════════════════════════
+    //  REHAB PORTAL COLLECTIONS
+    // ═══════════════════════════════════════════════════════════
+
+    // ── Setup meta (one-time init flag) ───────────────
+    // Public read so setup page can check if system is initialized.
+    // Write is false from client — only server action (Firebase Admin) writes this.
     match /rehab_meta/{doc} {
       allow read: if true;
-      allow write: if false; // only server action can write this
+      allow write: if false;
     }
 
-    // User profiles
+    // ── Rehab user profiles ────────────────────────────
+    // Users can read their own profile.
+    // Admin/superadmin can read all.
+    // Write is false from client — only server action (Firebase Admin) creates/updates.
     match /rehab_users/{uid} {
-      allow read: if request.auth.uid == uid || isAdminOrAbove();
-      allow write: if false; // only server action creates/updates users
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isRehabAdminOrAbove());
+      allow write: if false;
     }
 
-    // Patients
+    // ── Patients ───────────────────────────────────────
+    // Family can only read their linked patient.
+    // Admin/superadmin can read and write all.
+    // Delete only by superadmin.
     match /rehab_patients/{patientId} {
-      allow read: if isAdminOrAbove() ||
-        (isRole('family') &&
-         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId == patientId);
-      allow create, update: if isAdminOrAbove();
-      allow delete: if isSuperAdmin();
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('family') && rehabPatientId() == patientId);
+      allow create, update: if isRehabAdminOrAbove();
+      allow delete: if isRehabSuperAdmin();
     }
 
-    // Fee records
+    // ── Fee records ────────────────────────────────────
+    // Family can read only their patient's fee record.
+    // Cashier and superadmin can write.
+    // Admin can read all (for reports).
     match /rehab_fees/{docId} {
-      allow read: if isAdminOrAbove() ||
-        (isRole('family') &&
-         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId == resource.data.patientId);
-      allow write: if isRole('cashier') || isSuperAdmin();
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('cashier'))
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+      allow write: if isRehabRole('cashier') || isRehabSuperAdmin();
     }
 
-    // Canteen records
+    // ── Canteen records ────────────────────────────────
     match /rehab_canteen/{docId} {
-      allow read: if isAdminOrAbove() ||
-        (isRole('family') &&
-         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId == resource.data.patientId);
-      allow write: if isRole('cashier') || isSuperAdmin();
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('cashier'))
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+      allow write: if isRehabRole('cashier') || isRehabSuperAdmin();
     }
 
-    // Transactions
+    // ── Transactions ───────────────────────────────────
+    // Cashier creates. Superadmin approves/rejects (update).
+    // Admin and superadmin can read all. Cashier reads own entries.
+    // Nobody deletes transactions — full audit trail.
     match /rehab_transactions/{docId} {
-      allow read: if isAdminOrAbove() || isRole('cashier');
-      allow create: if isRole('cashier') || isSuperAdmin();
-      allow update: if isSuperAdmin(); // only superadmin approves/rejects
+      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier');
+      allow create: if isRehabRole('cashier') || isRehabSuperAdmin();
+      allow update: if isRehabSuperAdmin();
       allow delete: if false;
     }
 
-    // Staff profiles
+    // ── Staff profiles ─────────────────────────────────
+    // Staff can read their own profile only.
+    // Admin/superadmin can read and write all.
     match /rehab_staff/{staffId} {
-      allow read: if isAdminOrAbove() ||
-        (isRole('staff') &&
-         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.staffId == staffId);
-      allow write: if isAdminOrAbove();
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('staff') && rehabStaffId() == staffId);
+      allow create, update: if isRehabAdminOrAbove();
+      allow delete: if isRehabSuperAdmin();
     }
 
-    // Attendance
+    // ── Attendance ─────────────────────────────────────
+    // Staff can create their own attendance (self check-in).
+    // Admin can update (override). Nobody deletes.
     match /rehab_attendance/{docId} {
-      allow read: if isAdminOrAbove() ||
-        (isRole('staff') &&
-         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.staffId == resource.data.staffId);
-      allow create: if isRole('staff') || isAdminOrAbove();
-      allow update: if isAdminOrAbove(); // only admin can override
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('staff') && rehabStaffId() == resource.data.staffId);
+      allow create: if isRehabRole('staff') || isRehabAdminOrAbove();
+      allow update: if isRehabAdminOrAbove();
       allow delete: if false;
     }
 
-    // Videos
+    // ── Patient videos ─────────────────────────────────
+    // Family can read only their patient's videos.
+    // Admin/superadmin can read and write all.
     match /rehab_videos/{docId} {
-      allow read: if isAdminOrAbove() ||
-        (isRole('family') &&
-         get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.patientId == resource.data.patientId);
-      allow write: if isAdminOrAbove();
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+      allow create, update: if isRehabAdminOrAbove();
+      allow delete: if isRehabSuperAdmin();
     }
+
   }
 }

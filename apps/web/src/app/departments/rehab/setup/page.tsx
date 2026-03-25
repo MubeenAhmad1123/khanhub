@@ -1,145 +1,243 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createRehabUserServer } from '../actions/createRehabUser';
 
-export default function RehabSetupPage() {
+export default function SetupPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [error, setError] = useState('');
-  
-  const [formData, setFormData] = useState({
-    superAdminId: 'REHAB-SA-001',
-    superAdminPass: '',
-    confirmPass: '',
-    cashierId: 'REHAB-CSH-001',
-    cashierPass: ''
-  });
 
+  // mounted prevents any render before hydration
+  const [mounted, setMounted] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [alreadySetup, setAlreadySetup] = useState(false);
+
+  // form state
+  const [superAdminId, setSuperAdminId] = useState('REHAB-SA-001');
+  const [superAdminPassword, setSuperAdminPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [cashierId, setCashierId] = useState('REHAB-CSH-001');
+  const [cashierPassword, setCashierPassword] = useState('');
+
+  // password visibility toggles
+  const [showSaPass, setShowSaPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [showCashierPass, setShowCashierPass] = useState(false);
+
+  // submission state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  // Step 1: set mounted on client
   useEffect(() => {
-    const checkSetup = async () => {
-      const snap = await getDoc(doc(db, 'rehab_meta', 'setup'));
-      if (snap.exists() && snap.data().completed) {
-        setIsCompleted(true);
-      }
-      setLoading(false);
-    };
-    checkSetup();
+    setMounted(true);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.superAdminPass !== formData.confirmPass) {
-      setError('Passwords do not match');
-      return;
+  // Step 2: check Firestore only after mounted
+  useEffect(() => {
+    if (!mounted) return;
+    async function checkSetup() {
+      try {
+        const snap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+        if (snap.exists() && snap.data()?.completed === true) {
+          setAlreadySetup(true);
+        }
+      } catch (e) {
+        // If read fails, allow setup to continue
+      } finally {
+        setChecking(false);
+      }
     }
-    
-    setSubmitting(true);
+    checkSetup();
+  }, [mounted]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setError('');
 
+    if (superAdminPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (superAdminPassword.length < 8 || cashierPassword.length < 8) {
+      setError('Passwords must be at least 8 characters.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      // 1. Create Super Admin
-      const saResult = await createRehabUserServer(formData.superAdminId, formData.superAdminPass, 'superadmin', 'Super Admin');
-      if (!saResult.success) throw new Error(`Super Admin error: ${saResult.error}`);
+      // 1. Create super admin
+      const saResult = await createRehabUserServer(
+        superAdminId, superAdminPassword, 'superadmin', 'Super Admin'
+      );
+      if (!saResult.success) throw new Error(saResult.error || 'Failed to create super admin');
 
-      // 2. Create Cashier
-      const csResult = await createRehabUserServer(formData.cashierId, formData.cashierPass, 'cashier', 'Cashier');
-      if (!csResult.success) throw new Error(`Cashier error: ${csResult.error}`);
+      // 2. Create cashier
+      const cshResult = await createRehabUserServer(
+        cashierId, cashierPassword, 'cashier', 'Cashier'
+      );
+      if (!cshResult.success) throw new Error(cshResult.error || 'Failed to create cashier');
 
-      // 3. Mark setup as completed
+      // 3. Mark setup as completed in Firestore
       await setDoc(doc(db, 'rehab_meta', 'setup'), {
         completed: true,
         completedAt: new Date(),
-        superAdminCustomId: formData.superAdminId,
-        cashierCustomId: formData.cashierId
+        superAdminCustomId: superAdminId,
+        cashierCustomId: cashierId
       });
 
-      router.push('/departments/rehab/login');
+      setSuccess(true);
+      setTimeout(() => router.push('/departments/rehab/login'), 2000);
     } catch (err: any) {
-      setError(err.message || 'Setup failed');
+      setError(err.message || 'Setup failed. Please try again.');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
-  };
+  }
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center animate-pulse" />;
-
-  if (isCompleted) {
+  // Render nothing until mounted (prevents hydration mismatch)
+  if (!mounted || checking) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 text-center max-w-md">
-          <div className="text-4xl mb-4">✅</div>
-          <h1 className="text-2xl font-black text-gray-900 mb-2">System Initialized</h1>
-          <p className="text-gray-500 mb-8">The Rehab ERP system has already been set up. Please use your credentials to log in.</p>
-          <button 
-            onClick={() => router.push('/departments/rehab/login')}
-            className="w-full bg-[#1D9E75] text-white py-4 rounded-2xl font-black shadow-lg shadow-[#1D9E75]/20 hover:scale-[1.02] transition-all"
-          >
-            Go to Login
-          </button>
-        </div>
+      <div style={{ minHeight: '60vh', display: 'flex', 
+                    alignItems: 'center', justifyContent: 'center' }}>
+        <p className="text-gray-500 text-sm animate-pulse">Checking system status...</p>
+      </div>
+    );
+  }
+
+  if (alreadySetup) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+        <p className="text-gray-700 font-medium">System already initialized.</p>
+        <button onClick={() => router.push('/departments/rehab/login')}
+           className="text-teal-600 underline text-sm">Go to Login</button>
+      </div>
+    );
+  }
+
+  if (success) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+        <p className="text-green-600 font-medium text-lg">
+          System initialized successfully! Redirecting to login...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
-      <form onSubmit={handleSubmit} className="bg-white p-12 rounded-[3.5rem] shadow-2xl border border-gray-100 max-w-2xl w-full space-y-10 animate-in fade-in zoom-in duration-700">
-        <div className="text-center">
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">System Setup</h1>
-          <p className="text-gray-400 font-bold uppercase text-xs tracking-[0.3em]">Initialize Rehab Portal</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gray-50">
+      <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl p-10 border border-gray-100">
+        <h1 className="text-4xl font-black text-center text-gray-900 mb-2 tracking-tight">System Setup</h1>
+        <p className="text-xs text-center tracking-[0.3em] text-gray-400 font-black uppercase mb-10">
+          Initialize Rehab Portal
+        </p>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 font-bold text-sm text-center">
+          <div className="bg-red-50 border border-red-100 text-red-700 
+                          rounded-2xl px-6 py-4 text-sm mb-8 font-bold text-center">
             {error}
           </div>
         )}
 
-        <div className="space-y-6">
-          <h2 className="text-lg font-black text-gray-900 border-b border-gray-50 pb-2">Master Super Admin</h2>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="col-span-2 space-y-1">
-               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Admin ID</label>
-               <input disabled value={formData.superAdminId} className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 font-bold text-gray-400 cursor-not-allowed" />
-            </div>
-            <div className="space-y-1">
-               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Password</label>
-               <input type="password" required className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" value={formData.superAdminPass} onChange={e => setFormData({...formData, superAdminPass: e.target.value})} />
-            </div>
-            <div className="space-y-1">
-               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Confirm</label>
-               <input type="password" required className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" value={formData.confirmPass} onChange={e => setFormData({...formData, confirmPass: e.target.value})} />
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div>
+            <h2 className="text-lg font-black text-gray-800 mb-4 border-b border-gray-50 pb-2">Master Super Admin</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] 
+                                  text-gray-400 block mb-1 ml-2">Admin ID</label>
+                <input
+                  type="text"
+                  value={superAdminId}
+                  onChange={e => setSuperAdminId(e.target.value)}
+                  required
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
+                             py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] 
+                                    text-gray-400 block mb-1 ml-2">Password</label>
+                  <input
+                    type={showSaPass ? "text" : "password"}
+                    value={superAdminPassword}
+                    onChange={e => setSuperAdminPassword(e.target.value)}
+                    required
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
+                               py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                  />
+                  <button type="button" onClick={() => setShowSaPass(!showSaPass)} className="absolute right-4 top-[38px] text-lg hover:scale-110 transition-transform">
+                    {showSaPass ? '👁️' : '🔒'}
+                  </button>
+                </div>
+                <div className="relative">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] 
+                                    text-gray-400 block mb-1 ml-2">Confirm</label>
+                  <input
+                    type={showConfirmPass ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
+                               py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                  />
+                  <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-4 top-[38px] text-lg hover:scale-110 transition-transform">
+                    {showConfirmPass ? '👁️' : '🔒'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-6 pt-6 border-t border-gray-50">
-          <h2 className="text-lg font-black text-gray-900 border-b border-gray-50 pb-2">Single Cashier Account</h2>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="col-span-2 space-y-1">
-               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Cashier ID</label>
-               <input disabled value={formData.cashierId} className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 font-bold text-gray-400 cursor-not-allowed" />
-            </div>
-            <div className="col-span-2 space-y-1">
-               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Cashier Password</label>
-               <input type="password" required className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" value={formData.cashierPass} onChange={e => setFormData({...formData, cashierPass: e.target.value})} />
+          <div>
+            <h2 className="text-lg font-black text-gray-800 mb-4 border-b border-gray-50 pb-2">Single Cashier Account</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] 
+                                  text-gray-400 block mb-1 ml-2">Cashier ID</label>
+                <input
+                  type="text"
+                  value={cashierId}
+                  onChange={e => setCashierId(e.target.value)}
+                  required
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
+                             py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                />
+              </div>
+              <div className="relative">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] 
+                                  text-gray-400 block mb-1 ml-2">Cashier Password</label>
+                <input
+                  type={showCashierPass ? "text" : "password"}
+                  value={cashierPassword}
+                  onChange={e => setCashierPassword(e.target.value)}
+                  required
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
+                             py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                />
+                <button type="button" onClick={() => setShowCashierPass(!showCashierPass)} className="absolute right-4 top-[38px] text-lg hover:scale-110 transition-transform">
+                  {showCashierPass ? '👁️' : '🔒'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <button 
-          disabled={submitting}
-          className="w-full bg-gray-900 text-white py-6 rounded-[2rem] font-black text-lg shadow-2xl hover:bg-gray-800 transition-all disabled:opacity-50"
-        >
-          {submitting ? 'Initializing...' : 'Bootstrap System'}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white 
+                       font-black py-5 rounded-[2rem] text-lg shadow-2xl transition disabled:opacity-50">
+            {loading ? 'Bootstrapping System...' : 'Initialize System'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
