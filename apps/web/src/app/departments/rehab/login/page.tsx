@@ -21,7 +21,9 @@ export default function RehabLoginPage() {
     setError('');
 
     try {
+      console.log('Attempting login with ID:', customId);
       const user = await loginRehab(customId, password);
+      console.log('Firebase auth success, uid:', user.uid);
       
       // Step 3 Security Fix: Verify from Firestore
       const docSnap = await getDoc(doc(db, 'rehab_users', user.uid));
@@ -33,6 +35,7 @@ export default function RehabLoginPage() {
       }
 
       const userData = docSnap.data();
+      console.log('Firestore user data:', userData);
       const session = {
         uid: user.uid,
         customId: userData.customId,
@@ -45,6 +48,7 @@ export default function RehabLoginPage() {
 
       // Role-based redirects
       const role = userData.role;
+      console.log('Redirecting to role:', role);
       if (role === 'family') {
         router.push(`/departments/rehab/dashboard/family/${userData.patientId}`);
       } else if (role === 'staff') {
@@ -57,7 +61,8 @@ export default function RehabLoginPage() {
         router.push('/departments/rehab/dashboard/superadmin');
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
