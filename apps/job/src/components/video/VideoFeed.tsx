@@ -1,3 +1,4 @@
+//apps/job/src/components/video/VideoFeed.tsx
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -290,6 +291,12 @@ export function VideoFeed() {
     const lastUpdatedVideoRef = useRef<string | null>(null);
 
     // ── Intersection Observer for Active Index & URL ───────────────
+    // FIX 5: IntersectionObserver is the sole source of truth for activeIndex.
+    // The scroll-event fallback is kept only in development for DevTools emulation.
+    // A `ioActiveIndexRef` is used so the scroll fallback can read the latest value
+    // without being in the observer's closure (avoids double-firing in production).
+    const ioActiveIndexRef = useRef(0); // FIX 5: mirrors activeIndex for scroll fallback
+
     useEffect(() => {
         if (displayVideos.length === 0) return;
 
@@ -305,6 +312,8 @@ export function VideoFeed() {
                             const currentVideo = displayVideos[index];
                             if (!currentVideo || currentVideo.isPlaceholder) return;
 
+                            // FIX 5: Update the ref so scroll fallback stays in sync
+                            ioActiveIndexRef.current = index;
                             setActiveIndex(index);
                             sessionStorage.setItem('jobreel_last_video', currentVideo.id);
 
@@ -331,7 +340,7 @@ export function VideoFeed() {
                 },
                 {
                     root: containerRef.current,
-                    threshold: 0.8,        // video must be 80% visible before it becomes active
+                    threshold: 0.8,
                     rootMargin: '0px',
                 }
             );
@@ -342,8 +351,11 @@ export function VideoFeed() {
         return () => observers.forEach(o => o.disconnect());
     }, [displayVideos, user, loading]);
 
-    // Method 2: Scroll event fallback (DevTools emulation backup)
+    // FIX 5: Scroll fallback — only active in development (DevTools emulation).
+    // In production it is a no-op so there is no double-firing with IntersectionObserver.
     useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return; // FIX 5: production no-op
+
         const container = containerRef.current;
         if (!container || displayVideos.length === 0) return;
 
@@ -354,14 +366,16 @@ export function VideoFeed() {
             const scrollTop = container.scrollTop;
             const newIndex = Math.round(scrollTop / containerHeight);
 
-            if (newIndex !== activeIndex && newIndex >= 0 && newIndex < displayVideos.length) {
+            // FIX 5: Read from ref (set by IO) to avoid stale closure fighting IO
+            if (newIndex !== ioActiveIndexRef.current && newIndex >= 0 && newIndex < displayVideos.length) {
+                ioActiveIndexRef.current = newIndex;
                 setActiveIndex(newIndex);
             }
         };
 
         container.addEventListener('scroll', handleScroll, { passive: true });
         return () => container.removeEventListener('scroll', handleScroll);
-    }, [displayVideos.length, activeIndex]);
+    }, [displayVideos.length]); // FIX 5: removed activeIndex dep — read from ref instead
 
     // ── Keyboard Navigation ───────────────────────────────────────
     useEffect(() => {
