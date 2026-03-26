@@ -9,7 +9,7 @@ import type { Transaction } from '@/types/rehab';
 
 export default function CashierDashboardPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 

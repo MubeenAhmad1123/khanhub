@@ -7,7 +7,7 @@ import ReportGenerator from '@/components/rehab/ReportGenerator';
 
 export default function SuperAdminReportsPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
 
   useEffect(() => {
     if (sessionLoading) return;

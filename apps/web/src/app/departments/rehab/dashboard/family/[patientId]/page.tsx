@@ -12,7 +12,7 @@ import type { Patient, FeeRecord, CanteenRecord } from '@/types/rehab';
 export default function FamilyDashboardPage() {
   const { patientId } = useParams();
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [fee, setFee] = useState<FeeRecord | null>(null);
   const [canteen, setCanteen] = useState<CanteenRecord | null>(null);

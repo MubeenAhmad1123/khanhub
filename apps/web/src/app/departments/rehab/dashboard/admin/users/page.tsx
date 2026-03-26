@@ -10,7 +10,7 @@ import type { RehabUser, Patient, StaffMember } from '@/types/rehab';
 
 export default function AdminUserManagement() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [familyUsers, setFamilyUsers] = useState<RehabUser[]>([]);
   const [staffUsers, setStaffUsers] = useState<RehabUser[]>([]);

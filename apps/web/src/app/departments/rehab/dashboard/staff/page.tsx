@@ -11,7 +11,7 @@ import { db } from '@/lib/firebase';
 
 export default function StaffDashboardPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [staff, setStaff] = useState<StaffMember | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);

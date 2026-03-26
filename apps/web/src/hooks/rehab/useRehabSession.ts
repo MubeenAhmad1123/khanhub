@@ -1,43 +1,30 @@
 'use client';
+import { useEffect, useState } from 'react';
 
-import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { RehabUser } from '@/types/rehab';
+export interface RehabSession {
+  uid: string;
+  customId: string;
+  role: string;
+  displayName: string;
+  patientId?: string | null;
+}
 
 export function useRehabSession() {
-  const [user, setUser] = useState<RehabUser | null>(null);
+  const [session, setSession] = useState<RehabSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkSession = async () => {
+    try {
       const raw = localStorage.getItem('rehab_session');
-      if (!raw) {
-        setUser(null);
-        setLoading(false);
-        return;
+      if (raw) {
+        setSession(JSON.parse(raw));
       }
-
-      try {
-        const session = JSON.parse(raw);
-        const docSnap = await getDoc(doc(db, 'rehab_users', session.uid));
-        
-        if (!docSnap.exists() || !docSnap.data().isActive || docSnap.data().role !== session.role) {
-          localStorage.removeItem('rehab_session');
-          setUser(null);
-        } else {
-          setUser({ uid: session.uid, ...docSnap.data() } as RehabUser);
-        }
-      } catch (err) {
-        localStorage.removeItem('rehab_session');
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
+    } catch {
+      setSession(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { user, loading };
+  return { session, loading };
 }

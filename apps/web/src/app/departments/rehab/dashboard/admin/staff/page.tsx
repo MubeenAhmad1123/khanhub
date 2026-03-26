@@ -10,7 +10,7 @@ import type { StaffMember, AttendanceRecord } from '@/types/rehab';
 
 export default function AdminStaffPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord>>({});
   const [loading, setLoading] = useState(true);

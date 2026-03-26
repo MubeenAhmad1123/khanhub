@@ -10,7 +10,7 @@ import type { RehabUser } from '@/types/rehab';
 
 export default function SuperAdminUserManagement() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [admins, setAdmins] = useState<RehabUser[]>([]);
   const [cashier, setCashier] = useState<RehabUser | null>(null);
   const [loading, setLoading] = useState(true);

@@ -11,7 +11,7 @@ import type { Transaction } from '@/types/rehab';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [stats, setStats] = useState({
     totalPatients: 0,
     activePatients: 0,

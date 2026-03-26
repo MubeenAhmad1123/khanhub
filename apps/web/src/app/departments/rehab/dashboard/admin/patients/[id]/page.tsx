@@ -14,7 +14,7 @@ import { db } from '@/lib/firebase';
 export default function AdminPatientDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [fee, setFee] = useState<FeeRecord | null>(null);
   const [canteen, setCanteen] = useState<CanteenRecord | null>(null);

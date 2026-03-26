@@ -8,7 +8,7 @@ import type { Transaction } from '@/types/rehab';
 
 export default function SuperAdminApprovalsPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [pending, setPending] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 

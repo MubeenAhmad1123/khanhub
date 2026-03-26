@@ -9,7 +9,7 @@ import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 
 export default function SuperAdminDashboardPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [stats, setStats] = useState({
     pendingApprovals: 0,
     activeUsers: 0,

@@ -7,7 +7,7 @@ import { createPatient } from '@/lib/rehab/patients';
 
 export default function NewPatientPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useRehabSession();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
