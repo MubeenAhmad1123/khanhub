@@ -15,9 +15,16 @@ function getAdminApp(): App {
     credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID!,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY
-        ? Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf-8')
-        : undefined,
+      privateKey: (() => {
+        const key = process.env.FIREBASE_PRIVATE_KEY;
+        if (!key) return undefined;
+        // If it looks like base64 (no dashes), decode it
+        if (!key.includes('-----BEGIN')) {
+          return Buffer.from(key, 'base64').toString('utf-8');
+        }
+        // Otherwise fix escaped newlines
+        return key.replace(/\\n/g, '\n');
+      })(),
     }),
   }, 'rehab-admin');
 }
@@ -107,14 +114,19 @@ export async function debugEnvVars(): Promise<{
   privateKeyFirstChars: string;
 }> {
   const raw = process.env.FIREBASE_PRIVATE_KEY;
-  let decoded = '';
-  try {
-    decoded = raw 
-      ? Buffer.from(raw, 'base64').toString('utf-8').substring(0, 30)
-      : 'MISSING';
-  } catch {
-    decoded = 'DECODE FAILED';
-  }
+  const decoded = (() => {
+    const key = process.env.FIREBASE_PRIVATE_KEY;
+    if (!key) return 'MISSING';
+    if (!key.includes('-----BEGIN')) {
+      try {
+        return Buffer.from(key, 'base64').toString('utf-8').substring(0, 40);
+      } catch {
+        return 'BASE64_DECODE_FAILED';
+      }
+    }
+    return key.replace(/\\n/g, '\n').substring(0, 40);
+  })();
+
   return {
     hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
     hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
