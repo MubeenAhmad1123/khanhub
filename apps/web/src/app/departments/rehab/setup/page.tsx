@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer } from '../actions/createRehabUser';
+import { createRehabUserServer, markSetupComplete } from '../actions/createRehabUser';
 
 export default function SetupPage() {
   const router = useRouter();
@@ -90,13 +90,9 @@ export default function SetupPage() {
       );
       if (!cshResult.success) throw new Error(cshResult.error || 'Failed to create cashier');
 
-      // 3. Mark setup as completed in Firestore
-      await setDoc(doc(db, 'rehab_meta', 'setup'), {
-        completed: true,
-        completedAt: new Date(),
-        superAdminCustomId: superAdminId,
-        cashierCustomId: cashierId
-      });
+      // 3. Mark setup as completed via server action (bypasses client rules)
+      const metaResult = await markSetupComplete(superAdminId, cashierId);
+      if (!metaResult.success) throw new Error(metaResult.error || 'Failed to mark setup complete');
 
       setSuccess(true);
       setTimeout(() => router.push('/departments/rehab/login'), 2000);

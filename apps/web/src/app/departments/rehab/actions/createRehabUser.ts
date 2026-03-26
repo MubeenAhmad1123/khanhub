@@ -118,3 +118,23 @@ export async function debugEnvVars(): Promise<{
     };
   }
 }
+
+export async function markSetupComplete(
+  superAdminCustomId: string,
+  cashierCustomId: string
+): Promise<{ success: boolean; error?: string }> {
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
+  try {
+    const app = getAdminApp();
+    await getFirestore(app).collection('rehab_meta').doc('setup').set({
+      completed: true,
+      completedAt: new Date(),
+      superAdminCustomId,
+      cashierCustomId,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
