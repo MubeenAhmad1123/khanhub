@@ -6,34 +6,44 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 const DOMAIN = '@rehab.khanhub';
 
-// Lazy initialization — runs only when a function is called, not on import
+function getServiceAccount() {
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!json) return null;
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 function getAdminApp(): App {
   const existing = getApps().find(a => a.name === 'rehab-admin');
   if (existing) return existing;
-  
+
+  const sa = getServiceAccount();
+  if (!sa) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing or invalid JSON');
+
   return initializeApp({
     credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID!,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-      privateKey: (() => {
-        const key = process.env.FIREBASE_PRIVATE_KEY;
-        if (!key) return undefined;
-        // If it looks like base64 (no dashes), decode it
-        if (!key.includes('-----BEGIN')) {
-          return Buffer.from(key, 'base64').toString('utf-8');
-        }
-        // Otherwise fix escaped newlines
-        return key.replace(/\\n/g, '\n');
-      })(),
+      projectId: sa.project_id,
+      clientEmail: sa.client_email,
+      privateKey: sa.private_key,
     }),
   }, 'rehab-admin');
 }
 
 function checkEnvVars(): string | null {
-  if (!process.env.FIREBASE_PROJECT_ID) return 'Missing FIREBASE_PROJECT_ID';
-  if (!process.env.FIREBASE_CLIENT_EMAIL) return 'Missing FIREBASE_CLIENT_EMAIL';
-  if (!process.env.FIREBASE_PRIVATE_KEY) return 'Missing FIREBASE_PRIVATE_KEY';
-  return null;
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!json) return 'Missing FIREBASE_SERVICE_ACCOUNT_JSON in environment variables';
+  try {
+    const parsed = JSON.parse(json);
+    if (!parsed.project_id) return 'FIREBASE_SERVICE_ACCOUNT_JSON missing project_id';
+    if (!parsed.client_email) return 'FIREBASE_SERVICE_ACCOUNT_JSON missing client_email';
+    if (!parsed.private_key) return 'FIREBASE_SERVICE_ACCOUNT_JSON missing private_key';
+    return null;
+  } catch {
+    return 'FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON';
+  }
 }
 
 export async function createRehabUserServer(
@@ -83,7 +93,10 @@ export async function deactivateRehabUser(
   try {
     const app = getAdminApp();
     await getAuth(app).updateUser(uid, { disabled: true });
-    await getFirestore(app).collection('rehab_users').doc(uid).update({ isActive: false });
+    await getFirestore(app)
+      .collection('rehab_users')
+      .doc(uid)
+      .update({ isActive: false });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -107,31 +120,46 @@ export async function resetRehabPassword(
 }
 
 export async function debugEnvVars(): Promise<{
+  hasJson: boolean;
+  isValidJson: boolean;
   hasProjectId: boolean;
   hasClientEmail: boolean;
   hasPrivateKey: boolean;
   projectIdValue: string;
   privateKeyFirstChars: string;
 }> {
-  const raw = process.env.FIREBASE_PRIVATE_KEY;
-  const decoded = (() => {
-    const key = process.env.FIREBASE_PRIVATE_KEY;
-    if (!key) return 'MISSING';
-    if (!key.includes('-----BEGIN')) {
-      try {
-        return Buffer.from(key, 'base64').toString('utf-8').substring(0, 40);
-      } catch {
-        return 'BASE64_DECODE_FAILED';
-      }
-    }
-    return key.replace(/\\n/g, '\n').substring(0, 40);
-  })();
-
-  return {
-    hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
-    hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
-    hasPrivateKey: !!raw,
-    projectIdValue: process.env.FIREBASE_PROJECT_ID?.substring(0, 8) + '...' || 'UNDEFINED',
-    privateKeyFirstChars: decoded,
-  };
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!json) {
+    return {
+      hasJson: false,
+      isValidJson: false,
+      hasProjectId: false,
+      hasClientEmail: false,
+      hasPrivateKey: false,
+      projectIdValue: 'MISSING',
+      privateKeyFirstChars: 'MISSING',
+    };
+  }
+  try {
+    const parsed = JSON.parse(json);
+    return {
+      hasJson: true,
+      isValidJson: true,
+      hasProjectId: !!parsed.project_id,
+      hasClientEmail: !!parsed.client_email,
+      hasPrivateKey: !!parsed.private_key,
+      projectIdValue: (parsed.project_id || '').substring(0, 10) + '...',
+      privateKeyFirstChars: (parsed.private_key || '').substring(0, 27),
+    };
+  } catch {
+    return {
+      hasJson: true,
+      isValidJson: false,
+      hasProjectId: false,
+      hasClientEmail: false,
+      hasPrivateKey: false,
+      projectIdValue: 'JSON_PARSE_FAILED',
+      privateKeyFirstChars: 'JSON_PARSE_FAILED',
+    };
+  }
 }
