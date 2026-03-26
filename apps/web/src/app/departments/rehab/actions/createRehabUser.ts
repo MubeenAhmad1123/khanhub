@@ -16,9 +16,8 @@ function getAdminApp(): App {
       projectId: process.env.FIREBASE_PROJECT_ID!,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
       privateKey: process.env.FIREBASE_PRIVATE_KEY
-        ?.replace(/\\n/g, '\n')
-        ?.replace(/\\\\n/g, '\n')
-        ?.trim(),
+        ? Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf-8')
+        : undefined,
     }),
   }, 'rehab-admin');
 }
@@ -105,13 +104,22 @@ export async function debugEnvVars(): Promise<{
   hasClientEmail: boolean;
   hasPrivateKey: boolean;
   projectIdValue: string;
+  privateKeyFirstChars: string;
 }> {
+  const raw = process.env.FIREBASE_PRIVATE_KEY;
+  let decoded = '';
+  try {
+    decoded = raw 
+      ? Buffer.from(raw, 'base64').toString('utf-8').substring(0, 30)
+      : 'MISSING';
+  } catch {
+    decoded = 'DECODE FAILED';
+  }
   return {
     hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
     hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
-    hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
-    projectIdValue: process.env.FIREBASE_PROJECT_ID 
-      ? process.env.FIREBASE_PROJECT_ID.substring(0, 8) + '...' 
-      : 'UNDEFINED',
+    hasPrivateKey: !!raw,
+    projectIdValue: process.env.FIREBASE_PROJECT_ID?.substring(0, 8) + '...' || 'UNDEFINED',
+    privateKeyFirstChars: decoded,
   };
 }
