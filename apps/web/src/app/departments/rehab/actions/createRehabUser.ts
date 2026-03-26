@@ -96,3 +96,19 @@ export async function resetRehabPassword(
     return { success: false, error: err.message };
   }
 }
+
+export async function debugEnvVars(): Promise<{
+  hasProjectId: boolean;
+  hasClientEmail: boolean;
+  hasPrivateKey: boolean;
+  projectIdValue: string;
+}> {
+  return {
+    hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+    hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+    hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+    projectIdValue: process.env.FIREBASE_PROJECT_ID 
+      ? process.env.FIREBASE_PROJECT_ID.substring(0, 8) + '...' 
+      : 'UNDEFINED',
+  };
+}
