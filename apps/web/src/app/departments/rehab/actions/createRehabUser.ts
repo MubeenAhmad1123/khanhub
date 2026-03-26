@@ -36,8 +36,20 @@ export async function createRehabUserServer(
 
   try {
     const app = getAdminApp();
+    const adminAuth = getAuth(app);
+    const adminDb = getFirestore(app);
     const email = `${customId.toLowerCase()}${DOMAIN}`;
-    const userRecord = await getAuth(app).createUser({ email, password, displayName });
+
+    try {
+      const existingUser = await adminAuth.getUserByEmail(email);
+      // If user exists, delete and recreate (only safe during setup)
+      await adminAuth.deleteUser(existingUser.uid);
+      await adminDb.collection('rehab_users').doc(existingUser.uid).delete();
+    } catch {
+      // User doesn't exist — continue normally
+    }
+
+    const userRecord = await adminAuth.createUser({ email, password, displayName });
     await getFirestore(app).collection('rehab_users').doc(userRecord.uid).set({
       customId,
       role,
