@@ -12,6 +12,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['firebase-admin'],
   reactStrictMode: true,
   swcMinify: true,
   images: {

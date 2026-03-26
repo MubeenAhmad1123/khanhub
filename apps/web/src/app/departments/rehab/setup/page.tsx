@@ -36,6 +36,15 @@ export default function SetupPage() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!mounted) return;
+    import('../actions/createRehabUser').then(m => {
+      m.debugEnvVars().then(result => {
+        console.log('ENV CHECK:', result);
+      });
+    });
+  }, [mounted]);
+
   // Step 2: check Firestore only after mounted
   useEffect(() => {
     if (!mounted) return;
