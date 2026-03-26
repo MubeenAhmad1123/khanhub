@@ -3,10 +3,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginRehab } from '@/lib/rehab/rehabAuth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
 
 export default function RehabLoginPage() {
   const [customId, setCustomId] = useState('');
@@ -22,22 +18,13 @@ export default function RehabLoginPage() {
 
     try {
       console.log('Attempting login with ID:', customId);
-      const user = await loginRehab(customId, password);
-      console.log('Firebase auth success, uid:', user.uid);
       
-      // Step 3 Security Fix: Verify from Firestore
-      const docSnap = await getDoc(doc(db, 'rehab_users', user.uid));
-      
-      if (!docSnap.exists() || !docSnap.data().isActive) {
-        await signOut(auth);
-        setError('Account is inactive or not found.');
-        return;
-      }
+      // loginRehab already handles Firestore fetch + isActive check
+      const userData = await loginRehab(customId, password);
+      console.log('Login success, user data:', userData);
 
-      const userData = docSnap.data();
-      console.log('Firestore user data:', userData);
       const session = {
-        uid: user.uid,
+        uid: userData.uid,
         customId: userData.customId,
         role: userData.role,
         displayName: userData.displayName,
@@ -45,24 +32,26 @@ export default function RehabLoginPage() {
       };
 
       localStorage.setItem('rehab_session', JSON.stringify(session));
+      console.log('Redirecting to role:', userData.role);
 
-      // Role-based redirects
-      const role = userData.role;
-      console.log('Redirecting to role:', role);
-      if (role === 'family') {
+      if (userData.role === 'family') {
         router.push(`/departments/rehab/dashboard/family/${userData.patientId}`);
-      } else if (role === 'staff') {
+      } else if (userData.role === 'staff') {
         router.push('/departments/rehab/dashboard/staff');
-      } else if (role === 'cashier') {
+      } else if (userData.role === 'cashier') {
         router.push('/departments/rehab/dashboard/cashier');
-      } else if (role === 'admin') {
+      } else if (userData.role === 'admin') {
         router.push('/departments/rehab/dashboard/admin');
-      } else if (role === 'superadmin') {
+      } else if (userData.role === 'superadmin') {
         router.push('/departments/rehab/dashboard/superadmin');
+      } else {
+        setError('Unknown role: ' + userData.role);
       }
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed');
+      console.error('Login error full object:', err);
+      console.error('Login error code:', err.code);
+      console.error('Login error message:', err.message);
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
