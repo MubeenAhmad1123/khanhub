@@ -218,14 +218,14 @@ export default function StaffSelfPage() {
       </div>
 
       {/* Duties */}
-      {staffProfile?.duties?.length > 0 && (
+      {(staffProfile?.duties?.length ?? 0) > 0 && (
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <List size={18} className="text-teal-500" />
             <h2 className="font-black text-gray-900">Your Duties</h2>
           </div>
           <ol className="space-y-2">
-            {staffProfile.duties.map((d, i) => (
+            {staffProfile?.duties?.map((d, i) => (
               <li key={d.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                 <span className="w-5 h-5 rounded-lg bg-teal-100 text-teal-600 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
                 <span className="text-gray-700 text-sm leading-snug">{d.description}</span>

@@ -130,8 +130,8 @@ export default function AdminStaffPage() {
   };
 
   const todayPresent = Object.values(attendance).filter(a => a.status === 'present').length;
-  const todayAbsent = Object.values(attendance).filter(a => a.status === 'absent').length;
-  const notMarked = staff.length - Object.keys(attendance).length;
+  const todayAbsent  = Object.values(attendance).filter(a => a.status === 'absent').length;
+  const notMarked    = staff.length - Object.keys(attendance).length;
 
   if (sessionLoading || loading) {
     return (
@@ -171,8 +171,9 @@ export default function AdminStaffPage() {
 
       {/* Message */}
       {message.text && (
-        <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
-          }`}>
+        <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm ${
+          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
+        }`}>
           {message.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {message.text}
         </div>
@@ -255,9 +256,10 @@ export default function AdminStaffPage() {
                       <td className="px-6 py-5">
                         {record ? (
                           <div className="flex items-center gap-2">
-                            <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full ${record.status === 'present' ? 'bg-green-100 text-green-600' :
-                                record.status === 'absent' ? 'bg-red-100 text-red-500' : 'bg-blue-100 text-blue-600'
-                              }`}>
+                            <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full ${
+                              record.status === 'present' ? 'bg-green-100 text-green-600' :
+                              record.status === 'absent'  ? 'bg-red-100 text-red-500'    : 'bg-blue-100 text-blue-600'
+                            }`}>
                               {record.status === 'present' ? <CheckCircle size={10} /> : record.status === 'absent' ? <XCircle size={10} /> : <Clock size={10} />}
                               {record.status}
                             </span>
@@ -292,8 +294,8 @@ export default function AdminStaffPage() {
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end items-center gap-1.5">
                           <button onClick={() => handleOverride(s.id, 'present')} title="Present" className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center hover:bg-green-500 hover:text-white transition-all text-xs font-black">P</button>
-                          <button onClick={() => handleOverride(s.id, 'absent')} title="Absent" className="w-8 h-8 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all text-xs font-black">A</button>
-                          <button onClick={() => handleOverride(s.id, 'leave')} title="Leave" className="w-8 h-8 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all text-xs font-black">L</button>
+                          <button onClick={() => handleOverride(s.id, 'absent')}  title="Absent"  className="w-8 h-8 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all text-xs font-black">A</button>
+                          <button onClick={() => handleOverride(s.id, 'leave')}   title="Leave"   className="w-8 h-8 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all text-xs font-black">L</button>
                           <button
                             onClick={() => router.push(`/departments/rehab/dashboard/admin/staff/${s.id}`)}
                             title="View Profile"
@@ -391,7 +393,7 @@ export default function AdminStaffPage() {
                     className="flex-1 bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
                     value={dutyInput}
                     onChange={e => setDutyInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDuty(); } }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDuty(); }}}
                   />
                   <button type="button" onClick={addDuty} className="px-4 py-3 bg-teal-50 text-teal-600 rounded-xl font-black text-sm hover:bg-teal-500 hover:text-white transition-all">
                     <Plus size={16} />
