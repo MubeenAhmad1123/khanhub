@@ -6,7 +6,12 @@ import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { overrideAttendance } from '@/lib/rehab/attendance';
+import { createStaffMemberServer } from '../../actions/createRehabUser';
 import type { StaffMember, AttendanceRecord } from '@/types/rehab';
+import {
+  UserCog, Plus, X, CheckCircle, XCircle, Clock,
+  Phone, Calendar, BadgeCheck, Loader2, AlertCircle
+} from 'lucide-react';
 
 export default function AdminStaffPage() {
   const router = useRouter();
@@ -14,16 +19,27 @@ export default function AdminStaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord>>({});
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [form, setForm] = useState({
+    name: '',
+    customId: 'REHAB-STF-001',
+    password: '',
+    staffRole: '',
+    phone: '',
+    salary: '',
+  });
 
   const fetchData = async () => {
     try {
       const staffSnap = await getDocs(collection(db, 'rehab_staff'));
-      const staffList = staffSnap.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(), 
-        joiningDate: doc.data().joiningDate.toDate() 
+      const staffList = staffSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        joiningDate: doc.data().joiningDate?.toDate?.() || new Date(),
       } as StaffMember));
-      setStaff(staffList);
+      setStaff(staffList.filter(s => s.isActive));
 
       const today = new Date().toISOString().split('T')[0];
       const attendanceSnap = await getDocs(collection(db, 'rehab_attendance'));
@@ -31,7 +47,12 @@ export default function AdminStaffPage() {
       attendanceSnap.docs.forEach(doc => {
         const data = doc.data();
         if (data.date === today) {
-          attendanceMap[data.staffId] = { id: doc.id, ...data } as AttendanceRecord;
+          attendanceMap[data.staffId] = {
+            id: doc.id,
+            ...data,
+            checkInTime: data.checkInTime?.toDate?.(),
+            checkOutTime: data.checkOutTime?.toDate?.(),
+          } as AttendanceRecord;
         }
       });
       setAttendance(attendanceMap);
@@ -57,76 +78,323 @@ export default function AdminStaffPage() {
     try {
       await overrideAttendance(staffId, today, status, user.uid);
       fetchData();
-    } catch (err) {
+    } catch {
       alert('Error overriding attendance');
     }
   };
 
-  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="h-16 bg-gray-100 rounded-2xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
+  const handleCreateStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.customId || !form.password || !form.staffRole) {
+      setMessage({ type: 'error', text: 'Please fill all required fields' });
+      return;
+    }
+    setFormLoading(true);
+    const res = await createStaffMemberServer(
+      form.customId,
+      form.password,
+      form.name,
+      form.staffRole,
+      form.phone || undefined,
+      form.salary ? Number(form.salary) : undefined,
+    );
+    if (res.success) {
+      setMessage({ type: 'success', text: `Staff member "${form.name}" created successfully!` });
+      setShowModal(false);
+      setForm({ name: '', customId: 'REHAB-STF-001', password: '', staffRole: '', phone: '', salary: '' });
+      fetchData();
+    } else {
+      setMessage({ type: 'error', text: res.error || 'Failed to create staff member' });
+    }
+    setFormLoading(false);
+    setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+  };
+
+  const todayPresent = Object.values(attendance).filter(a => a.status === 'present').length;
+  const todayAbsent = Object.values(attendance).filter(a => a.status === 'absent').length;
+  const notMarked = staff.length - Object.keys(attendance).length;
+
+  if (sessionLoading || loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-12 bg-gray-100 rounded-2xl w-1/3" />
+        <div className="grid grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-2xl" />)}
+        </div>
+        <div className="h-96 bg-gray-100 rounded-3xl" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-10 pb-20">
-      <div className="flex justify-between items-end">
+    <div className="space-y-8 pb-20">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">Staff Operations</h1>
-          <p className="text-gray-400 font-bold uppercase text-xs tracking-widest mt-1">Attendance & Roster Management</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center">
+              <UserCog size={20} className="text-teal-600" />
+            </div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Staff Operations</h1>
+          </div>
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest ml-1">
+            Attendance & Roster — {new Date().toLocaleDateString('en-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 bg-teal-500 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-teal-600 transition-all hover:scale-105 shadow-lg shadow-teal-200 self-start sm:self-auto"
+        >
+          <Plus size={16} />
+          Add Staff Member
+        </button>
+      </div>
+
+      {/* Message */}
+      {message.text && (
+        <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm transition-all ${
+          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
+        }`}>
+          {message.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+          {message.text}
+        </div>
+      )}
+
+      {/* Today's Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-green-50 rounded-2xl p-4 text-center">
+          <p className="text-3xl font-black text-green-600">{todayPresent}</p>
+          <p className="text-xs font-bold text-green-500 uppercase tracking-wide mt-1">Present</p>
+        </div>
+        <div className="bg-red-50 rounded-2xl p-4 text-center">
+          <p className="text-3xl font-black text-red-500">{todayAbsent}</p>
+          <p className="text-xs font-bold text-red-400 uppercase tracking-wide mt-1">Absent</p>
+        </div>
+        <div className="bg-gray-100 rounded-2xl p-4 text-center">
+          <p className="text-3xl font-black text-gray-500">{notMarked}</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mt-1">Unmarked</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Staff Member</th>
-              <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Role</th>
-              <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Today's Status</th>
-              <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Quick Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {staff.map((s) => {
-              const record = attendance[s.id];
-              return (
-                <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden border border-gray-100 shadow-sm">
-                        {s.photoUrl ? <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300 font-bold uppercase text-sm">{s.name.charAt(0)}</div>}
-                      </div>
-                      <div>
-                        <p className="font-black text-gray-900 leading-tight">{s.name}</p>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Joined {s.joiningDate.toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className="text-xs font-black text-[#1D9E75] bg-[#1D9E75]/10 px-3 py-1.5 rounded-lg uppercase tracking-widest">{s.role}</span>
-                  </td>
-                  <td className="px-8 py-6">
-                    {record ? (
-                      <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full ${
-                        record.status === 'present' ? 'bg-green-100 text-green-600' :
-                        record.status === 'absent' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-                      }`}>
-                        {record.status} {record.overriddenBy && '• OVERRIDDEN'}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-400">Not Marked</span>
-                    )}
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleOverride(s.id, 'present')} className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center hover:bg-green-600 hover:text-white transition-all text-xs font-black shadow-sm">P</button>
-                      <button onClick={() => handleOverride(s.id, 'absent')} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all text-xs font-black shadow-sm">A</button>
-                      <button onClick={() => handleOverride(s.id, 'leave')} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all text-xs font-black shadow-sm">L</button>
-                    </div>
-                  </td>
+      {/* Staff Table */}
+      {staff.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-gray-100 p-16 text-center">
+          <UserCog size={40} className="text-gray-200 mx-auto mb-4" />
+          <p className="text-gray-400 font-bold">No staff members yet.</p>
+          <p className="text-gray-300 text-sm mt-1">Click "Add Staff Member" to get started.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[640px]">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Staff Member</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Today</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Check-in / Out</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Override</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {staff.map((s) => {
+                  const record = attendance[s.id];
+                  return (
+                    <tr key={s.id} className="hover:bg-gray-50/50 transition-colors group">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden border border-gray-100 shadow-sm flex-shrink-0">
+                            {s.photoUrl
+                              ? <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center text-gray-400 font-black text-sm">{s.name.charAt(0)}</div>
+                            }
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 leading-tight">{s.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {s.phone && (
+                                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                  <Phone size={9} /> {s.phone}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1 text-[10px] text-gray-300">
+                                <Calendar size={9} /> {s.joiningDate.toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg uppercase tracking-widest">
+                          {s.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        {record ? (
+                          <div className="flex items-center gap-2">
+                            <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full ${
+                              record.status === 'present' ? 'bg-green-100 text-green-600' :
+                              record.status === 'absent'  ? 'bg-red-100 text-red-500'    : 'bg-blue-100 text-blue-600'
+                            }`}>
+                              {record.status === 'present' ? <CheckCircle size={10} /> : record.status === 'absent' ? <XCircle size={10} /> : <Clock size={10} />}
+                              {record.status}
+                            </span>
+                            {record.overriddenBy && (
+                              <span className="text-[9px] text-orange-400 font-bold uppercase flex items-center gap-0.5">
+                                <BadgeCheck size={9} /> Overridden
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-400">Not Marked</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-5">
+                        {record?.checkInTime || record?.checkOutTime ? (
+                          <div className="space-y-0.5">
+                            {record.checkInTime && (
+                              <p className="text-[10px] text-gray-500 font-bold">
+                                In: {new Date(record.checkInTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
+                            {record.checkOutTime && (
+                              <p className="text-[10px] text-gray-400 font-bold">
+                                Out: {new Date(record.checkOutTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOverride(s.id, 'present')}
+                            title="Mark Present"
+                            className="w-9 h-9 bg-green-50 text-green-600 rounded-xl flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm text-xs font-black"
+                          >P</button>
+                          <button
+                            onClick={() => handleOverride(s.id, 'absent')}
+                            title="Mark Absent"
+                            className="w-9 h-9 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm text-xs font-black"
+                          >A</button>
+                          <button
+                            onClick={() => handleOverride(s.id, 'leave')}
+                            title="Mark Leave"
+                            className="w-9 h-9 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm text-xs font-black"
+                          >L</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Create Staff Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="text-xl font-black text-gray-900">Add Staff Member</h2>
+                <p className="text-gray-400 text-xs mt-0.5">Creates login account + adds to roster</p>
+              </div>
+              <button onClick={() => setShowModal(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateStaff} className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Full Name *</label>
+                <input
+                  required
+                  placeholder="e.g. Muhammad Ali"
+                  className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Login ID *</label>
+                  <input
+                    required
+                    className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
+                    value={form.customId}
+                    onChange={e => setForm({ ...form, customId: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Password *</label>
+                  <input
+                    required
+                    type="password"
+                    placeholder="Min 6 chars"
+                    className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Department Role *</label>
+                <select
+                  required
+                  className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
+                  value={form.staffRole}
+                  onChange={e => setForm({ ...form, staffRole: e.target.value })}
+                >
+                  <option value="">Select role...</option>
+                  <option value="Counselor">Counselor</option>
+                  <option value="Nurse">Nurse</option>
+                  <option value="Security">Security</option>
+                  <option value="Cook">Cook</option>
+                  <option value="Cleaner">Cleaner</option>
+                  <option value="Driver">Driver</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phone</label>
+                  <input
+                    placeholder="03XX-XXXXXXX"
+                    className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Salary (PKR)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 25000"
+                    className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
+                    value={form.salary}
+                    onChange={e => setForm({ ...form, salary: e.target.value })}
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 bg-gray-50 rounded-xl px-4 py-3">
+                Staff will log in at <span className="font-mono font-bold">/departments/rehab/login</span> using their Login ID and password.
+              </p>
+              <button
+                type="submit"
+                disabled={formLoading}
+                className="w-full flex items-center justify-center gap-2 bg-teal-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-teal-600 transition-all disabled:opacity-50"
+              >
+                {formLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                {formLoading ? 'Creating...' : 'Create Staff Member'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
