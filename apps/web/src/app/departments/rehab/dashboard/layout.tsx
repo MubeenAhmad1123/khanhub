@@ -5,8 +5,10 @@ import Link from 'next/link';
 import {
   LayoutDashboard, Users, CheckCircle, Heart, UserCog,
   Banknote, FileBarChart, CreditCard, CalendarDays,
-  User, LogOut, ArrowLeft, Menu, X, Shield
+  User, LogOut, ArrowLeft, Menu, X, Shield, Bell
 } from 'lucide-react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 type RehabRole = 'superadmin' | 'admin' | 'cashier' | 'staff' | 'family';
 
@@ -54,6 +56,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; patientId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const session = localStorage.getItem('rehab_session');
@@ -68,6 +71,21 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     setIsChecking(false);
     setTimeout(() => setMounted(true), 50);
   }, [router]);
+
+  useEffect(() => {
+    if (user?.role !== 'superadmin') return;
+
+    const q = query(
+      collection(db, 'rehab_transactions'),
+      where('status', '==', 'pending')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPendingCount(snapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, [user?.role]);
 
   if (isChecking) {
     return (
@@ -145,7 +163,13 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
             >
               <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
               <span>{item.label}</span>
-              {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />}
+              {item.href.includes('approvals') && pendingCount > 0 && user?.role === 'superadmin' ? (
+                <span className="ml-auto min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              ) : isActive ? (
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />
+              ) : null}
             </Link>
           );
         })}
@@ -219,6 +243,14 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
             KhanHub Rehab Portal
           </div>
           <div className="flex items-center gap-3">
+            {role === 'superadmin' && pendingCount > 0 && (
+              <div className="relative mr-2">
+                <Bell size={18} className="text-gray-400" />
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center">
+                  {pendingCount > 9 ? '9+' : pendingCount}
+                </span>
+              </div>
+            )}
             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
               {role ? ROLE_LABELS[role] : ''}
             </span>
