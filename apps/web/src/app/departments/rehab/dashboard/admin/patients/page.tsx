@@ -1,109 +1,185 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
-import { getPatients } from '@/lib/rehab/patients';
-import type { Patient } from '@/types/rehab';
+import Link from 'next/link';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { 
+  Heart, Plus, Search, ChevronRight, User, Calendar, Package, Loader2 
+} from 'lucide-react';
 
-export default function AdminPatientsPage() {
+export default function PatientsListPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [patients, setPatients] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (sessionLoading) return;
-    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+    const sessionData = localStorage.getItem('rehab_session');
+    if (!sessionData) {
       router.push('/departments/rehab/login');
       return;
     }
-
-    const fetchPatients = async () => {
-      try {
-        const data = await getPatients();
-        setPatients(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const parsed = JSON.parse(sessionData);
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
+      router.push('/departments/rehab/login');
+      return;
+    }
+    setSession(parsed);
     fetchPatients();
-  }, [router, user, sessionLoading]);
+  }, [router]);
 
-  const filtered = patients.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const fetchPatients = async () => {
+    try {
+      const q = query(
+        collection(db, 'rehab_patients'),
+        where('isActive', '==', true),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPatients(data);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="h-16 bg-gray-100 rounded-2xl" /><div className="h-96 bg-gray-100 rounded-3xl" /></div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      </div>
+    );
+  }
+
+  const filteredPatients = patients.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const thisMonthAdmissions = patients.filter(p => {
+    if (!p.admissionDate) return false;
+    const date = p.admissionDate.toDate();
+    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  }).length;
 
   return (
-    <div className="space-y-8 pb-12">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Patient Registry</h1>
-          <p className="text-gray-400 font-bold uppercase text-xs tracking-widest mt-1">Manage and View Records</p>
-        </div>
-        <Link 
-          href="/departments/rehab/dashboard/admin/patients/new"
-          className="bg-[#1D9E75] text-white px-8 py-4 rounded-2xl font-black shadow-xl shadow-[#1D9E75]/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-        >
-          <span>＋</span> Add Patient
-        </Link>
-      </div>
-
-      <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-        <span className="ml-4 text-xl">🔍</span>
-        <input 
-          type="text" 
-          placeholder="Search by name..." 
-          className="flex-1 bg-transparent border-none outline-none py-3 font-bold text-gray-700 placeholder:text-gray-300"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map((patient) => (
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Heart className="w-6 h-6 text-teal-600" />
+              Patients
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">Manage all active patients</p>
+          </div>
           <Link 
-            key={patient.id} 
-            href={`/departments/rehab/dashboard/admin/patients/${patient.id}`}
-            className="group block bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-2xl hover:shadow-gray-200/50 hover:border-[#1D9E75]/20 transition-all text-center relative overflow-hidden"
+            href="/departments/rehab/dashboard/admin/patients/new"
+            className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 shadow-sm"
           >
-            <div className="w-24 h-24 rounded-3xl bg-gray-50 mx-auto mb-4 overflow-hidden border-4 border-white shadow-md relative z-10">
-              {patient.photoUrl ? (
-                <img src={patient.photoUrl} alt={patient.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-300 font-black text-3xl">
-                  {patient.name.charAt(0)}
-                </div>
-              )}
-            </div>
-            
-            <h3 className="text-xl font-black text-gray-900 mb-1 group-hover:text-[#1D9E75] transition-colors">{patient.name}</h3>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">{patient.diagnosis || 'General Care'}</p>
-            
-            <div className="bg-gray-50 rounded-2xl p-4 flex justify-between items-center">
-              <div className="text-left">
-                <p className="text-[9px] font-bold text-gray-400 uppercase">Package</p>
-                <p className="text-sm font-black text-gray-700">{patient.packageAmount.toLocaleString()} <span className="text-[10px] font-normal text-gray-400">PKR</span></p>
-              </div>
-              <div className="text-right">
-                <p className="text-[9px] font-bold text-gray-400 uppercase">Admission</p>
-                <p className="text-sm font-bold text-gray-600">{new Date(patient.admissionDate).toLocaleDateString()}</p>
-              </div>
-            </div>
-            
-            <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-green-500 shadow-lg shadow-green-500/50" />
+            <Plus className="w-5 h-5" />
+            Add Patient
           </Link>
-        ))}
+        </div>
 
-        {filtered.length === 0 && (
-          <div className="col-span-full py-20 text-center bg-white rounded-[2.5rem] border border-gray-100 border-dashed">
-            <p className="text-gray-400 font-bold uppercase tracking-widest">No patients found matches search</p>
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center text-teal-600">
+              <User className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Total Active</p>
+              <p className="text-2xl font-bold text-gray-900">{patients.length}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+              <Calendar className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">New This Month</p>
+              <p className="text-2xl font-bold text-gray-900">{thisMonthAdmissions}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+            placeholder="Search patients by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Patient Grid */}
+        {filteredPatients.length === 0 ? (
+          <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
+            <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No patients found</h3>
+            <p className="text-gray-500 text-sm">
+              {searchQuery ? "Try adjusting your search query." : "Add your first patient to get started."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredPatients.map(patient => (
+              <Link 
+                href={`/departments/rehab/dashboard/admin/patients/${patient.id}`} 
+                key={patient.id}
+                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md hover:border-teal-100 transition-all group flex flex-col h-full"
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  {patient.photoUrl ? (
+                    <img src={patient.photoUrl} alt={patient.name} className="w-14 h-14 rounded-full object-cover border border-gray-100" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xl border border-teal-200">
+                      {patient.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-gray-900 truncate group-hover:text-teal-700 transition-colors">
+                      {patient.name}
+                    </h3>
+                    <div className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {patient.admissionDate?.toDate?.()?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) || 'No date'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-auto space-y-2 pt-4 border-t border-gray-50">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Package className="w-4 h-4 text-gray-400" />
+                    <span>PKR {patient.packageAmount?.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="text-sm text-gray-500 truncate">
+                    {patient.diagnosis || "No diagnosis specified"}
+                  </div>
+                </div>
+
+                <div className="absolute inset-y-0 right-4 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ChevronRight className="w-5 h-5 text-teal-500" />
+                </div>
+              </Link>
+            ))}
           </div>
         )}
+
       </div>
     </div>
   );

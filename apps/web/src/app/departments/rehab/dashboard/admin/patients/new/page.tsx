@@ -2,148 +2,219 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
-import { createPatient } from '@/lib/rehab/patients';
+import Link from 'next/link';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { ArrowLeft, User, Heart, Save, Loader2, Link as LinkIcon } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function NewPatientPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    photoUrl: '',
-    admissionDate: new Date().toISOString().split('T')[0],
-    packageAmount: '',
-    diagnosis: ''
-  });
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form State
+  const [name, setName] = useState('');
+  const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [packageAmount, setPackageAmount] = useState('60000');
+  const [diagnosis, setDiagnosis] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [assignedStaffId, setAssignedStaffId] = useState('');
 
   useEffect(() => {
-    if (sessionLoading) return;
-    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+    const sessionData = localStorage.getItem('rehab_session');
+    if (!sessionData) {
       router.push('/departments/rehab/login');
       return;
     }
-  }, [user, sessionLoading, router]);
+    const parsed = JSON.parse(sessionData);
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
+      router.push('/departments/rehab/login');
+      return;
+    }
+    setSession(parsed);
+    setLoading(false);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!name || !admissionDate || !packageAmount) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+    
     try {
-      await createPatient({
-        name: formData.name,
-        photoUrl: formData.photoUrl || undefined,
-        admissionDate: new Date(formData.admissionDate),
-        packageAmount: parseFloat(formData.packageAmount),
-        diagnosis: formData.diagnosis || undefined,
-        assignedStaffId: '',
-        isActive: true
+      setIsSubmitting(true);
+      
+      const newPatientRef = await addDoc(collection(db, 'rehab_patients'), {
+        name,
+        photoUrl: photoUrl || null,
+        admissionDate: Timestamp.fromDate(new Date(admissionDate)),
+        packageAmount: Number(packageAmount),
+        diagnosis: diagnosis || null,
+        assignedStaffId: assignedStaffId || null,
+        isActive: true,
+        createdAt: Timestamp.now()
       });
-      router.push('/departments/rehab/dashboard/admin/patients');
-    } catch (err) {
-      alert('Error creating patient profile');
-    } finally {
-      setLoading(false);
+      
+      toast.success('Patient added ✓');
+      router.push(`/departments/rehab/dashboard/admin/patients/${newPatientRef.id}`);
+    } catch (error) {
+      console.error("Submit error:", error);
+      toast.error('Failed to add patient');
+      setIsSubmitting(false);
     }
   };
 
-  if (sessionLoading) return <div className="p-20 text-center animate-pulse">Initializing...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-3xl mx-auto pb-20">
-      <div className="mb-10">
-        <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">New Enrollment</h1>
-        <p className="text-gray-400 font-bold uppercase text-xs tracking-widest mt-1">Register new patient to system</p>
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="max-w-2xl mx-auto space-y-6">
+        
+        {/* Header & Back Link */}
+        <div className="flex flex-col gap-4">
+          <Link 
+            href="/departments/rehab/dashboard/admin/patients" 
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Patients
+          </Link>
+          
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <User className="w-6 h-6 text-teal-600" />
+              Add New Patient
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">Register a new patient into the rehab system.</p>
+          </div>
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
+            
+            {/* Core Details */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
+                <Heart className="w-5 h-5 text-gray-400" />
+                Core Details
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name *</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none transition-all placeholder-gray-400"
+                    placeholder="e.g. John Doe"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Admission Date *</label>
+                  <input
+                    type="date"
+                    value={admissionDate}
+                    onChange={(e) => setAdmissionDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none transition-all"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Package Amount (PKR) *</label>
+                  <input
+                    type="number"
+                    value={packageAmount}
+                    onChange={(e) => setPackageAmount(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none transition-all font-medium"
+                    min="0"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Details */}
+            <div className="space-y-4 pt-4">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 pb-2 border-b border-gray-50">
+                <Save className="w-5 h-5 text-gray-400" />
+                Additional Info
+              </h2>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Diagnosis / Notes</label>
+                <textarea
+                  value={diagnosis}
+                  onChange={(e) => setDiagnosis(e.target.value)}
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none transition-all placeholder-gray-400 resize-none"
+                  placeholder="e.g. Heroin addiction, referred by Dr. Smith..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                  <LinkIcon className="w-4 h-4 text-gray-400" />
+                  Photo URL
+                </label>
+                <input
+                  type="url"
+                  value={photoUrl}
+                  onChange={(e) => setPhotoUrl(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none transition-all placeholder-gray-400 text-sm"
+                  placeholder="https://example.com/photo.jpg"
+                />
+                <p className="text-xs text-gray-500 mt-2 ml-1">
+                  Cloudinary upload coming soon — paste a direct image URL for now.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Assigned Staff ID (Optional)</label>
+                <input
+                  type="text"
+                  value={assignedStaffId}
+                  onChange={(e) => setAssignedStaffId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none transition-all placeholder-gray-400 text-sm font-mono"
+                  placeholder="Staff document ID"
+                />
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-gray-100 flex items-center justify-end gap-4">
+              <Link 
+                href="/departments/rehab/dashboard/admin/patients"
+                className="px-6 py-3 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </Link>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-medium shadow-sm transition-colors flex items-center gap-2 disabled:opacity-70"
+              >
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                Add Patient
+              </button>
+            </div>
+
+          </form>
+        </div>
+
       </div>
-
-      <form onSubmit={handleSubmit} className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100 space-y-10">
-        <div className="space-y-6">
-          <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
-             <span className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center text-sm font-bold text-blue-500">1</span>
-             Personal Information
-          </h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2 col-span-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Full Name</label>
-              <input
-                type="text"
-                required
-                placeholder="Enter patient's full name..."
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2 col-span-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Photo URL (Optional)</label>
-              <input
-                type="url"
-                placeholder="https://example.com/photo.jpg"
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300 uppercase text-[10px]"
-                value={formData.photoUrl}
-                onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-6 pt-10 border-t border-gray-50">
-          <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
-             <span className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center text-sm font-bold text-orange-500">2</span>
-             Admission Details
-          </h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Admission Date</label>
-              <input
-                type="date"
-                required
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all"
-                value={formData.admissionDate}
-                onChange={(e) => setFormData({ ...formData, admissionDate: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Monthly Package (PKR)</label>
-              <input
-                type="number"
-                required
-                placeholder="e.g. 60000"
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300"
-                value={formData.packageAmount}
-                onChange={(e) => setFormData({ ...formData, packageAmount: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2 col-span-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-2">Diagnosis / Notes</label>
-              <textarea
-                placeholder="Additional medical notes..."
-                rows={4}
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300 resize-none"
-                value={formData.diagnosis}
-                onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-4 pt-10">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex-1 bg-gray-50 text-gray-500 py-5 rounded-[2rem] font-black text-lg hover:bg-gray-100 transition-all uppercase tracking-widest"
-          >
-            Cancel
-          </button>
-          <button
-            disabled={loading}
-            className="flex-[2] bg-[#1D9E75] text-white py-5 rounded-[2rem] font-black text-lg shadow-2xl shadow-[#1D9E75]/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 uppercase tracking-widest"
-          >
-            {loading ? 'Registering...' : 'Enroll Patient'}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

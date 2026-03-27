@@ -1,122 +1,307 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
-import { getTransactionsByDateRange } from '@/lib/rehab/transactions';
-import type { Transaction } from '@/types/rehab';
+import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { 
+  TrendingUp, TrendingDown, DollarSign, Filter, 
+  Search, Calendar, Loader2, BarChart3, AlertCircle, CheckCircle
+} from 'lucide-react';
 
-export default function AdminFinancePage() {
+export default function FinanceLogPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
-  });
+  const [queryLoading, setQueryLoading] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const data = await getTransactionsByDateRange(new Date(range.start), new Date(range.end));
-      setTransactions(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Filters
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  const [dateFrom, setDateFrom] = useState(thirtyDaysAgo.toISOString().split('T')[0]);
+  const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0]);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [stats, setStats] = useState({ income: 0, expense: 0, net: 0 });
 
   useEffect(() => {
-    if (sessionLoading) return;
-    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+    const sessionData = localStorage.getItem('rehab_session');
+    if (!sessionData) {
       router.push('/departments/rehab/login');
       return;
     }
+    const parsed = JSON.parse(sessionData);
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
+      router.push('/departments/rehab/login');
+      return;
+    }
+    setSession(parsed);
+    setLoading(false);
+  }, [router]);
+
+  useEffect(() => {
+    if (!session) return;
     fetchData();
-  }, [router, user, sessionLoading]);
+  }, [session]);
 
-  const totalIncome = transactions.filter(t => t.type === 'income' && t.status === 'approved').reduce((sum, t) => sum + t.amount, 0);
-  const totalExpense = transactions.filter(t => t.type === 'expense' && t.status === 'approved').reduce((sum, t) => sum + t.amount, 0);
+  const fetchData = async () => {
+    try {
+      setQueryLoading(true);
+      
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
 
-  if (sessionLoading || loading) return <div className="p-20 text-center animate-pulse">Synchronizing Ledger...</div>;
+      // We constrain our query to date range to keep it simple and composite index minimal
+      const q = query(
+        collection(db, 'rehab_transactions'),
+        where('date', '>=', Timestamp.fromDate(from)),
+        where('date', '<=', Timestamp.fromDate(to)),
+        orderBy('date', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+
+      // Client-side filtering for other fields
+      if (typeFilter !== 'all') {
+        data = data.filter(tx => tx.type === typeFilter);
+      }
+      if (statusFilter !== 'all') {
+        data = data.filter(tx => tx.status === statusFilter);
+      }
+      if (categoryFilter !== 'all') {
+        data = data.filter(tx => tx.category === categoryFilter);
+      }
+
+      setTransactions(data);
+
+      // Calculate stats (only approved transactions contribute to stats)
+      let income = 0;
+      let expense = 0;
+      data.forEach(tx => {
+        if (tx.status === 'approved') {
+          if (tx.type === 'income') income += tx.amount;
+          if (tx.type === 'expense') expense += tx.amount;
+        }
+      });
+      setStats({ income, expense, net: income - expense });
+
+    } catch (error) {
+      console.error("Fetch data error:", error);
+    } finally {
+      setQueryLoading(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setDateFrom(thirtyDaysAgo.toISOString().split('T')[0]);
+    setDateTo(new Date().toISOString().split('T')[0]);
+    setTypeFilter('all');
+    setStatusFilter('all');
+    setCategoryFilter('all');
+    // The user will click Apply Filters to re-fetch
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      </div>
+    );
+  }
+
+  const allCategories = [
+    'patient_fee', 'canteen_deposit', 'rent', 'electricity', 
+    'salary', 'medicine', 'food', 'maintenance', 'other'
+  ];
 
   return (
-    <div className="space-y-10 pb-20">
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">Financial Records</h1>
-          <p className="text-gray-400 font-bold uppercase text-xs tracking-widest mt-1">Transaction History & Auditing</p>
-        </div>
-      </div>
-
-      <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-wrap items-center gap-8">
-        <div className="flex items-center gap-4">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Start Date</p>
-            <input type="date" value={range.start} onChange={(e) => setRange({ ...range, start: e.target.value })} className="bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10 transition-all shadow-sm" />
-          </div>
-          <div className="space-y-1 text-gray-300 font-black text-xl">→</div>
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">End Date</p>
-            <input type="date" value={range.end} onChange={(e) => setRange({ ...range, end: e.target.value })} className="bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10 transition-all shadow-sm" />
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-teal-600" />
+              Finance Log
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">Read-only financial overview & history</p>
           </div>
         </div>
-        <button onClick={fetchData} className="bg-[#1D9E75] text-white px-10 py-4 rounded-[1.5rem] font-bold shadow-xl shadow-[#1D9E75]/20 hover:scale-105 active:scale-95 transition-all text-sm uppercase tracking-widest">Filter Records</button>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-green-50 p-8 rounded-[2.5rem] border border-green-100 shadow-sm shadow-green-100/30">
-          <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Approved Income</p>
-          <p className="text-3xl font-black text-green-700">{totalIncome.toLocaleString()} <span className="text-sm font-normal text-green-600/60">PKR</span></p>
+        {/* Filter Bar */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
+          <div className="flex items-center gap-2 text-sm font-bold text-gray-800 mb-4 pb-2 border-b border-gray-50">
+            <Filter className="w-4 h-4 text-teal-600" /> Filters
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">From</label>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">To</label>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Type</label>
+              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white capitalize">
+                <option value="all">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Status</label>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white capitalize">
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Category</label>
+              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white capitalize">
+                <option value="all">All Categories</option>
+                {allCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-end gap-3 pt-6 mt-2 border-t border-gray-50">
+            <button onClick={clearFilters} className="text-sm font-medium text-gray-500 hover:text-gray-800 px-4 py-2 rounded-lg transition-colors hover:bg-gray-100">Clear</button>
+            <button 
+              onClick={fetchData}
+              disabled={queryLoading}
+              className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-70"
+            >
+              {queryLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              Apply Filters
+            </button>
+          </div>
         </div>
-        <div className="bg-red-50 p-8 rounded-[2.5rem] border border-red-100 shadow-sm shadow-red-100/30">
-          <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Approved Expenses</p>
-          <p className="text-3xl font-black text-red-700">{totalExpense.toLocaleString()} <span className="text-sm font-normal text-red-600/60">PKR</span></p>
-        </div>
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm shadow-gray-100/30 relative">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Net Flow</p>
-          <p className={`text-3xl font-black ${totalIncome - totalExpense >= 0 ? 'text-gray-900' : 'text-red-500'}`}>{(totalIncome - totalExpense).toLocaleString()} <span className="text-sm font-normal text-gray-400">PKR</span></p>
-          <div className="absolute top-8 right-8 text-xl opacity-20">📊</div>
-        </div>
-      </div>
 
-      <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Transaction</th>
-              <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Category</th>
-              <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Amount</th>
-              <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {transactions.map((t) => (
-              <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-8 py-6">
-                  <p className="font-black text-gray-900 leading-tight mb-1">{t.description}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recorded {new Date(t.date).toLocaleDateString()}</p>
-                </td>
-                <td className="px-8 py-6 uppercase font-bold text-xs text-gray-500 tracking-widest">{t.category.replace('_', ' ')}</td>
-                <td className="px-8 py-6">
-                  <span className={`font-black text-sm ${t.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
-                    {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()} PKR
-                  </span>
-                </td>
-                <td className="px-8 py-6 text-right">
-                   <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-full ${
-                     t.status === 'approved' ? 'bg-green-100 text-green-600' : 
-                     t.status === 'pending' ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'
-                   }`}>
-                     {t.status}
-                   </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white border text-green-700 border-green-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <TrendingUp className="w-16 h-16" />
+            </div>
+            <div className="flex items-center gap-2 text-green-600 mb-3">
+              <TrendingUp className="w-5 h-5" />
+              <span className="font-bold text-sm uppercase tracking-wider">Approved Income</span>
+            </div>
+            <div className="text-3xl font-black text-gray-900">Rs. {stats.income.toLocaleString()}</div>
+          </div>
+
+          <div className="bg-white border text-red-700 border-red-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-4 opacity-10">
+              <TrendingDown className="w-16 h-16" />
+            </div>
+            <div className="flex items-center gap-2 text-red-600 mb-3">
+              <TrendingDown className="w-5 h-5" />
+              <span className="font-bold text-sm uppercase tracking-wider">Approved Expense</span>
+            </div>
+            <div className="text-3xl font-black text-gray-900">Rs. {stats.expense.toLocaleString()}</div>
+          </div>
+
+          <div className="bg-white border text-teal-700 border-teal-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-4 opacity-10">
+              <DollarSign className="w-16 h-16" />
+            </div>
+            <div className="flex items-center gap-2 text-teal-600 mb-3">
+              <DollarSign className="w-5 h-5" />
+              <span className="font-bold text-sm uppercase tracking-wider">Net Balance</span>
+            </div>
+            <div className={`text-3xl font-black ${stats.net >= 0 ? 'text-teal-600' : 'text-red-500'}`}>
+              Rs. {stats.net.toLocaleString()}
+            </div>
+          </div>
+        </div>
+
+        {/* Transactions List */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 uppercase text-xs font-bold tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Type / Category</th>
+                  <th className="px-6 py-4">Description</th>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Cashier</th>
+                  <th className="px-6 py-4 text-right">Amount (PKR)</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-gray-700">
+                {transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-16 text-center text-gray-500">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Search className="w-8 h-8 text-gray-300" />
+                        <p className="text-base font-medium text-gray-600">No transactions found</p>
+                        <p className="text-sm">Try adjusting your filters.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  transactions.map(tx => (
+                    <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            tx.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                          }`}>
+                            {tx.type === 'income' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                          </div>
+                          <span className="font-medium capitalize text-gray-900">{tx.category.replace('_', ' ')}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 truncate max-w-xs">{tx.description || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                        {tx.date?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-mono text-gray-400">{tx.cashierId}</td>
+                      <td className="px-6 py-4 text-right font-bold text-gray-900">
+                        {tx.amount.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {tx.status === 'approved' && (
+                          <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <CheckCircle className="w-3 h-3" /> Approved
+                          </span>
+                        )}
+                        {tx.status === 'pending' && (
+                          <span className="inline-flex items-center gap-1 bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Pending
+                          </span>
+                        )}
+                        {tx.status === 'rejected' && (
+                          <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <AlertCircle className="w-3 h-3" /> Rejected
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
   );

@@ -2,199 +2,363 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
-import { createRehabUserServer, deactivateRehabUser, resetRehabPassword } from '../../../actions/createRehabUser';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { RehabUser, Patient, StaffMember } from '@/types/rehab';
+import { 
+  Users, UserPlus, User, Heart, UserCog, 
+  Shield, CreditCard, Eye, EyeOff, Loader2, 
+  CheckCircle, XCircle, Search 
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
-export default function AdminUserManagement() {
+export default function UserManagementPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [familyUsers, setFamilyUsers] = useState<RehabUser[]>([]);
-  const [staffUsers, setStaffUsers] = useState<RehabUser[]>([]);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [activeTab, setActiveTab] = useState<'family' | 'staff'>('family');
 
-  // Form states
-  const [familyForm, setFamilyForm] = useState({ name: '', id: 'REHAB-FAM-101', pass: '', patientId: '' });
-  const [staffForm, setStaffForm] = useState({ name: '', id: 'REHAB-STF-101', pass: '', role: 'Doctor' });
+  // Data State
+  const [users, setUsers] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'family' | 'staff' | 'all'>('family');
 
-  const fetchData = async () => {
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Form State
+  const [fullName, setFullName] = useState('');
+  const [customId, setCustomId] = useState('');
+  const [password, setPassword] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [modalError, setModalError] = useState('');
+
+  useEffect(() => {
+    const sessionData = localStorage.getItem('rehab_session');
+    if (!sessionData) {
+      router.push('/departments/rehab/login');
+      return;
+    }
+    const parsed = JSON.parse(sessionData);
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
+      router.push('/departments/rehab/login');
+      return;
+    }
+    setSession(parsed);
+  }, [router]);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchUsers();
+  }, [session]);
+
+  const fetchUsers = async () => {
     try {
-      const qPatients = query(collection(db, 'rehab_patients'));
-      const qFamily = query(collection(db, 'rehab_users'), where('role', '==', 'family'));
-      const qStaff = query(collection(db, 'rehab_users'), where('role', '==', 'staff'));
-      
-      const [snapP, snapF, snapS] = await Promise.all([getDocs(qPatients), getDocs(qFamily), getDocs(qStaff)]);
-      
-      setPatients(snapP.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient)));
-      setFamilyUsers(snapF.docs.map(doc => ({ uid: doc.id, ...doc.data() } as RehabUser)));
-      setStaffUsers(snapS.docs.map(doc => ({ uid: doc.id, ...doc.data() } as RehabUser)));
-    } catch (err) {
-      console.error(err);
+      setLoading(true);
+      const q = query(
+        collection(db, 'rehab_users'),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setUsers(data);
+    } catch (error) {
+      console.error("Fetch users error:", error);
+      toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!sessionLoading) {
-      if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
-        router.push('/departments/rehab/login');
+  const handleCreateFamilyUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setModalError('');
+
+    if (!fullName || !customId || !password || !patientId) {
+      setModalError('All fields are required');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const result = await createRehabUserServer(
+        customId.toUpperCase(),
+        password,
+        'family',
+        fullName,
+        patientId
+      );
+
+      if (result.success) {
+        toast.success('Family user created ✓');
+        setIsModalOpen(false);
+        // Reset form
+        setFullName('');
+        setCustomId('');
+        setPassword('');
+        setPatientId('');
+        // Refresh list
+        fetchUsers();
       } else {
-        fetchData();
+        setModalError(result.error || 'Failed to create user');
       }
+    } catch (error: any) {
+      console.error("Create error", error);
+      setModalError(error.message || 'An error occurred');
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [user, sessionLoading, router]);
-
-  const handleCreateFamily = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setActionLoading(true);
-    const res = await createRehabUserServer(familyForm.id, familyForm.pass, 'family', familyForm.name, familyForm.patientId);
-    if (res.success) {
-      setMessage({ type: 'success', text: `Family user ${familyForm.id} created!` });
-      setFamilyForm({ name: '', id: 'REHAB-FAM-101', pass: '', patientId: '' });
-      fetchData();
-    } else {
-      setMessage({ type: 'error', text: res.error || 'Failed to create family user' });
-    }
-    setActionLoading(false);
   };
 
-  const handleCreateStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setActionLoading(true);
-    const res = await createRehabUserServer(staffForm.id, staffForm.pass, 'staff', staffForm.name);
-    if (res.success) {
-      // Also create record in rehab_staff collection
-      await addDoc(collection(db, 'rehab_staff'), {
-        name: staffForm.name,
-        role: staffForm.role,
-        isActive: true,
-        joiningDate: new Date(),
-        salary: 0,
-        staffId: staffForm.id // Link by customId for convenience
-      });
-      setMessage({ type: 'success', text: `Staff user ${staffForm.id} created!` });
-      setStaffForm({ name: '', id: 'REHAB-STF-101', pass: '', role: 'Doctor' });
-      fetchData();
-    } else {
-      setMessage({ type: 'error', text: res.error || 'Failed to create staff user' });
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      </div>
+    );
+  }
+
+  // Filter users by tab and search
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = 
+      (u.displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.customId || '').toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesTab = 
+      activeTab === 'all' ? true : u.role === activeTab;
+    
+    return matchesSearch && matchesTab;
+  });
+
+  const familyCount = users.filter(u => u.role === 'family').length;
+  const staffCount = users.filter(u => u.role === 'staff').length;
+  const adminCount = users.filter(u => u.role === 'admin' || u.role === 'superadmin').length;
+
+  const getRoleBadge = (role: string) => {
+    switch(role) {
+      case 'family': return <span className="flex items-center gap-1 bg-green-50 text-green-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-green-200"><Heart className="w-3 h-3"/> Family</span>;
+      case 'staff': return <span className="flex items-center gap-1 bg-teal-50 text-teal-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-teal-200"><UserCog className="w-3 h-3"/> Staff</span>;
+      case 'admin': return <span className="flex items-center gap-1 bg-blue-50 text-blue-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-blue-200"><Shield className="w-3 h-3"/> Admin</span>;
+      case 'cashier': return <span className="flex items-center gap-1 bg-amber-50 text-amber-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-amber-200"><CreditCard className="w-3 h-3"/> Cashier</span>;
+      case 'superadmin': return <span className="flex items-center gap-1 bg-purple-50 text-purple-700 font-medium px-2.5 py-1 rounded text-xs tracking-wider uppercase border border-purple-200"><Shield className="w-3 h-3"/> Super Admin</span>;
+      default: return <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded text-xs uppercase">{role}</span>;
     }
-    setActionLoading(false);
   };
-
-  const handleDeactivate = async (uid: string) => {
-    if (!confirm('Are you sure?')) return;
-    setActionLoading(true);
-    const res = await deactivateRehabUser(uid);
-    if (res.success) {
-      setMessage({ type: 'success', text: 'User deactivated' });
-      fetchData();
-    }
-    setActionLoading(false);
-  };
-
-  const handleResetPass = async (uid: string) => {
-    const newPass = prompt('Enter new password:');
-    if (!newPass) return;
-    setActionLoading(true);
-    const res = await resetRehabPassword(uid, newPass);
-    if (res.success) setMessage({ type: 'success', text: 'Password reset successful' });
-    setActionLoading(false);
-  };
-
-  if (sessionLoading || loading) return <div className="p-20 text-center font-black text-gray-200">LOADING HUB...</div>;
 
   return (
-    <div className="space-y-12 pb-20 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">Internal Access Control</h1>
-        <p className="text-gray-400 font-bold uppercase text-xs tracking-widest mt-1">Managed by {user?.displayName}</p>
-      </div>
-
-      {message.text && (
-        <div className={`p-6 rounded-[2rem] border font-bold flex items-center gap-4 ${
-          message.type === 'success' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
-        }`}>
-          {message.text}
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Users className="w-6 h-6 text-teal-600" />
+              User Management
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">Manage portal access for families and staff</p>
+          </div>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <UserPlus className="w-5 h-5" />
+            Create Family User
+          </button>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* CREATE FAMILY */}
-        <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
-           <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Provision Family Access</h2>
-           <form onSubmit={handleCreateFamily} className="space-y-4">
-              <input required placeholder="Family Member Name" className="w-full bg-gray-50 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none" value={familyForm.name} onChange={e => setFamilyForm({...familyForm, name: e.target.value})} />
-              <div className="grid grid-cols-2 gap-4">
-                <input required placeholder="User ID" className="w-full bg-gray-50 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none" value={familyForm.id} onChange={e => setFamilyForm({...familyForm, id: e.target.value})} />
-                <input type="password" required placeholder="Initial Pass" className="w-full bg-gray-50 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none" value={familyForm.pass} onChange={e => setFamilyForm({...familyForm, pass: e.target.value})} />
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><Heart className="w-5 h-5"/></div>
+            <div><div className="text-sm text-gray-500">Family</div><div className="text-xl font-bold text-gray-900">{familyCount}</div></div>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center"><UserCog className="w-5 h-5"/></div>
+            <div><div className="text-sm text-gray-500">Staff</div><div className="text-xl font-bold text-gray-900">{staffCount}</div></div>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><Shield className="w-5 h-5"/></div>
+            <div><div className="text-sm text-gray-500">Admins</div><div className="text-xl font-bold text-gray-900">{adminCount}</div></div>
+          </div>
+        </div>
+
+        {/* Filter / Search */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto hide-scrollbar">
+            <button
+              onClick={() => setActiveTab('family')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'family' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+            >Family</button>
+            <button
+              onClick={() => setActiveTab('staff')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'staff' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+            >Staff</button>
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'all' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+            >All Users</button>
+          </div>
+          
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search name or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all"
+            />
+          </div>
+        </div>
+
+        {/* User List */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {filteredUsers.length === 0 ? (
+            <div className="p-12 text-center text-gray-500">
+              <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p>No users found matching the criteria.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredUsers.map(user => (
+                <div key={user.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      {(user.displayName || user.customId || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                        {user.displayName}
+                        {user.isActive ? (
+                          <span className="flex items-center gap-0.5 text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest leading-none border border-green-200"><CheckCircle className="w-3 h-3"/> Active</span>
+                        ) : (
+                          <span className="flex items-center gap-0.5 text-red-600 bg-red-50 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest leading-none border border-red-200"><XCircle className="w-3 h-3"/> Inactive</span>
+                        )}
+                      </h4>
+                      <div className="text-sm font-mono text-gray-500 mt-1">{user.customId}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between sm:justify-end gap-6 min-w-[200px]">
+                    {getRoleBadge(user.role)}
+                    <div className="text-xs text-gray-400 whitespace-nowrap">
+                      {user.createdAt?.toDate?.()?.toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Modal: Create Family User */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-teal-600" />
+                  Create Family User
+                </h2>
+                <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-lg transition-colors">
+                  <XCircle className="w-5 h-5" />
+                </button>
               </div>
-              <select required className="w-full bg-gray-50 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none appearance-none" value={familyForm.patientId} onChange={e => setFamilyForm({...familyForm, patientId: e.target.value})}>
-                <option value="">Select Linked Patient</option>
-                {patients.map(p => <option key={p.id} value={p.id}>{p.name} (#{p.id.slice(-4)})</option>)}
-              </select>
-              <button disabled={actionLoading} className="w-full bg-[#1D9E75] text-white py-5 rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl shadow-[#1D9E75]/20">Authorize Family User</button>
-           </form>
-        </div>
 
-        {/* CREATE STAFF */}
-        <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
-           <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Provision Staff Access</h2>
-           <form onSubmit={handleCreateStaff} className="space-y-4">
-              <input required placeholder="Staff Full Name" className="w-full bg-gray-50 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none" value={staffForm.name} onChange={e => setStaffForm({...staffForm, name: e.target.value})} />
-              <div className="grid grid-cols-2 gap-4">
-                <input required placeholder="Staff User ID" className="w-full bg-gray-50 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none" value={staffForm.id} onChange={e => setStaffForm({...staffForm, id: e.target.value})} />
-                <input type="password" required placeholder="Initial Pass" className="w-full bg-gray-50 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none" value={staffForm.pass} onChange={e => setStaffForm({...staffForm, pass: e.target.value})} />
-              </div>
-              <input required placeholder="Role/Designation (e.g. Nurse)" className="w-full bg-gray-50 rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none" value={staffForm.role} onChange={e => setStaffForm({...staffForm, role: e.target.value})} />
-              <button disabled={actionLoading} className="w-full bg-gray-900 text-white py-5 rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl shadow-gray-900/10">Authorize Staff User</button>
-           </form>
-        </div>
-      </div>
+              <form onSubmit={handleCreateFamilyUser} className="p-6 space-y-4">
+                {modalError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>{modalError}</span>
+                  </div>
+                )}
 
-      {/* ROSTER TABS */}
-      <div className="bg-white rounded-[4rem] border border-gray-100 overflow-hidden shadow-sm">
-        <div className="flex bg-gray-50 border-b border-gray-100">
-          <button onClick={() => setActiveTab('family')} className={`flex-1 py-8 font-black text-xs uppercase tracking-[0.3em] transition-all ${activeTab === 'family' ? 'bg-white text-[#1D9E75]' : 'text-gray-400 hover:text-gray-600'}`}>Family Users</button>
-          <button onClick={() => setActiveTab('staff')} className={`flex-1 py-8 font-black text-xs uppercase tracking-[0.3em] transition-all ${activeTab === 'staff' ? 'bg-white text-[#1D9E75]' : 'text-gray-400 hover:text-gray-600'}`}>Staff Users</button>
-        </div>
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-100">
-               <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Identity</th>
-               <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-               <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {(activeTab === 'family' ? familyUsers : staffUsers).map(u => (
-              <tr key={u.uid} className="group hover:bg-gray-50/50 transition-colors">
-                <td className="px-10 py-8">
-                  <p className="font-black text-gray-900">{u.displayName}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{u.customId}</p>
-                </td>
-                <td className="px-10 py-8">
-                  <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${u.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                    {u.isActive ? 'Active' : 'Deactivated'}
-                  </span>
-                </td>
-                <td className="px-10 py-8 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                   <div className="flex justify-end gap-2">
-                      <button onClick={() => handleResetPass(u.uid)} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-[9px] font-black uppercase tracking-widest">Reset</button>
-                      {u.isActive && <button onClick={() => handleDeactivate(u.uid)} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase tracking-widest">Deactivate</button>}
-                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white"
+                    placeholder="e.g. Ali Khan"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Custom ID (Login ID) *</label>
+                  <input
+                    type="text"
+                    value={customId}
+                    onChange={e => setCustomId(e.target.value.toUpperCase())}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white font-mono uppercase"
+                    placeholder="e.g. REHAB-FAM-001"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white"
+                      placeholder="Min 6 characters"
+                      required
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Patient ID *</label>
+                  <input
+                    type="text"
+                    value={patientId}
+                    onChange={e => setPatientId(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white font-mono"
+                    placeholder="Paste from Patients list"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Find the patient doc ID from the Patients page</p>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors shadow-sm disabled:opacity-70 flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    Create User
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
 }
+
+// Added this strictly for error usage above
+import { AlertCircle } from 'lucide-react';
