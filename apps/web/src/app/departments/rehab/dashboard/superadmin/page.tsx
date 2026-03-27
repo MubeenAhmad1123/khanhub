@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -13,7 +12,8 @@ export default function SuperAdminDashboardPage() {
   const [stats, setStats] = useState({
     pendingApprovals: 0,
     activeUsers: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    totalPatients: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -23,21 +23,19 @@ export default function SuperAdminDashboardPage() {
       router.push('/departments/rehab/login');
       return;
     }
-
     const fetchData = async () => {
       try {
-        const [pendingSnap, usersSnap, transSnap] = await Promise.all([
+        const [pendingSnap, usersSnap, transSnap, patientsSnap] = await Promise.all([
           getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
           getDocs(query(collection(db, 'rehab_users'), where('isActive', '==', true))),
-          getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved'), where('type', '==', 'income')))
+          getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved'), where('type', '==', 'income'))),
+          getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true))),
         ]);
-
-        const totalRev = transSnap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-
         setStats({
           pendingApprovals: pendingSnap.size,
           activeUsers: usersSnap.size,
-          totalRevenue: totalRev
+          totalRevenue: transSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0),
+          totalPatients: patientsSnap.size,
         });
       } catch (err) {
         console.error(err);
@@ -45,58 +43,111 @@ export default function SuperAdminDashboardPage() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [router, user, sessionLoading]);
 
-  if (sessionLoading || loading) return <div className="space-y-8 animate-pulse"><div className="grid grid-cols-3 gap-6"><div className="h-48 bg-gray-100 rounded-[2.5rem]" /><div className="h-48 bg-gray-100 rounded-[2.5rem]" /><div className="h-48 bg-gray-100 rounded-[2.5rem]" /></div></div>;
+  if (sessionLoading || loading) {
+    return (
+      <div className="space-y-6">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-12 pb-20">
+    <div className="space-y-8 pb-12">
+      {/* Page Header */}
       <div>
-        <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-3">Superadmin Console</h1>
-        <p className="text-gray-400 font-bold uppercase text-xs tracking-[0.3em]">KhanHub Master Management System</p>
+        <h1 className="text-2xl lg:text-3xl font-black text-gray-900">Welcome, {user?.displayName} 👋</h1>
+        <p className="text-gray-400 text-sm mt-1">Super Admin Console — KhanHub Rehab Center</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <Link href="/departments/rehab/dashboard/superadmin/approvals" className="group bg-[#1D9E75] p-10 rounded-[3rem] shadow-2xl shadow-[#1D9E75]/30 hover:scale-[1.02] transition-all">
-          <p className="text-[#1D9E75] bg-white w-fit px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">Action Required</p>
-          <p className="text-6xl font-black text-white mb-2 tracking-tighter">{stats.pendingApprovals}</p>
-          <p className="text-white/80 font-bold uppercase text-xs tracking-widest">Pending Approvals ➔</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Pending Approvals" value={stats.pendingApprovals} color="bg-orange-50 text-orange-600" urgent={stats.pendingApprovals > 0} />
+        <StatCard label="Active Patients" value={stats.totalPatients} color="bg-teal-50 text-teal-600" />
+        <StatCard label="Active Users" value={stats.activeUsers} color="bg-blue-50 text-blue-600" />
+        <StatCard label="Total Revenue (PKR)" value={stats.totalRevenue.toLocaleString()} color="bg-purple-50 text-purple-600" />
+      </div>
+
+      {/* Priority Action */}
+      {stats.pendingApprovals > 0 && (
+        <Link href="/departments/rehab/dashboard/superadmin/approvals"
+          className="flex items-center justify-between bg-orange-500 text-white px-6 py-4 rounded-2xl hover:bg-orange-600 transition-colors">
+          <div>
+            <p className="font-black text-base">⚠️ {stats.pendingApprovals} transaction{stats.pendingApprovals > 1 ? 's' : ''} waiting for your approval</p>
+            <p className="text-orange-100 text-xs mt-0.5">Tap to review and approve</p>
+          </div>
+          <span className="text-2xl">→</span>
         </Link>
+      )}
 
-        <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100">
-           <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-6">Revenue Audit</p>
-           <p className="text-4xl font-black text-gray-900 mb-2">{stats.totalRevenue.toLocaleString()}</p>
-           <p className="text-[#1D9E75] font-bold uppercase text-xs tracking-widest">Total Approved Income (PKR)</p>
-        </div>
-
-        <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-gray-100">
-           <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-6">Portal Access</p>
-           <p className="text-4xl font-black text-gray-900 mb-2">{stats.activeUsers}</p>
-           <p className="text-[#1D9E75] font-bold uppercase text-xs tracking-widest">Active System Users</p>
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-base font-black text-gray-900 uppercase tracking-wider mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ActionCard
+            icon="👥"
+            title="Create Admin or Cashier"
+            desc="Add new admin accounts or manage the cashier account"
+            href="/departments/rehab/dashboard/superadmin/users"
+            accent="teal"
+          />
+          <ActionCard
+            icon="✓"
+            title="Approve Transactions"
+            desc="Review and approve all pending financial entries"
+            href="/departments/rehab/dashboard/superadmin/approvals"
+            accent="orange"
+          />
+          <ActionCard
+            icon="📋"
+            title="Global Reports"
+            desc="Generate income, expense and patient reports"
+            href="/departments/rehab/dashboard/superadmin/reports"
+            accent="purple"
+          />
+          <ActionCard
+            icon="🏥"
+            title="Patient Registry"
+            desc="View and manage all patient profiles"
+            href="/departments/rehab/dashboard/admin/patients"
+            accent="blue"
+          />
         </div>
       </div>
-
-      <section className="space-y-6">
-        <h2 className="text-2xl font-black text-gray-900">Administrative Hubs</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-          <HubCard title="Staff Roster" icon="⚕️" href="/departments/rehab/dashboard/admin/staff" />
-          <HubCard title="User Access" icon="🔐" href="/departments/rehab/dashboard/superadmin/users" />
-          <HubCard title="Patient Registry" icon="🏥" href="/departments/rehab/dashboard/admin/patients" />
-          <HubCard title="Finance Logs" icon="📉" href="/departments/rehab/dashboard/admin/finance" />
-          <HubCard title="Global Reports" icon="📑" href="/departments/rehab/dashboard/superadmin/reports" />
-        </div>
-      </section>
     </div>
   );
 }
 
-function HubCard({ title, icon, href }: { title: string, icon: string, href: string }) {
+function StatCard({ label, value, color, urgent }: { label: string; value: any; color: string; urgent?: boolean }) {
   return (
-    <Link href={href} className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 hover:bg-white hover:shadow-xl hover:shadow-gray-200/50 transition-all text-center">
-      <div className="text-3xl mb-3">{icon}</div>
-      <p className="font-black text-gray-800 text-sm uppercase tracking-widest leading-tight">{title}</p>
+    <div className={`rounded-2xl p-4 lg:p-5 ${color.split(' ')[0]} ${urgent ? 'ring-2 ring-orange-300' : ''}`}>
+      <p className={`text-2xl lg:text-3xl font-black ${color.split(' ')[1]}`}>{value}</p>
+      <p className="text-gray-600 text-xs font-semibold mt-1 leading-tight">{label}</p>
+    </div>
+  );
+}
+
+function ActionCard({ icon, title, desc, href, accent }: {
+  icon: string; title: string; desc: string; href: string; accent: string;
+}) {
+  const accents: Record<string, string> = {
+    teal:   'hover:border-teal-200 hover:bg-teal-50',
+    orange: 'hover:border-orange-200 hover:bg-orange-50',
+    purple: 'hover:border-purple-200 hover:bg-purple-50',
+    blue:   'hover:border-blue-200 hover:bg-blue-50',
+  };
+  return (
+    <Link href={href}
+      className={`flex items-start gap-4 p-5 bg-white rounded-2xl border border-gray-100 transition-all ${accents[accent] || ''}`}>
+      <span className="text-2xl mt-0.5">{icon}</span>
+      <div>
+        <p className="font-bold text-gray-900 text-sm">{title}</p>
+        <p className="text-gray-400 text-xs mt-0.5 leading-snug">{desc}</p>
+      </div>
     </Link>
   );
 }

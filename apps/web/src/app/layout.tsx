@@ -1,14 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import { Sora, DM_Sans } from 'next/font/google'
-import Navbar from '@/components/layout/Navbar'
-import Footer from '@/components/layout/Footer'
 import { Toaster } from 'react-hot-toast'
 import '@/styles/globals.css'
-import SocialMediaSidebar from '@/components/SocialMediaSidebar'
-import FloatingDonateButton from '@/components/FloatingDonateButton'
-import FloatingAffiliateButton from '@/components/FloatingAffiliateButton'
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import ConditionalShell from '@/components/layout/ConditionalShell'
 
 // ─── Viewport ────────────────────────────────────────────────────────────────
 export const viewport: Viewport = {
@@ -164,14 +160,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${sora.variable} ${dmSans.variable}`}>
       <body className="antialiased selection:bg-primary-100 selection:text-primary-900">
-        <Navbar />
-        <main className="min-h-screen">
+        <ConditionalShell>
           {children}
-        </main>
-        <SocialMediaSidebar />
-        <FloatingAffiliateButton />
-        <FloatingDonateButton />
-        <Footer />
+        </ConditionalShell>
         <Toaster position="bottom-right" />
         <Analytics />
         <SpeedInsights />

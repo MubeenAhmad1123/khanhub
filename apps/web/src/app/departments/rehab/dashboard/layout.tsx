@@ -1,59 +1,225 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import RehabSidebar from '@/components/rehab/RehabSidebar';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+
+type RehabRole = 'superadmin' | 'admin' | 'cashier' | 'staff' | 'family';
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+  roles: RehabRole[];
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Overview',       href: '/departments/rehab/dashboard/superadmin',          icon: '◈', roles: ['superadmin'] },
+  { label: 'User Management',href: '/departments/rehab/dashboard/superadmin/users',     icon: '👥', roles: ['superadmin'] },
+  { label: 'Approvals',      href: '/departments/rehab/dashboard/superadmin/approvals', icon: '✓', roles: ['superadmin'] },
+  { label: 'Overview',       href: '/departments/rehab/dashboard/admin',                icon: '◈', roles: ['admin'] },
+  { label: 'Patients',       href: '/departments/rehab/dashboard/admin/patients',       icon: '🏥', roles: ['admin', 'superadmin'] },
+  { label: 'Staff',          href: '/departments/rehab/dashboard/admin/staff',          icon: '⚕️', roles: ['admin', 'superadmin'] },
+  { label: 'Finance',        href: '/departments/rehab/dashboard/admin/finance',        icon: '₨', roles: ['admin', 'superadmin'] },
+  { label: 'Reports',        href: '/departments/rehab/dashboard/admin/reports',        icon: '📋', roles: ['admin', 'superadmin'] },
+  { label: 'Cashier Station',href: '/departments/rehab/dashboard/cashier',              icon: '💳', roles: ['cashier'] },
+  { label: 'My Attendance',  href: '/departments/rehab/dashboard/staff',               icon: '📅', roles: ['staff'] },
+  { label: 'My Patient',     href: '/departments/rehab/dashboard/family',              icon: '👤', roles: ['family'] },
+];
+
+const ROLE_COLORS: Record<RehabRole, string> = {
+  superadmin: 'bg-purple-100 text-purple-700',
+  admin:      'bg-blue-100 text-blue-700',
+  cashier:    'bg-amber-100 text-amber-700',
+  staff:      'bg-teal-100 text-teal-700',
+  family:     'bg-green-100 text-green-700',
+};
+
+const ROLE_LABELS: Record<RehabRole, string> = {
+  superadmin: 'Super Admin',
+  admin:      'Admin',
+  cashier:    'Cashier',
+  staff:      'Staff',
+  family:     'Family',
+};
 
 export default function RehabDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
-  const [patientId, setPatientId] = useState<string | null>(null);
+  const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; patientId?: string } | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Only runs on client after hydration
     const session = localStorage.getItem('rehab_session');
-    
-    if (!session) {
-      router.push('/departments/rehab/login');
-      return;
-    }
-
-    // Optional: validate session has required fields
+    if (!session) { router.push('/departments/rehab/login'); return; }
     try {
       const parsed = JSON.parse(session);
-      if (!parsed.uid || !parsed.role) {
-        router.push('/departments/rehab/login');
-        return;
-      }
-      setRole(parsed.role);
-      setPatientId(parsed.patientId || null);
+      if (!parsed.uid || !parsed.role) { router.push('/departments/rehab/login'); return; }
+      setUser(parsed);
     } catch {
-      router.push('/departments/rehab/login');
-      return;
+      router.push('/departments/rehab/login'); return;
     }
-
     setIsChecking(false);
   }, [router]);
 
-  // Show nothing while checking — prevents flash + premature redirect
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-[#fcfdfd] flex items-center justify-center">
-        <div className="text-gray-400 text-sm font-bold uppercase tracking-widest animate-pulse">
-          Loading Dashboard...
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex bg-gray-50 min-h-screen">
-      <RehabSidebar role={role as any} patientId={patientId as any} />
-      <main className="flex-1 p-8 overflow-y-auto max-h-screen">
-        <div className="max-w-7xl mx-auto">
-          {children}
+  const navItems = NAV_ITEMS.filter(item => user && item.roles.includes(user.role));
+  const role = user?.role as RehabRole;
+
+  const handleSignOut = () => {
+    localStorage.removeItem('rehab_session');
+    router.push('/departments/rehab/login');
+  };
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Logo + Back */}
+      <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+        <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-gray-600 text-xs font-semibold mb-4 transition-colors">
+          ← Back to KhanHub
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center text-white font-black text-sm">
+            R
+          </div>
+          <div>
+            <p className="font-black text-gray-900 text-sm leading-none">Rehab Portal</p>
+            <p className="text-gray-400 text-[10px] font-semibold mt-0.5">KhanHub</p>
+          </div>
         </div>
-      </main>
+      </div>
+
+      {/* User Role Badge */}
+      <div className="px-4 py-4 border-b border-gray-100">
+        <div className="bg-gray-50 rounded-2xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gray-200 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm">
+              {user?.displayName?.[0]?.toUpperCase() || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-900 text-sm truncate">{user?.displayName}</p>
+              <p className="text-gray-400 text-[10px] font-mono truncate">{user?.customId}</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
+              {role ? ROLE_LABELS[role] : ''}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav Items */}
+      <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setSidebarOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                isActive
+                  ? 'bg-teal-500 text-white shadow-sm shadow-teal-200'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              <span className="text-base w-5 text-center">{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Sign out */}
+      <div className="px-4 pb-6 pt-2 border-t border-gray-100">
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-all"
+        >
+          <span className="text-base w-5 text-center">⬡</span>
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-100 fixed left-0 top-0 h-screen z-30">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar Drawer */}
+      <aside className={`fixed left-0 top-0 h-screen w-72 bg-white z-50 lg:hidden transform transition-transform duration-300 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <SidebarContent />
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        {/* Mobile top bar */}
+        <header className="lg:hidden sticky top-0 z-20 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M3 12h18M3 6h18M3 18h18"/>
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-teal-500 rounded-lg flex items-center justify-center text-white font-black text-xs">R</div>
+            <span className="font-black text-gray-900 text-sm">Rehab Portal</span>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>
+            {role ? ROLE_LABELS[role] : ''}
+          </span>
+        </header>
+
+        {/* Desktop top bar */}
+        <header className="hidden lg:flex sticky top-0 z-20 bg-white border-b border-gray-100 px-8 py-4 items-center justify-between">
+          <div className="text-gray-400 text-xs font-semibold uppercase tracking-widest">
+            KhanHub Rehab Portal
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
+              {role ? ROLE_LABELS[role] : ''}
+            </span>
+            <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm">
+              {user?.displayName?.[0]?.toUpperCase() || '?'}
+            </div>
+            <span className="text-gray-700 text-sm font-semibold">{user?.displayName}</span>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+          <div className="max-w-6xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
