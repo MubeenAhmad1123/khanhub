@@ -150,3 +150,60 @@ export async function markSetupComplete(
     return { success: false, error: err.message };
   }
 }
+
+export async function createStaffMemberServer(
+  customId: string,
+  password: string,
+  displayName: string,
+  staffRole: string,
+  phone?: string,
+  salary?: number
+): Promise<{ success: boolean; uid?: string; staffDocId?: string; error?: string }> {
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
+
+  try {
+    const app = getAdminApp();
+    const adminAuth = getAuth(app);
+    const adminDb = getFirestore(app);
+    const email = `${customId.toLowerCase()}@rehab.khanhub`;
+
+    // Clean up if user already exists
+    try {
+      const existingUser = await adminAuth.getUserByEmail(email);
+      await adminAuth.deleteUser(existingUser.uid);
+      await adminDb.collection('rehab_users').doc(existingUser.uid).delete();
+    } catch {
+      // fine
+    }
+
+    // Create Firebase Auth user
+    const userRecord = await adminAuth.createUser({ email, password, displayName });
+
+    // Write to rehab_users (for login)
+    await adminDb.collection('rehab_users').doc(userRecord.uid).set({
+      customId,
+      role: 'staff',
+      displayName,
+      isActive: true,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    // Write to rehab_staff (for attendance + roster)
+    const staffRef = adminDb.collection('rehab_staff').doc();
+    await staffRef.set({
+      name: displayName,
+      role: staffRole,
+      phone: phone || null,
+      salary: salary || 0,
+      joiningDate: FieldValue.serverTimestamp(),
+      isActive: true,
+      photoUrl: null,
+      loginUserId: userRecord.uid,
+    });
+
+    return { success: true, uid: userRecord.uid, staffDocId: staffRef.id };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
