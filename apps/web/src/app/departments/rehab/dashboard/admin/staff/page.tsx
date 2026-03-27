@@ -7,6 +7,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { overrideAttendance } from '@/lib/rehab/attendance';
 import { createStaffMemberServer } from '../../../actions/createRehabUser';
+import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 import type { StaffMember, AttendanceRecord, StaffDuty } from '@/types/rehab';
 import {
   UserCog, Plus, X, CheckCircle, XCircle, Clock,
@@ -368,7 +369,13 @@ export default function AdminStaffPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Password *</label>
-                  <input required type="password" placeholder="Min 6 chars" className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+                  <EyePasswordInput 
+                    required 
+                    placeholder="Min 6 chars" 
+                    className="bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none shadow-none" 
+                    value={form.password} 
+                    onChange={e => setForm({ ...form, password: e.target.value })} 
+                  />
                 </div>
               </div>
 

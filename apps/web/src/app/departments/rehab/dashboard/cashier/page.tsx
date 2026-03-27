@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, Timestamp, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
   TrendingUp, TrendingDown, Plus, 
@@ -78,10 +78,16 @@ export default function CashierStationPage() {
       toast.error('Please fill required fields');
       return;
     }
-    
+    const needsPatient = category === 'canteen_deposit' || category === 'canteen_expense';
+    if (needsPatient && !patientId.trim()) {
+      toast.error('Patient ID is required for canteen transactions');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      
+
+      // 1. Submit to rehab_transactions
       await addDoc(collection(db, 'rehab_transactions'), {
         type: activeTab,
         category,
@@ -93,15 +99,62 @@ export default function CashierStationPage() {
         status: 'pending',
         createdAt: Timestamp.now()
       });
-      
+
+      // 2. If canteen_deposit or canteen_expense → update rehab_canteen
+      if (needsPatient && patientId.trim()) {
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const isDeposit = category === 'canteen_deposit';
+        const txEntry = {
+          id: Date.now().toString(),
+          type: isDeposit ? 'deposit' : 'expense',
+          amount: Number(amount),
+          description: description || (isDeposit ? 'Canteen deposit' : 'Canteen expense'),
+          date: Timestamp.now(),
+          cashierId: session.uid,
+        };
+
+        try {
+          const canteenQ = query(
+            collection(db, 'rehab_canteen'),
+            where('patientId', '==', patientId.trim()),
+            where('month', '==', currentMonth)
+          );
+          const snap = await getDocs(canteenQ);
+
+          if (!snap.empty) {
+            const canteenDoc = snap.docs[0];
+            const d = canteenDoc.data();
+            const newDeposited = isDeposit ? (d.totalDeposited || 0) + Number(amount) : (d.totalDeposited || 0);
+            const newSpent = !isDeposit ? (d.totalSpent || 0) + Number(amount) : (d.totalSpent || 0);
+            await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+              totalDeposited: newDeposited,
+              totalSpent: newSpent,
+              balance: newDeposited - newSpent,
+              transactions: [...(d.transactions || []), txEntry],
+            });
+          } else {
+            await addDoc(collection(db, 'rehab_canteen'), {
+              patientId: patientId.trim(),
+              month: currentMonth,
+              totalDeposited: isDeposit ? Number(amount) : 0,
+              totalSpent: !isDeposit ? Number(amount) : 0,
+              balance: isDeposit ? Number(amount) : -Number(amount),
+              transactions: [txEntry],
+            });
+          }
+        } catch (canteenErr) {
+          console.error('Canteen update failed:', canteenErr);
+          // Don't block the main flow — just log it
+        }
+      }
+
       toast.success('Submitted for approval ✓');
-      // Reset form
       setCategory('');
       setAmount('');
       setDescription('');
       setPatientId('');
       setDateStr(new Date().toISOString().split('T')[0]);
-      
       fetchTodayTransactions();
     } catch (error) {
       console.error("Submit error:", error);
@@ -132,8 +185,11 @@ export default function CashierStationPage() {
     { value: 'medicine', label: 'Medicine' },
     { value: 'food', label: 'Food' },
     { value: 'maintenance', label: 'Maintenance' },
+    { value: 'canteen_expense', label: 'Canteen Expense' },
     { value: 'other', label: 'Other Expense' }
   ];
+
+  const showPatientField = category === 'canteen_deposit' || category === 'canteen_expense' || (activeTab === 'income' && category === 'patient_fee');
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -218,6 +274,21 @@ export default function CashierStationPage() {
                     className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
                     placeholder="e.g. patient doc ID"
                   />
+                </div>
+              )}
+
+              {(category === 'canteen_deposit' || category === 'canteen_expense') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Patient ID *</label>
+                  <input
+                    type="text"
+                    value={patientId}
+                    onChange={(e) => setPatientId(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
+                    placeholder="Paste patient doc ID"
+                    required
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Find the patient ID from the Patients list page</p>
                 </div>
               )}
 

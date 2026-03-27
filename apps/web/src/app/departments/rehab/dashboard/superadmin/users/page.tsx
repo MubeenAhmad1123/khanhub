@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { createRehabUserServer, deactivateRehabUser, resetRehabPassword } from '../../../actions/createRehabUser';
+import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { RehabUser } from '@/types/rehab';
@@ -136,7 +137,12 @@ export default function SuperAdminUserManagement() {
                </div>
                <div className="space-y-1">
                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Access Secret</label>
-                 <input type="password" required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100 placeholder:text-gray-200" placeholder="••••••••" value={adminForm.pass} onChange={e => setAdminForm({...adminForm, pass: e.target.value})} />
+                 <EyePasswordInput 
+                   required 
+                   className="bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100 placeholder:text-gray-200" 
+                   value={adminForm.pass} 
+                   onChange={e => setAdminForm({...adminForm, pass: e.target.value})} 
+                 />
                </div>
             </div>
             <button disabled={actionLoading} className="w-full bg-blue-600 text-white py-5 rounded-[1.5rem] font-black shadow-xl shadow-blue-600/20 hover:scale-[1.02] transition-all disabled:opacity-50 uppercase tracking-widest text-sm">Create Admin Account</button>
@@ -176,7 +182,12 @@ export default function SuperAdminUserManagement() {
                  </div>
                  <div className="space-y-1">
                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Initial Secret</label>
-                   <input type="password" required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" value={cashierForm.pass} onChange={e => setCashierForm({...cashierForm, pass: e.target.value})} />
+                   <EyePasswordInput 
+                     required 
+                     className="bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" 
+                     value={cashierForm.pass} 
+                     onChange={e => setCashierForm({...cashierForm, pass: e.target.value})} 
+                   />
                  </div>
                </div>
                <button disabled={actionLoading} className="w-full bg-gray-900 text-white py-5 rounded-[1.5rem] font-black shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 uppercase tracking-widest text-sm">Create Cashier Account</button>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createRehabUserServer, markSetupComplete } from '../actions/createRehabUser';
+import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 
 export default function SetupPage() {
   const router = useRouter();
@@ -20,11 +21,6 @@ export default function SetupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [cashierId, setCashierId] = useState('REHAB-CSH-001');
   const [cashierPassword, setCashierPassword] = useState('');
-
-  // password visibility toggles
-  const [showSaPass, setShowSaPass] = useState(false);
-  const [showConfirmPass, setShowConfirmPass] = useState(false);
-  const [showCashierPass, setShowCashierPass] = useState(false);
 
   // submission state
   const [loading, setLoading] = useState(false);
@@ -172,32 +168,22 @@ export default function SetupPage() {
                   <div className="relative">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] 
                                       text-gray-400 block mb-1 ml-2">Password</label>
-                    <input
-                      type={showSaPass ? "text" : "password"}
+                    <EyePasswordInput
                       value={superAdminPassword}
                       onChange={e => setSuperAdminPassword(e.target.value)}
                       required
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
-                                 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                      className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-none"
                     />
-                    <button type="button" onClick={() => setShowSaPass(!showSaPass)} className="absolute right-4 top-[38px] text-lg hover:scale-110 transition-transform">
-                      {showSaPass ? '👁️' : '🔒'}
-                    </button>
                   </div>
                   <div className="relative">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] 
                                       text-gray-400 block mb-1 ml-2">Confirm</label>
-                    <input
-                      type={showConfirmPass ? "text" : "password"}
+                    <EyePasswordInput
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
                       required
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
-                                 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                      className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-none"
                     />
-                    <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-4 top-[38px] text-lg hover:scale-110 transition-transform">
-                      {showConfirmPass ? '👁️' : '🔒'}
-                    </button>
                   </div>
                 </div>
               </div>
@@ -221,17 +207,12 @@ export default function SetupPage() {
                 <div className="relative">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] 
                                     text-gray-400 block mb-1 ml-2">Cashier Password</label>
-                  <input
-                    type={showCashierPass ? "text" : "password"}
+                  <EyePasswordInput
                     value={cashierPassword}
                     onChange={e => setCashierPassword(e.target.value)}
                     required
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
-                               py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                    className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-none"
                   />
-                  <button type="button" onClick={() => setShowCashierPass(!showCashierPass)} className="absolute right-4 top-[38px] text-lg hover:scale-110 transition-transform">
-                    {showCashierPass ? '👁️' : '🔒'}
-                  </button>
                 </div>
               </div>
             </div>

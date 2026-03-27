@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginRehab } from '@/lib/rehab/rehabAuth';
+import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 
 export default function RehabLoginPage() {
   const [customId, setCustomId] = useState('');
@@ -86,13 +87,11 @@ export default function RehabLoginPage() {
 
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-6">Secret Password</label>
-            <input 
-              type="password" 
-              placeholder="••••••••"
-              required
-              className="bg-gray-50 border-none rounded-[30px] px-8 py-6 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300"
+            <EyePasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
+              className="bg-gray-50 border-none rounded-[30px] px-8 py-6 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300"
             />
           </div>
 

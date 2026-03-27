@@ -58,6 +58,15 @@ export async function createRehabUserServer(
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
     });
+    // Fire-and-forget audit log
+    try {
+      await getFirestore(app).collection('rehab_audit').add({
+        action: 'user_created',
+        performedBy: 'server_action',
+        details: { customId, role, displayName },
+        createdAt: new Date(),
+      });
+    } catch {}
     return { success: true, uid: userRecord.uid };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -73,6 +82,15 @@ export async function deactivateRehabUser(
     const app = getAdminApp();
     await getAuth(app).updateUser(uid, { disabled: true });
     await getFirestore(app).collection('rehab_users').doc(uid).update({ isActive: false });
+    // Fire-and-forget audit log
+    try {
+      await getFirestore(app).collection('rehab_audit').add({
+        action: 'user_deactivated',
+        performedBy: 'server_action',
+        details: { uid },
+        createdAt: new Date(),
+      });
+    } catch {}
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -201,7 +219,15 @@ export async function createStaffMemberServer(
       photoUrl: null,
       loginUserId: userRecord.uid,
     });
-
+    // Fire-and-forget audit log
+    try {
+      await adminDb.collection('rehab_audit').add({
+        action: 'staff_created',
+        performedBy: 'server_action',
+        details: { customId, displayName, staffRole },
+        createdAt: new Date(),
+      });
+    } catch {}
     return { success: true, uid: userRecord.uid, staffDocId: staffRef.id };
   } catch (err: any) {
     return { success: false, error: err.message };

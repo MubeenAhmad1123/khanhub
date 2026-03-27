@@ -217,7 +217,13 @@ service cloud.firestore {
     match /rehab_users/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid || isRehabAdminOrAbove());
-      allow write: if false;
+      allow create: if false;
+      allow delete: if false;
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly(['photoUrl', 'displayName', 'phone']);
     }
 
     // ── Patients ───────────────────────────────────────
@@ -288,6 +294,49 @@ service cloud.firestore {
     match /rehab_videos/{docId} {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+      allow create, update: if isRehabAdminOrAbove();
+      allow delete: if isRehabSuperAdmin();
+    }
+
+    // ── Audit log ──────────────────────────────────────
+    // Only superadmin can read. 
+    // Server actions write via Admin SDK (bypasses rules).
+    // Client writes allowed for fire-and-forget audit entries
+    // from authenticated rehab users only.
+    match /rehab_audit/{docId} {
+      allow read: if isRehabSuperAdmin();
+      allow create: if isRehabAuth();
+      allow update, delete: if false;
+    }
+
+    // ── Staff contributions ────────────────────────────
+    // Staff write their own contributions.
+    // Admin/superadmin can read all.
+    // Nobody deletes or edits.
+    match /rehab_contributions/{docId} {
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('staff') 
+            && resource.data.staffId == request.auth.uid);
+      allow create: if isRehabRole('staff') || isRehabAdminOrAbove();
+      allow update, delete: if false;
+    }
+
+    // ── Staff fines ────────────────────────────────────
+    // Admin/superadmin read and write. Staff reads own fines.
+    match /rehab_fines/{docId} {
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('staff') 
+            && resource.data.staffId == request.auth.uid);
+      allow create, update: if isRehabAdminOrAbove();
+      allow delete: if isRehabSuperAdmin();
+    }
+
+    // ── Staff leaves ───────────────────────────────────
+    // Admin/superadmin read and write. Staff reads own leaves.
+    match /rehab_leaves/{docId} {
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('staff') 
+            && resource.data.staffId == request.auth.uid);
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
