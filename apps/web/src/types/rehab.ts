@@ -75,24 +75,78 @@ export interface Transaction {
   approvedAt?: Date;
 }
 
+export interface StaffDuty {
+  id: string;
+  description: string; // e.g. "Clean all rooms daily before 8am"
+}
+
+export interface StaffFine {
+  id: string;
+  staffId: string;
+  amount: number;
+  reason: string;
+  date: string;       // "2025-01"
+  recordedBy: string; // admin uid
+  createdAt: Date;
+}
+
+export interface LeaveRecord {
+  id: string;
+  staffId: string;
+  fromDate: string;   // "2025-01-10"
+  toDate: string;     // "2025-01-12"
+  days: number;
+  reason: string;
+  type: 'paid' | 'unpaid';
+  recordedBy: string; // admin uid
+  createdAt: Date;
+}
+
+export interface StaffContribution {
+  id: string;
+  staffId: string;
+  date: string;       // "2025-01-15"
+  content: string;    // what they did / idea / feedback
+  createdAt: Date;
+}
+
 export interface StaffMember {
   id: string;
   name: string;
-  role: string;
+  gender: 'male' | 'female' | 'other';
+  role: string;           // department role e.g. "Counselor"
+  duties: StaffDuty[];    // list of assigned duties
   photoUrl?: string;
-  salary: number;
+  salary: number;         // monthly salary in PKR
   phone?: string;
   joiningDate: Date;
   isActive: boolean;
-  loginUserId?: string; // uid in rehab_users (for login)
+  loginUserId?: string;   // uid in rehab_users (for login link)
 }
 
 export interface AttendanceRecord {
   id: string;
   staffId: string;
-  date: string;       // "2025-01-15"
+  date: string;           // "2025-01-15"
   status: 'present' | 'absent' | 'leave';
   checkInTime?: Date;
   checkOutTime?: Date;
   overriddenBy?: string;
 }
+
+// Salary calculation helper (use in reports)
+// dailyRate = salary / workingDaysInMonth (default 26)
+// netSalary = salary - (absentDays * dailyRate) - totalFines
+
+// FIRESTORE COLLECTIONS:
+// rehab_users         — all portal users
+// rehab_patients      — patient profiles
+// rehab_fees          — monthly fee records per patient
+// rehab_canteen       — monthly canteen wallet per patient
+// rehab_videos        — videos uploaded per patient
+// rehab_staff         — staff member profiles
+// rehab_attendance    — daily attendance records
+// rehab_transactions  — all financial transactions
+// rehab_fines         — staff fine records
+// rehab_leaves        — staff leave records
+// rehab_contributions — staff daily contributions/feedback

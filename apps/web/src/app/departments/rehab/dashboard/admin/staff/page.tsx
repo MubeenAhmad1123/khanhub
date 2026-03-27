@@ -6,11 +6,12 @@ import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { overrideAttendance } from '@/lib/rehab/attendance';
-import { createStaffMemberServer } from '../../actions/createRehabUser';
-import type { StaffMember, AttendanceRecord } from '@/types/rehab';
+import { createStaffMemberServer } from '../../../actions/createRehabUser';
+import type { StaffMember, AttendanceRecord, StaffDuty } from '@/types/rehab';
 import {
   UserCog, Plus, X, CheckCircle, XCircle, Clock,
-  Phone, Calendar, BadgeCheck, Loader2, AlertCircle
+  Phone, Calendar, BadgeCheck, Loader2, AlertCircle,
+  ChevronRight, List
 } from 'lucide-react';
 
 export default function AdminStaffPage() {
@@ -22,13 +23,16 @@ export default function AdminStaffPage() {
   const [showModal, setShowModal] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [dutyInput, setDutyInput] = useState('');
   const [form, setForm] = useState({
     name: '',
+    gender: 'male' as 'male' | 'female' | 'other',
     customId: 'REHAB-STF-001',
     password: '',
     staffRole: '',
     phone: '',
     salary: '',
+    duties: [] as StaffDuty[],
   });
 
   const fetchData = async () => {
@@ -38,6 +42,7 @@ export default function AdminStaffPage() {
         id: doc.id,
         ...doc.data(),
         joiningDate: doc.data().joiningDate?.toDate?.() || new Date(),
+        duties: doc.data().duties || [],
       } as StaffMember));
       setStaff(staffList.filter(s => s.isActive));
 
@@ -83,6 +88,18 @@ export default function AdminStaffPage() {
     }
   };
 
+  const addDuty = () => {
+    const trimmed = dutyInput.trim();
+    if (!trimmed) return;
+    const newDuty: StaffDuty = { id: Date.now().toString(), description: trimmed };
+    setForm(f => ({ ...f, duties: [...f.duties, newDuty] }));
+    setDutyInput('');
+  };
+
+  const removeDuty = (id: string) => {
+    setForm(f => ({ ...f, duties: f.duties.filter(d => d.id !== id) }));
+  };
+
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.customId || !form.password || !form.staffRole) {
@@ -97,11 +114,13 @@ export default function AdminStaffPage() {
       form.staffRole,
       form.phone || undefined,
       form.salary ? Number(form.salary) : undefined,
+      form.gender,
+      form.duties,
     );
     if (res.success) {
       setMessage({ type: 'success', text: `Staff member "${form.name}" created successfully!` });
       setShowModal(false);
-      setForm({ name: '', customId: 'REHAB-STF-001', password: '', staffRole: '', phone: '', salary: '' });
+      setForm({ name: '', gender: 'male', customId: 'REHAB-STF-001', password: '', staffRole: '', phone: '', salary: '', duties: [] });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create staff member' });
@@ -152,15 +171,14 @@ export default function AdminStaffPage() {
 
       {/* Message */}
       {message.text && (
-        <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm transition-all ${
-          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
-        }`}>
+        <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
+          }`}>
           {message.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {message.text}
         </div>
       )}
 
-      {/* Today's Stats */}
+      {/* Today Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-green-50 rounded-2xl p-4 text-center">
           <p className="text-3xl font-black text-green-600">{todayPresent}</p>
@@ -186,14 +204,14 @@ export default function AdminStaffPage() {
       ) : (
         <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[640px]">
+            <table className="w-full text-left min-w-[680px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Staff Member</th>
                   <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
                   <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Today</th>
                   <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Check-in / Out</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Override</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Override / View</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -212,36 +230,40 @@ export default function AdminStaffPage() {
                           <div>
                             <p className="font-bold text-gray-900 leading-tight">{s.name}</p>
                             <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-gray-400 capitalize">{s.gender}</span>
                               {s.phone && (
                                 <span className="flex items-center gap-1 text-[10px] text-gray-400">
                                   <Phone size={9} /> {s.phone}
                                 </span>
                               )}
-                              <span className="flex items-center gap-1 text-[10px] text-gray-300">
-                                <Calendar size={9} /> {s.joiningDate.toLocaleDateString()}
-                              </span>
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg uppercase tracking-widest">
-                          {s.role}
-                        </span>
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg uppercase tracking-widest block w-fit">
+                            {s.role}
+                          </span>
+                          {s.duties?.length > 0 && (
+                            <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                              <List size={9} /> {s.duties.length} duties
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-5">
                         {record ? (
                           <div className="flex items-center gap-2">
-                            <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full ${
-                              record.status === 'present' ? 'bg-green-100 text-green-600' :
-                              record.status === 'absent'  ? 'bg-red-100 text-red-500'    : 'bg-blue-100 text-blue-600'
-                            }`}>
+                            <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full ${record.status === 'present' ? 'bg-green-100 text-green-600' :
+                                record.status === 'absent' ? 'bg-red-100 text-red-500' : 'bg-blue-100 text-blue-600'
+                              }`}>
                               {record.status === 'present' ? <CheckCircle size={10} /> : record.status === 'absent' ? <XCircle size={10} /> : <Clock size={10} />}
                               {record.status}
                             </span>
                             {record.overriddenBy && (
                               <span className="text-[9px] text-orange-400 font-bold uppercase flex items-center gap-0.5">
-                                <BadgeCheck size={9} /> Overridden
+                                <BadgeCheck size={9} /> Override
                               </span>
                             )}
                           </div>
@@ -268,22 +290,17 @@ export default function AdminStaffPage() {
                         )}
                       </td>
                       <td className="px-6 py-5 text-right">
-                        <div className="flex justify-end gap-1.5">
+                        <div className="flex justify-end items-center gap-1.5">
+                          <button onClick={() => handleOverride(s.id, 'present')} title="Present" className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center hover:bg-green-500 hover:text-white transition-all text-xs font-black">P</button>
+                          <button onClick={() => handleOverride(s.id, 'absent')} title="Absent" className="w-8 h-8 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all text-xs font-black">A</button>
+                          <button onClick={() => handleOverride(s.id, 'leave')} title="Leave" className="w-8 h-8 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all text-xs font-black">L</button>
                           <button
-                            onClick={() => handleOverride(s.id, 'present')}
-                            title="Mark Present"
-                            className="w-9 h-9 bg-green-50 text-green-600 rounded-xl flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm text-xs font-black"
-                          >P</button>
-                          <button
-                            onClick={() => handleOverride(s.id, 'absent')}
-                            title="Mark Absent"
-                            className="w-9 h-9 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm text-xs font-black"
-                          >A</button>
-                          <button
-                            onClick={() => handleOverride(s.id, 'leave')}
-                            title="Mark Leave"
-                            className="w-9 h-9 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm text-xs font-black"
-                          >L</button>
+                            onClick={() => router.push(`/departments/rehab/dashboard/admin/staff/${s.id}`)}
+                            title="View Profile"
+                            className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center hover:bg-gray-800 hover:text-white transition-all"
+                          >
+                            <ChevronRight size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -298,96 +315,108 @@ export default function AdminStaffPage() {
       {/* Create Staff Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
               <div>
                 <h2 className="text-xl font-black text-gray-900">Add Staff Member</h2>
-                <p className="text-gray-400 text-xs mt-0.5">Creates login account + adds to roster</p>
+                <p className="text-gray-400 text-xs mt-0.5">Creates login + roster entry</p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors">
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleCreateStaff} className="p-6 space-y-4">
+
+            <form onSubmit={handleCreateStaff} className="p-6 space-y-4 overflow-y-auto flex-1">
+              {/* Name */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Full Name *</label>
-                <input
-                  required
-                  placeholder="e.g. Muhammad Ali"
-                  className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
-                  value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
-                />
+                <input required placeholder="e.g. Muhammad Ali" className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
               </div>
+
+              {/* Gender + Role */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gender *</label>
+                  <select required className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value as any })}>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dept. Role *</label>
+                  <select required className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.staffRole} onChange={e => setForm({ ...form, staffRole: e.target.value })}>
+                    <option value="">Select...</option>
+                    <option value="Counselor">Counselor</option>
+                    <option value="Nurse">Nurse</option>
+                    <option value="Security">Security</option>
+                    <option value="Cook">Cook</option>
+                    <option value="Cleaner">Cleaner</option>
+                    <option value="Driver">Driver</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Login ID + Password */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Login ID *</label>
-                  <input
-                    required
-                    className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
-                    value={form.customId}
-                    onChange={e => setForm({ ...form, customId: e.target.value })}
-                  />
+                  <input required className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.customId} onChange={e => setForm({ ...form, customId: e.target.value })} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Password *</label>
-                  <input
-                    required
-                    type="password"
-                    placeholder="Min 6 chars"
-                    className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
-                    value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                  />
+                  <input required type="password" placeholder="Min 6 chars" className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Department Role *</label>
-                <select
-                  required
-                  className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
-                  value={form.staffRole}
-                  onChange={e => setForm({ ...form, staffRole: e.target.value })}
-                >
-                  <option value="">Select role...</option>
-                  <option value="Counselor">Counselor</option>
-                  <option value="Nurse">Nurse</option>
-                  <option value="Security">Security</option>
-                  <option value="Cook">Cook</option>
-                  <option value="Cleaner">Cleaner</option>
-                  <option value="Driver">Driver</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
+
+              {/* Phone + Salary */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phone</label>
-                  <input
-                    placeholder="03XX-XXXXXXX"
-                    className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
-                    value={form.phone}
-                    onChange={e => setForm({ ...form, phone: e.target.value })}
-                  />
+                  <input placeholder="03XX-XXXXXXX" className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Salary (PKR)</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 25000"
-                    className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
-                    value={form.salary}
-                    onChange={e => setForm({ ...form, salary: e.target.value })}
-                  />
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Monthly Salary (PKR)</label>
+                  <input type="number" placeholder="e.g. 25000" className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.salary} onChange={e => setForm({ ...form, salary: e.target.value })} />
                 </div>
               </div>
+
+              {/* Duties */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Assigned Duties</label>
+                <div className="flex gap-2">
+                  <input
+                    placeholder="e.g. Clean all rooms before 8am"
+                    className="flex-1 bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none"
+                    value={dutyInput}
+                    onChange={e => setDutyInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDuty(); } }}
+                  />
+                  <button type="button" onClick={addDuty} className="px-4 py-3 bg-teal-50 text-teal-600 rounded-xl font-black text-sm hover:bg-teal-500 hover:text-white transition-all">
+                    <Plus size={16} />
+                  </button>
+                </div>
+                {form.duties.length > 0 && (
+                  <ul className="space-y-2 mt-2">
+                    {form.duties.map((d, i) => (
+                      <li key={d.id} className="flex items-start gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
+                        <span className="text-teal-400 font-black text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
+                        <span className="text-gray-700 text-sm flex-1 leading-snug">{d.description}</span>
+                        <button type="button" onClick={() => removeDuty(d.id)} className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0">
+                          <X size={14} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
               <p className="text-[10px] text-gray-400 bg-gray-50 rounded-xl px-4 py-3">
-                Staff will log in at <span className="font-mono font-bold">/departments/rehab/login</span> using their Login ID and password.
+                Staff logs in at <span className="font-mono font-bold">/departments/rehab/login</span> using their ID + password.
               </p>
-              <button
-                type="submit"
-                disabled={formLoading}
-                className="w-full flex items-center justify-center gap-2 bg-teal-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-teal-600 transition-all disabled:opacity-50"
-              >
+
+              <button type="submit" disabled={formLoading} className="w-full flex items-center justify-center gap-2 bg-teal-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-teal-600 transition-all disabled:opacity-50">
                 {formLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
                 {formLoading ? 'Creating...' : 'Create Staff Member'}
               </button>
