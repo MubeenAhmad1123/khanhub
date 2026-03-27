@@ -2,10 +2,10 @@ export type RehabRole = 'family' | 'staff' | 'cashier' | 'admin' | 'superadmin';
 
 export interface RehabUser {
   uid: string;
-  customId: string;         // e.g. "REHAB-FAM-001", "REHAB-STAFF-003"
+  customId: string;
   role: RehabRole;
   displayName: string;
-  patientId?: string;       // only for family role
+  patientId?: string;
   createdAt: Date;
   isActive: boolean;
 }
@@ -15,7 +15,7 @@ export interface Patient {
   name: string;
   photoUrl?: string;
   admissionDate: Date;
-  packageAmount: number;    // e.g. 60000 PKR/month
+  packageAmount: number;
   diagnosis?: string;
   assignedStaffId?: string;
   isActive: boolean;
@@ -25,7 +25,7 @@ export interface Patient {
 export interface FeeRecord {
   id: string;
   patientId: string;
-  month: string;            // "2025-01"
+  month: string;
   packageAmount: number;
   amountPaid: number;
   amountRemaining: number;
@@ -64,7 +64,7 @@ export interface Payment {
 export interface Transaction {
   id: string;
   type: 'income' | 'expense';
-  category: string;   // 'patient_fee' | 'canteen' | 'rent' | 'electricity' | 'salary' | 'medicine' | 'other'
+  category: string;
   amount: number;
   description: string;
   date: Date;
@@ -84,6 +84,7 @@ export interface StaffMember {
   phone?: string;
   joiningDate: Date;
   isActive: boolean;
+  loginUserId?: string; // uid in rehab_users (for login)
 }
 
 export interface AttendanceRecord {
@@ -92,15 +93,6 @@ export interface AttendanceRecord {
   date: string;       // "2025-01-15"
   status: 'present' | 'absent' | 'leave';
   checkInTime?: Date;
+  checkOutTime?: Date;
   overriddenBy?: string;
 }
-
-// FIRESTORE COLLECTIONS:
-// rehab_users        — all portal users (family, staff, cashier, admin, superadmin)
-// rehab_patients     — patient profiles
-// rehab_fees         — monthly fee records per patient
-// rehab_canteen      — monthly canteen wallet per patient
-// rehab_videos       — videos uploaded per patient
-// rehab_staff        — staff member profiles
-// rehab_attendance   — daily attendance records
-// rehab_transactions — all financial transactions (income + expenses)
