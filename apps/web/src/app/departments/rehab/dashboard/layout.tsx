@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Cashier Station', href: '/departments/rehab/dashboard/cashier',              icon: <CreditCard size={16}/>,      roles: ['cashier'] },
   { label: 'My Attendance',   href: '/departments/rehab/dashboard/staff',               icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'My Patient',      href: '/departments/rehab/dashboard/family',              icon: <User size={16}/>,            roles: ['family'] },
+  { label: 'My Profile',      href: '/departments/rehab/dashboard/profile',             icon: <User size={16}/>,            roles: ['superadmin', 'admin', 'cashier', 'staff', 'family'] },
 ];
 
 const ROLE_COLORS: Record<RehabRole, string> = {
