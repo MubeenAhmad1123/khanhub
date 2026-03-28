@@ -303,8 +303,8 @@ export default function ProfilePage() {
                 <div className="bg-gray-50 p-5 rounded-xl border border-gray-100">
                   <h4 className="text-sm font-bold text-gray-700 mb-3 border-b border-gray-200 pb-2">Assigned Duties</h4>
                   <ul className="list-decimal pl-5 space-y-1.5 text-sm text-gray-600">
-                    {staffData.duties.map((duty: string, i: number) => (
-                      <li key={i}>{duty}</li>
+                    {staffData.duties.map((duty: any, i: number) => (
+                      <li key={duty.id || i}>{duty.description || duty}</li>
                     ))}
                   </ul>
                 </div>
