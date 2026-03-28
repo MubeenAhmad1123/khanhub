@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import {
@@ -30,7 +30,7 @@ export default function StaffSelfPage() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     try {
       // Find staff profile linked to this login user
@@ -83,13 +83,13 @@ export default function StaffSelfPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, today]);
 
   useEffect(() => {
     if (sessionLoading) return;
     if (!user || user.role !== 'staff') { router.push('/departments/rehab/login'); return; }
     fetchData();
-  }, [sessionLoading, user]);
+  }, [sessionLoading, user, fetchData, router]);
 
   const showMsg = (type: string, text: string) => {
     setMessage({ type, text });

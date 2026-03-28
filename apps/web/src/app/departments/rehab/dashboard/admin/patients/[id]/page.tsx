@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -58,12 +58,8 @@ export default function PatientDetailPage() {
     setSession(parsed);
   }, [router]);
 
-  useEffect(() => {
-    if (!session || !patientId) return;
-    fetchData();
-  }, [session, patientId]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -120,7 +116,12 @@ export default function PatientDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [patientId, router]);
+
+  useEffect(() => {
+    if (!session || !patientId) return;
+    fetchData();
+  }, [session, patientId, fetchData]);
 
   const handleSaveEdit = async () => {
     try {

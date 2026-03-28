@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -43,12 +43,7 @@ export default function FinanceLogPage() {
     setLoading(false);
   }, [router]);
 
-  useEffect(() => {
-    if (!session) return;
-    fetchData();
-  }, [session]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setQueryLoading(true);
       
@@ -98,7 +93,12 @@ export default function FinanceLogPage() {
     } finally {
       setQueryLoading(false);
     }
-  };
+  }, [dateFrom, dateTo, typeFilter, statusFilter, categoryFilter]);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchData();
+  }, [session, fetchData]);
 
   const clearFilters = () => {
     setDateFrom(thirtyDaysAgo.toISOString().split('T')[0]);

@@ -12,7 +12,6 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['firebase-admin'],
   reactStrictMode: true,
   swcMinify: true,
   images: {
@@ -46,6 +45,7 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
+    serverExternalPackages: ['firebase-admin'],
   },
   async headers() {
     return [

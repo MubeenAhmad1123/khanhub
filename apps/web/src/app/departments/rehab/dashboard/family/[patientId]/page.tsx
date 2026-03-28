@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { doc, getDoc, collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -23,29 +23,7 @@ export default function FamilyPatientViewPage() {
   const [canteenRecord, setCanteenRecord] = useState<any>(null);
   const [videos, setVideos] = useState<any[]>([]);
 
-  useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) {
-      router.push('/departments/rehab/login');
-      return;
-    }
-    const parsed = JSON.parse(sessionData);
-    
-    // STRICT ROLE AND ID GUARD
-    if (parsed.role !== 'family' || parsed.patientId !== patientId) {
-      setLoading(false);
-      return; // Will show "Access Denied" below
-    }
-    
-    setSession(parsed);
-  }, [router, patientId]);
-
-  useEffect(() => {
-    if (!session) return;
-    fetchPatientData();
-  }, [session]);
-
-  const fetchPatientData = async () => {
+  const fetchPatientData = useCallback(async () => {
     try {
       // 1. Patient Profile
       const pDoc = await getDoc(doc(db, 'rehab_patients', patientId));
@@ -91,7 +69,29 @@ export default function FamilyPatientViewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [patientId, router]);
+
+  useEffect(() => {
+    const sessionData = localStorage.getItem('rehab_session');
+    if (!sessionData) {
+      router.push('/departments/rehab/login');
+      return;
+    }
+    const parsed = JSON.parse(sessionData);
+    
+    // STRICT ROLE AND ID GUARD
+    if (parsed.role !== 'family' || parsed.patientId !== patientId) {
+      setLoading(false);
+      return; // Will show "Access Denied" below
+    }
+    
+    setSession(parsed);
+  }, [router, patientId]);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchPatientData();
+  }, [session, fetchPatientData]);
 
   if (loading) {
     return (

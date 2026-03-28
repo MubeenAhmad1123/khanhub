@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -28,22 +28,7 @@ export default function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) {
-      router.push('/departments/rehab/login');
-      return;
-    }
-    const parsed = JSON.parse(sessionData);
-    setSession(parsed);
-  }, [router]);
-
-  useEffect(() => {
-    if (!session) return;
-    fetchProfileData();
-  }, [session]);
-
-  const fetchProfileData = async () => {
+  const fetchProfileData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -83,7 +68,22 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session, router]);
+
+  useEffect(() => {
+    const sessionData = localStorage.getItem('rehab_session');
+    if (!sessionData) {
+      router.push('/departments/rehab/login');
+      return;
+    }
+    const parsed = JSON.parse(sessionData);
+    setSession(parsed);
+  }, [router]);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchProfileData();
+  }, [session, fetchProfileData]);
 
   const handleSaveEdit = async () => {
     if (!editForm.displayName.trim()) {

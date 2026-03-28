@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import {
@@ -39,7 +39,7 @@ export default function StaffDetailPage() {
 
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const staffDoc = await getDoc(doc(db, 'rehab_staff', id));
       if (!staffDoc.exists()) { router.back(); return; }
@@ -76,7 +76,7 @@ export default function StaffDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, router]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -85,7 +85,7 @@ export default function StaffDetailPage() {
       return;
     }
     fetchData();
-  }, [sessionLoading, user, id]);
+  }, [sessionLoading, user, fetchData, router]);
 
   const showMsg = (type: string, text: string) => {
     setMessage({ type, text });

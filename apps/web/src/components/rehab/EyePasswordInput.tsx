@@ -371,7 +371,7 @@ export default function EyePasswordInput({
           <span style={{
             fontFamily: "'Courier New',monospace", fontSize: 10,
             letterSpacing: '.1em', color: str.color,
-          }}>// {str.label}</span>
+          }}>{`// ${str.label}`}</span>
         )}
       </div>
 
