@@ -29,44 +29,50 @@ export default function CashierStationPage() {
 
   const fetchTodayTransactions = async (uid: string) => {
     try {
-      setLoadingTransactions(true);
-      // Get start of today as a Date
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      
-      // Query by cashierId only, then filter client-side by date
-      // (avoids composite index requirement)
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+
+      // Simple single-field query — no composite index needed
       const snap = await getDocs(
         query(
           collection(db, 'rehab_transactions'),
-          where('cashierId', '==', uid),
-          orderBy('createdAt', 'desc')
+          where('cashierId', '==', uid)
         )
-      );
-      
-      const todayTxns = snap.docs
-        .map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            ...data,
-            date: data.date?.toDate?.() || new Date(data.date),
-            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-          };
-        })
-        .filter(t => {
-          const txDate = new Date(t.createdAt);
-          return txDate >= todayStart;
-        });
-      
-      setTodayTransactions(todayTxns);
-    } catch (err) {
-      console.error('Fetch today transactions error:', err);
-      toast.error("Failed to load today's transactions");
-    } finally {
-      setLoadingTransactions(false);
+      )
+
+      const allTxns = snap.docs.map(d => {
+        const data = d.data()
+        const createdAt = data.createdAt?.toDate?.() 
+          ? data.createdAt.toDate() 
+          : data.createdAt 
+            ? new Date(data.createdAt) 
+            : new Date()
+        return {
+          id: d.id,
+          type: data.type || '',
+          category: data.category || '',
+          description: data.description || '',
+          amount: data.amount || 0,
+          status: data.status || 'pending',
+          patientId: data.patientId || null,
+          cashierId: data.cashierId || '',
+          createdAt,
+          date: data.date?.toDate?.() ? data.date.toDate() : new Date(),
+        }
+      })
+
+      // Filter today's entries client-side
+      const todayTxns = allTxns
+        .filter(t => t.createdAt >= todayStart)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+
+      setTodayTransactions(todayTxns)
+      setLoadingTransactions(false)
+    } catch (err: any) {
+      console.error('Fetch today transactions error:', err?.message)
+      setLoadingTransactions(false)
     }
-  };
+  }
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -198,9 +204,10 @@ export default function CashierStationPage() {
       patient_welfare: 'Patient Welfare',
       office_supplies: 'Office Supplies',
       other_expense: 'Other Expense',
-    };
-    return map[cat] || cat.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-  };
+    }
+    return map[cat] || cat.replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase())
+  }
 
   if (loading) {
     return (
@@ -378,82 +385,75 @@ export default function CashierStationPage() {
           </form>
         </div>
 
-        {/* Today's Transactions List */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-gray-400" />
-            Today's Submissions
-          </h2>
-
-          <div className="space-y-3">
-            {loadingTransactions ? (
-              <div className="flex justify-center p-8">
-                <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
-              </div>
-            ) : todayTransactions.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                <Receipt className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No transactions submitted today yet.</p>
-              </div>
-            ) : (
-              todayTransactions.map((t: any) => (
-                <div key={t.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border-l-4 rounded-2xl hover:bg-gray-50 transition-all hover:scale-[1.01] active:scale-[0.99] bg-white gap-4 shadow-sm ${
-                  t.type === 'income' ? 'border-l-green-500' : 'border-l-red-500'
-                }`}>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
-                      t.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                    }`}>
-                      {t.type === 'income' ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+        {/* Today's Submissions */}
+        <div className="mt-8">
+          <h3 className="text-sm font-black text-gray-400 uppercase 
+            tracking-widest mb-4">
+            Today's Submissions ({todayTransactions.length})
+          </h3>
+          
+          {loadingTransactions ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
+            </div>
+          ) : todayTransactions.length === 0 ? (
+            <div className="text-center py-8 bg-white rounded-2xl 
+              border border-dashed border-gray-200 text-gray-400 
+              text-sm font-medium">
+              No transactions submitted today yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {todayTransactions.map(tx => (
+                <div key={tx.id} className={`bg-white rounded-2xl p-4 
+                  border-l-4 shadow-sm flex items-center 
+                  justify-between gap-4 ${
+                    tx.type === 'income' 
+                      ? 'border-l-green-400' 
+                      : 'border-l-red-400'
+                  }`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-black uppercase 
+                        px-2 py-0.5 rounded-md ${
+                          tx.type === 'income' 
+                            ? 'bg-green-100 text-green-600' 
+                            : 'bg-red-100 text-red-600'
+                        }`}>
+                        {tx.type}
+                      </span>
+                      <span className="text-xs text-gray-400 font-medium">
+                        {formatCategory(tx.category)}
+                      </span>
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                         <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                           t.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                         }`}>
-                           {t.type}
-                         </span>
-                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                           {formatCategory(t.category)}
-                         </span>
-                      </div>
-                      <div className="font-black text-gray-900 text-base">
-                        PKR {t.amount.toLocaleString('en-PK')}
-                      </div>
-                      {t.description && (
-                        <div className="text-xs text-gray-500 truncate italic">
-                          "{t.description}"
-                        </div>
-                      )}
-                    </div>
+                    <p className="text-sm text-gray-600 truncate">
+                      {tx.description || '—'}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {tx.createdAt.toLocaleTimeString('en-PK', {
+                        hour: '2-digit', minute: '2-digit'
+                      })}
+                    </p>
                   </div>
-                  
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-50">
-                    <div className="flex items-center gap-2">
-                      {t.status === 'pending' && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> PENDING
-                        </span>
-                      )}
-                      {t.status === 'approved' && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-50 text-green-600 border border-green-100">
-                          <CheckCircle className="w-3 h-3" /> APPROVED
-                        </span>
-                      )}
-                      {t.status === 'rejected' && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
-                          <AlertCircle className="w-3 h-3" /> REJECTED
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">
-                      {new Date(t.createdAt).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-black text-gray-900 text-sm">
+                      PKR {tx.amount.toLocaleString('en-PK')}
+                    </p>
+                    <span className={`text-[9px] font-black uppercase 
+                      px-2 py-0.5 rounded-full ${
+                        tx.status === 'approved' 
+                          ? 'bg-green-100 text-green-600'
+                          : tx.status === 'rejected'
+                            ? 'bg-red-100 text-red-600'
+                            : 'bg-yellow-100 text-yellow-600'
+                      }`}>
+                      {tx.status}
                     </span>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
