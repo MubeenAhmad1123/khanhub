@@ -43,11 +43,12 @@ export default function StaffDetailPage() {
     try {
       const staffDoc = await getDoc(doc(db, 'rehab_staff', id));
       if (!staffDoc.exists()) { router.back(); return; }
+      const data = staffDoc.data();
       setStaff({
         id: staffDoc.id,
-        ...staffDoc.data(),
-        joiningDate: staffDoc.data().joiningDate?.toDate?.() || new Date(),
-        duties: staffDoc.data().duties || [],
+        ...data,
+        joiningDate: data.joiningDate?.toDate?.() || new Date(data.joiningDate || Date.now()),
+        duties: data.duties || [],
       } as StaffMember);
 
       const [attSnap, fineSnap, leaveSnap] = await Promise.all([
@@ -62,15 +63,27 @@ export default function StaffDetailPage() {
         checkOutTime: d.data().checkOutTime?.toDate?.(),
       } as AttendanceRecord)));
 
-      setFines(fineSnap.docs.map(d => ({
-        id: d.id, ...d.data(),
-        createdAt: d.data().createdAt?.toDate?.() || new Date(),
-      } as StaffFine)));
+      setFines(fineSnap.docs
+        .map(d => {
+          const fd = d.data();
+          return {
+            id: d.id, ...fd,
+            createdAt: fd.createdAt?.toDate?.() || new Date(fd.createdAt || Date.now()),
+          };
+        })
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      );
 
-      setLeaves(leaveSnap.docs.map(d => ({
-        id: d.id, ...d.data(),
-        createdAt: d.data().createdAt?.toDate?.() || new Date(),
-      } as LeaveRecord)));
+      setLeaves(leaveSnap.docs
+        .map(d => {
+          const ld = d.data();
+          return {
+            id: d.id, ...ld,
+            createdAt: ld.createdAt?.toDate?.() || new Date(ld.createdAt || Date.now()),
+          };
+        })
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      );
     } catch (err) {
       console.error(err);
     } finally {
@@ -156,10 +169,13 @@ export default function StaffDetailPage() {
   const absentDays   = thisMonthAtt.filter(a => a.status === 'absent').length;
   const leaveDays    = thisMonthAtt.filter(a => a.status === 'leave').length;
 
-  const thisMonthFines = fines.filter(f => f.date === currentMonth).reduce((s, f) => s + f.amount, 0);
-  const dailyRate    = staff ? Math.round(staff.salary / WORKING_DAYS) : 0;
-  const deduction    = absentDays * dailyRate + thisMonthFines;
-  const netSalary    = staff ? Math.max(0, staff.salary - deduction) : 0;
+  const thisMonthFines = fines
+    .filter(f => f.date === currentMonth)
+    .reduce((s, f) => s + Number(f.amount || 0), 0);
+
+  const dailyRate = staff ? Math.round(Number(staff.salary || 0) / WORKING_DAYS) : 0;
+  const deduction = (absentDays * dailyRate) + thisMonthFines;
+  const netSalary = staff ? Math.max(0, Number(staff.salary || 0) - deduction) : 0;
 
   const tabs = [
     { key: 'overview', label: 'Profile' },
@@ -208,7 +224,10 @@ export default function StaffDetailPage() {
                 </span>
               )}
               <span className="flex items-center gap-1 text-xs text-gray-400 font-medium">
-                <Calendar size={10} /> Joined {staff.joiningDate.toLocaleDateString('en-PK')}
+                <Calendar size={10} /> Joined {staff.joiningDate 
+                  ? new Date(staff.joiningDate).toLocaleDateString('en-PK')
+                  : '—'
+                }
               </span>
             </div>
           </div>
@@ -255,14 +274,18 @@ export default function StaffDetailPage() {
               <h2 className="font-black text-gray-900">Assigned Duties</h2>
             </div>
             {staff.duties?.length > 0 ? (
-              <ol className="space-y-2">
+              <ul className="space-y-2">
                 {staff.duties.map((d, i) => (
                   <li key={d.id || i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-                    <span className="w-5 h-5 rounded-lg bg-teal-100 text-teal-600 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                    <span className="text-gray-700 text-sm leading-snug">{d.description || String(d)}</span>
+                    <span className="w-5 h-5 rounded-lg bg-teal-100 text-teal-600 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {i + 1}
+                    </span>
+                    <span className="text-gray-700 text-sm leading-snug">
+                      {d.description || d}
+                    </span>
                   </li>
                 ))}
-              </ol>
+              </ul>
             ) : (
               <p className="text-gray-300 text-sm">No duties assigned yet.</p>
             )}
@@ -346,13 +369,13 @@ export default function StaffDetailPage() {
                 <h2 className="font-black text-gray-900">Fine History</h2>
               </div>
               <div className="divide-y divide-gray-50">
-                {fines.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map(f => (
+                {fines.map(f => (
                   <div key={f.id} className="px-6 py-4 flex items-center justify-between">
                     <div>
                       <p className="font-bold text-gray-800 text-sm">{f.reason}</p>
                       <p className="text-[10px] text-gray-400 font-mono mt-0.5">{f.date}</p>
                     </div>
-                    <span className="font-black text-red-500 text-sm">- ₨{f.amount.toLocaleString()}</span>
+                    <span className="font-black text-red-500 text-sm">- ₨{Number(f.amount || 0).toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -406,14 +429,14 @@ export default function StaffDetailPage() {
                 <h2 className="font-black text-gray-900">Leave History</h2>
               </div>
               <div className="divide-y divide-gray-50">
-                {leaves.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map(l => (
+                {leaves.map(l => (
                   <div key={l.id} className="px-6 py-4 flex items-center justify-between">
                     <div>
                       <p className="font-bold text-gray-800 text-sm">{l.reason}</p>
                       <p className="text-[10px] text-gray-400 font-mono mt-0.5">{l.fromDate} → {l.toDate}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-blue-500 text-sm">{l.days} day{l.days > 1 ? 's' : ''}</p>
+                      <p className="font-black text-blue-500 text-sm">{l.days} day{Number(l.days) > 1 ? 's' : ''}</p>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${l.type === 'paid' ? 'bg-green-50 text-green-500' : 'bg-orange-50 text-orange-500'}`}>{l.type}</span>
                     </div>
                   </div>
