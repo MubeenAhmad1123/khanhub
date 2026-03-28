@@ -10,7 +10,8 @@ import {
 import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
-  Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera
+  Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
+  ChevronLeft, ChevronRight, Plus, Minus, Shield
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
@@ -50,6 +51,37 @@ export default function PatientDetailPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Fee Tab State
+  const [feeMonth, setFeeMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [showAddFeeModal, setShowAddFeeModal] = useState(false);
+  const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
+  
+  // Fee Form State
+  const [packageAmt, setPackageAmt] = useState('');
+  const [initialPayment, setInitialPayment] = useState('');
+  const [paymentNote, setPaymentNote] = useState('');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Payment Form State
+  const [payAmt, setPayAmt] = useState('');
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
+  const [payNote, setPayNote] = useState('');
+
+  // Canteen Tab State
+  const [canteenMonth, setCanteenMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [canteenModal, setCanteenModal] = useState<'deposit' | 'expense' | null>(null);
+
+  // Canteen Form State
+  const [canteenAmt, setCanteenAmt] = useState('');
+  const [canteenDesc, setCanteenDesc] = useState('');
+  const [canteenDate, setCanteenDate] = useState(new Date().toISOString().split('T')[0]);
+
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
     if (!sessionData) {
@@ -86,27 +118,34 @@ export default function PatientDetailPage() {
       });
       setPhotoPreview(data.photoUrl || '');
 
-      // Current Month String (e.g. "2025-01")
       const now = new Date();
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      // 2. Fees
+      // 2. Fees (Initial current month)
       const feesQ = query(
         collection(db, 'rehab_fees'),
         where('patientId', '==', patientId),
         where('month', '==', monthStr)
       );
       const feeSnap = await getDocs(feesQ);
-      if (!feeSnap.empty) setFeeRecord(feeSnap.docs[0].data());
+      if (!feeSnap.empty) {
+        setFeeRecord({ id: feeSnap.docs[0].id, ...feeSnap.docs[0].data() });
+      } else {
+        setFeeRecord(null);
+      }
 
-      // 3. Canteen
+      // 3. Canteen (Initial current month)
       const canteenQ = query(
         collection(db, 'rehab_canteen'),
         where('patientId', '==', patientId),
         where('month', '==', monthStr)
       );
       const canteenSnap = await getDocs(canteenQ);
-      if (!canteenSnap.empty) setCanteenRecord(canteenSnap.docs[0].data());
+      if (!canteenSnap.empty) {
+        setCanteenRecord({ id: canteenSnap.docs[0].id, ...canteenSnap.docs[0].data() });
+      } else {
+        setCanteenRecord(null);
+      }
 
       // 4. Videos
       const videosQ = query(
@@ -129,6 +168,183 @@ export default function PatientDetailPage() {
     if (!session || !patientId) return;
     fetchData();
   }, [session, patientId, fetchData]);
+
+  useEffect(() => {
+    if (!patientId || !session) return;
+    fetchFeeRecord();
+  }, [feeMonth]);
+
+  useEffect(() => {
+    if (!patientId || !session) return;
+    fetchCanteenRecord();
+  }, [canteenMonth]);
+
+  const fetchFeeRecord = async () => {
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, 'rehab_fees'),
+          where('patientId', '==', patientId),
+          where('month', '==', feeMonth)
+        )
+      );
+      setFeeRecord(snap.empty ? null : { 
+        id: snap.docs[0].id, 
+        ...snap.docs[0].data() 
+      } as any);
+    } catch (err) {
+      console.error("Fetch fee error", err);
+    }
+  };
+
+  const changeMonth = (dir: number) => {
+    const [y, m] = feeMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + dir, 1);
+    setFeeMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const changeCanteenMonth = (dir: number) => {
+    const [y, m] = canteenMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + dir, 1);
+    setCanteenMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const handleInitializeFee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const docRef = await addDoc(collection(db, 'rehab_fees'), {
+        patientId: patientId,
+        month: feeMonth,
+        packageAmount: Number(packageAmt),
+        amountPaid: Number(initialPayment) || 0,
+        amountRemaining: Number(packageAmt) - (Number(initialPayment) || 0),
+        payments: initialPayment ? [{
+          id: Date.now().toString(),
+          amount: Number(initialPayment),
+          date: Timestamp.fromDate(new Date(paymentDate)),
+          cashierId: session.uid,
+          note: paymentNote || null,
+          status: 'approved'
+        }] : [],
+        createdAt: Timestamp.now(),
+        createdBy: session.uid
+      });
+      setShowAddFeeModal(false);
+      fetchFeeRecord();
+      toast.success('Fee record created ✓');
+    } catch (error) {
+      console.error("Initialize Fee error", error);
+      toast.error('Failed to create fee record');
+    }
+  };
+
+  const handleAddPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feeRecord) return;
+    try {
+      const payment = {
+        id: Date.now().toString(),
+        amount: Number(payAmt),
+        date: Timestamp.fromDate(new Date(payDate)),
+        cashierId: session.uid,
+        note: payNote || null,
+        status: 'approved'
+      };
+      
+      const newPaid = Number(feeRecord.amountPaid) + Number(payAmt);
+      const newRemaining = Number(feeRecord.packageAmount) - newPaid;
+      
+      await updateDoc(doc(db, 'rehab_fees', feeRecord.id), {
+        amountPaid: newPaid,
+        amountRemaining: Math.max(0, newRemaining),
+        payments: [...(feeRecord.payments || []), payment]
+      });
+      setShowAddPaymentModal(false);
+      setPayAmt('');
+      setPayNote('');
+      fetchFeeRecord();
+      toast.success('Payment recorded ✓');
+    } catch (error) {
+      console.error("Add Payment error", error);
+      toast.error('Failed to record payment');
+    }
+  };
+
+  const fetchCanteenRecord = async () => {
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, 'rehab_canteen'),
+          where('patientId', '==', patientId),
+          where('month', '==', canteenMonth)
+        )
+      );
+      setCanteenRecord(snap.empty ? null : {
+        id: snap.docs[0].id,
+        ...snap.docs[0].data()
+      } as any);
+    } catch (err) {
+      console.error("Fetch canteen error", err);
+    }
+  };
+
+  const resetCanteenForm = () => {
+    setCanteenAmt('');
+    setCanteenDesc('');
+    setCanteenDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const handleCanteenEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canteenModal) return;
+    try {
+      const entry = {
+        id: Date.now().toString(),
+        type: canteenModal,
+        amount: Number(canteenAmt),
+        description: canteenDesc,
+        date: Timestamp.fromDate(new Date(canteenDate)),
+        cashierId: session.uid
+      };
+
+      if (!canteenRecord) {
+        await addDoc(collection(db, 'rehab_canteen'), {
+          patientId: patientId,
+          month: canteenMonth,
+          totalDeposited: canteenModal === 'deposit' ? Number(canteenAmt) : 0,
+          totalSpent: canteenModal === 'expense' ? Number(canteenAmt) : 0,
+          balance: canteenModal === 'deposit' 
+            ? Number(canteenAmt) 
+            : -Number(canteenAmt),
+          transactions: [entry],
+          createdAt: Timestamp.now(),
+          createdBy: session.uid
+        });
+      } else {
+        const newDeposited = Number(canteenRecord.totalDeposited) + 
+          (canteenModal === 'deposit' ? Number(canteenAmt) : 0);
+        const newSpent = Number(canteenRecord.totalSpent) + 
+          (canteenModal === 'expense' ? Number(canteenAmt) : 0);
+        
+        await updateDoc(doc(db, 'rehab_canteen', canteenRecord.id), {
+          totalDeposited: newDeposited,
+          totalSpent: newSpent,
+          balance: newDeposited - newSpent,
+          transactions: [...(canteenRecord.transactions || []), entry]
+        });
+      }
+      
+      setCanteenModal(null);
+      resetCanteenForm();
+      fetchCanteenRecord();
+      toast.success(canteenModal === 'deposit' 
+        ? 'Deposit recorded ✓' 
+        : 'Expense recorded ✓');
+    } catch (error) {
+      console.error("Canteen entry error", error);
+      toast.error('Failed to record transaction');
+    }
+  };
 
   const handleSaveEdit = async () => {
     try {
@@ -312,7 +528,7 @@ export default function PatientDetailPage() {
               activeTab === 'fees' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <DollarSign className="w-4 h-4" /> Fees ({new Date().toLocaleDateString('en-US', { month: 'short' })})
+            <DollarSign className="w-4 h-4" /> Fees
           </button>
           <button
             onClick={() => setActiveTab('canteen')}
@@ -474,63 +690,123 @@ export default function PatientDetailPage() {
           {/* TAB: FEES */}
           {activeTab === 'fees' && (
             <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-6">
-                <DollarSign className="w-6 h-6 text-teal-600" />
-                <h2 className="text-xl font-bold text-gray-800">
-                  {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => changeMonth(-1)} 
+                    className="p-2 rounded-xl hover:bg-gray-100 transition">
+                    <ChevronLeft size={20} className="text-gray-400" />
+                  </button>
+                  <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
+                    {new Date(feeMonth + '-01').toLocaleDateString('en-PK', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button onClick={() => changeMonth(1)}
+                    className="p-2 rounded-xl hover:bg-gray-100 transition">
+                    <ChevronRight size={20} className="text-gray-400" />
+                  </button>
+                </div>
+                {feeRecord && (
+                  <button 
+                    onClick={() => {
+                      setPayAmt('');
+                      setPayDate(new Date().toISOString().split('T')[0]);
+                      setPayNote('');
+                      setShowAddPaymentModal(true);
+                    }}
+                    className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-teal-600 shadow-sm transition-all active:scale-95"
+                  >
+                    <Plus size={14} /> Add Payment
+                  </button>
+                )}
               </div>
               
               {!feeRecord ? (
-                <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl text-blue-800">
-                  <p className="font-medium mb-1">No fee record generated for this month yet.</p>
-                  <p className="text-sm opacity-80">Fee records are automatically created when the cashier logs the first fee payment for the month.</p>
+                <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                    <DollarSign className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <h3 className="text-gray-900 font-bold mb-1">No fee record for this month</h3>
+                  <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                    You can initialize a fee record manually with the patient's base package amount.
+                  </p>
+                  <button 
+                    onClick={() => {
+                      setPackageAmt(patient.packageAmount?.toString() || '');
+                      setInitialPayment('');
+                      setPaymentNote('');
+                      setShowAddFeeModal(true);
+                    }}
+                    className="inline-flex items-center gap-2 bg-teal-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-teal-600 transition shadow-lg shadow-teal-100"
+                  >
+                    <Plus size={16} /> Initialize Fee Record
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-8 animate-in fade-in duration-500">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-gray-50 border border-gray-100 p-5 rounded-2xl">
-                      <div className="text-sm text-gray-500 mb-1 font-medium">Monthly Package</div>
-                      <div className="text-2xl font-bold text-gray-900">Rs. {feeRecord.packageAmount.toLocaleString()}</div>
+                    <div className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
+                      <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Monthly Package</div>
+                      <div className="text-2xl font-black text-gray-900">PKR {feeRecord.packageAmount.toLocaleString()}</div>
                     </div>
-                    <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl">
-                      <div className="text-sm text-teal-700 mb-1 font-medium">Total Paid</div>
-                      <div className="text-2xl font-bold text-teal-800">Rs. {feeRecord.amountPaid.toLocaleString()}</div>
+                    <div className="bg-green-50 border border-green-100 p-5 rounded-2xl shadow-sm">
+                      <div className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">Total Paid</div>
+                      <div className="text-2xl font-black text-green-700">PKR {feeRecord.amountPaid.toLocaleString()}</div>
                     </div>
-                    <div className="bg-red-50 border border-red-100 p-5 rounded-2xl">
-                      <div className="text-sm text-red-700 mb-1 font-medium">Remaining</div>
-                      <div className="text-2xl font-bold text-red-800">Rs. {feeRecord.amountRemaining.toLocaleString()}</div>
+                    <div className="bg-red-50 border border-red-100 p-5 rounded-2xl shadow-sm">
+                      <div className="text-[10px] text-red-500 font-black uppercase tracking-widest mb-1">Remaining</div>
+                      <div className="text-2xl font-black text-red-700">PKR {feeRecord.amountRemaining.toLocaleString()}</div>
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="bg-gray-100 h-4 rounded-full overflow-hidden">
+                  <div className="bg-gray-100 h-3 rounded-full overflow-hidden">
                     <div 
-                      className="bg-teal-500 h-full transition-all duration-500"
+                      className="bg-teal-500 h-full transition-all duration-700 ease-out"
                       style={{ width: `${Math.min(100, Math.max(0, (feeRecord.amountPaid / feeRecord.packageAmount) * 100))}%` }}
                     />
                   </div>
 
+                  {feeRecord.amountRemaining <= 0 && (
+                     <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-100 font-bold text-sm flex items-center gap-2">
+                       <Shield className="w-5 h-5" /> PAID IN FULL
+                     </div>
+                  )}
+
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Payment History</h3>
-                    {feeRecord.payments?.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No payments recorded.</p>
+                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
+                      <h3 className="text-lg font-black text-gray-900">Payment History</h3>
+                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{feeRecord.payments?.length || 0} Entries</span>
+                    </div>
+                    
+                    {!feeRecord.payments || feeRecord.payments.length === 0 ? (
+                      <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                        <p className="text-gray-400 text-sm font-medium">No payments recorded for this month.</p>
+                      </div>
                     ) : (
-                      <div className="space-y-3">
-                        {feeRecord.payments?.map((p: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
-                            <div className="flex flex-col gap-1">
-                              <span className="font-bold text-gray-900">Rs. {p.amount.toLocaleString()}</span>
-                              <span className="text-xs text-gray-400 font-mono">Tx ID: {p.transactionId}</span>
+                      <div className="grid grid-cols-1 gap-3">
+                        {feeRecord.payments
+                          ?.sort((a: any, b: any) => {
+                            const aT = a.date?.toDate?.()?.getTime() || new Date(a.date).getTime();
+                            const bT = b.date?.toDate?.()?.getTime() || new Date(b.date).getTime();
+                            return bT - aT;
+                          })
+                          .map((p: any) => (
+                          <div key={p.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-teal-100 transition-colors">
+                            <div className="flex-1">
+                              <p className="font-black text-gray-900">
+                                PKR {Number(p.amount).toLocaleString('en-PK')}
+                              </p>
+                              {p.note && (
+                                <p className="text-xs text-gray-500 mt-0.5">{p.note}</p>
+                              )}
+                              <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Verified by {p.cashierId}</p>
                             </div>
-                            <div className="flex flex-col items-end gap-1 text-sm">
-                              <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded uppercase text-xs font-bold tracking-wider">Paid</span>
-                              <span className="text-gray-500">
+                            <div className="text-right">
+                              <p className="text-xs text-gray-700 font-bold">
                                 {p.date?.toDate?.() 
-                                  ? p.date.toDate().toLocaleDateString('en-PK') 
-                                  : p.date 
-                                  ? new Date(p.date).toLocaleDateString('en-PK') 
-                                  : '—'}
+                                  ? p.date.toDate().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+                                  : new Date(p.date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </p>
+                              <span className="inline-block mt-1 text-[9px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-widest">
+                                APPROVED
                               </span>
                             </div>
                           </div>
@@ -546,66 +822,100 @@ export default function PatientDetailPage() {
           {/* TAB: CANTEEN */}
           {activeTab === 'canteen' && (
             <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-6">
-                <ShoppingCart className="w-6 h-6 text-teal-600" />
-                <h2 className="text-xl font-bold text-gray-800">
-                  {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => changeCanteenMonth(-1)} 
+                    className="p-2 rounded-xl hover:bg-gray-100 transition">
+                    <ChevronLeft size={20} className="text-gray-400" />
+                  </button>
+                  <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
+                    {new Date(canteenMonth + '-01').toLocaleDateString('en-PK', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button onClick={() => changeCanteenMonth(1)}
+                    className="p-2 rounded-xl hover:bg-gray-100 transition">
+                    <ChevronRight size={20} className="text-gray-400" />
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setCanteenModal('deposit')}
+                    className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-green-600 transition shadow-sm active:scale-95">
+                    <Plus size={14} /> Deposit
+                  </button>
+                  <button onClick={() => setCanteenModal('expense')}
+                    className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition shadow-sm active:scale-95">
+                    <Minus size={14} /> Expense
+                  </button>
+                </div>
               </div>
 
               {!canteenRecord ? (
-                <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl text-blue-800">
-                  <p className="font-medium mb-1">No canteen account for this month.</p>
-                  <p className="text-sm opacity-80">A canteen record is generated when the first deposit is made via the Cashier.</p>
+                <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                    <ShoppingCart className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <h3 className="text-gray-900 font-bold mb-1">No canteen record for this month</h3>
+                  <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                    Add a deposit or expense to get started with this month's wallet.
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl">
-                      <div className="text-sm text-blue-700 mb-1 font-medium">Total Deposited</div>
-                      <div className="text-2xl font-bold text-blue-900">Rs. {canteenRecord.totalDeposited.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-red-50 border border-red-100 p-5 rounded-2xl">
-                      <div className="text-sm text-red-700 mb-1 font-medium">Total Spent</div>
-                      <div className="text-2xl font-bold text-red-900">Rs. {canteenRecord.totalSpent.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl">
-                      <div className="text-sm text-teal-700 mb-1 font-medium">Current Balance</div>
-                      <div className="text-2xl font-bold text-teal-900">Rs. {canteenRecord.balance.toLocaleString()}</div>
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  {/* Balance Card */}
+                  <div className="text-center p-8 bg-gradient-to-br from-teal-50 to-teal-100 rounded-[2rem] border border-teal-200/50 shadow-sm">
+                    <p className="text-[10px] font-black text-teal-500 uppercase tracking-widest mb-1">Available Balance</p>
+                    <p className={`text-5xl font-black ${canteenRecord.balance >= 0 ? 'text-teal-700' : 'text-red-600'}`}>
+                      PKR {Number(canteenRecord.balance).toLocaleString('en-PK')}
+                    </p>
+                    <div className="flex justify-center gap-8 mt-6">
+                      <div className="text-left">
+                        <p className="text-[10px] text-green-600 font-black uppercase tracking-widest">↑ Deposited</p>
+                        <p className="text-sm font-black text-green-700">PKR {Number(canteenRecord.totalDeposited).toLocaleString('en-PK')}</p>
+                      </div>
+                      <div className="w-px h-8 bg-teal-200/50"></div>
+                      <div className="text-left">
+                        <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">↓ Spent</p>
+                        <p className="text-sm font-black text-red-600">PKR {Number(canteenRecord.totalSpent).toLocaleString('en-PK')}</p>
+                      </div>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Transaction Log</h3>
-                    {canteenRecord.transactions?.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No canteen transactions.</p>
+                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
+                       <h3 className="text-lg font-black text-gray-900">Transaction History</h3>
+                       <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{canteenRecord.transactions?.length || 0} Events</span>
+                    </div>
+                    
+                    {!canteenRecord.transactions || canteenRecord.transactions.length === 0 ? (
+                      <p className="text-gray-500 text-sm text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">No transactions recorded.</p>
                     ) : (
-                      <div className="space-y-3">
-                        {canteenRecord.transactions?.map((tx: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
-                                  tx.type === 'deposit' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                }`}>
-                                  {tx.type}
-                                </span>
-                                <span className="text-gray-900 font-medium">Rs. {tx.amount.toLocaleString()}</span>
-                              </div>
-                              <div className="text-sm text-gray-500">{tx.description}</div>
-                            </div>
-                            <div className="text-right text-xs text-gray-400 space-y-1">
+                      <div className="grid grid-cols-1 gap-3">
+                        {canteenRecord.transactions
+                          ?.sort((a: any, b: any) => {
+                            const aT = a.date?.toDate?.()?.getTime() || 0;
+                            const bT = b.date?.toDate?.()?.getTime() || 0;
+                            return bT - aT;
+                          })
+                          .map((t: any) => (
+                            <div key={t.id} className={`flex items-center justify-between p-4 rounded-2xl border-l-4 transition-all hover:translate-x-1 ${
+                              t.type === 'deposit' 
+                                ? 'bg-green-50/50 border-l-green-400' 
+                                : 'bg-red-50/50 border-l-red-400'
+                            }`}>
                               <div>
-                                {tx.date?.toDate?.() 
-                                  ? tx.date.toDate().toLocaleString('en-PK') 
-                                  : tx.date 
-                                  ? new Date(tx.date).toLocaleString('en-PK') 
-                                  : '—'}
+                                <p className="text-sm font-black text-gray-900">{t.description}</p>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                                  {t.date?.toDate?.() 
+                                    ? t.date.toDate().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+                                    : new Date(t.date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  <span className="mx-2">•</span>
+                                  Verifier: {t.cashierId}
+                                </p>
                               </div>
-                              <div className="font-mono">{tx.cashierId}</div>
+                              <p className={`font-black text-base ${t.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+                                {t.type === 'deposit' ? '+' : '-'} {Number(t.amount).toLocaleString('en-PK')}
+                              </p>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     )}
                   </div>
@@ -749,6 +1059,119 @@ export default function PatientDetailPage() {
                   {isUploading ? 'Uploading...' : 'Upload'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Initialize Fee Modal */}
+      {showAddFeeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-black text-gray-900">Initialize Fee</h2>
+              <button onClick={() => setShowAddFeeModal(false)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleInitializeFee} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Package Amount (PKR) *</label>
+                <input required type="number" value={packageAmt} onChange={e => setPackageAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. 50000" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Initial Payment</label>
+                  <input type="number" value={initialPayment} onChange={e => setInitialPayment(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
+                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Note (Optional)</label>
+                <input value={paymentNote} onChange={e => setPaymentNote(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Received by hand" />
+              </div>
+              <button type="submit" className="w-full bg-teal-500 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100">
+                <Plus size={18} /> Create Fee Record
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Payment Modal */}
+      {showAddPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-black text-gray-900">Add Payment</h2>
+              <button onClick={() => setShowAddPaymentModal(false)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddPayment} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
+                  <input required type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
+                  <input required type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Note (Optional)</label>
+                <input value={payNote} onChange={e => setPayNote(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Received via bank" />
+              </div>
+              <button type="submit" className="w-full bg-teal-500 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100">
+                <Plus size={18} /> Record Payment
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Canteen Entry Modal */}
+      {canteenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-black text-gray-900">
+                {canteenModal === 'deposit' ? 'Add Deposit' : 'Add Expense'}
+              </h2>
+              <button onClick={() => setCanteenModal(null)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCanteenEntry} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
+                <input required type="number" value={canteenAmt} onChange={e => setCanteenAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
+              </div>
+              <div>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Description *</label>
+                <input 
+                  required 
+                  value={canteenDesc} 
+                  onChange={e => setCanteenDesc(e.target.value)} 
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                  placeholder={canteenModal === 'deposit' ? 'e.g. Cash deposit by family' : 'e.g. Snacks and drinks'} 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
+                <input required type="date" value={canteenDate} onChange={e => setCanteenDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+              </div>
+              <button 
+                type="submit" 
+                className={`w-full text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg ${
+                  canteenModal === 'deposit' ? 'bg-green-500 hover:bg-green-600 shadow-green-100' : 'bg-red-500 hover:bg-red-600 shadow-red-100'
+                }`}
+              >
+                {canteenModal === 'deposit' ? <Plus size={18} /> : <Minus size={18} />}
+                Record {canteenModal === 'deposit' ? 'Deposit' : 'Expense'}
+              </button>
             </form>
           </div>
         </div>
