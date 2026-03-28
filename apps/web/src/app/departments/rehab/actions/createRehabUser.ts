@@ -180,6 +180,7 @@ export async function createStaffMemberServer(
   duties?: Array<{ id: string; description: string }>,
   dutyStartTime?: string,
   dutyEndTime?: string,
+  photoUrl?: string,
 ): Promise<{ success: boolean; uid?: string; staffDocId?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -218,7 +219,7 @@ export async function createStaffMemberServer(
       salary: salary || 0,
       joiningDate: FieldValue.serverTimestamp(),
       isActive: true,
-      photoUrl: null,
+      photoUrl: photoUrl || null,
       loginUserId: userRecord.uid,
       dutyStartTime: dutyStartTime || '08:00',
       dutyEndTime: dutyEndTime || '17:00',

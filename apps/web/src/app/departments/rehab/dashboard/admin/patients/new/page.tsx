@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUser as createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { 
   ArrowLeft, Heart, Save, Loader2, User, Upload, 

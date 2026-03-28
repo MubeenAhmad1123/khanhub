@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -10,7 +10,7 @@ import {
 import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
-  Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText
+  Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
@@ -37,6 +37,12 @@ export default function PatientDetailPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+
+  // Photo Upload State
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -78,6 +84,7 @@ export default function PatientDetailPage() {
         packageAmount: data.packageAmount || 0,
         photoUrl: data.photoUrl || ''
       });
+      setPhotoPreview(data.photoUrl || '');
 
       // Current Month String (e.g. "2025-01")
       const now = new Date();
@@ -126,13 +133,38 @@ export default function PatientDetailPage() {
   const handleSaveEdit = async () => {
     try {
       setSavingEdit(true);
+
+      let photoUrl = editForm.photoUrl;
+
+      // Upload new photo if selected
+      if (photoFile) {
+        setPhotoUploading(true);
+        try {
+          const url = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
+          photoUrl = url;
+        } catch (err) {
+          console.error("Photo upload failed", err);
+          toast.error('Photo upload failed, keeping old photo');
+        }
+        setPhotoUploading(false);
+      }
+
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         name: editForm.name,
         diagnosis: editForm.diagnosis,
         packageAmount: Number(editForm.packageAmount),
-        photoUrl: editForm.photoUrl || null
+        photoUrl: photoUrl || null
       });
-      setPatient((prev: any) => ({ ...prev, ...editForm, packageAmount: Number(editForm.packageAmount) }));
+
+      setPatient((prev: any) => ({ 
+        ...prev, 
+        name: editForm.name,
+        diagnosis: editForm.diagnosis,
+        packageAmount: Number(editForm.packageAmount),
+        photoUrl: photoUrl 
+      }));
+      setEditForm(prev => ({ ...prev, photoUrl }));
+      setPhotoFile(null);
       setIsEditing(false);
       toast.success('Profile updated');
     } catch (error) {
@@ -330,13 +362,72 @@ export default function PatientDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                     <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Package Amount</label>
-                    <input type="number" value={editForm.packageAmount} onChange={e => setEditForm({...editForm, packageAmount: Number(e.target.value)})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Photo URL</label>
-                    <input type="text" value={editForm.photoUrl} onChange={e => setEditForm({...editForm, photoUrl: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="https://..." />
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Photo
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div
+                        onClick={() => photoInputRef.current?.click()}
+                        className="w-20 h-20 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 transition-all overflow-hidden flex-shrink-0"
+                      >
+                        {photoPreview ? (
+                          <img 
+                            src={photoPreview} 
+                            className="w-full h-full object-cover" 
+                            alt="Preview"
+                          />
+                        ) : (
+                          <>
+                            <Camera size={20} className="text-gray-400 mb-1" />
+                            <span className="text-[9px] text-gray-400 font-bold text-center leading-tight px-1">
+                              Upload
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setPhotoFile(file);
+                          setPhotoPreview(URL.createObjectURL(file));
+                        }}
+                      />
+                      <div>
+                        {photoFile ? (
+                          <p className="text-xs text-green-600 font-semibold mb-1">
+                            ✓ New photo selected
+                          </p>
+                        ) : photoPreview ? (
+                          <p className="text-xs text-teal-600 font-medium">
+                            Current photo
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-500 font-medium">
+                            Click to upload a photo
+                          </p>
+                        )}
+                        <p className="text-[10px] text-gray-400">JPG, PNG up to 5MB</p>
+                        {photoPreview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPhotoFile(null);
+                              setPhotoPreview('');
+                              setEditForm(prev => ({ ...prev, photoUrl: '' }));
+                            }}
+                            className="text-[10px] text-red-400 hover:text-red-600 mt-1 font-semibold"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis / Notes</label>

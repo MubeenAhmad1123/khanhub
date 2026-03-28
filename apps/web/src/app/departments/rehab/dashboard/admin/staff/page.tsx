@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { collection, getDocs } from 'firebase/firestore';
@@ -12,8 +12,9 @@ import type { StaffMember, AttendanceRecord, StaffDuty } from '@/types/rehab';
 import {
   UserCog, Plus, X, CheckCircle, XCircle, Clock,
   Phone, Calendar, BadgeCheck, Loader2, AlertCircle,
-  ChevronRight, List
+  ChevronRight, List, Camera
 } from 'lucide-react';
+import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 export default function AdminStaffPage() {
   const router = useRouter();
@@ -37,6 +38,11 @@ export default function AdminStaffPage() {
   });
   const [dutyStartTime, setDutyStartTime] = useState('08:00');
   const [dutyEndTime, setDutyEndTime] = useState('17:00');
+
+  // Photo Upload State
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = async () => {
     try {
@@ -110,6 +116,16 @@ export default function AdminStaffPage() {
       return;
     }
     setFormLoading(true);
+
+    let photoUrl = undefined;
+    if (photoFile) {
+      try {
+        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/rehab/staff');
+      } catch (err) {
+        console.error("Staff photo upload failed", err);
+      }
+    }
+
     const res = await createStaffMemberServer(
       form.customId,
       form.password,
@@ -121,6 +137,7 @@ export default function AdminStaffPage() {
       form.duties,
       dutyStartTime,
       dutyEndTime,
+      photoUrl
     );
     if (res.success) {
       setMessage({ type: 'success', text: `Staff member "${form.name}" created successfully!` });
@@ -128,6 +145,8 @@ export default function AdminStaffPage() {
       setForm({ name: '', gender: 'male', customId: 'REHAB-STF-001', password: '', staffRole: '', phone: '', salary: '', duties: [] });
       setDutyStartTime('08:00');
       setDutyEndTime('17:00');
+      setPhotoFile(null);
+      setPhotoPreview('');
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create staff member' });
