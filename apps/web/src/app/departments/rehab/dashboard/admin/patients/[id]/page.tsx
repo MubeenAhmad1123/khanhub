@@ -433,7 +433,13 @@ export default function PatientDetailPage() {
                             </div>
                             <div className="flex flex-col items-end gap-1 text-sm">
                               <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded uppercase text-xs font-bold tracking-wider">Paid</span>
-                              <span className="text-gray-500">{p.date?.toDate?.()?.toLocaleDateString()}</span>
+                              <span className="text-gray-500">
+                                {p.date?.toDate?.() 
+                                  ? p.date.toDate().toLocaleDateString('en-PK') 
+                                  : p.date 
+                                  ? new Date(p.date).toLocaleDateString('en-PK') 
+                                  : '—'}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -497,7 +503,13 @@ export default function PatientDetailPage() {
                               <div className="text-sm text-gray-500">{tx.description}</div>
                             </div>
                             <div className="text-right text-xs text-gray-400 space-y-1">
-                              <div>{tx.date?.toDate?.()?.toLocaleString()}</div>
+                              <div>
+                                {tx.date?.toDate?.() 
+                                  ? tx.date.toDate().toLocaleString('en-PK') 
+                                  : tx.date 
+                                  ? new Date(tx.date).toLocaleString('en-PK') 
+                                  : '—'}
+                              </div>
                               <div className="font-mono">{tx.cashierId}</div>
                             </div>
                           </div>

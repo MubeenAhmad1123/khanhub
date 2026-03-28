@@ -109,6 +109,33 @@ export default function FinanceLogPage() {
     // The user will click Apply Filters to re-fetch
   };
 
+  const formatCategory = (cat: string) => {
+    const map: Record<string, string> = {
+      patient_fee: 'Patient Monthly Fee',
+      canteen_deposit: 'Canteen Deposit',
+      donation: 'Donation',
+      government_grant: 'Government Grant',
+      other_income: 'Other Income',
+      staff_salary: 'Staff Salary',
+      rent: 'Rent / Property',
+      electricity: 'Electricity Bill',
+      gas: 'Gas Bill',
+      water: 'Water Bill',
+      medicine: 'Medicine / Pharmacy',
+      food: 'Food & Groceries',
+      canteen_expense: 'Canteen Expense',
+      maintenance: 'Building Maintenance',
+      transport: 'Transport / Fuel',
+      equipment: 'Equipment Purchase',
+      security: 'Security Services',
+      cleaning: 'Cleaning Supplies',
+      patient_welfare: 'Patient Welfare',
+      office_supplies: 'Office Supplies',
+      other_expense: 'Other Expense',
+    };
+    return map[cat] || cat.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -118,8 +145,10 @@ export default function FinanceLogPage() {
   }
 
   const allCategories = [
-    'patient_fee', 'canteen_deposit', 'rent', 'electricity', 
-    'salary', 'medicine', 'food', 'maintenance', 'other'
+    'patient_fee', 'canteen_deposit', 'donation', 'government_grant', 'other_income',
+    'staff_salary', 'rent', 'electricity', 'gas', 'water', 'medicine', 'food',
+    'canteen_expense', 'maintenance', 'transport', 'equipment', 'security',
+    'cleaning', 'patient_welfare', 'office_supplies', 'other_expense'
   ];
 
   return (
@@ -174,7 +203,7 @@ export default function FinanceLogPage() {
               <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white capitalize">
                 <option value="all">All Categories</option>
                 {allCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                  <option key={cat} value={cat}>{formatCategory(cat)}</option>
                 ))}
               </select>
             </div>
@@ -203,7 +232,7 @@ export default function FinanceLogPage() {
               <TrendingUp className="w-5 h-5" />
               <span className="font-bold text-sm uppercase tracking-wider">Approved Income</span>
             </div>
-            <div className="text-3xl font-black text-gray-900">Rs. {stats.income.toLocaleString()}</div>
+            <div className="text-3xl font-black text-gray-900">₨{stats.income.toLocaleString('en-PK')}</div>
           </div>
 
           <div className="bg-white border text-red-700 border-red-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
@@ -214,7 +243,7 @@ export default function FinanceLogPage() {
               <TrendingDown className="w-5 h-5" />
               <span className="font-bold text-sm uppercase tracking-wider">Approved Expense</span>
             </div>
-            <div className="text-3xl font-black text-gray-900">Rs. {stats.expense.toLocaleString()}</div>
+            <div className="text-3xl font-black text-gray-900">₨{stats.expense.toLocaleString('en-PK')}</div>
           </div>
 
           <div className="bg-white border text-teal-700 border-teal-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
@@ -226,7 +255,7 @@ export default function FinanceLogPage() {
               <span className="font-bold text-sm uppercase tracking-wider">Net Balance</span>
             </div>
             <div className={`text-3xl font-black ${stats.net >= 0 ? 'text-teal-600' : 'text-red-500'}`}>
-              Rs. {stats.net.toLocaleString()}
+              ₨{stats.net.toLocaleString('en-PK')}
             </div>
           </div>
         </div>
@@ -266,30 +295,30 @@ export default function FinanceLogPage() {
                           }`}>
                             {tx.type === 'income' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                           </div>
-                          <span className="font-medium capitalize text-gray-900">{tx.category.replace('_', ' ')}</span>
+                          <span className="font-medium text-gray-900">{formatCategory(tx.category)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 truncate max-w-xs">{tx.description || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                        {tx.date?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                        {tx.date?.toDate?.() ? tx.date.toDate().toLocaleDateString('en-PK') : new Date(tx.date).toLocaleDateString('en-PK')}
                       </td>
-                      <td className="px-6 py-4 text-xs font-mono text-gray-400">{tx.cashierId}</td>
-                      <td className="px-6 py-4 text-right font-bold text-gray-900">
-                        {tx.amount.toLocaleString()}
+                      <td className="px-6 py-4 text-xs font-mono text-gray-400 truncate max-w-[100px]">{tx.cashierId}</td>
+                      <td className="px-6 py-4 text-right font-black text-gray-900">
+                        {tx.amount.toLocaleString('en-PK')}
                       </td>
                       <td className="px-6 py-4 text-center">
                         {tx.status === 'approved' && (
-                          <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                          <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                             <CheckCircle className="w-3 h-3" /> Approved
                           </span>
                         )}
                         {tx.status === 'pending' && (
-                          <span className="inline-flex items-center gap-1 bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                          <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                             <Loader2 className="w-3 h-3 animate-spin" /> Pending
                           </span>
                         )}
                         {tx.status === 'rejected' && (
-                          <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                          <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                             <AlertCircle className="w-3 h-3" /> Rejected
                           </span>
                         )}

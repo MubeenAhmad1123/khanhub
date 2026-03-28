@@ -325,9 +325,9 @@ export default function StaffSelfPage() {
           </div>
           <ol className="space-y-2">
             {staffProfile?.duties?.map((d, i) => (
-              <li key={d.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+              <li key={d.id || i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                 <span className="w-5 h-5 rounded-lg bg-teal-100 text-teal-600 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                <span className="text-gray-700 text-sm leading-snug">{d.description}</span>
+                <span className="text-gray-700 text-sm leading-snug">{d.description || String(d)}</span>
               </li>
             ))}
           </ol>

@@ -54,23 +54,36 @@ export default function ApprovalsPage() {
     return () => unsubscribe();
   }, [session]);
 
-  // Fetch History
+  const fetchHistory = async () => {
+    try {
+      // Fetch approved/rejected
+      const hSnap = await getDocs(
+        query(
+          collection(db, 'rehab_transactions'),
+          where('status', 'in', ['approved', 'rejected']),
+          orderBy('createdAt', 'desc'),
+          limit(30)
+        )
+      );
+      const history = hSnap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          date: data.date?.toDate?.() || new Date(data.date),
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          approvedAt: data.approvedAt?.toDate?.() || (data.approvedAt ? new Date(data.approvedAt) : null),
+        };
+      });
+      setHistoryTransactions(history);
+    } catch (err) {
+      console.error('History fetch error:', err);
+    }
+  };
+
+  // Fetch History on load and tab change
   useEffect(() => {
     if (!session) return;
-    
-    const fetchHistory = async () => {
-      const field = historyTab === 'approved' ? 'approvedAt' : 'rejectedAt';
-      const q = query(
-        collection(db, 'rehab_transactions'),
-        where('status', '==', historyTab),
-        orderBy(field, 'desc'),
-        limit(30)
-      );
-      
-      const snap = await getDocs(q);
-      setHistoryTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    };
-    
     fetchHistory();
   }, [session, historyTab]);
 
@@ -83,6 +96,7 @@ export default function ApprovalsPage() {
         approvedAt: Timestamp.now()
       });
       toast.success('Approved ✓');
+      fetchHistory(); // Refresh history
     } catch (error) {
       console.error("Approve error", error);
       toast.error("Failed to approve");
@@ -109,12 +123,40 @@ export default function ApprovalsPage() {
       toast.success('Rejected');
       setRejectId(null);
       setRejectReason('');
+      fetchHistory(); // Refresh history
     } catch (error) {
       console.error("Reject error", error);
       toast.error("Failed to reject");
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const formatCategory = (cat: string) => {
+    const map: Record<string, string> = {
+      patient_fee: 'Patient Monthly Fee',
+      canteen_deposit: 'Canteen Deposit',
+      donation: 'Donation',
+      government_grant: 'Government Grant',
+      other_income: 'Other Income',
+      staff_salary: 'Staff Salary',
+      rent: 'Rent / Property',
+      electricity: 'Electricity Bill',
+      gas: 'Gas Bill',
+      water: 'Water Bill',
+      medicine: 'Medicine / Pharmacy',
+      food: 'Food & Groceries',
+      canteen_expense: 'Canteen Expense',
+      maintenance: 'Building Maintenance',
+      transport: 'Transport / Fuel',
+      equipment: 'Equipment Purchase',
+      security: 'Security Services',
+      cleaning: 'Cleaning Supplies',
+      patient_welfare: 'Patient Welfare',
+      office_supplies: 'Office Supplies',
+      other_expense: 'Other Expense',
+    };
+    return map[cat] || cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   if (loading) {
@@ -126,7 +168,9 @@ export default function ApprovalsPage() {
   }
 
   const TransactionCard = ({ tx, type }: { tx: any, type: 'pending' | 'history' }) => (
-    <div className="bg-white border border-gray-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:shadow-gray-900/5 transition-all active:scale-[0.99] group overflow-hidden relative">
+    <div className={`bg-white border-l-4 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:shadow-gray-900/5 transition-all active:scale-[0.99] group overflow-hidden relative border ${
+      tx.type === 'income' ? 'border-l-green-500' : 'border-l-red-500'
+    } ${type === 'pending' ? 'border-gray-100' : 'border-gray-50 opacity-90'}`}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         
         <div className="flex items-start gap-4 flex-1">
@@ -142,26 +186,34 @@ export default function ApprovalsPage() {
               }`}>
                 {tx.type}
               </span>
-              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
-                {tx.category.replace('_', ' ')}
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                {formatCategory(tx.category)}
               </span>
             </div>
             <div className="text-2xl font-black text-gray-900 mb-1 tracking-tight">
-              {tx.amount.toLocaleString()} <span className="text-sm font-bold text-gray-400">PKR</span>
+              {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>
             </div>
             {tx.description && (
               <p className="text-sm font-medium text-gray-500 mb-3 bg-gray-50 p-2 rounded-xl border border-gray-100/50 italic px-3">"{tx.description}"</p>
             )}
-            <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-lg">
                 <Clock size={12} className="text-gray-300" />
-                {tx.date?.toDate?.()?.toLocaleDateString('en-PK', { day: '2-digit', month: 'short' }) || 'Unknown'}
+                Original Date: {tx.date?.toDate?.() ? tx.date.toDate().toLocaleDateString('en-PK') : new Date(tx.date).toLocaleDateString('en-PK')}
               </div>
-              <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-lg truncate">
+              <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-lg">
                 <User size={12} className="text-gray-300" />
-                ID: {tx.cashierId?.slice(-6)}
+                Cashier ID: {tx.cashierId?.slice(-6)}
               </div>
+              {type === 'history' && tx.approvedAt && (
+                <div className="flex items-center gap-1.5 bg-green-50 text-green-600 px-2 py-1 rounded-lg">
+                   Approved At: {new Date(tx.approvedAt).toLocaleString('en-PK')}
+                </div>
+              )}
             </div>
+            {type === 'history' && tx.status === 'approved' && (
+              <p className="text-[10px] text-gray-400 mt-2 font-bold uppercase tracking-widest">Approved by: {tx.approvedBy}</p>
+            )}
             {type === 'history' && tx.status === 'rejected' && tx.rejectReason && (
               <div className="text-[10px] font-black text-red-500 mt-3 p-2 bg-red-50 rounded-xl border border-red-100 uppercase tracking-widest flex items-center gap-2">
                 <XCircle size={12} /> Reason: {tx.rejectReason}
@@ -218,11 +270,11 @@ export default function ApprovalsPage() {
           <div className="flex items-center gap-2 whitespace-nowrap pt-4 md:pt-0 border-t md:border-t-0 border-gray-50">
             {tx.status === 'approved' ? (
               <span className="flex items-center gap-2 text-green-600 bg-green-50 border border-green-100 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest leading-none">
-                <CheckCircle size={14} /> Approved
+                <CheckCircle size={14} /> APPROVED
               </span>
             ) : (
               <span className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-100 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest leading-none">
-                <XCircle size={14} /> Rejected
+                <XCircle size={14} /> REJECTED
               </span>
             )}
           </div>
@@ -255,6 +307,9 @@ export default function ApprovalsPage() {
 
         {/* Pending Section */}
         <section>
+           <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+             <Clock className="w-4 h-4" /> Pending Review
+           </h2>
           <div className="space-y-4">
             {pendingTransactions.length === 0 ? (
               <div className="bg-white border text-center border-gray-200 border-dashed rounded-xl p-12 text-gray-500">
@@ -268,34 +323,16 @@ export default function ApprovalsPage() {
         </section>
 
         {/* History Section */}
-        <section className="pt-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <section className="pt-8">
           <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-2">
-            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-gray-400" />
-              History
+            <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              Approval History (Last 30)
             </h2>
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setHistoryTab('approved')}
-                className={`text-sm font-medium pb-2 border-b-2 transition-colors ${
-                  historyTab === 'approved' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Approved
-              </button>
-              <button 
-                onClick={() => setHistoryTab('rejected')}
-                className={`text-sm font-medium pb-2 border-b-2 transition-colors ${
-                  historyTab === 'rejected' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Rejected
-              </button>
-            </div>
           </div>
           <div className="space-y-4">
             {historyTransactions.length === 0 ? (
-              <p className="text-gray-500 text-sm text-center py-8">No recent history found.</p>
+              <p className="text-center text-gray-300 py-10 font-bold text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200 uppercase tracking-widest">No approval history yet.</p>
             ) : (
               historyTransactions.map(tx => <TransactionCard key={tx.id} tx={tx} type="history" />)
             )}

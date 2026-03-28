@@ -24,9 +24,49 @@ export default function CashierStationPage() {
   const [dateStr, setDateStr] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Today's Transactions
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [todayTransactions, setTodayTransactions] = useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
+
+  const fetchTodayTransactions = async (uid: string) => {
+    try {
+      setLoadingTransactions(true);
+      // Get start of today as a Date
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
+      // Query by cashierId only, then filter client-side by date
+      // (avoids composite index requirement)
+      const snap = await getDocs(
+        query(
+          collection(db, 'rehab_transactions'),
+          where('cashierId', '==', uid),
+          orderBy('createdAt', 'desc')
+        )
+      );
+      
+      const todayTxns = snap.docs
+        .map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            date: data.date?.toDate?.() || new Date(data.date),
+            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          };
+        })
+        .filter(t => {
+          const txDate = new Date(t.createdAt);
+          return txDate >= todayStart;
+        });
+      
+      setTodayTransactions(todayTxns);
+    } catch (err) {
+      console.error('Fetch today transactions error:', err);
+      toast.error("Failed to load today's transactions");
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -41,36 +81,8 @@ export default function CashierStationPage() {
     }
     setSession(parsed);
     setLoading(false);
+    fetchTodayTransactions(parsed.uid);
   }, [router]);
-
-  useEffect(() => {
-    if (!session) return;
-    fetchTodayTransactions();
-  }, [session]);
-
-  const fetchTodayTransactions = async () => {
-    try {
-      setLoadingTransactions(true);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const q = query(
-        collection(db, 'rehab_transactions'),
-        where('cashierId', '==', session.uid),
-        where('date', '>=', Timestamp.fromDate(today)),
-        orderBy('date', 'desc')
-      );
-      
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setTransactions(data);
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-      toast.error("Failed to load today's transactions");
-    } finally {
-      setLoadingTransactions(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,9 +90,9 @@ export default function CashierStationPage() {
       toast.error('Please fill required fields');
       return;
     }
-    const needsPatient = category === 'canteen_deposit' || category === 'canteen_expense';
+    const needsPatient = category === 'canteen_deposit' || category === 'canteen_expense' || (activeTab === 'income' && category === 'patient_fee');
     if (needsPatient && !patientId.trim()) {
-      toast.error('Patient ID is required for canteen transactions');
+      toast.error('Patient ID is required for this transaction');
       return;
     }
 
@@ -101,7 +113,7 @@ export default function CashierStationPage() {
       });
 
       // 2. If canteen_deposit or canteen_expense → update rehab_canteen
-      if (needsPatient && patientId.trim()) {
+      if ((category === 'canteen_deposit' || category === 'canteen_expense') && patientId.trim()) {
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const isDeposit = category === 'canteen_deposit';
@@ -145,7 +157,6 @@ export default function CashierStationPage() {
           }
         } catch (canteenErr) {
           console.error('Canteen update failed:', canteenErr);
-          // Don't block the main flow — just log it
         }
       }
 
@@ -155,13 +166,40 @@ export default function CashierStationPage() {
       setDescription('');
       setPatientId('');
       setDateStr(new Date().toISOString().split('T')[0]);
-      fetchTodayTransactions();
+      fetchTodayTransactions(session.uid);
     } catch (error) {
       console.error("Submit error:", error);
       toast.error('Failed to submit transaction');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const formatCategory = (cat: string) => {
+    const map: Record<string, string> = {
+      patient_fee: 'Patient Monthly Fee',
+      canteen_deposit: 'Canteen Deposit',
+      donation: 'Donation',
+      government_grant: 'Government Grant',
+      other_income: 'Other Income',
+      staff_salary: 'Staff Salary',
+      rent: 'Rent / Property',
+      electricity: 'Electricity Bill',
+      gas: 'Gas Bill',
+      water: 'Water Bill',
+      medicine: 'Medicine / Pharmacy',
+      food: 'Food & Groceries',
+      canteen_expense: 'Canteen Expense',
+      maintenance: 'Building Maintenance',
+      transport: 'Transport / Fuel',
+      equipment: 'Equipment Purchase',
+      security: 'Security Services',
+      cleaning: 'Cleaning Supplies',
+      patient_welfare: 'Patient Welfare',
+      office_supplies: 'Office Supplies',
+      other_expense: 'Other Expense',
+    };
+    return map[cat] || cat.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   if (loading) {
@@ -173,23 +211,34 @@ export default function CashierStationPage() {
   }
 
   const incomeCategories = [
-    { value: 'patient_fee', label: 'Patient Fee' },
-    { value: 'canteen_deposit', label: 'Canteen Deposit' },
-    { value: 'other', label: 'Other Income' }
+    { value: 'patient_fee', label: 'Patient Monthly Fee' },
+    { value: 'canteen_deposit', label: 'Canteen Deposit (Family)' },
+    { value: 'donation', label: 'Donation' },
+    { value: 'government_grant', label: 'Government Grant' },
+    { value: 'other_income', label: 'Other Income' }
   ];
 
   const expenseCategories = [
-    { value: 'rent', label: 'Rent' },
-    { value: 'electricity', label: 'Electricity' },
-    { value: 'salary', label: 'Salary' },
-    { value: 'medicine', label: 'Medicine' },
-    { value: 'food', label: 'Food' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'canteen_expense', label: 'Canteen Expense' },
-    { value: 'other', label: 'Other Expense' }
+    { value: 'staff_salary', label: 'Staff Salary' },
+    { value: 'rent', label: 'Rent / Property' },
+    { value: 'electricity', label: 'Electricity Bill' },
+    { value: 'gas', label: 'Gas Bill' },
+    { value: 'water', label: 'Water Bill' },
+    { value: 'medicine', label: 'Medicine / Pharmacy' },
+    { value: 'food', label: 'Food & Groceries' },
+    { value: 'canteen_expense', label: 'Canteen Expense (Patient)' },
+    { value: 'maintenance', label: 'Building Maintenance' },
+    { value: 'transport', label: 'Transport / Fuel' },
+    { value: 'equipment', label: 'Equipment Purchase' },
+    { value: 'security', label: 'Security Services' },
+    { value: 'cleaning', label: 'Cleaning Supplies' },
+    { value: 'patient_welfare', label: 'Patient Welfare' },
+    { value: 'office_supplies', label: 'Office Supplies' },
+    { value: 'other_expense', label: 'Other Expense' }
   ];
 
   const showPatientField = category === 'canteen_deposit' || category === 'canteen_expense' || (activeTab === 'income' && category === 'patient_fee');
+  const showStaffField = category === 'staff_salary';
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -264,20 +313,7 @@ export default function CashierStationPage() {
                 />
               </div>
 
-              {activeTab === 'income' && category === 'patient_fee' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Patient ID (Optional)</label>
-                  <input
-                    type="text"
-                    value={patientId}
-                    onChange={(e) => setPatientId(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                    placeholder="e.g. patient doc ID"
-                  />
-                </div>
-              )}
-
-              {(category === 'canteen_deposit' || category === 'canteen_expense') && (
+              {showPatientField && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Patient ID *</label>
                   <input
@@ -289,6 +325,19 @@ export default function CashierStationPage() {
                     required
                   />
                   <p className="text-xs text-gray-400 mt-1">Find the patient ID from the Patients list page</p>
+                </div>
+              )}
+
+              {showStaffField && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Staff ID (Optional)</label>
+                  <input
+                    type="text"
+                    value={patientId}
+                    onChange={(e) => setPatientId(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
+                    placeholder="Staff doc ID (optional, for reference)"
+                  />
                 </div>
               )}
 
@@ -341,48 +390,64 @@ export default function CashierStationPage() {
               <div className="flex justify-center p-8">
                 <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
               </div>
-            ) : transactions.length === 0 ? (
+            ) : todayTransactions.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                 <Receipt className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No entries today</p>
+                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No transactions submitted today yet.</p>
               </div>
             ) : (
-              transactions.map(tx => (
-                <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-50 rounded-2xl hover:bg-gray-50 transition-all hover:scale-[1.01] active:scale-[0.99] bg-white gap-4 shadow-sm">
+              todayTransactions.map((t: any) => (
+                <div key={t.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border-l-4 rounded-2xl hover:bg-gray-50 transition-all hover:scale-[1.01] active:scale-[0.99] bg-white gap-4 shadow-sm ${
+                  t.type === 'income' ? 'border-l-green-500' : 'border-l-red-500'
+                }`}>
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
-                      tx.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                      t.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
                     }`}>
-                      {tx.type === 'income' ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+                      {t.type === 'income' ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-black text-gray-900 text-base flex items-center gap-2">
-                        {tx.type === 'income' ? '+' : '-'} {tx.amount.toLocaleString()} PKR
+                      <div className="flex items-center gap-2 mb-0.5">
+                         <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                           t.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                         }`}>
+                           {t.type}
+                         </span>
+                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                           {formatCategory(t.category)}
+                         </span>
                       </div>
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">
-                        {tx.category.replace('_', ' ')} {tx.description ? `• ${tx.description}` : ''}
+                      <div className="font-black text-gray-900 text-base">
+                        PKR {t.amount.toLocaleString('en-PK')}
                       </div>
+                      {t.description && (
+                        <div className="text-xs text-gray-500 truncate italic">
+                          "{t.description}"
+                        </div>
+                      )}
                     </div>
                   </div>
                   
                   <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-50">
-                    {tx.status === 'pending' && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Pending
-                      </span>
-                    )}
-                    {tx.status === 'approved' && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-50 text-green-600 border border-green-100">
-                        <CheckCircle className="w-3 h-3" /> Approved
-                      </span>
-                    )}
-                    {tx.status === 'rejected' && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
-                        <AlertCircle className="w-3 h-3" /> Rejected
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {t.status === 'pending' && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> PENDING
+                        </span>
+                      )}
+                      {t.status === 'approved' && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-50 text-green-600 border border-green-100">
+                          <CheckCircle className="w-3 h-3" /> APPROVED
+                        </span>
+                      )}
+                      {t.status === 'rejected' && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
+                          <AlertCircle className="w-3 h-3" /> REJECTED
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">
-                      {tx.date?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'No time'}
+                      {new Date(t.createdAt).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 </div>
