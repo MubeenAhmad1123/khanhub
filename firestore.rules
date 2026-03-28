@@ -232,6 +232,7 @@ service cloud.firestore {
     // Delete only by superadmin.
     match /rehab_patients/{patientId} {
       allow read: if isRehabAdminOrAbove()
+        || isRehabRole('cashier')
         || (isRehabRole('family') && rehabPatientId() == patientId);
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();

@@ -93,6 +93,7 @@ export default function CashierPage() {
     try {
       const snap = await getDocs(collection(db, 'rehab_patients'));
       const list = snap.docs.map(d => ({ id: d.id, name: d.data().name || 'Unknown' }));
+      console.log('Loaded patients:', list.length, list);
       setAllPatients(list);
     } catch (e) {
       console.error('Load patients error:', e);
@@ -133,9 +134,10 @@ export default function CashierPage() {
   function handlePatientSearch(val: string) {
     setPatientSearch(val);
     setSelectedPatient(null);
-    if (val.length < 2) { setPatientResults([]); setShowDropdown(false); return; }
+    if (val.length < 1) { setPatientResults([]); setShowDropdown(false); return; }
     const results = allPatients.filter(p =>
-      p.name.toLowerCase().includes(val.toLowerCase())
+      p.name.toLowerCase().includes(val.toLowerCase()) ||
+      p.id.toLowerCase().includes(val.toLowerCase())
     );
     setPatientResults(results);
     setShowDropdown(true);
@@ -308,9 +310,12 @@ export default function CashierPage() {
                 type="text"
                 value={patientSearch}
                 onChange={e => handlePatientSearch(e.target.value)}
-                placeholder="Type patient name to search..."
+                placeholder="Search patient by name..."
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               />
+              <p className="text-xs text-gray-400 mt-1 ml-1">
+                Type any letter to search from {allPatients.length} patients
+              </p>
               {selectedPatient && (
                 <div className="mt-1.5 flex items-center gap-2 bg-teal-50 rounded-lg px-3 py-2">
                   <span className="text-teal-600 text-sm font-bold">✓ {selectedPatient.name}</span>
