@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, updateDoc, doc, query, where, Timestamp, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, updateDoc, doc, query, where, Timestamp, onSnapshot, getDocs, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
   CheckCircle, XCircle, Clock, TrendingUp, TrendingDown, 
@@ -59,6 +59,8 @@ export default function ApprovalsPage() {
             amount: Number(data.amount) || 0,
             status: data.status || 'pending',
             cashierId: data.cashierId || '',
+            patientId: data.patientId || null,
+            patientName: data.patientName || null,
             date: data.date,  // keep as Firestore Timestamp for display
             createdAt: data.createdAt,
           }
@@ -119,6 +121,8 @@ export default function ApprovalsPage() {
             approvedBy: data.approvedBy || '',
             rejectedBy: data.rejectedBy || '',
             rejectReason: data.rejectReason || '',
+            patientId: data.patientId || null,
+            patientName: data.patientName || null,
             createdAt,
             approvedAt,
             date: txDate,
@@ -144,11 +148,125 @@ export default function ApprovalsPage() {
   const handleApprove = async (txId: string) => {
     try {
       setActionLoading(txId);
+      
+      // 1. Update the transaction status first
       await updateDoc(doc(db, 'rehab_transactions', txId), {
         status: 'approved',
         approvedBy: session.uid,
         approvedAt: Timestamp.now()
       });
+
+      // 2. Auto-sync to patient records after approval
+      const tx = pendingTransactions.find(t => t.id === txId);
+      if (tx && tx.patientId) {
+        const month = tx.date?.toDate
+          ? tx.date.toDate().toISOString().slice(0, 7)
+          : new Date().toISOString().slice(0, 7);
+
+        if (tx.category === 'patient_fee') {
+          // Update rehab_fees for this patient + month
+          const feesQ = query(
+            collection(db, 'rehab_fees'),
+            where('patientId', '==', tx.patientId),
+            where('month', '==', month)
+          );
+          const feesSnap = await getDocs(feesQ);
+          if (!feesSnap.empty) {
+            const feeDoc = feesSnap.docs[0];
+            const current = feeDoc.data();
+            const newPaid = (current.amountPaid || 0) + tx.amount;
+            const newRemaining = Math.max(0, (current.packageAmount || 0) - newPaid);
+            await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+              amountPaid: newPaid,
+              amountRemaining: newRemaining,
+              lastPaymentDate: serverTimestamp(),
+              lastPaymentAmount: tx.amount,
+              payments: [
+                ...(current.payments || []),
+                {
+                  id: txId,
+                  amount: tx.amount,
+                  date: tx.date || Timestamp.now(),
+                  cashierId: tx.cashierId,
+                  status: 'approved'
+                }
+              ]
+            });
+          }
+        }
+
+        if (tx.category === 'canteen_deposit') {
+          // Update rehab_canteen for this patient + month
+          const canteenQ = query(
+            collection(db, 'rehab_canteen'),
+            where('patientId', '==', tx.patientId),
+            where('month', '==', month)
+          );
+          const canteenSnap = await getDocs(canteenQ);
+          const txEntry = {
+            id: txId,
+            type: 'deposit',
+            amount: tx.amount,
+            description: tx.description || 'Canteen deposit',
+            date: tx.date || Timestamp.now(),
+            cashierId: tx.cashierId,
+          };
+
+          if (!canteenSnap.empty) {
+            const canteenDoc = canteenSnap.docs[0];
+            const current = canteenDoc.data();
+            const newDeposited = (current.totalDeposited || 0) + tx.amount;
+            const newBalance = newDeposited - (current.totalSpent || 0);
+            await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+              totalDeposited: newDeposited,
+              balance: newBalance,
+              lastDepositDate: serverTimestamp(),
+              transactions: [...(current.transactions || []), txEntry]
+            });
+          } else {
+            // Create record if missing (best effort)
+            await addDoc(collection(db, 'rehab_canteen'), {
+              patientId: tx.patientId,
+              month: month,
+              totalDeposited: tx.amount,
+              totalSpent: 0,
+              balance: tx.amount,
+              transactions: [txEntry]
+            });
+          }
+        }
+
+        if (tx.category === 'canteen_expense') {
+          // Deduct from canteen balance
+          const canteenQ = query(
+            collection(db, 'rehab_canteen'),
+            where('patientId', '==', tx.patientId),
+            where('month', '==', month)
+          );
+          const canteenSnap = await getDocs(canteenQ);
+          const txEntry = {
+            id: txId,
+            type: 'expense',
+            amount: tx.amount,
+            description: tx.description || 'Canteen expense',
+            date: tx.date || Timestamp.now(),
+            cashierId: tx.cashierId,
+          };
+
+          if (!canteenSnap.empty) {
+            const canteenDoc = canteenSnap.docs[0];
+            const current = canteenDoc.data();
+            const newSpent = (current.totalSpent || 0) + tx.amount;
+            const newBalance = (current.totalDeposited || 0) - newSpent;
+            await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+              totalSpent: newSpent,
+              balance: newBalance,
+              transactions: [...(current.transactions || []), txEntry]
+            });
+          }
+        }
+      }
+
       toast.success('Approved ✓');
       fetchHistory(); // Refresh history
     } catch (error) {
@@ -251,6 +369,11 @@ export default function ApprovalsPage() {
             </div>
             <div className="text-2xl font-black text-gray-900 mb-1 tracking-tight">
               {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>
+              {tx.patientName && (
+                <span className="ml-3 text-sm font-black text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg uppercase tracking-widest">
+                  Patient: {tx.patientName}
+                </span>
+              )}
             </div>
             {tx.description && (
               <p className="text-sm font-medium text-gray-500 mb-3 bg-gray-50 p-2 rounded-xl border border-gray-100/50 italic px-3">"{tx.description}"</p>

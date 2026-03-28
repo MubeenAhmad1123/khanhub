@@ -1,116 +1,174 @@
 'use client';
-
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, getDocs, query, where, orderBy, Timestamp, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { 
-  TrendingUp, TrendingDown, Plus, 
-  Clock, CheckCircle, AlertCircle, Loader2, Receipt 
-} from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import {
+  collection, addDoc, getDocs, query, where,
+  serverTimestamp, Timestamp
+} from 'firebase/firestore';
+import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 
-export default function CashierStationPage() {
+const INCOME_CATEGORIES = [
+  { value: 'patient_fee',      label: 'Patient Monthly Fee',   needsPatient: true },
+  { value: 'canteen_deposit',  label: 'Canteen Deposit',        needsPatient: true },
+  { value: 'donation',         label: 'Donation',               needsPatient: false },
+  { value: 'other_income',     label: 'Other Income',           needsPatient: false },
+];
+
+const EXPENSE_CATEGORIES = [
+  { value: 'staff_salary',     label: 'Staff Salary',           needsPatient: false },
+  { value: 'rent',             label: 'Rent',                   needsPatient: false },
+  { value: 'electricity',      label: 'Electricity',            needsPatient: false },
+  { value: 'gas',              label: 'Gas',                    needsPatient: false },
+  { value: 'water',            label: 'Water',                  needsPatient: false },
+  { value: 'medicine',         label: 'Medicine',               needsPatient: false },
+  { value: 'food',             label: 'Food / Ration',          needsPatient: false },
+  { value: 'canteen_expense',  label: 'Canteen Expense',        needsPatient: true  },
+  { value: 'maintenance',      label: 'Maintenance',            needsPatient: false },
+  { value: 'transport',        label: 'Transport',              needsPatient: false },
+  { value: 'equipment',        label: 'Equipment',              needsPatient: false },
+  { value: 'security',         label: 'Security',               needsPatient: false },
+  { value: 'cleaning',         label: 'Cleaning',               needsPatient: false },
+  { value: 'patient_welfare',  label: 'Patient Welfare',        needsPatient: false },
+  { value: 'office_supplies',  label: 'Office Supplies',        needsPatient: false },
+  { value: 'other_expense',    label: 'Other Expense',          needsPatient: false },
+];
+
+export default function CashierPage() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { session: user, loading: sessionLoading } = useRehabSession();
 
-  // Form State
-  const [activeTab, setActiveTab] = useState<'income' | 'expense'>('income');
-  const [category, setCategory] = useState('');
-  const [patientId, setPatientId] = useState('');
+  // form state
+  const [type, setType] = useState<'income' | 'expense'>('income');
+  const [category, setCategory] = useState('patient_fee');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [dateStr, setDateStr] = useState(new Date().toISOString().split('T')[0]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [patientSearch, setPatientSearch] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState<{id: string; name: string} | null>(null);
+  const [patientResults, setPatientResults] = useState<{id: string; name: string}[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [allPatients, setAllPatients] = useState<{id: string; name: string}[]>([]);
 
-  const [todayTransactions, setTodayTransactions] = useState<any[]>([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  // today's transactions
+  const [todayEntries, setTodayEntries] = useState<any[]>([]);
+  const [todayIncome, setTodayIncome] = useState(0);
+  const [todayExpense, setTodayExpense] = useState(0);
 
-  const fetchTodayTransactions = async (uid: string) => {
+  // ui state
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const currentCat = categories.find(c => c.value === category);
+  const needsPatient = currentCat?.needsPatient ?? false;
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user || (user.role !== 'cashier' && user.role !== 'superadmin')) {
+      router.push('/departments/rehab/login');
+      return;
+    }
+    loadPatients();
+    loadTodayEntries();
+  }, [user, sessionLoading]);
+
+  // Reset category when type changes
+  useEffect(() => {
+    setCategory(type === 'income' ? 'patient_fee' : 'staff_salary');
+    setSelectedPatient(null);
+    setPatientSearch('');
+  }, [type]);
+
+  // Reset patient when category changes to non-patient
+  useEffect(() => {
+    if (!needsPatient) {
+      setSelectedPatient(null);
+      setPatientSearch('');
+    }
+  }, [category]);
+
+  async function loadPatients() {
     try {
-      const todayStart = new Date()
-      todayStart.setHours(0, 0, 0, 0)
-
-      // Simple single-field query — no composite index needed
-      const snap = await getDocs(
-        query(
-          collection(db, 'rehab_transactions'),
-          where('cashierId', '==', uid)
-        )
-      )
-
-      const allTxns = snap.docs.map(d => {
-        const data = d.data()
-        const createdAt = data.createdAt?.toDate?.() 
-          ? data.createdAt.toDate() 
-          : data.createdAt 
-            ? new Date(data.createdAt) 
-            : new Date()
-        return {
-          id: d.id,
-          type: data.type || '',
-          category: data.category || '',
-          description: data.description || '',
-          amount: data.amount || 0,
-          status: data.status || 'pending',
-          patientId: data.patientId || null,
-          cashierId: data.cashierId || '',
-          createdAt,
-          date: data.date?.toDate?.() ? data.date.toDate() : new Date(),
-        }
-      })
-
-      // Filter today's entries client-side
-      const todayTxns = allTxns
-        .filter(t => t.createdAt >= todayStart)
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-
-      setTodayTransactions(todayTxns)
-      setLoadingTransactions(false)
-    } catch (err: any) {
-      console.error('Fetch today transactions error:', err?.message)
-      setLoadingTransactions(false)
+      const snap = await getDocs(collection(db, 'rehab_patients'));
+      const list = snap.docs.map(d => ({ id: d.id, name: d.data().name || 'Unknown' }));
+      setAllPatients(list);
+    } catch (e) {
+      console.error('Load patients error:', e);
     }
   }
 
-  useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) {
-      router.push('/departments/rehab/login');
-      return;
-    }
-    const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'cashier' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
-      return;
-    }
-    setSession(parsed);
-    setLoading(false);
-    fetchTodayTransactions(parsed.uid);
-  }, [router]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!category || !amount) {
-      toast.error('Please fill required fields');
-      return;
-    }
-    const needsPatient = category === 'canteen_deposit' || category === 'canteen_expense' || (activeTab === 'income' && category === 'patient_fee');
-    if (needsPatient && !patientId.trim()) {
-      toast.error('Patient ID is required for this transaction');
-      return;
-    }
-
+  async function loadTodayEntries() {
     try {
-      setIsSubmitting(true);
-      
+      const todayStr = new Date().toISOString().split('T')[0];
+      const snap = await getDocs(
+        query(collection(db, 'rehab_transactions'),
+          where('cashierId', '==', user!.uid))
+      );
+      const entries = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter((e: any) => {
+          const entryDate = e.date instanceof Timestamp
+            ? e.date.toDate().toISOString().split('T')[0]
+            : String(e.date).split('T')[0];
+          return entryDate === todayStr;
+        })
+        .sort((a: any, b: any) => {
+          const ta = a.createdAt?.toDate?.() || new Date(0);
+          const tb = b.createdAt?.toDate?.() || new Date(0);
+          return tb - ta;
+        });
+
+      setTodayEntries(entries);
+      setTodayIncome(entries.filter((e: any) => e.type === 'income')
+        .reduce((s: number, e: any) => s + (e.amount || 0), 0));
+      setTodayExpense(entries.filter((e: any) => e.type === 'expense')
+        .reduce((s: number, e: any) => s + (e.amount || 0), 0));
+    } catch (e) {
+      console.error('Load today entries error:', e);
+    }
+  }
+
+  function handlePatientSearch(val: string) {
+    setPatientSearch(val);
+    setSelectedPatient(null);
+    if (val.length < 2) { setPatientResults([]); setShowDropdown(false); return; }
+    const results = allPatients.filter(p =>
+      p.name.toLowerCase().includes(val.toLowerCase())
+    );
+    setPatientResults(results);
+    setShowDropdown(true);
+  }
+
+  function selectPatient(p: {id: string; name: string}) {
+    setSelectedPatient(p);
+    setPatientSearch(p.name);
+    setShowDropdown(false);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      setError('Enter a valid amount');
+      return;
+    }
+    if (needsPatient && !selectedPatient) {
+      setError('Please select a patient for this category');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
       // Anti-Cheat: 5-minute duplicate check
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       const dupSnap = await getDocs(
         query(
           collection(db, 'rehab_transactions'),
-          where('cashierId', '==', session.uid),
+          where('cashierId', '==', user!.uid),
           where('amount', '==', Number(amount)),
           where('category', '==', category)
         )
@@ -120,361 +178,257 @@ export default function CashierStationPage() {
         return created && created >= fiveMinutesAgo
       });
       if (recentDup) {
-        toast.error('Duplicate transaction detected! Please wait 5 minutes.');
-        setIsSubmitting(false);
+        setError('Duplicate transaction detected! Please wait 5 minutes.');
+        setSubmitting(false);
         return;
       }
 
-      // 1. Submit to rehab_transactions
-      await addDoc(collection(db, 'rehab_transactions'), {
-        type: activeTab,
+      const txData: any = {
+        type,
         category,
         amount: Number(amount),
-        description,
-        date: Timestamp.fromDate(new Date(dateStr)),
-        cashierId: session.uid,
-        patientId: patientId || null,
+        description: description || currentCat?.label || category,
+        date: Timestamp.fromDate(new Date(date)),
+        cashierId: user!.uid,
+        cashierName: user!.displayName,
         status: 'pending',
-        createdAt: serverTimestamp()
-      });
+        createdAt: serverTimestamp(),
+      };
 
-      // 2. If canteen_deposit or canteen_expense → update rehab_canteen
-      if ((category === 'canteen_deposit' || category === 'canteen_expense') && patientId.trim()) {
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        const isDeposit = category === 'canteen_deposit';
-        const txEntry = {
-          id: Date.now().toString(),
-          type: isDeposit ? 'deposit' : 'expense',
-          amount: Number(amount),
-          description: description || (isDeposit ? 'Canteen deposit' : 'Canteen expense'),
-          date: Timestamp.now(),
-          cashierId: session.uid,
-        };
-
-        try {
-          const canteenQ = query(
-            collection(db, 'rehab_canteen'),
-            where('patientId', '==', patientId.trim()),
-            where('month', '==', currentMonth)
-          );
-          const snap = await getDocs(canteenQ);
-
-          if (!snap.empty) {
-            const canteenDoc = snap.docs[0];
-            const d = canteenDoc.data();
-            const newDeposited = isDeposit ? (d.totalDeposited || 0) + Number(amount) : (d.totalDeposited || 0);
-            const newSpent = !isDeposit ? (d.totalSpent || 0) + Number(amount) : (d.totalSpent || 0);
-            await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
-              totalDeposited: newDeposited,
-              totalSpent: newSpent,
-              balance: newDeposited - newSpent,
-              transactions: [...(d.transactions || []), txEntry],
-            });
-          } else {
-            await addDoc(collection(db, 'rehab_canteen'), {
-              patientId: patientId.trim(),
-              month: currentMonth,
-              totalDeposited: isDeposit ? Number(amount) : 0,
-              totalSpent: !isDeposit ? Number(amount) : 0,
-              balance: isDeposit ? Number(amount) : -Number(amount),
-              transactions: [txEntry],
-            });
-          }
-        } catch (canteenErr) {
-          console.error('Canteen update failed:', canteenErr);
-        }
+      if (needsPatient && selectedPatient) {
+        txData.patientId = selectedPatient.id;
+        txData.patientName = selectedPatient.name;
       }
 
-      toast.success('Submitted for approval ✓');
-      setCategory('');
+      await addDoc(collection(db, 'rehab_transactions'), txData);
+
+      setSuccess(`Transaction recorded! Awaiting super admin approval.`);
       setAmount('');
       setDescription('');
-      setPatientId('');
-      setDateStr(new Date().toISOString().split('T')[0]);
-      fetchTodayTransactions(session.uid);
-    } catch (error) {
-      console.error("Submit error:", error);
-      toast.error('Failed to submit transaction');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      setSelectedPatient(null);
+      setPatientSearch('');
+      await loadTodayEntries();
 
-  const formatCategory = (cat: string) => {
-    const map: Record<string, string> = {
-      patient_fee: 'Patient Monthly Fee',
-      canteen_deposit: 'Canteen Deposit',
-      donation: 'Donation',
-      government_grant: 'Government Grant',
-      other_income: 'Other Income',
-      staff_salary: 'Staff Salary',
-      rent: 'Rent / Property',
-      electricity: 'Electricity Bill',
-      gas: 'Gas Bill',
-      water: 'Water Bill',
-      medicine: 'Medicine / Pharmacy',
-      food: 'Food & Groceries',
-      canteen_expense: 'Canteen Expense',
-      maintenance: 'Building Maintenance',
-      transport: 'Transport / Fuel',
-      equipment: 'Equipment Purchase',
-      security: 'Security Services',
-      cleaning: 'Cleaning Supplies',
-      patient_welfare: 'Patient Welfare',
-      office_supplies: 'Office Supplies',
-      other_expense: 'Other Expense',
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to record transaction');
+    } finally {
+      setSubmitting(false);
     }
-    return map[cat] || cat.replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase())
   }
 
-  if (loading) {
+  if (sessionLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const incomeCategories = [
-    { value: 'patient_fee', label: 'Patient Monthly Fee' },
-    { value: 'canteen_deposit', label: 'Canteen Deposit (Family)' },
-    { value: 'donation', label: 'Donation' },
-    { value: 'government_grant', label: 'Government Grant' },
-    { value: 'other_income', label: 'Other Income' }
-  ];
-
-  const expenseCategories = [
-    { value: 'staff_salary', label: 'Staff Salary' },
-    { value: 'rent', label: 'Rent / Property' },
-    { value: 'electricity', label: 'Electricity Bill' },
-    { value: 'gas', label: 'Gas Bill' },
-    { value: 'water', label: 'Water Bill' },
-    { value: 'medicine', label: 'Medicine / Pharmacy' },
-    { value: 'food', label: 'Food & Groceries' },
-    { value: 'canteen_expense', label: 'Canteen Expense (Patient)' },
-    { value: 'maintenance', label: 'Building Maintenance' },
-    { value: 'transport', label: 'Transport / Fuel' },
-    { value: 'equipment', label: 'Equipment Purchase' },
-    { value: 'security', label: 'Security Services' },
-    { value: 'cleaning', label: 'Cleaning Supplies' },
-    { value: 'patient_welfare', label: 'Patient Welfare' },
-    { value: 'office_supplies', label: 'Office Supplies' },
-    { value: 'other_expense', label: 'Other Expense' }
-  ];
-
-  const showPatientField = category === 'canteen_deposit' || category === 'canteen_expense' || (activeTab === 'income' && category === 'patient_fee');
-  const showStaffField = category === 'staff_salary';
-
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-black text-gray-900">Cashier Station</h1>
+        <p className="text-gray-400 text-sm mt-1">All transactions require super admin approval</p>
+      </div>
+
+      {/* Today summary */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-teal-50 rounded-2xl p-4">
+          <p className="text-teal-700 font-black text-xl">PKR {todayIncome.toLocaleString()}</p>
+          <p className="text-teal-600 text-xs font-semibold mt-1">Today's Income Recorded</p>
+        </div>
+        <div className="bg-red-50 rounded-2xl p-4">
+          <p className="text-red-700 font-black text-xl">PKR {todayExpense.toLocaleString()}</p>
+          <p className="text-red-600 text-xs font-semibold mt-1">Today's Expenses Recorded</p>
+        </div>
+      </div>
+
+      {/* New Transaction Form */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <h2 className="font-black text-gray-900 mb-5">New Transaction</h2>
+
+        {error && (
+          <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-sm font-semibold mb-4">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="bg-teal-50 text-teal-600 rounded-xl px-4 py-3 text-sm font-semibold mb-4">
+            {success}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Type toggle */}
+          <div className="flex gap-2 bg-gray-50 rounded-xl p-1">
+            <button type="button"
+              onClick={() => setType('income')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                type === 'income'
+                  ? 'bg-teal-500 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}>
+              Income
+            </button>
+            <button type="button"
+              onClick={() => setType('expense')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                type === 'expense'
+                  ? 'bg-red-500 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}>
+              Expense
+            </button>
+          </div>
+
+          {/* Category */}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Receipt className="w-6 h-6 text-teal-600" />
-              Cashier Station
-            </h1>
-            <p className="text-sm text-gray-500">
-              Welcome, {session?.displayName}. Today is {new Date().toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-
-        {/* Tabs & Form */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-          <div className="flex border-b border-gray-100">
-            <button
-              onClick={() => { setActiveTab('income'); setCategory(''); }}
-              className={`flex-1 py-4 text-center font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
-                activeTab === 'income' 
-                  ? 'border-b-2 border-teal-500 text-teal-700 bg-teal-50/30' 
-                  : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              💰 Income
-            </button>
-            <button
-              onClick={() => { setActiveTab('expense'); setCategory(''); }}
-              className={`flex-1 py-4 text-center font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
-                activeTab === 'expense' 
-                  ? 'border-b-2 border-red-500 text-red-700 bg-red-50/30' 
-                  : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <TrendingDown className="w-4 h-4" />
-              📤 Expense
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {(activeTab === 'income' ? incomeCategories : expenseCategories).map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount (PKR) *</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                  placeholder="0"
-                  min="0"
-                  required
-                />
-              </div>
-
-              {showPatientField && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Patient ID *</label>
-                  <input
-                    type="text"
-                    value={patientId}
-                    onChange={(e) => setPatientId(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                    placeholder="Paste patient doc ID"
-                    required
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Find the patient ID from the Patients list page</p>
-                </div>
-              )}
-
-              {showStaffField && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Staff ID (Optional)</label>
-                  <input
-                    type="text"
-                    value={patientId}
-                    onChange={(e) => setPatientId(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                    placeholder="Staff doc ID (optional, for reference)"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                <input
-                  type="date"
-                  value={dateStr}
-                  onChange={(e) => setDateStr(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                  required
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                  placeholder="Brief description of the transaction"
-                  required={activeTab === 'expense'}
-                />
-              </div>
-            </div>
-
-            <div className="pt-4 flex justify-end">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-70"
-              >
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                Submit for Approval
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Today's Submissions */}
-        <div className="mt-8">
-          <h3 className="text-sm font-black text-gray-400 uppercase 
-            tracking-widest mb-4">
-            Today's Submissions ({todayTransactions.length})
-          </h3>
-          
-          {loadingTransactions ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
-            </div>
-          ) : todayTransactions.length === 0 ? (
-            <div className="text-center py-8 bg-white rounded-2xl 
-              border border-dashed border-gray-200 text-gray-400 
-              text-sm font-medium">
-              No transactions submitted today yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {todayTransactions.map(tx => (
-                <div key={tx.id} className={`bg-white rounded-2xl p-4 
-                  border-l-4 shadow-sm flex items-center 
-                  justify-between gap-4 ${
-                    tx.type === 'income' 
-                      ? 'border-l-green-400' 
-                      : 'border-l-red-400'
-                  }`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[10px] font-black uppercase 
-                        px-2 py-0.5 rounded-md ${
-                          tx.type === 'income' 
-                            ? 'bg-green-100 text-green-600' 
-                            : 'bg-red-100 text-red-600'
-                        }`}>
-                        {tx.type}
-                      </span>
-                      <span className="text-xs text-gray-400 font-medium">
-                        {formatCategory(tx.category)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 truncate">
-                      {tx.description || '—'}
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      {tx.createdAt.toLocaleTimeString('en-PK', {
-                        hour: '2-digit', minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-black text-gray-900 text-sm">
-                      PKR {tx.amount.toLocaleString('en-PK')}
-                    </p>
-                    <span className={`text-[9px] font-black uppercase 
-                      px-2 py-0.5 rounded-full ${
-                        tx.status === 'approved' 
-                          ? 'bg-green-100 text-green-600'
-                          : tx.status === 'rejected'
-                            ? 'bg-red-100 text-red-600'
-                            : 'bg-yellow-100 text-yellow-600'
-                      }`}>
-                      {tx.status}
-                    </span>
-                  </div>
-                </div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+              {categories.map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
               ))}
+            </select>
+          </div>
+
+          {/* Patient search — shown only when needed */}
+          {needsPatient && (
+            <div className="relative">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                Patient <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={patientSearch}
+                onChange={e => handlePatientSearch(e.target.value)}
+                placeholder="Type patient name to search..."
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              />
+              {selectedPatient && (
+                <div className="mt-1.5 flex items-center gap-2 bg-teal-50 rounded-lg px-3 py-2">
+                  <span className="text-teal-600 text-sm font-bold">✓ {selectedPatient.name}</span>
+                  <button type="button" onClick={() => { setSelectedPatient(null); setPatientSearch(''); }}
+                    className="ml-auto text-gray-400 hover:text-red-500 text-xs">✕</button>
+                </div>
+              )}
+              {showDropdown && patientResults.length > 0 && (
+                <div className="absolute z-10 top-full mt-1 w-full bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden">
+                  {patientResults.map(p => (
+                    <button key={p.id} type="button"
+                      onClick={() => selectPatient(p)}
+                      className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-teal-50 transition-colors">
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showDropdown && patientResults.length === 0 && patientSearch.length > 1 && (
+                <div className="absolute z-10 top-full mt-1 w-full bg-white rounded-xl border border-gray-100 shadow-lg px-4 py-3 text-sm text-gray-400">
+                  No patient found
+                </div>
+              )}
             </div>
           )}
-        </div>
+
+          {/* Amount + Date */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                Amount (PKR) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                placeholder="0"
+                min="1"
+                required
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                Date
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+              Note (optional)
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Any extra details..."
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-gray-900 text-white rounded-xl py-3.5 text-sm font-black transition-all hover:bg-gray-800 disabled:opacity-50">
+            {submitting ? 'Recording...' : 'Record Transaction →'}
+          </button>
+
+          <p className="text-center text-gray-400 text-xs">
+            This will be sent to Super Admin for approval before reflecting in reports.
+          </p>
+        </form>
+      </div>
+
+      {/* Today's entries */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <h2 className="font-black text-gray-900 mb-4">Today's Entries ({todayEntries.length})</h2>
+        {todayEntries.length === 0 ? (
+          <p className="text-gray-400 text-sm text-center py-6">No transactions recorded today yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {todayEntries.map((entry: any) => (
+              <div key={entry.id}
+                className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+                <div>
+                  <p className="text-sm font-bold text-gray-800">
+                    {entry.description || entry.category}
+                    {entry.patientName && (
+                      <span className="ml-2 text-xs text-teal-600 font-semibold">
+                        ({entry.patientName})
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {entry.type === 'income' ? '↑ Income' : '↓ Expense'} •{' '}
+                    <span className={`font-semibold ${
+                      entry.status === 'approved' ? 'text-teal-600' :
+                      entry.status === 'rejected' ? 'text-red-500' : 'text-amber-500'
+                    }`}>{entry.status}</span>
+                  </p>
+                </div>
+                <p className={`text-sm font-black ${
+                  entry.type === 'income' ? 'text-teal-600' : 'text-red-500'
+                }`}>
+                  {entry.type === 'income' ? '+' : '-'} PKR {(entry.amount || 0).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
