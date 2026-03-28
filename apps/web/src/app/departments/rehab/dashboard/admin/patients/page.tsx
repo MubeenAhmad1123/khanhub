@@ -33,16 +33,40 @@ export default function PatientsListPage() {
 
   const fetchPatients = async () => {
     try {
-      const q = query(
-        collection(db, 'rehab_patients'),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc')
-      );
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPatients(data);
-    } catch (error) {
-      console.error("Error fetching patients:", error);
+      setLoading(true);
+      // No where/orderBy — avoids index issues
+      const snap = await getDocs(collection(db, 'rehab_patients'));
+      
+      const all = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name || '',
+          photoUrl: data.photoUrl || null,
+          admissionDate: data.admissionDate?.toDate?.() 
+            ? data.admissionDate.toDate() 
+            : data.admissionDate 
+              ? new Date(data.admissionDate) 
+              : new Date(),
+          packageAmount: Number(data.packageAmount) || 60000,
+          diagnosis: data.diagnosis || '',
+          isActive: data.isActive !== false, // default true
+          fatherName: data.fatherName || '',
+          phone: data.phone || '',
+          age: data.age || '',
+          createdAt: data.createdAt?.toDate?.()
+            ? data.createdAt.toDate()
+            : new Date(),
+        };
+      })
+      // Sort newest first client-side
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      // Only active ones
+      .filter(p => p.isActive !== false);
+
+      setPatients(all);
+    } catch (err: any) {
+      console.error('Fetch patients error:', err?.message);
     } finally {
       setLoading(false);
     }
@@ -60,12 +84,12 @@ export default function PatientsListPage() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const thisMonthAdmissions = patients.filter(p => {
-    if (!p.admissionDate) return false;
-    const date = p.admissionDate.toDate();
-    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  const totalActive = patients.length;
+  const newThisMonth = patients.filter(p => {
+    const firstOfMonth = new Date();
+    firstOfMonth.setDate(1);
+    firstOfMonth.setHours(0, 0, 0, 0);
+    return p.admissionDate >= firstOfMonth;
   }).length;
 
   return (
@@ -98,7 +122,7 @@ export default function PatientsListPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Total Active</p>
-              <p className="text-2xl font-bold text-gray-900">{patients.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{totalActive}</p>
             </div>
           </div>
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
@@ -107,7 +131,7 @@ export default function PatientsListPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">New This Month</p>
-              <p className="text-2xl font-bold text-gray-900">{thisMonthAdmissions}</p>
+              <p className="text-2xl font-bold text-gray-900">{newThisMonth}</p>
             </div>
           </div>
         </div>
@@ -174,7 +198,10 @@ export default function PatientsListPage() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                             <Calendar size={12} className="text-teal-400" />
-                            {patient.admissionDate?.toDate?.()?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || 'No date'}
+                            {patient.admissionDate instanceof Date 
+                                ? patient.admissionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) 
+                                : 'No date'
+                            }
                         </div>
                         <div className="text-[11px] font-black text-gray-900 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100/50">
                             PKR {patient.packageAmount?.toLocaleString() || 0}
