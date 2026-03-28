@@ -298,6 +298,16 @@ service cloud.firestore {
       allow delete: if isRehabSuperAdmin();
     }
 
+    // ── Patient visits ─────────────────────────────────
+    // Family can read only their patient's visits.
+    // Admin/superadmin can read and write all.
+    match /rehab_visits/{docId} {
+      allow read: if isRehabAdminOrAbove()
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
+      allow create, update: if isRehabAdminOrAbove();
+      allow delete: if isRehabSuperAdmin();
+    }
+
     // ── Audit log ──────────────────────────────────────
     // Only superadmin can read. 
     // Server actions write via Admin SDK (bypasses rules).

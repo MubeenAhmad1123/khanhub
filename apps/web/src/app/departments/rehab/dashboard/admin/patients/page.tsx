@@ -34,11 +34,30 @@ export default function PatientsListPage() {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      // No where/orderBy — avoids index issues
-      const snap = await getDocs(collection(db, 'rehab_patients'));
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // 1. Fetch Patients, Fees, and Canteen data
+      const [snap, feesSnap, canteenSnap] = await Promise.all([
+        getDocs(collection(db, 'rehab_patients')),
+        getDocs(query(collection(db, 'rehab_fees'), where('month', '==', currentMonth))),
+        getDocs(query(collection(db, 'rehab_canteen'), where('month', '==', currentMonth)))
+      ]);
       
+      const feesMap: Record<string, any> = {};
+      feesSnap.docs.forEach(d => { feesMap[d.data().patientId] = d.data(); });
+
+      const canteenMap: Record<string, any> = {};
+      canteenSnap.docs.forEach(d => { canteenMap[d.data().patientId] = d.data(); });
+
       const all = snap.docs.map(d => {
         const data = d.data();
+        const fee = feesMap[d.id];
+        const canteen = canteenMap[d.id];
+        
+        const isFeeDue = !fee || (Number(fee.paidAmount || 0) < Number(data.packageAmount || 60000));
+        const isLowCanteen = (Number(canteen?.balance || 0) < 500);
+
         return {
           id: d.id,
           name: data.name || '',
@@ -50,18 +69,18 @@ export default function PatientsListPage() {
               : new Date(),
           packageAmount: Number(data.packageAmount) || 60000,
           diagnosis: data.diagnosis || '',
-          isActive: data.isActive !== false, // default true
+          isActive: data.isActive !== false,
           fatherName: data.fatherName || '',
           phone: data.phone || '',
           age: data.age || '',
+          isFeeDue,
+          isLowCanteen,
           createdAt: data.createdAt?.toDate?.()
             ? data.createdAt.toDate()
             : new Date(),
         };
       })
-      // Sort newest first client-side
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      // Only active ones
       .filter(p => p.isActive !== false);
 
       setPatients(all);
@@ -80,9 +99,15 @@ export default function PatientsListPage() {
     );
   }
 
-  const filteredPatients = patients.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPatients = patients.filter(p => {
+    const s = searchQuery.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(s) ||
+      p.fatherName.toLowerCase().includes(s) ||
+      p.phone.includes(s) ||
+      p.id.toLowerCase().includes(s)
+    );
+  });
 
   const totalActive = patients.length;
   const newThisMonth = patients.filter(p => {
@@ -144,7 +169,7 @@ export default function PatientsListPage() {
           <input
             type="text"
             className="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-            placeholder="Search patients by name..."
+            placeholder="Search patients by name, father, phone, or ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -191,6 +216,14 @@ export default function PatientsListPage() {
                         <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mt-1">
                             Active Patient
                         </p>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                            {patient.isFeeDue && (
+                                <span className="text-[8px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm shadow-red-200">Fee Due</span>
+                            )}
+                            {patient.isLowCanteen && (
+                                <span className="text-[8px] font-black bg-orange-500 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm shadow-orange-200">Low Canteen</span>
+                            )}
+                        </div>
                     </div>
                 </div>
 

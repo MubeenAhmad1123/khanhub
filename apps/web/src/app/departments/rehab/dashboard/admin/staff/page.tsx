@@ -25,6 +25,10 @@ export default function AdminStaffPage() {
   const [showModal, setShowModal] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [dutyInput, setDutyInput] = useState('');
   const [form, setForm] = useState({
     name: '',
@@ -95,6 +99,23 @@ export default function AdminStaffPage() {
     } catch {
       alert('Error overriding attendance');
     }
+  };
+
+  const handleBulkAttendance = async () => {
+    if (!user || selectedStaffIds.length === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        selectedStaffIds.map(sid => overrideAttendance(sid, bulkDate, 'present', user.uid))
+      );
+      setMessage({ type: 'success', text: `Attendance marked for ${selectedStaffIds.length} staff members!` });
+      setShowBulkModal(false);
+      fetchData();
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to mark bulk attendance' });
+    }
+    setBulkLoading(false);
+    setTimeout(() => setMessage({ type: '', text: '' }), 4000);
   };
 
   const addDuty = () => {
@@ -186,13 +207,25 @@ export default function AdminStaffPage() {
             Attendance & Roster — {new Date().toLocaleDateString('en-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-teal-500 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-teal-600 transition-all hover:scale-105 shadow-lg shadow-teal-200 self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          Add Staff Member
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <button
+            onClick={() => {
+              setSelectedStaffIds(staff.map(s => s.id));
+              setShowBulkModal(true);
+            }}
+            className="flex items-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-black transition-all hover:scale-105 shadow-lg shadow-gray-200"
+          >
+            <CheckCircle size={16} />
+            Bulk Attendance
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-teal-500 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-teal-600 transition-all hover:scale-105 shadow-lg shadow-teal-200"
+          >
+            <Plus size={16} />
+            Add Staff Member
+          </button>
+        </div>
       </div>
 
       {/* Message */}
@@ -540,6 +573,81 @@ export default function AdminStaffPage() {
           </div>
         </div>
       )}
+      {/* Bulk Attendance Modal */}
+      {showBulkModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="text-xl font-black text-gray-900">Bulk Attendance</h2>
+                <p className="text-gray-400 text-xs mt-0.5">Quickly mark multiple staff as present</p>
+              </div>
+              <button onClick={() => setShowBulkModal(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Attendance Date</label>
+                <input 
+                  type="date" 
+                  className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" 
+                  value={bulkDate}
+                  onChange={e => setBulkDate(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Select Staff ({selectedStaffIds.length})</label>
+                  <button 
+                    onClick={() => setSelectedStaffIds(selectedStaffIds.length === staff.length ? [] : staff.map(s => s.id))}
+                    className="text-[10px] font-black text-teal-600 uppercase tracking-widest hover:underline"
+                  >
+                    {selectedStaffIds.length === staff.length ? 'Unselect All' : 'Select All'}
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  {staff.map(s => (
+                    <label key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-[10px] font-black text-gray-400 uppercase">
+                          {s.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-700">{s.name}</p>
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{s.role}</p>
+                        </div>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        className="w-5 h-5 rounded-lg border-gray-200 text-teal-500 focus:ring-teal-300 cursor-pointer"
+                        checked={selectedStaffIds.includes(s.id)}
+                        onChange={() => {
+                          setSelectedStaffIds(prev => 
+                            prev.includes(s.id) ? prev.filter(i => i !== s.id) : [...prev, s.id]
+                          );
+                        }}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                onClick={handleBulkAttendance}
+                disabled={bulkLoading || selectedStaffIds.length === 0}
+                className="w-full flex items-center justify-center gap-2 bg-teal-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-teal-600 transition-all disabled:opacity-50 shadow-lg shadow-teal-200 disabled:shadow-none"
+              >
+                {bulkLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                {bulkLoading ? 'Processing...' : `Mark ${selectedStaffIds.length} Staff as Present`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

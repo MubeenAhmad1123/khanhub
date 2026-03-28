@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, getDocs, query, where, orderBy, Timestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, Timestamp, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
   TrendingUp, TrendingDown, Plus, 
@@ -104,6 +104,26 @@ export default function CashierStationPage() {
 
     try {
       setIsSubmitting(true);
+      
+      // Anti-Cheat: 5-minute duplicate check
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const dupSnap = await getDocs(
+        query(
+          collection(db, 'rehab_transactions'),
+          where('cashierId', '==', session.uid),
+          where('amount', '==', Number(amount)),
+          where('category', '==', category)
+        )
+      );
+      const recentDup = dupSnap.docs.find(d => {
+        const created = d.data().createdAt?.toDate?.()
+        return created && created >= fiveMinutesAgo
+      });
+      if (recentDup) {
+        toast.error('Duplicate transaction detected! Please wait 5 minutes.');
+        setIsSubmitting(false);
+        return;
+      }
 
       // 1. Submit to rehab_transactions
       await addDoc(collection(db, 'rehab_transactions'), {
@@ -115,7 +135,7 @@ export default function CashierStationPage() {
         cashierId: session.uid,
         patientId: patientId || null,
         status: 'pending',
-        createdAt: Timestamp.now()
+        createdAt: serverTimestamp()
       });
 
       // 2. If canteen_deposit or canteen_expense → update rehab_canteen

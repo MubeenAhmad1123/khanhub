@@ -27,6 +27,7 @@ export default function StaffDetailPage() {
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'salary' | 'fines' | 'leaves'>('overview');
+  const [streak, setStreak] = useState(0);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Fine form
@@ -89,6 +90,28 @@ export default function StaffDetailPage() {
         } as LeaveRecord))
         .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime())
       );
+
+      // Streak Calculation
+      const allAtt = attSnap.docs.map(d => d.data() as AttendanceRecord)
+        .sort((a, b) => b.date.localeCompare(a.date));
+      
+      let currentStreak = 0;
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      
+      let checkDate = allAtt[0]?.date === today ? today : yesterday;
+      
+      for (const att of allAtt) {
+        if (att.date === checkDate && att.status === 'present') {
+          currentStreak++;
+          const prevDate = new Date(new Date(checkDate).getTime() - 86400000);
+          checkDate = prevDate.toISOString().split('T')[0];
+        } else if (att.date < checkDate) {
+          break;
+        }
+      }
+      setStreak(currentStreak);
+
     } catch (err: any) {
       console.error('Fetch staff data error:', err?.message)
     } finally {
@@ -301,10 +324,24 @@ export default function StaffDetailPage() {
                 <p className="text-2xl font-black text-red-500">{absentDays}</p>
                 <p className="text-[10px] font-bold text-red-400 uppercase mt-1">Absent</p>
               </div>
-              <div className="bg-blue-50 rounded-2xl p-4 text-center">
+              <div className="bg-blue-50 rounded-2xl p-4 text-center border border-blue-100">
                 <p className="text-2xl font-black text-blue-500">{leaveDays}</p>
                 <p className="text-[10px] font-bold text-blue-400 uppercase mt-1">Leave</p>
               </div>
+            </div>
+
+            {/* Streak Counter */}
+            <div className="mt-4 p-5 bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl text-white shadow-lg shadow-orange-200 relative overflow-hidden">
+               <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+               <div className="relative z-10 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Current Work Streak</p>
+                    <p className="text-3xl font-black">{streak} Days 🔥</p>
+                  </div>
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                     <CheckCircle size={24} />
+                  </div>
+               </div>
             </div>
           </div>
         </div>
@@ -312,20 +349,50 @@ export default function StaffDetailPage() {
 
       {/* TAB: Salary */}
       {activeTab === 'salary' && (
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign size={18} className="text-teal-500" />
-            <h2 className="font-black text-gray-900">Salary Breakdown — {currentMonth}</h2>
-          </div>
-          <div className="space-y-3">
-            <Row label="Gross Salary" value={`₨${staff.salary.toLocaleString()}`} />
-            <Row label={`Daily Rate (÷${WORKING_DAYS} days)`} value={`₨${dailyRate.toLocaleString()}/day`} muted />
-            <Row label={`Absent Deduction (${absentDays} days × ₨${dailyRate.toLocaleString()})`} value={`- ₨${(absentDays * dailyRate).toLocaleString()}`} red />
-            <Row label={`Fines This Month`} value={`- ₨${thisMonthFines.toLocaleString()}`} red />
-            <div className="h-px bg-gray-100" />
-            <div className="flex justify-between items-center p-4 bg-teal-50 rounded-2xl">
-              <span className="font-black text-teal-700 text-sm uppercase tracking-wide">Net Payable</span>
-              <span className="font-black text-teal-700 text-2xl">₨{Math.round(netSalary).toLocaleString('en-PK')}</span>
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm space-y-6 print:shadow-none print:border-none print:p-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <DollarSign size={24} className="text-teal-500" />
+                <h2 className="text-xl font-black text-gray-900">Salary Ledger — {new Date(currentMonth + '-01').toLocaleDateString('en-PK', { month: 'long', year: 'numeric' })}</h2>
+              </div>
+              <button 
+                onClick={() => window.print()}
+                className="hidden md:flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl font-black text-xs hover:bg-black transition-all active:scale-95 print:hidden"
+              >
+                Print Salary Slip
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-2">Earnings</h3>
+                <Row label="Base Salary" value={`₨${staff.salary.toLocaleString()}`} />
+                <Row label="Performance Bonus" value="₨0" muted />
+                <Row label="Other Allowances" value="₨0" muted />
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2 border-b border-red-50 pb-2">Deductions</h3>
+                <Row label={`Absents (${absentDays} days)`} value={`₨${(absentDays * dailyRate).toLocaleString()}`} red />
+                <Row label={`Monthly Fines`} value={`₨${thisMonthFines.toLocaleString()}`} red />
+                <Row label="Tax / Fund" value="₨0" muted />
+              </div>
+            </div>
+
+            <div className="mt-8 p-6 bg-teal-50 rounded-[2rem] border border-teal-100 flex flex-col md:flex-row justify-between items-center gap-4">
+              <div>
+                <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1">Total Net Payable</p>
+                <p className="text-4xl font-black text-teal-700">₨{Math.round(netSalary).toLocaleString('en-PK')}</p>
+              </div>
+              <div className="text-right hidden md:block print:block">
+                <div className="w-32 h-px bg-teal-200 mb-2 mt-8 mx-auto md:ml-auto"></div>
+                <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Authorized Signature</p>
+              </div>
+            </div>
+
+            {/* Print Only Footer */}
+            <div className="hidden print:block pt-12 text-center border-t border-gray-100 mt-12">
+               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Generated by KhanHub Rehab Portal — {new Date().toLocaleString()}</p>
             </div>
           </div>
         </div>

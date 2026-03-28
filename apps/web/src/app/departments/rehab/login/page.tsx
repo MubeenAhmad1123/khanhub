@@ -33,6 +33,7 @@ export default function RehabLoginPage() {
       };
 
       localStorage.setItem('rehab_session', JSON.stringify(session));
+      localStorage.setItem('rehab_login_time', Date.now().toString());
       console.log('Redirecting to role:', userData.role);
 
       if (userData.role === 'family') {

@@ -7,7 +7,7 @@ import {
   Banknote, FileBarChart, CreditCard, CalendarDays,
   User, LogOut, ArrowLeft, Menu, X, Shield, Bell, Activity, Sun, Moon
 } from 'lucide-react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type RehabRole = 'superadmin' | 'admin' | 'cashier' | 'staff' | 'family';
@@ -55,7 +55,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   const router = useRouter();
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
-  const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; patientId?: string } | null>(null);
+  const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -64,15 +64,40 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   useEffect(() => {
     const session = localStorage.getItem('rehab_session');
     if (!session) { router.push('/departments/rehab/login'); return; }
-    try {
-      const parsed = JSON.parse(session);
-      if (!parsed.uid || !parsed.role) { router.push('/departments/rehab/login'); return; }
-      setUser(parsed);
-    } catch {
-      router.push('/departments/rehab/login'); return;
-    }
-    setIsChecking(false);
-    setTimeout(() => setMounted(true), 50);
+
+    const performAuthCheck = async () => {
+      try {
+        const parsed = JSON.parse(session);
+        if (!parsed.uid || !parsed.role) { throw new Error('Invalid session'); }
+
+        // 1. Session Timeout Check (12 Hours)
+        const loginTime = localStorage.getItem('rehab_login_time');
+        if (loginTime) {
+          const hoursElapsed = (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60);
+          if (hoursElapsed > 12) {
+            handleSignOut();
+            return;
+          }
+        }
+
+        // 2. Background Verification (Role & Active Status)
+        const userDoc = await getDoc(doc(db, 'rehab_users', parsed.uid));
+        if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
+          handleSignOut();
+          return;
+        }
+
+        setUser(parsed);
+        setIsChecking(false);
+        setTimeout(() => setMounted(true), 50);
+      } catch (err) {
+        console.error('Auth check error:', err);
+        handleSignOut();
+      }
+    };
+
+    performAuthCheck();
+    
     const saved = localStorage.getItem('rehab_dark_mode');
     if (saved === 'true') setDarkMode(true);
   }, [router]);

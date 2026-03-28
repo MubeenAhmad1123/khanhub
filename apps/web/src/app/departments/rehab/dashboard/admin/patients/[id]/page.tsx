@@ -11,7 +11,7 @@ import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
-  ChevronLeft, ChevronRight, Plus, Minus, Shield
+  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
@@ -31,7 +31,18 @@ export default function PatientDetailPage() {
   const [videos, setVideos] = useState<any[]>([]);
 
   // State
-  const [activeTab, setActiveTab] = useState<'profile' | 'fees' | 'canteen' | 'videos'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'fees' | 'canteen' | 'videos' | 'visits'>('profile');
+  const [visits, setVisits] = useState<any[]>([]);
+  const [showAddVisitModal, setShowAddVisitModal] = useState(false);
+  const [isSavingVisit, setIsSavingVisit] = useState(false);
+
+  // Visit Form State
+  const [vName, setVName] = useState('');
+  const [vRelation, setVRelation] = useState('');
+  const [vPhone, setVPhone] = useState('');
+  const [vCnic, setVCnic] = useState('');
+  const [vNotes, setVNotes] = useState('');
+  const [vDate, setVDate] = useState(new Date().toISOString().split('T')[0]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '', diagnosis: '', packageAmount: 0, photoUrl: ''
@@ -155,6 +166,15 @@ export default function PatientDetailPage() {
       );
       const vidSnap = await getDocs(videosQ);
       setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+
+      // 5. Visits
+      const visitsQ = query(
+        collection(db, 'rehab_visits'),
+        where('patientId', '==', patientId),
+        orderBy('date', 'desc')
+      );
+      const visitSnap = await getDocs(visitsQ);
+      setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -454,6 +474,53 @@ export default function PatientDetailPage() {
     }
   };
 
+  const handleAddVisit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vName || !vRelation || !vPhone) {
+      toast.error('Name, Relation and Phone are required');
+      return;
+    }
+
+    try {
+      setIsSavingVisit(true);
+      const visitData = {
+        patientId,
+        visitorName: vName,
+        relation: vRelation,
+        phone: vPhone,
+        cnic: vCnic || null,
+        notes: vNotes || null,
+        date: Timestamp.fromDate(new Date(vDate)),
+        loggedBy: session.uid,
+        createdAt: Timestamp.now()
+      };
+
+      await addDoc(collection(db, 'rehab_visits'), visitData);
+      
+      toast.success('Visit logged ✓');
+      setShowAddVisitModal(false);
+      
+      // Reset form
+      setVName('');
+      setVRelation('');
+      setVPhone('');
+      setVCnic('');
+      setVNotes('');
+      setVDate(new Date().toISOString().split('T')[0]);
+
+      // Refresh visits
+      const visitsQ = query(collection(db, 'rehab_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitSnap = await getDocs(visitsQ);
+      setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+
+    } catch (error) {
+      console.error("Add visit error", error);
+      toast.error('Failed to log visit');
+    } finally {
+      setIsSavingVisit(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -545,6 +612,14 @@ export default function PatientDetailPage() {
             }`}
           >
             <Video className="w-4 h-4" /> Videos ({videos.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('visits')}
+            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'visits' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Users className="w-4 h-4" /> Family Visits
           </button>
         </div>
 
@@ -1000,6 +1075,75 @@ export default function PatientDetailPage() {
             </div>
           )}
 
+          {/* TAB: VISITS */}
+          {activeTab === 'visits' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+                    <Users size={20} />
+                  </div>
+                  <h2 className="text-xl font-black text-gray-900">Family Visit Log</h2>
+                </div>
+                <button
+                  onClick={() => setShowAddVisitModal(true)}
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95"
+                >
+                  <Plus size={16} /> Log New Visit
+                </button>
+              </div>
+
+              {visits.length === 0 ? (
+                <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
+                  <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                  <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No visits recorded yet</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {visits.map(visit => (
+                    <div key={visit.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 transition-all group relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4">
+                         <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
+                            <span>{visit.date?.toDate?.() 
+                              ? visit.date.toDate().toLocaleDateString('en-PK', { day: '2-digit' })
+                              : new Date(visit.date).toLocaleDateString('en-PK', { day: '2-digit' })}</span>
+                            <span className="opacity-60">{visit.date?.toDate?.() 
+                              ? visit.date.toDate().toLocaleDateString('en-PK', { month: 'short' })
+                              : new Date(visit.date).toLocaleDateString('en-PK', { month: 'short' })}</span>
+                         </div>
+                      </div>
+
+                      <div className="flex flex-col gap-4">
+                        <div className="space-y-1 pr-16">
+                          <div className="flex items-center gap-2">
+                             <h4 className="font-black text-gray-900 text-xl tracking-tight">{visit.visitorName}</h4>
+                             <span className="text-[10px] font-black bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{visit.relation}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
+                            <span className="flex items-center gap-1.5"><Phone size={14} className="text-teal-500" /> {visit.phone}</span>
+                            {visit.cnic && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {visit.cnic}</span>}
+                          </div>
+                        </div>
+
+                        {visit.notes && (
+                          <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100/50 italic text-sm text-gray-600 relative">
+                            <div className="absolute -top-2 left-6 bg-white px-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">Observation Notes</div>
+                            "{visit.notes}"
+                          </div>
+                        )}
+                        
+                        <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Admin: {visit.loggedBy}</p>
+                            <User size={14} className="text-gray-200" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -1171,6 +1315,55 @@ export default function PatientDetailPage() {
               >
                 {canteenModal === 'deposit' ? <Plus size={18} /> : <Minus size={18} />}
                 Record {canteenModal === 'deposit' ? 'Deposit' : 'Expense'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Add Visit Modal */}
+      {showAddVisitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <Users className="w-6 h-6 text-teal-600" /> Log Family Visit
+              </h2>
+              <button onClick={() => setShowAddVisitModal(false)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddVisit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
+                  <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Full Name" />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation *</label>
+                  <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Father" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
+                  <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="+92..." />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">CNIC (Optional)</label>
+                  <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
+                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
+                <textarea rows={2} value={vNotes} onChange={e => setVNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="What was discussed? items brought?"></textarea>
+              </div>
+              <button type="submit" disabled={isSavingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">
+                {isSavingVisit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
+                {isSavingVisit ? 'Saving...' : 'Log Visit'}
               </button>
             </form>
           </div>

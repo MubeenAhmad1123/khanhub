@@ -243,6 +243,11 @@ export default function ApprovalsPage() {
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 {formatCategory(tx.category)}
               </span>
+              {type === 'pending' && tx.createdAt && (Date.now() - (tx.createdAt?.toDate?.()?.getTime() || new Date(tx.createdAt).getTime())) > 48 * 60 * 60 * 1000 && (
+                <span className="text-[10px] font-black bg-red-600 text-white px-2 py-0.5 rounded-md animate-pulse">
+                  48h+ PENDING
+                </span>
+              )}
             </div>
             <div className="text-2xl font-black text-gray-900 mb-1 tracking-tight">
               {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>

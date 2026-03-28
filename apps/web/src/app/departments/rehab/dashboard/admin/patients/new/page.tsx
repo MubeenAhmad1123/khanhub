@@ -24,26 +24,6 @@ export default function AdmitPatientPage() {
   const [submitStatus, setSubmitStatus] = useState('');
   const [error, setError] = useState('');
 
-  // SECTION- [x] **Prompt 1: Fees Management Enhancement**
-    - [x] Add `feeMonth` state and `changeMonth` function
-    - [x] Implement `fetchFeeRecord` with month filtering
-    - [x] Implement Month Selector UI for Fees tab
-    - [x] Add `showAddFeeModal` & `showAddPaymentModal` states and forms
-    - [x] Create "Initialize Fee Record" Modal and submit logic
-    - [x] Create "Add Payment" Modal and submit logic
-    - [x] Update Fees display (stats, progress bar, history list)
-    - [x] Git commit and push for Fees fix (Skipped per user request)
-- [x] **Prompt 2: Canteen Management Enhancement**
-    - [x] Add `canteenMonth` state and `changeCanteenMonth`-style logic
-    - [x] Implement `fetchCanteenRecord` with month filtering
-    - [x] Implement Month Selector UI for Canteen tab
-    - [x] Add `canteenModal` state and form fields
-    - [x] Create "Add Deposit/Expense" Modal and unified submit logic (create/update)
-    - [x] Update Canteen display (Balance card, transaction list)
-    - [x] Git commit and push for Canteen fix (Skipped per user request)
-- [x] **Final Verification**
-    - [x] Verify both tabs work correctly in the browser
-    - [x] Create Walkthrough artifact
 
   // SECTION 1: Login Credentials
   const [loginId, setLoginId] = useState('');
@@ -100,6 +80,23 @@ export default function AdmitPatientPage() {
     }
     setLoading(false);
   }, [router]);
+
+  useEffect(() => {
+    if (!admissionDate) return;
+    const date = new Date(admissionDate);
+    let months = 0;
+    
+    if (treatmentDuration === '1 Month') months = 1;
+    else if (treatmentDuration === '2 Months') months = 2;
+    else if (treatmentDuration === '3 Months') months = 3;
+    else if (treatmentDuration === '6 Months') months = 6;
+    else if (treatmentDuration === 'Custom' && customDuration) months = parseInt(customDuration);
+
+    if (months > 0) {
+      date.setMonth(date.getMonth() + months);
+      setExpectedDischargeDate(date.toISOString().split('T')[0]);
+    }
+  }, [admissionDate, treatmentDuration, customDuration]);
 
   const toggleReason = (reason: string) => {
     setReasonsForAdmission(prev => 
