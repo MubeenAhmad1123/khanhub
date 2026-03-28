@@ -45,8 +45,8 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
-    serverExternalPackages: ['firebase-admin'],
   },
+  serverExternalPackages: ['firebase-admin'],
   async headers() {
     return [
       {

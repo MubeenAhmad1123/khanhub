@@ -57,35 +57,40 @@ export default function StaffDetailPage() {
         getDocs(query(collection(db, 'rehab_leaves'), where('staffId', '==', id))),
       ]);
 
-      setAttendance(attSnap.docs.map(d => ({
-        id: d.id, ...d.data(),
-        checkInTime: d.data().checkInTime?.toDate?.(),
-        checkOutTime: d.data().checkOutTime?.toDate?.(),
-      } as AttendanceRecord)));
+      // Step 3: Filter client-side for this month (robustly)
+      const now = new Date()
+      const firstDayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const lastDayStr = lastDay.toISOString().split('T')[0]
+
+      const attendanceData = attSnap.docs
+        .map(d => ({
+          id: d.id,
+          ...d.data(),
+        } as AttendanceRecord))
+        .filter(a => a.date >= firstDayStr && a.date <= lastDayStr)
+
+      setAttendance(attendanceData);
 
       setFines(fineSnap.docs
-        .map(d => {
-          const fd = d.data();
-          return {
-            id: d.id, ...fd,
-            createdAt: fd.createdAt?.toDate?.() || new Date(fd.createdAt || Date.now()),
-          };
-        })
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .map(d => ({
+          id: d.id,
+          ...d.data(),
+          createdAt: d.data().createdAt?.toDate?.() || new Date(d.data().createdAt || Date.now()),
+        } as StaffFine))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       );
 
       setLeaves(leaveSnap.docs
-        .map(d => {
-          const ld = d.data();
-          return {
-            id: d.id, ...ld,
-            createdAt: ld.createdAt?.toDate?.() || new Date(ld.createdAt || Date.now()),
-          };
-        })
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .map(d => ({
+          id: d.id,
+          ...d.data(),
+          createdAt: d.data().createdAt?.toDate?.() || new Date(d.data().createdAt || Date.now()),
+        } as LeaveRecord))
+        .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime())
       );
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Fetch staff data error:', err?.message)
     } finally {
       setLoading(false);
     }
@@ -155,27 +160,20 @@ export default function StaffDetailPage() {
     setLeaveLoading(false);
   };
 
-  // Salary calculation for current month
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonthIdx = now.getMonth(); // 0-indexed
-  
-  const firstDayStr = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}-01`;
-  const lastDay = new Date(currentYear, currentMonthIdx + 1, 0);
-  const lastDayStr = lastDay.toISOString().split('T')[0];
-
-  const thisMonthAtt = attendance.filter(a => a.date >= firstDayStr && a.date <= lastDayStr);
-  const presentDays  = thisMonthAtt.filter(a => a.status === 'present').length;
-  const absentDays   = thisMonthAtt.filter(a => a.status === 'absent').length;
-  const leaveDays    = thisMonthAtt.filter(a => a.status === 'leave').length;
+  // Salary calculation for current month (robust version)
+  const salaryVal = Number(staff?.salary || 0);
+  const thisMonthAtt = attendance; // Already filtered in fetchData now
+  const presentDays = thisMonthAtt.filter(a => a.status === 'present').length;
+  const absentDays = thisMonthAtt.filter(a => a.status === 'absent').length;
+  const leaveDays = thisMonthAtt.filter(a => a.status === 'leave').length;
 
   const thisMonthFines = fines
     .filter(f => f.date === currentMonth)
     .reduce((s, f) => s + Number(f.amount || 0), 0);
 
-  const dailyRate = staff ? Math.round(Number(staff.salary || 0) / WORKING_DAYS) : 0;
+  const dailyRate = Math.round(salaryVal / WORKING_DAYS);
   const deduction = (absentDays * dailyRate) + thisMonthFines;
-  const netSalary = staff ? Math.max(0, Number(staff.salary || 0) - deduction) : 0;
+  const netSalary = Math.max(0, salaryVal - deduction);
 
   const tabs = [
     { key: 'overview', label: 'Profile' },
@@ -281,7 +279,7 @@ export default function StaffDetailPage() {
                       {i + 1}
                     </span>
                     <span className="text-gray-700 text-sm leading-snug">
-                      {d.description || d}
+                      {d.description}
                     </span>
                   </li>
                 ))}
@@ -327,7 +325,7 @@ export default function StaffDetailPage() {
             <div className="h-px bg-gray-100" />
             <div className="flex justify-between items-center p-4 bg-teal-50 rounded-2xl">
               <span className="font-black text-teal-700 text-sm uppercase tracking-wide">Net Payable</span>
-              <span className="font-black text-teal-700 text-2xl">₨{netSalary.toLocaleString()}</span>
+              <span className="font-black text-teal-700 text-2xl">₨{Math.round(netSalary).toLocaleString('en-PK')}</span>
             </div>
           </div>
         </div>
