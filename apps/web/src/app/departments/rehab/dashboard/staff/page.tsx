@@ -25,7 +25,7 @@ export default function StaffSelfPage() {
   const [loading, setLoading] = useState(true);
   const [checkLoading, setCheckLoading] = useState(false);
   const [contribLoading, setContribLoading] = useState(false);
-  const [monthlyStats, setMonthlyStats] = useState({ present: 0, absent: 0, leave: 0 });
+  const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
   const [message, setMessage] = useState({ type: '', text: '' });
 
   const today = new Date().toISOString().split('T')[0];
@@ -60,23 +60,24 @@ export default function StaffSelfPage() {
       );
 
       // Monthly attendance summary
-      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      const firstDay = new Date();
+      firstDay.setDate(1);
+      const firstDayStr = firstDay.toISOString().split('T')[0];
+      const todayStr = new Date().toISOString().split('T')[0];
+
       const monthlySnap = await getDocs(
         query(
           collection(db, 'rehab_attendance'),
           where('staffId', '==', staffId),
-          where('date', '>=', firstDayOfMonth),
-          where('date', '<=', today)
+          where('date', '>=', firstDayStr),
+          where('date', '<=', todayStr)
         )
       );
-      let p = 0, a = 0, l = 0;
-      monthlySnap.docs.forEach(doc => {
-        const d = doc.data();
-        if (d.status === 'present' && d.checkInTime) p++;
-        else if (d.status === 'absent') a++;
-        else if (d.status === 'leave') l++;
-      });
-      setMonthlyStats({ present: p, absent: a, leave: l });
+      const presentCount = monthlySnap.docs.filter(d => d.data().status === 'present').length;
+      const absentCount  = monthlySnap.docs.filter(d => d.data().status === 'absent').length;
+      const leaveCount   = monthlySnap.docs.filter(d => d.data().status === 'leave').length;
+
+      setMonthlySummary({ present: presentCount, absent: absentCount, leave: leaveCount });
     } catch (err) {
       console.error(err);
     } finally {
@@ -96,7 +97,12 @@ export default function StaffSelfPage() {
   };
 
   const handleCheckIn = async () => {
-    if (!staffProfile) return;
+    console.log('Check-in clicked, staffProfile:', staffProfile?.id, 'today:', today);
+    if (!staffProfile) {
+      showMsg('error', 'Staff profile not found. Contact admin.');
+      return;
+    }
+
     setCheckLoading(true);
     try {
       if (!todayRecord) {
@@ -121,6 +127,19 @@ export default function StaffSelfPage() {
           autoFineApplied: isLate,
         });
 
+        showMsg('success', 'Checked in! ✓');
+        // optimistic update
+        setTodayRecord({
+          id: 'temp-' + Date.now(),
+          staffId: staffProfile.id,
+          date: today,
+          status: 'present',
+          checkInTime: new Date(),
+          isLate,
+          lateByMinutes: isLate ? lateByMinutes : 0,
+          autoFineApplied: isLate,
+        } as AttendanceRecord);
+
         if (isLate) {
           const currentMonth = today.substring(0, 7);
           await addDoc(collection(db, 'rehab_fines'), {
@@ -131,20 +150,20 @@ export default function StaffSelfPage() {
             recordedBy: 'system_auto',
             createdAt: Timestamp.now(),
           });
-          showMsg('success', `Checked in. Note: You are ${lateByMinutes} minutes late. PKR 200 fine has been applied. ⚠️`);
-        } else {
-          showMsg('success', 'Checked in successfully! Have a great shift 💪');
+          showMsg('success', `Checked in. Note: You are ${lateByMinutes} minutes late. PKR 200 fine applied. ⚠️`);
         }
       } else if (!todayRecord.checkOutTime) {
         // Already checked in — check out
         await updateDoc(doc(db, 'rehab_attendance', todayRecord.id), {
           checkOutTime: Timestamp.now(),
         });
-        showMsg('success', 'Checked out. See you tomorrow!');
+        showMsg('success', 'Checked out. Great work today! ✓');
+        setTodayRecord(prev => prev ? { ...prev, checkOutTime: new Date() } : prev);
       }
       fetchData();
-    } catch {
-      showMsg('error', 'Something went wrong. Try again.');
+    } catch (err: any) {
+      console.error('Attendance error:', err);
+      showMsg('error', `Failed: ${err?.message || 'Unknown error'}`);
     }
     setCheckLoading(false);
   };
@@ -260,7 +279,7 @@ export default function StaffSelfPage() {
           <button
             onClick={handleCheckIn}
             disabled={checkLoading}
-            className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-wide flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg disabled:opacity-50 ${
+            className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-wide flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
               !checkedIn
                 ? 'bg-teal-500 text-white shadow-teal-200 hover:bg-teal-600'
                 : 'bg-blue-500 text-white shadow-blue-200 hover:bg-blue-600'
@@ -283,15 +302,15 @@ export default function StaffSelfPage() {
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-green-50 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-black text-green-600">{monthlyStats.present}</p>
+            <p className="text-2xl font-black text-green-600">{monthlySummary.present}</p>
             <p className="text-[10px] font-bold text-green-500 uppercase tracking-wide mt-1">Present</p>
           </div>
           <div className="bg-red-50 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-black text-red-500">{monthlyStats.absent}</p>
+            <p className="text-2xl font-black text-red-500">{monthlySummary.absent}</p>
             <p className="text-[10px] font-bold text-red-400 uppercase tracking-wide mt-1">Absent</p>
           </div>
           <div className="bg-blue-50 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-black text-blue-600">{monthlyStats.leave}</p>
+            <p className="text-2xl font-black text-blue-600">{monthlySummary.leave}</p>
             <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wide mt-1">Leave</p>
           </div>
         </div>

@@ -197,45 +197,75 @@ export default function SuperAdminUserManagement() {
       </div>
 
       {/* SECTION C: Admin Roster */}
-      <section className="bg-white rounded-[4rem] border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-10 border-b border-gray-50">
-           <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">Administrative Roster</h2>
+      <section className="bg-white rounded-[2rem] sm:rounded-[4rem] border border-gray-100 overflow-hidden shadow-sm">
+        <div className="p-6 sm:p-10 border-b border-gray-50">
+           <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight uppercase">Administrative Roster</h2>
         </div>
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Identity</th>
-              <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">System ID</th>
-              <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
-              <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {admins.map((adm) => (
-              <tr key={adm.uid} className="hover:bg-gray-50/50 transition-all group">
-                <td className="px-10 py-8">
-                  <p className="font-black text-lg text-gray-900 group-hover:text-blue-600 transition-colors uppercase">{adm.displayName}</p>
-                </td>
-                <td className="px-10 py-8 font-black text-xs text-gray-400 tracking-widest">{adm.customId}</td>
-                <td className="px-10 py-8">
-                  <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    adm.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                  }`}>
-                    {adm.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-10 py-8 text-right">
-                  <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleResetPass(adm.uid)} className="px-5 py-2.5 bg-gray-50 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">Reset</button>
-                    {adm.isActive && (
-                      <button onClick={() => handleDeactivate(adm.uid)} className="px-5 py-2.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Deactivate</button>
-                    )}
-                  </div>
-                </td>
+
+        {/* Mobile View: Cards */}
+        <div className="lg:hidden divide-y divide-gray-50">
+          {admins.map((adm) => (
+            <div key={adm.uid} className="p-6 space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-black text-lg text-gray-900 uppercase leading-tight">{adm.displayName}</p>
+                  <p className="text-[10px] font-black text-gray-400 tracking-widest mt-0.5">{adm.customId}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                  adm.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                }`}>
+                  {adm.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleResetPass(adm.uid)} className="flex-1 bg-gray-50 text-gray-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest">Reset</button>
+                {adm.isActive && (
+                  <button onClick={() => handleDeactivate(adm.uid)} className="flex-1 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest">Deactivate</button>
+                )}
+              </div>
+            </div>
+          ))}
+          {admins.length === 0 && <p className="text-center py-10 text-gray-300 font-bold uppercase tracking-widest text-[10px]">No administrative staff found</p>}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden lg:block">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Identity</th>
+                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">System ID</th>
+                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
+                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {admins.map((adm) => (
+                <tr key={adm.uid} className="hover:bg-gray-50/50 transition-all group">
+                  <td className="px-10 py-8">
+                    <p className="font-black text-lg text-gray-900 group-hover:text-blue-600 transition-colors uppercase">{adm.displayName}</p>
+                  </td>
+                  <td className="px-10 py-8 font-black text-xs text-gray-400 tracking-widest">{adm.customId}</td>
+                  <td className="px-10 py-8">
+                    <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                      adm.isActive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                    }`}>
+                      {adm.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-10 py-8 text-right">
+                    <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleResetPass(adm.uid)} className="px-5 py-2.5 bg-gray-50 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">Reset</button>
+                      {adm.isActive && (
+                        <button onClick={() => handleDeactivate(adm.uid)} className="px-5 py-2.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Deactivate</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

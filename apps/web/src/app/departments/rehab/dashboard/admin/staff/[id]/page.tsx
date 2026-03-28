@@ -143,10 +143,19 @@ export default function StaffDetailPage() {
   };
 
   // Salary calculation for current month
-  const thisMonthAtt = attendance.filter(a => a.date?.startsWith(currentMonth));
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIdx = now.getMonth(); // 0-indexed
+  
+  const firstDayStr = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}-01`;
+  const lastDay = new Date(currentYear, currentMonthIdx + 1, 0);
+  const lastDayStr = lastDay.toISOString().split('T')[0];
+
+  const thisMonthAtt = attendance.filter(a => a.date >= firstDayStr && a.date <= lastDayStr);
   const presentDays  = thisMonthAtt.filter(a => a.status === 'present').length;
   const absentDays   = thisMonthAtt.filter(a => a.status === 'absent').length;
   const leaveDays    = thisMonthAtt.filter(a => a.status === 'leave').length;
+
   const thisMonthFines = fines.filter(f => f.date === currentMonth).reduce((s, f) => s + f.amount, 0);
   const dailyRate    = staff ? Math.round(staff.salary / WORKING_DAYS) : 0;
   const deduction    = absentDays * dailyRate + thisMonthFines;

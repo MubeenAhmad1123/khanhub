@@ -141,39 +141,48 @@ export default function PatientsListPage() {
               <Link 
                 href={`/departments/rehab/dashboard/admin/patients/${patient.id}`} 
                 key={patient.id}
-                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md hover:border-teal-100 transition-all group flex flex-col h-full"
+                className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-200 transition-all active:scale-[0.98] group flex flex-col h-full relative overflow-hidden"
               >
-                <div className="flex items-start gap-4 mb-4">
-                  {patient.photoUrl ? (
-                    <img src={patient.photoUrl} alt={patient.name} className="w-14 h-14 rounded-full object-cover border border-gray-100" />
-                  ) : (
-                    <div className="w-14 h-14 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xl border border-teal-200">
-                      {patient.name.charAt(0).toUpperCase()}
+                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center text-teal-500">
+                        <ChevronRight size={16} />
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-gray-900 truncate group-hover:text-teal-700 transition-colors">
-                      {patient.name}
-                    </h3>
-                    <div className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {patient.admissionDate?.toDate?.()?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) || 'No date'}
+                </div>
+                
+                <div className="flex items-center gap-4 mb-5">
+                    <div className="relative">
+                        {patient.photoUrl ? (
+                            <img src={patient.photoUrl} alt={patient.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md font-black text-[10px] text-gray-300 flex items-center justify-center bg-gray-50" />
+                        ) : (
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 flex items-center justify-center font-black text-2xl border border-teal-200/50 shadow-inner">
+                                {patient.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
                     </div>
-                  </div>
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-black text-gray-900 truncate leading-tight">
+                            {patient.name}
+                        </h3>
+                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mt-1">
+                            Active Patient
+                        </p>
+                    </div>
                 </div>
 
-                <div className="mt-auto space-y-2 pt-4 border-t border-gray-50">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Package className="w-4 h-4 text-gray-400" />
-                    <span>PKR {patient.packageAmount?.toLocaleString() || 0}</span>
-                  </div>
-                  <div className="text-sm text-gray-500 truncate">
-                    {patient.diagnosis || "No diagnosis specified"}
-                  </div>
-                </div>
-
-                <div className="absolute inset-y-0 right-4 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ChevronRight className="w-5 h-5 text-teal-500" />
+                <div className="mt-auto space-y-3 pt-4 border-t border-gray-50">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            <Calendar size={12} className="text-teal-400" />
+                            {patient.admissionDate?.toDate?.()?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) || 'No date'}
+                        </div>
+                        <div className="text-[11px] font-black text-gray-900 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100/50">
+                            PKR {patient.packageAmount?.toLocaleString() || 0}
+                        </div>
+                    </div>
+                    <div className="text-xs font-medium text-gray-500 line-clamp-1 italic bg-gray-50/50 p-2 rounded-xl border border-gray-100/50">
+                        "{patient.diagnosis || "No diagnosis specified"}"
+                    </div>
                 </div>
               </Link>
             ))}

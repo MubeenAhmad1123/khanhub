@@ -204,119 +204,189 @@ export default function AdminStaffPage() {
 
       {/* Staff Table */}
       {staff.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-gray-100 p-16 text-center">
+        <div className="bg-white rounded-3xl border border-gray-100 p-16 text-center shadow-sm">
           <UserCog size={40} className="text-gray-200 mx-auto mb-4" />
           <p className="text-gray-400 font-bold">No staff members yet.</p>
           <p className="text-gray-300 text-sm mt-1">Click "Add Staff Member" to get started.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[680px]">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Staff Member</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Today</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Check-in / Out</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Override / View</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {staff.map((s) => {
-                  const record = attendance[s.id];
-                  return (
-                    <tr key={s.id} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden border border-gray-100 shadow-sm flex-shrink-0">
-                            {s.photoUrl
-                              ? <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
-                              : <div className="w-full h-full flex items-center justify-center text-gray-400 font-black text-sm">{s.name.charAt(0)}</div>
-                            }
-                          </div>
-                          <div>
-                            <p className="font-bold text-gray-900 leading-tight">{s.name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-gray-400 capitalize">{s.gender}</span>
-                              {s.phone && (
-                                <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                                  <Phone size={9} /> {s.phone}
-                                </span>
-                              )}
+        <div className="space-y-4">
+          {/* Mobile View: Cards */}
+          <div className="lg:hidden space-y-4">
+            {staff.map((s) => {
+              const record = attendance[s.id];
+              return (
+                <div key={s.id} className="bg-white rounded-[2rem] p-5 border border-gray-100 shadow-sm space-y-4 transition-all active:scale-[0.99]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden shadow-inner flex-shrink-0">
+                        {s.photoUrl 
+                          ? <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
+                          : <span className="text-gray-400 font-black text-xs">{s.name.charAt(0)}</span>
+                        }
+                      </div>
+                      <div>
+                        <p className="font-black text-gray-900 leading-tight uppercase text-sm">{s.name}</p>
+                        <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest mt-0.5">{s.role}</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                       {record ? (
+                         <span className={`px-2.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 border ${
+                           record.status === 'present' ? 'bg-green-50 text-green-600 border-green-100' :
+                           record.status === 'absent'  ? 'bg-red-50 text-red-500 border-red-100'    : 'bg-blue-50 text-blue-600 border-blue-100'
+                         }`}>
+                           <div className={`w-1 h-1 rounded-full ${record.status === 'present' ? 'bg-green-500' : record.status === 'absent' ? 'bg-red-500' : 'bg-blue-500'}`} />
+                           {record.status}
+                         </span>
+                       ) : (
+                         <span className="px-2.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-gray-50 text-gray-300 border border-gray-100">Unmarked</span>
+                       )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-50">
+                    <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100/50">
+                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.15em] mb-1">Check-in</p>
+                      <p className="text-xs font-black text-gray-700">
+                        {record?.checkInTime ? new Date(record.checkInTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100/50">
+                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.15em] mb-1">Check-out</p>
+                      <p className="text-xs font-black text-gray-700">
+                        {record?.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 pt-2">
+                    <div className="flex gap-1.5 flex-1">
+                      <button onClick={() => handleOverride(s.id, 'present')} className="flex-1 py-3 bg-green-50 text-green-600 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all hover:bg-green-600 hover:text-white">P</button>
+                      <button onClick={() => handleOverride(s.id, 'absent')} className="flex-1 py-3 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all hover:bg-red-500 hover:text-white">A</button>
+                      <button onClick={() => handleOverride(s.id, 'leave')} className="flex-1 py-3 bg-blue-50 text-blue-500 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all hover:bg-blue-500 hover:text-white">L</button>
+                    </div>
+                    <button 
+                      onClick={() => router.push(`/departments/rehab/dashboard/admin/staff/${s.id}`)}
+                      className="w-12 h-12 bg-gray-900 text-white rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-gray-200"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop View: Table */}
+          <div className="hidden lg:block bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left min-w-[680px]">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Staff Member</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Today</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Check-in / Out</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Override / View</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {staff.map((s) => {
+                    const record = attendance[s.id];
+                    return (
+                      <tr key={s.id} className="hover:bg-gray-50/50 transition-colors group">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden border border-gray-100 shadow-sm flex-shrink-0">
+                              {s.photoUrl
+                                ? <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
+                                : <div className="w-full h-full flex items-center justify-center text-gray-400 font-black text-sm">{s.name.charAt(0)}</div>
+                              }
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900 leading-tight">{s.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-gray-400 capitalize">{s.gender}</span>
+                                {s.phone && (
+                                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                    <Phone size={9} /> {s.phone}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg uppercase tracking-widest block w-fit">
-                            {s.role}
-                          </span>
-                          {s.duties?.length > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                              <List size={9} /> {s.duties.length} duties
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg uppercase tracking-widest block w-fit">
+                              {s.role}
                             </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        {record ? (
-                          <div className="flex items-center gap-2">
-                            <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full ${
-                              record.status === 'present' ? 'bg-green-100 text-green-600' :
-                              record.status === 'absent'  ? 'bg-red-100 text-red-500'    : 'bg-blue-100 text-blue-600'
-                            }`}>
-                              {record.status === 'present' ? <CheckCircle size={10} /> : record.status === 'absent' ? <XCircle size={10} /> : <Clock size={10} />}
-                              {record.status}
-                            </span>
-                            {record.overriddenBy && (
-                              <span className="text-[9px] text-orange-400 font-bold uppercase flex items-center gap-0.5">
-                                <BadgeCheck size={9} /> Override
+                            {s.duties?.length > 0 && (
+                              <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                <List size={9} /> {s.duties.length} duties
                               </span>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-400">Not Marked</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-5">
-                        {record?.checkInTime || record?.checkOutTime ? (
-                          <div className="space-y-0.5">
-                            {record.checkInTime && (
-                              <p className="text-[10px] text-gray-500 font-bold">
-                                In: {new Date(record.checkInTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            )}
-                            {record.checkOutTime && (
-                              <p className="text-[10px] text-gray-400 font-bold">
-                                Out: {new Date(record.checkOutTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            )}
+                        </td>
+                        <td className="px-6 py-5">
+                          {record ? (
+                            <div className="flex items-center gap-2">
+                              <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full ${
+                                record.status === 'present' ? 'bg-green-100 text-green-600' :
+                                record.status === 'absent'  ? 'bg-red-100 text-red-500'    : 'bg-blue-100 text-blue-600'
+                              }`}>
+                                {record.status === 'present' ? <CheckCircle size={10} /> : record.status === 'absent' ? <XCircle size={10} /> : <Clock size={10} />}
+                                {record.status}
+                              </span>
+                              {record.overriddenBy && (
+                                <span className="text-[9px] text-orange-400 font-bold uppercase flex items-center gap-0.5">
+                                  <BadgeCheck size={9} /> Override
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-400">Not Marked</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-5">
+                          {record?.checkInTime || record?.checkOutTime ? (
+                            <div className="space-y-0.5">
+                              {record.checkInTime && (
+                                <p className="text-[10px] text-gray-500 font-bold">
+                                  In: {new Date(record.checkInTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
+                              {record.checkOutTime && (
+                                <p className="text-[10px] text-gray-400 font-bold">
+                                  Out: {new Date(record.checkOutTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <div className="flex justify-end items-center gap-1.5">
+                            <button onClick={() => handleOverride(s.id, 'present')} title="Present" className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center hover:bg-green-500 hover:text-white transition-all text-xs font-black">P</button>
+                            <button onClick={() => handleOverride(s.id, 'absent')}  title="Absent"  className="w-8 h-8 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all text-xs font-black">A</button>
+                            <button onClick={() => handleOverride(s.id, 'leave')}   title="Leave"   className="w-8 h-8 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all text-xs font-black">L</button>
+                            <button
+                              onClick={() => router.push(`/departments/rehab/dashboard/admin/staff/${s.id}`)}
+                              title="View Profile"
+                              className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center hover:bg-gray-800 hover:text-white transition-all"
+                            >
+                              <ChevronRight size={14} />
+                            </button>
                           </div>
-                        ) : (
-                          <span className="text-[10px] text-gray-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <div className="flex justify-end items-center gap-1.5">
-                          <button onClick={() => handleOverride(s.id, 'present')} title="Present" className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center hover:bg-green-500 hover:text-white transition-all text-xs font-black">P</button>
-                          <button onClick={() => handleOverride(s.id, 'absent')}  title="Absent"  className="w-8 h-8 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all text-xs font-black">A</button>
-                          <button onClick={() => handleOverride(s.id, 'leave')}   title="Leave"   className="w-8 h-8 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all text-xs font-black">L</button>
-                          <button
-                            onClick={() => router.push(`/departments/rehab/dashboard/admin/staff/${s.id}`)}
-                            title="View Profile"
-                            className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center hover:bg-gray-800 hover:text-white transition-all"
-                          >
-                            <ChevronRight size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

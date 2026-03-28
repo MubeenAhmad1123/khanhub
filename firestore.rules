@@ -271,8 +271,7 @@ service cloud.firestore {
     // Staff can read their own profile only.
     // Admin/superadmin can read and write all.
     match /rehab_staff/{staffId} {
-      allow read: if isRehabAdminOrAbove()
-        || (isRehabRole('staff') && rehabStaffId() == staffId);
+      allow read: if isRehabAdminOrAbove() || isRehabRole('staff');
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -282,9 +281,10 @@ service cloud.firestore {
     // Admin can update (override). Nobody deletes.
     match /rehab_attendance/{docId} {
       allow read: if isRehabAdminOrAbove()
-        || (isRehabRole('staff') && rehabStaffId() == resource.data.staffId);
+        || isRehabRole('cashier')
+        || isRehabRole('staff');
       allow create: if isRehabRole('staff') || isRehabAdminOrAbove();
-      allow update: if isRehabAdminOrAbove();
+      allow update: if isRehabRole('staff') || isRehabAdminOrAbove();
       allow delete: if false;
     }
 
@@ -314,9 +314,7 @@ service cloud.firestore {
     // Admin/superadmin can read all.
     // Nobody deletes or edits.
     match /rehab_contributions/{docId} {
-      allow read: if isRehabAdminOrAbove()
-        || (isRehabRole('staff') 
-            && resource.data.staffId == request.auth.uid);
+      allow read: if isRehabAdminOrAbove() || isRehabRole('staff');
       allow create: if isRehabRole('staff') || isRehabAdminOrAbove();
       allow update, delete: if false;
     }

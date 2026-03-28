@@ -342,43 +342,46 @@ export default function CashierStationPage() {
                 <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
               </div>
             ) : transactions.length === 0 ? (
-              <p className="text-center text-sm text-gray-500 py-8">No transactions submitted today.</p>
+              <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                <Receipt className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No entries today</p>
+              </div>
             ) : (
               transactions.map(tx => (
-                <div key={tx.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
+                <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-50 rounded-2xl hover:bg-gray-50 transition-all hover:scale-[1.01] active:scale-[0.99] bg-white gap-4 shadow-sm">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      tx.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+                      tx.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
                     }`}>
-                      {tx.type === 'income' ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                      {tx.type === 'income' ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
                     </div>
-                    <div>
-                      <div className="font-medium text-gray-900 flex items-center gap-2">
+                    <div className="min-w-0">
+                      <div className="font-black text-gray-900 text-base flex items-center gap-2">
                         {tx.type === 'income' ? '+' : '-'} {tx.amount.toLocaleString()} PKR
                       </div>
-                      <div className="text-sm text-gray-500 capitalize">
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">
                         {tx.category.replace('_', ' ')} {tx.description ? `• ${tx.description}` : ''}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-50">
                     {tx.status === 'pending' && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-                        <AlertCircle className="w-3 h-3" /> Pending
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Pending
                       </span>
                     )}
                     {tx.status === 'approved' && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-50 text-green-600 border border-green-100">
                         <CheckCircle className="w-3 h-3" /> Approved
                       </span>
                     )}
                     {tx.status === 'rejected' && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
                         <AlertCircle className="w-3 h-3" /> Rejected
                       </span>
                     )}
-                    <span className="text-xs text-gray-400">
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">
                       {tx.date?.toDate?.()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'No time'}
                     </span>
                   </div>

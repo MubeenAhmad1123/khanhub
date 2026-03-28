@@ -188,6 +188,35 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                 )}
                             </div>
 
+                            {/* Portal Access Banner for Rehabilitation */}
+                            {department.slug === 'rehabilitation' && (
+                                <section className="mt-8 bg-gradient-to-r from-cyan-600 to-sky-600 rounded-3xl p-6 sm:p-10 text-white shadow-2xl overflow-hidden relative group border-4 border-white/20">
+                                    <div className="absolute top-[-20px] right-[-20px] opacity-10 group-hover:rotate-12 transition-transform duration-700 pointer-events-none">
+                                        <Users size={160} strokeWidth={1} />
+                                    </div>
+                                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
+                                        <div className="max-w-xl">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
+                                                <div className="w-2 h-2 rounded-full bg-cyan-300 animate-pulse" />
+                                                Verified Portal Access
+                                            </div>
+                                            <h2 className="text-3xl sm:text-4xl font-black mb-3 font-display leading-tight">Staff & Patient Portal</h2>
+                                            <p className="text-cyan-50 text-base sm:text-lg font-medium opacity-90">
+                                                Secure access for staff attendance, medical records, financial management, 
+                                                and administrative controls. Trusted by healthcare professionals.
+                                            </p>
+                                        </div>
+                                        <Link 
+                                            href="/departments/rehab/dashboard/staff"
+                                            className="bg-white text-cyan-600 px-10 py-4 sm:py-5 rounded-2xl font-black text-lg hover:bg-cyan-50 transition-all shadow-xl hover:shadow-cyan-900/40 active:scale-95 whitespace-nowrap flex items-center gap-3 group/btn"
+                                        >
+                                            Portal Login
+                                            <ArrowLeft className="w-5 h-5 rotate-180 transition-transform group-hover/btn:translate-x-1" />
+                                        </Link>
+                                    </div>
+                                </section>
+                            )}
+
                             {/* Programs / Courses Section */}
                             {department.slug === 'rehabilitation' && department.subDepartments ? (
                                 <div className="space-y-12 animate-fade-in">

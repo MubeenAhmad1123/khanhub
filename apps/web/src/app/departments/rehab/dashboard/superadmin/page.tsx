@@ -134,7 +134,46 @@ export default function SuperAdminDashboardPage() {
       {/* All Users Section */}
       <div>
         <h2 className="text-base font-black text-gray-900 uppercase tracking-wider mb-4">All Users</h2>
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        
+        {/* Mobile View: Card List */}
+        <div className="lg:hidden space-y-3">
+          {allUsers.map((u) => (
+            <div key={u.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-bold text-gray-900">{u.displayName}</p>
+                  <p className="text-[10px] text-gray-400 font-mono mt-0.5">{u.customId}</p>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                  u.role === 'superadmin' ? 'bg-purple-100 text-purple-600' :
+                  u.role === 'admin'      ? 'bg-blue-100 text-blue-600'     :
+                  u.role === 'staff'      ? 'bg-teal-100 text-teal-600'     :
+                  u.role === 'cashier'    ? 'bg-amber-100 text-amber-600'   :
+                  'bg-green-100 text-green-600'
+                }`}>
+                  {u.role}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-gray-50">
+                <span className={`text-[10px] font-bold ${u.isActive ? 'text-green-600' : 'text-red-500'}`}>
+                  {u.isActive ? '● Active' : '● Inactive'}
+                </span>
+                <button 
+                  className="text-teal-500 font-bold text-xs"
+                  onClick={() => alert('View Profile coming soon!')}
+                >
+                  View Profile
+                </button>
+              </div>
+            </div>
+          ))}
+          {allUsers.length === 0 && (
+            <p className="text-center text-gray-300 py-10 font-bold text-sm bg-gray-50 rounded-2xl">No users found</p>
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden lg:block bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
@@ -179,7 +218,6 @@ export default function SuperAdminDashboardPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button 
-                        title="Coming soon" 
                         className="text-teal-500 font-bold hover:underline"
                         onClick={() => alert('View Profile coming soon!')}
                       >
