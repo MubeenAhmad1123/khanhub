@@ -122,6 +122,8 @@ export interface StaffMember {
   joiningDate: Date;
   isActive: boolean;
   loginUserId?: string;   // uid in rehab_users (for login link)
+  dutyStartTime: string;   // "08:00" — 24hr format HH:MM
+  dutyEndTime: string;     // "20:00" — 24hr format HH:MM
 }
 
 export interface AttendanceRecord {
@@ -132,6 +134,9 @@ export interface AttendanceRecord {
   checkInTime?: Date;
   checkOutTime?: Date;
   overriddenBy?: string;
+  isLate?: boolean;        // true if checked in after dutyStartTime
+  lateByMinutes?: number;  // how many minutes late
+  autoFineApplied?: boolean; // true if 200 PKR fine was auto-created
 }
 
 // Salary calculation helper (use in reports)

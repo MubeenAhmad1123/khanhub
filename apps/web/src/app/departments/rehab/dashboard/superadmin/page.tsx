@@ -11,10 +11,12 @@ export default function SuperAdminDashboardPage() {
   const { session: user, loading: sessionLoading } = useRehabSession();
   const [stats, setStats] = useState({
     pendingApprovals: 0,
-    activeUsers: 0,
+    activeStaff: 0,
     totalRevenue: 0,
     totalPatients: 0,
+    totalUsers: 0,
   });
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,17 +27,27 @@ export default function SuperAdminDashboardPage() {
     }
     const fetchData = async () => {
       try {
-        const [pendingSnap, usersSnap, transSnap, patientsSnap] = await Promise.all([
+        const [pendingSnap, usersSnap, transSnap, patientsSnap, staffSnap] = await Promise.all([
           getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
-          getDocs(query(collection(db, 'rehab_users'), where('isActive', '==', true))),
+          getDocs(collection(db, 'rehab_users')),
           getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved'), where('type', '==', 'income'))),
           getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true))),
+          getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true))),
         ]);
+
+        const usersList = usersSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+        })).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+        setAllUsers(usersList);
         setStats({
           pendingApprovals: pendingSnap.size,
-          activeUsers: usersSnap.size,
+          activeStaff: staffSnap.size,
           totalRevenue: transSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0),
           totalPatients: patientsSnap.size,
+          totalUsers: usersSnap.size,
         });
       } catch (err) {
         console.error(err);
@@ -66,10 +78,10 @@ export default function SuperAdminDashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Total Patients" value={stats.totalPatients} color="bg-teal-50 text-teal-600" />
+        <StatCard label="Total Staff" value={stats.activeStaff} color="bg-blue-50 text-blue-600" />
         <StatCard label="Pending Approvals" value={stats.pendingApprovals} color="bg-orange-50 text-orange-600" urgent={stats.pendingApprovals > 0} />
-        <StatCard label="Active Patients" value={stats.totalPatients} color="bg-teal-50 text-teal-600" />
-        <StatCard label="Active Users" value={stats.activeUsers} color="bg-blue-50 text-blue-600" />
-        <StatCard label="Total Revenue (PKR)" value={stats.totalRevenue.toLocaleString()} color="bg-purple-50 text-purple-600" />
+        <StatCard label="Total Users" value={stats.totalUsers} color="bg-purple-50 text-purple-600" />
       </div>
 
       {/* Priority Action */}
@@ -116,6 +128,69 @@ export default function SuperAdminDashboardPage() {
             href="/departments/rehab/dashboard/admin/patients"
             accent="blue"
           />
+        </div>
+      </div>
+
+      {/* All Users Section */}
+      <div>
+        <h2 className="text-base font-black text-gray-900 uppercase tracking-wider mb-4">All Users</h2>
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-4 font-black text-gray-400 uppercase tracking-widest text-[10px]">Name</th>
+                  <th className="px-6 py-4 font-black text-gray-400 uppercase tracking-widest text-[10px]">Custom ID</th>
+                  <th className="px-6 py-4 font-black text-gray-400 uppercase tracking-widest text-[10px]">Role</th>
+                  <th className="px-6 py-4 font-black text-gray-400 uppercase tracking-widest text-[10px]">Status</th>
+                  <th className="px-6 py-4 font-black text-gray-400 uppercase tracking-widest text-[10px]">Created</th>
+                  <th className="px-6 py-4 font-black text-gray-400 uppercase tracking-widest text-[10px] text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {allUsers.map((u) => (
+                  <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-gray-900">{u.displayName}</td>
+                    <td className="px-6 py-4 text-gray-500 font-mono text-xs">{u.customId}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        u.role === 'superadmin' ? 'bg-purple-100 text-purple-600' :
+                        u.role === 'admin'      ? 'bg-blue-100 text-blue-600'     :
+                        u.role === 'staff'      ? 'bg-teal-100 text-teal-600'     :
+                        u.role === 'cashier'    ? 'bg-amber-100 text-amber-600'   :
+                        'bg-green-100 text-green-600'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {u.isActive ? (
+                        <span className="flex items-center gap-1.5 text-green-600 font-bold text-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Active
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-red-500 font-bold text-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-400" /> Inactive
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-gray-400 text-xs">
+                      {u.createdAt.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        title="Coming soon" 
+                        className="text-teal-500 font-bold hover:underline"
+                        onClick={() => alert('View Profile coming soon!')}
+                      >
+                        View Profile
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

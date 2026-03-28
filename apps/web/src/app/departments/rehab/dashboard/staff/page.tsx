@@ -25,6 +25,7 @@ export default function StaffSelfPage() {
   const [loading, setLoading] = useState(true);
   const [checkLoading, setCheckLoading] = useState(false);
   const [contribLoading, setContribLoading] = useState(false);
+  const [monthlyStats, setMonthlyStats] = useState({ present: 0, absent: 0, leave: 0 });
   const [message, setMessage] = useState({ type: '', text: '' });
 
   const today = new Date().toISOString().split('T')[0];
@@ -57,6 +58,25 @@ export default function StaffSelfPage() {
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
           .slice(0, 10)
       );
+
+      // Monthly attendance summary
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      const monthlySnap = await getDocs(
+        query(
+          collection(db, 'rehab_attendance'),
+          where('staffId', '==', staffId),
+          where('date', '>=', firstDayOfMonth),
+          where('date', '<=', today)
+        )
+      );
+      let p = 0, a = 0, l = 0;
+      monthlySnap.docs.forEach(doc => {
+        const d = doc.data();
+        if (d.status === 'present' && d.checkInTime) p++;
+        else if (d.status === 'absent') a++;
+        else if (d.status === 'leave') l++;
+      });
+      setMonthlyStats({ present: p, absent: a, leave: l });
     } catch (err) {
       console.error(err);
     } finally {
@@ -81,14 +101,40 @@ export default function StaffSelfPage() {
     try {
       if (!todayRecord) {
         // No record yet — create with check-in
+        const now = new Date();
+        const [dutyHour, dutyMin] = (staffProfile.dutyStartTime || '08:00').split(':').map(Number);
+        const dutyStart = new Date();
+        dutyStart.setHours(dutyHour, dutyMin, 0, 0);
+
+        const lateByMs = now.getTime() - dutyStart.getTime();
+        const lateByMinutes = Math.floor(lateByMs / 60000);
+        const isLate = lateByMinutes > 0;
+
         await addDoc(collection(db, 'rehab_attendance'), {
           staffId: staffProfile.id,
           date: today,
           status: 'present',
           checkInTime: Timestamp.now(),
           checkOutTime: null,
+          isLate,
+          lateByMinutes: isLate ? lateByMinutes : 0,
+          autoFineApplied: isLate,
         });
-        showMsg('success', 'Checked in successfully! Have a great shift 💪');
+
+        if (isLate) {
+          const currentMonth = today.substring(0, 7);
+          await addDoc(collection(db, 'rehab_fines'), {
+            staffId: staffProfile.id,
+            amount: 200,
+            reason: `Late arrival — ${lateByMinutes} minutes late (duty start: ${staffProfile.dutyStartTime})`,
+            date: currentMonth,
+            recordedBy: 'system_auto',
+            createdAt: Timestamp.now(),
+          });
+          showMsg('success', `Checked in. Note: You are ${lateByMinutes} minutes late. PKR 200 fine has been applied. ⚠️`);
+        } else {
+          showMsg('success', 'Checked in successfully! Have a great shift 💪');
+        }
       } else if (!todayRecord.checkOutTime) {
         // Already checked in — check out
         await updateDoc(doc(db, 'rehab_attendance', todayRecord.id), {
@@ -160,9 +206,16 @@ export default function StaffSelfPage() {
 
       {/* Check In / Out Card */}
       <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-5">
-          <Clock size={18} className="text-teal-500" />
-          <h2 className="font-black text-gray-900">Today's Attendance</h2>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <Clock size={18} className="text-teal-500" />
+            <h2 className="font-black text-gray-900">Today's Attendance</h2>
+          </div>
+          {staffProfile && (
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">
+               Duty: {staffProfile.dutyStartTime} — {staffProfile.dutyEndTime}
+            </p>
+          )}
         </div>
 
         {isOverridden && (
@@ -181,6 +234,11 @@ export default function StaffSelfPage() {
                 : '--:--'
               }
             </p>
+            {todayRecord?.isLate && (
+              <p className="text-[10px] text-orange-500 font-bold mt-1">
+                ⚠️ Late by {todayRecord.lateByMinutes} mins — PKR 200 fine applied
+              </p>
+            )}
           </div>
           <div className={`p-4 rounded-2xl text-center ${checkedOut ? 'bg-blue-50' : 'bg-gray-50'}`}>
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Check Out</p>
@@ -215,6 +273,28 @@ export default function StaffSelfPage() {
             {checkLoading ? 'Processing...' : !checkedIn ? 'Check In Now' : 'Check Out Now'}
           </button>
         )}
+      </div>
+
+      {/* Monthly Summary Card */}
+      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <Calendar size={18} className="text-teal-500" />
+          <h2 className="font-black text-gray-900">Monthly Summary</h2>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-green-50 rounded-2xl p-4 text-center">
+            <p className="text-2xl font-black text-green-600">{monthlyStats.present}</p>
+            <p className="text-[10px] font-bold text-green-500 uppercase tracking-wide mt-1">Present</p>
+          </div>
+          <div className="bg-red-50 rounded-2xl p-4 text-center">
+            <p className="text-2xl font-black text-red-500">{monthlyStats.absent}</p>
+            <p className="text-[10px] font-bold text-red-400 uppercase tracking-wide mt-1">Absent</p>
+          </div>
+          <div className="bg-blue-50 rounded-2xl p-4 text-center">
+            <p className="text-2xl font-black text-blue-600">{monthlyStats.leave}</p>
+            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wide mt-1">Leave</p>
+          </div>
+        </div>
       </div>
 
       {/* Duties */}

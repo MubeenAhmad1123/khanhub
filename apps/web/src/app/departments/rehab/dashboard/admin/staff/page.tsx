@@ -35,6 +35,8 @@ export default function AdminStaffPage() {
     salary: '',
     duties: [] as StaffDuty[],
   });
+  const [dutyStartTime, setDutyStartTime] = useState('08:00');
+  const [dutyEndTime, setDutyEndTime] = useState('17:00');
 
   const fetchData = async () => {
     try {
@@ -117,11 +119,15 @@ export default function AdminStaffPage() {
       form.salary ? Number(form.salary) : undefined,
       form.gender,
       form.duties,
+      dutyStartTime,
+      dutyEndTime,
     );
     if (res.success) {
       setMessage({ type: 'success', text: `Staff member "${form.name}" created successfully!` });
       setShowModal(false);
       setForm({ name: '', gender: 'male', customId: 'REHAB-STF-001', password: '', staffRole: '', phone: '', salary: '', duties: [] });
+      setDutyStartTime('08:00');
+      setDutyEndTime('17:00');
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create staff member' });
@@ -388,6 +394,18 @@ export default function AdminStaffPage() {
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Monthly Salary (PKR)</label>
                   <input type="number" placeholder="e.g. 25000" className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={form.salary} onChange={e => setForm({ ...form, salary: e.target.value })} />
+                </div>
+              </div>
+
+              {/* Duty Times */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Duty Start Time *</label>
+                  <input type="time" required className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={dutyStartTime} onChange={e => setDutyStartTime(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Duty End Time *</label>
+                  <input type="time" required className="w-full bg-gray-50 rounded-xl px-4 py-3 font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-teal-300 text-sm border-none" value={dutyEndTime} onChange={e => setDutyEndTime(e.target.value)} />
                 </div>
               </div>
 
