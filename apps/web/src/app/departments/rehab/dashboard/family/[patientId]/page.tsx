@@ -31,7 +31,18 @@ export default function FamilyPatientViewPage() {
         router.push('/departments/rehab/login');
         return;
       }
-      setPatient({ id: pDoc.id, ...pDoc.data() });
+      const data = pDoc.data();
+      
+      // Calculate Remaining Days (100-day program)
+      let remainingDays = 0;
+      if (data?.admissionDate) {
+        const admission = data.admissionDate.toDate();
+        const diffTime = Math.abs(new Date().getTime() - admission.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        remainingDays = Math.max(0, 100 - diffDays);
+      }
+
+      setPatient({ id: pDoc.id, ...data, remainingDays });
 
       // Current Month String (e.g. "2025-01")
       const now = new Date();
@@ -145,11 +156,66 @@ export default function FamilyPatientViewPage() {
             )}
           </div>
           
-          <h1 className="text-2xl md:text-4xl font-black text-gray-900 mb-2 relative z-10">{patient.name}</h1>
-          <p className="text-sm md:text-base text-gray-500 flex items-center gap-2 relative z-10">
-            <Calendar className="w-4 h-4" />
-            Admitted: {patient.admissionDate?.toDate?.()?.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
+          <h1 className="text-2xl md:text-4xl font-black text-gray-900 mb-2 relative z-10 uppercase tracking-tight">{patient.name}</h1>
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 relative z-10">
+            <p className="text-sm text-gray-500 font-bold flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-teal-600" />
+              Admitted: {patient.admissionDate?.toDate?.()?.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+            <div className="hidden md:block w-1.5 h-1.5 rounded-full bg-gray-200"></div>
+            <p className="text-sm font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-full border border-teal-100 uppercase tracking-widest shadow-sm">
+              100-Day Program
+            </p>
+          </div>
+        </div>
+
+        {/* PROGRESS COUNTDOWN */}
+        <div className="bg-gradient-to-br from-orange-500 to-rose-600 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl shadow-orange-200 relative overflow-hidden group">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-black/10 rounded-full blur-2xl"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                <Clock className="w-5 h-5 text-orange-200 animate-pulse" />
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-orange-100">Recovery Journey</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black mb-2 uppercase italic tracking-tighter">Discharge Countdown</h2>
+              <p className="text-orange-100 text-sm font-medium opacity-90 max-w-xs">
+                Estimated remaining days in the intensive care program based on admission date.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <div className="relative w-32 h-32 md:w-36 md:h-36 flex items-center justify-center">
+                <svg className="w-full h-full -rotate-90 drop-shadow-lg">
+                  <circle cx="50%" cy="50%" r="45%" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="10" />
+                  <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="10" 
+                    strokeDasharray="283"
+                    strokeDashoffset={283 - (283 * Math.min(100, (100 - (patient.remainingDays || 0)))) / 100}
+                    className="text-white transition-all duration-1000 ease-out"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-4xl md:text-5xl font-black leading-none">{patient.remainingDays}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-100 mt-1">Days Left</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 bg-black/10 rounded-2xl p-4 border border-white/5">
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-orange-50 mb-2 px-1">
+              <span>Program Progress</span>
+              <span>{Math.min(100, 100 - (patient.remainingDays || 0))}% Completed</span>
+            </div>
+            <div className="w-full bg-white/20 h-2.5 rounded-full overflow-hidden shadow-inner">
+              <div 
+                className="bg-white h-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(255,255,255,0.5)]" 
+                style={{ width: `${Math.min(100, (100 - (patient.remainingDays || 0)))}%` }}
+              ></div>
+            </div>
+          </div>
         </div>
 
         {/* SECTION 1: MONTHLY FEE */}
