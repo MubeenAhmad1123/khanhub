@@ -21,6 +21,7 @@ export default function AdminStaffPage() {
   const { session: user, loading: sessionLoading } = useRehabSession();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord>>({});
+  const [streaks, setStreaks] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -60,8 +61,12 @@ export default function AdminStaffPage() {
       setStaff(staffList.filter(s => s.isActive));
 
       const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const attendanceSnap = await getDocs(collection(db, 'rehab_attendance'));
+      
       const attendanceMap: Record<string, AttendanceRecord> = {};
+      const allAttendanceByStaff: Record<string, any[]> = {};
+
       attendanceSnap.docs.forEach(doc => {
         const data = doc.data();
         if (data.date === today) {
@@ -72,8 +77,31 @@ export default function AdminStaffPage() {
             checkOutTime: data.checkOutTime?.toDate?.(),
           } as AttendanceRecord;
         }
+        
+        if (!allAttendanceByStaff[data.staffId]) allAttendanceByStaff[data.staffId] = [];
+        allAttendanceByStaff[data.staffId].push(data);
       });
       setAttendance(attendanceMap);
+
+      // Calculate Streaks
+      const streakMap: Record<string, number> = {};
+      Object.keys(allAttendanceByStaff).forEach(sid => {
+        const sorted = allAttendanceByStaff[sid].sort((a, b) => b.date.localeCompare(a.date));
+        let currentStreak = 0;
+        let checkDate = sorted[0]?.date === today ? today : yesterday;
+
+        for (const att of sorted) {
+          if (att.date === checkDate && att.status === 'present') {
+            currentStreak++;
+            const prevDate = new Date(new Date(checkDate).getTime() - 86400000);
+            checkDate = prevDate.toISOString().split('T')[0];
+          } else if (att.date < checkDate) {
+            break;
+          }
+        }
+        streakMap[sid] = currentStreak;
+      });
+      setStreaks(streakMap);
     } catch (err) {
       console.error(err);
     } finally {
@@ -278,7 +306,14 @@ export default function AdminStaffPage() {
                         }
                       </div>
                       <div>
-                        <p className="font-black text-gray-900 leading-tight uppercase text-sm">{s.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-gray-900 leading-tight uppercase text-sm">{s.name}</p>
+                          {(streaks[s.id] || 0) >= 2 && (
+                            <span className="bg-orange-50 text-orange-600 text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-orange-100 uppercase tracking-widest animate-pulse">
+                              🔥 {streaks[s.id]} Day
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest mt-0.5">{s.role}</p>
                       </div>
                     </div>
@@ -357,7 +392,14 @@ export default function AdminStaffPage() {
                               }
                             </div>
                             <div>
-                              <p className="font-bold text-gray-900 leading-tight">{s.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-gray-900 leading-tight">{s.name}</p>
+                                {(streaks[s.id] || 0) >= 2 && (
+                                  <span className="bg-orange-50 text-orange-600 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 border border-orange-100 uppercase tracking-widest animate-pulse">
+                                    🔥 {streaks[s.id]} Day Streak
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-[10px] text-gray-400 capitalize">{s.gender}</span>
                                 {s.phone && (

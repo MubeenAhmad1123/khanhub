@@ -169,18 +169,18 @@ export default function UserManagementPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><Heart className="w-5 h-5"/></div>
-            <div><div className="text-sm text-gray-500">Family</div><div className="text-xl font-bold text-gray-900">{familyCount}</div></div>
+            <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><Heart className="w-5 h-5"/></div>
+            <div><div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Family</div><div className="text-xl font-black text-gray-900">{familyCount}</div></div>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center"><UserCog className="w-5 h-5"/></div>
-            <div><div className="text-sm text-gray-500">Staff</div><div className="text-xl font-bold text-gray-900">{staffCount}</div></div>
+            <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><UserCog className="w-5 h-5"/></div>
+            <div><div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Staff</div><div className="text-xl font-black text-gray-900">{staffCount}</div></div>
           </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><Shield className="w-5 h-5"/></div>
-            <div><div className="text-sm text-gray-500">Admins</div><div className="text-xl font-bold text-gray-900">{adminCount}</div></div>
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 sm:col-span-2 lg:col-span-1">
+            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 font-black tracking-tighter shadow-sm"><Shield className="w-5 h-5"/></div>
+            <div><div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Admins</div><div className="text-xl font-black text-gray-900">{adminCount}</div></div>
           </div>
         </div>
 
@@ -223,27 +223,33 @@ export default function UserManagementPage() {
           ) : (
             <div className="divide-y divide-gray-100">
               {filteredUsers.map(user => (
-                <div key={user.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                <div key={user.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+                  <div className="flex items-center gap-3 sm:gap-4 font-black tracking-tight">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-black text-lg flex-shrink-0 border border-teal-100 shadow-sm">
                       {(user.displayName || user.customId || 'U').charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-black text-gray-900 text-sm sm:text-base flex flex-wrap items-center gap-2 truncate uppercase">
                         {user.displayName}
                         {user.isActive ? (
-                          <span className="flex items-center gap-0.5 text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest leading-none border border-green-200"><CheckCircle className="w-3 h-3"/> Active</span>
+                          <span className="flex items-center gap-1 text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] uppercase font-black tracking-widest border border-green-100 shadow-sm animate-pulse-slow">
+                            <CheckCircle className="w-3 h-3"/> Active
+                          </span>
                         ) : (
-                          <span className="flex items-center gap-0.5 text-red-600 bg-red-50 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest leading-none border border-red-200"><XCircle className="w-3 h-3"/> Inactive</span>
+                          <span className="flex items-center gap-1 text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] uppercase font-black tracking-widest border border-red-100 shadow-sm">
+                            <XCircle className="w-3 h-3"/> Inactive
+                          </span>
                         )}
                       </h4>
-                      <div className="text-sm font-mono text-gray-500 mt-1">{user.customId}</div>
+                      <div className="text-[10px] sm:text-xs font-black text-gray-400 mt-0.5 sm:mt-1 uppercase tracking-widest truncate">{user.customId}</div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between sm:justify-end gap-6 min-w-[200px]">
-                    {getRoleBadge(user.role)}
-                    <div className="text-xs text-gray-400 whitespace-nowrap">
+                  <div className="flex items-center justify-between sm:justify-end gap-4 min-w-[150px] border-t sm:border-t-0 pt-3 sm:pt-0 mt-1 sm:mt-0">
+                    <div className="font-black">
+                      {getRoleBadge(user.role)}
+                    </div>
+                    <div className="text-[9px] font-black text-gray-300 uppercase tracking-widest whitespace-nowrap">
                       {user.createdAt?.toDate?.()?.toLocaleDateString()}
                     </div>
                   </div>

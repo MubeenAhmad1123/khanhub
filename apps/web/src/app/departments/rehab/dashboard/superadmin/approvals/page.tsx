@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, updateDoc, doc, query, where, Timestamp, onSnapshot, getDocs, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, updateDoc, doc, query, where, Timestamp, onSnapshot, getDocs, serverTimestamp, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
   CheckCircle, XCircle, Clock, TrendingUp, TrendingDown, 
@@ -156,114 +156,150 @@ export default function ApprovalsPage() {
         approvedAt: Timestamp.now()
       });
 
-      // 2. Auto-sync to patient records after approval
-      const tx = pendingTransactions.find(t => t.id === txId);
+      // ── SYNC TO PATIENT RECORDS AFTER APPROVAL ──
+      const allTransactions = [...pendingTransactions, ...historyTransactions];
+      const tx = allTransactions.find((t: any) => t.id === txId);
       if (tx && tx.patientId) {
-        const month = tx.date?.toDate
-          ? tx.date.toDate().toISOString().slice(0, 7)
-          : new Date().toISOString().slice(0, 7);
+        try {
+          const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
+          const month = txDate.toISOString().slice(0, 7); // "2026-03"
 
-        if (tx.category === 'patient_fee') {
-          // Update rehab_fees for this patient + month
-          const feesQ = query(
-            collection(db, 'rehab_fees'),
-            where('patientId', '==', tx.patientId),
-            where('month', '==', month)
-          );
-          const feesSnap = await getDocs(feesQ);
-          if (!feesSnap.empty) {
-            const feeDoc = feesSnap.docs[0];
-            const current = feeDoc.data();
-            const newPaid = (current.amountPaid || 0) + tx.amount;
-            const newRemaining = Math.max(0, (current.packageAmount || 0) - newPaid);
-            await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
-              amountPaid: newPaid,
-              amountRemaining: newRemaining,
-              lastPaymentDate: serverTimestamp(),
-              lastPaymentAmount: tx.amount,
-              payments: [
-                ...(current.payments || []),
-                {
-                  id: txId,
+          if (tx.category === 'patient_fee') {
+            // Find or CREATE the fee record for this patient+month
+            const feesQ = query(
+              collection(db, 'rehab_fees'),
+              where('patientId', '==', tx.patientId),
+              where('month', '==', month)
+            );
+            const feesSnap = await getDocs(feesQ);
+
+            if (feesSnap.empty) {
+              // Auto-create fee record — fetch patient package amount first
+              const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
+              const packageAmount = patientSnap.exists()
+                ? (patientSnap.data().packageAmount || 60000)
+                : 60000;
+              const amountPaid = tx.amount;
+              const amountRemaining = Math.max(0, packageAmount - amountPaid);
+              await addDoc(collection(db, 'rehab_fees'), {
+                patientId: tx.patientId,
+                patientName: tx.patientName || '',
+                month,
+                packageAmount,
+                amountPaid,
+                amountRemaining,
+                payments: [{
                   amount: tx.amount,
-                  date: tx.date || Timestamp.now(),
-                  cashierId: tx.cashierId,
-                  status: 'approved'
-                }
-              ]
-            });
+                  date: txDate,
+                  transactionId: txId,
+                  approvedBy: session?.uid,
+                }],
+                lastPaymentDate: serverTimestamp(),
+                lastPaymentAmount: tx.amount,
+                createdAt: serverTimestamp(),
+              });
+            } else {
+              // Update existing fee record
+              const feeDoc = feesSnap.docs[0];
+              const current = feeDoc.data();
+              const newPaid = (current.amountPaid || 0) + tx.amount;
+              const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
+              const existingPayments = current.payments || [];
+              await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+                amountPaid: newPaid,
+                amountRemaining: newRemaining,
+                lastPaymentDate: serverTimestamp(),
+                lastPaymentAmount: tx.amount,
+                payments: [...existingPayments, {
+                  amount: tx.amount,
+                  date: txDate,
+                  transactionId: txId,
+                  approvedBy: session?.uid,
+                }],
+              });
+            }
           }
-        }
 
-        if (tx.category === 'canteen_deposit') {
-          // Update rehab_canteen for this patient + month
-          const canteenQ = query(
-            collection(db, 'rehab_canteen'),
-            where('patientId', '==', tx.patientId),
-            where('month', '==', month)
-          );
-          const canteenSnap = await getDocs(canteenQ);
-          const txEntry = {
-            id: txId,
-            type: 'deposit',
-            amount: tx.amount,
-            description: tx.description || 'Canteen deposit',
-            date: tx.date || Timestamp.now(),
-            cashierId: tx.cashierId,
-          };
+          if (tx.category === 'canteen_deposit') {
+            const canteenQ = query(
+              collection(db, 'rehab_canteen'),
+              where('patientId', '==', tx.patientId),
+              where('month', '==', month)
+            );
+            const canteenSnap = await getDocs(canteenQ);
 
-          if (!canteenSnap.empty) {
-            const canteenDoc = canteenSnap.docs[0];
-            const current = canteenDoc.data();
-            const newDeposited = (current.totalDeposited || 0) + tx.amount;
-            const newBalance = newDeposited - (current.totalSpent || 0);
-            await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
-              totalDeposited: newDeposited,
-              balance: newBalance,
-              lastDepositDate: serverTimestamp(),
-              transactions: [...(current.transactions || []), txEntry]
-            });
-          } else {
-            // Create record if missing (best effort)
-            await addDoc(collection(db, 'rehab_canteen'), {
-              patientId: tx.patientId,
-              month: month,
-              totalDeposited: tx.amount,
-              totalSpent: 0,
-              balance: tx.amount,
-              transactions: [txEntry]
-            });
+            if (canteenSnap.empty) {
+              // Auto-create canteen record
+              await addDoc(collection(db, 'rehab_canteen'), {
+                patientId: tx.patientId,
+                patientName: tx.patientName || '',
+                month,
+                totalDeposited: tx.amount,
+                totalSpent: 0,
+                balance: tx.amount,
+                lastDepositDate: serverTimestamp(),
+                createdAt: serverTimestamp(),
+              });
+            } else {
+              const canteenDoc = canteenSnap.docs[0];
+              const current = canteenDoc.data();
+              const newDeposited = (current.totalDeposited || 0) + tx.amount;
+              const newBalance = newDeposited - (current.totalSpent || 0);
+              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+                totalDeposited: newDeposited,
+                balance: newBalance,
+                lastDepositDate: serverTimestamp(),
+              });
+            }
           }
-        }
 
-        if (tx.category === 'canteen_expense') {
-          // Deduct from canteen balance
-          const canteenQ = query(
-            collection(db, 'rehab_canteen'),
-            where('patientId', '==', tx.patientId),
-            where('month', '==', month)
-          );
-          const canteenSnap = await getDocs(canteenQ);
-          const txEntry = {
-            id: txId,
-            type: 'expense',
-            amount: tx.amount,
-            description: tx.description || 'Canteen expense',
-            date: tx.date || Timestamp.now(),
-            cashierId: tx.cashierId,
-          };
-
-          if (!canteenSnap.empty) {
-            const canteenDoc = canteenSnap.docs[0];
-            const current = canteenDoc.data();
-            const newSpent = (current.totalSpent || 0) + tx.amount;
-            const newBalance = (current.totalDeposited || 0) - newSpent;
-            await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
-              totalSpent: newSpent,
-              balance: newBalance,
-              transactions: [...(current.transactions || []), txEntry]
-            });
+          if (tx.category === 'canteen_expense') {
+            const canteenQ = query(
+              collection(db, 'rehab_canteen'),
+              where('patientId', '==', tx.patientId),
+              where('month', '==', month)
+            );
+            const canteenSnap = await getDocs(canteenQ);
+            if (!canteenSnap.empty) {
+              const canteenDoc = canteenSnap.docs[0];
+              const current = canteenDoc.data();
+              const newSpent = (current.totalSpent || 0) + tx.amount;
+              const newBalance = (current.totalDeposited || 0) - newSpent;
+              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+                totalSpent: newSpent,
+                balance: Math.max(0, newBalance),
+              });
+            }
           }
+
+          if (tx.category === 'staff_salary' && tx.staffId) {
+            // Mark salary as paid for this staff member this month
+            const salaryQ = query(
+              collection(db, 'rehab_salary_records'),
+              where('staffId', '==', tx.staffId),
+              where('month', '==', month)
+            );
+            const salarySnap = await getDocs(salaryQ);
+            if (salarySnap.empty) {
+              await addDoc(collection(db, 'rehab_salary_records'), {
+                staffId: tx.staffId,
+                staffName: tx.staffName || '',
+                month,
+                amount: tx.amount,
+                transactionId: txId,
+                paidAt: serverTimestamp(),
+                approvedBy: session?.uid,
+              });
+            } else {
+              await updateDoc(doc(db, 'rehab_salary_records', salarySnap.docs[0].id), {
+                amount: (salarySnap.docs[0].data().amount || 0) + tx.amount,
+                lastPaidAt: serverTimestamp(),
+              });
+            }
+          }
+        } catch (syncErr) {
+          console.error('Sync error after approval:', syncErr);
+          // Don't fail the approval if sync fails — transaction is already approved
         }
       }
 

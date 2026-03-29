@@ -122,24 +122,24 @@ export default function SuperAdminDashboardPage() {
       </div>
 
       {/* System Overview Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+         <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
             <TrendingUp className="w-8 h-8 text-green-500 mb-4" />
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Approved Revenue</p>
-            <h3 className="text-2xl font-black text-gray-900 mt-1">₨{stats.income.toLocaleString('en-PK')}</h3>
+            <h3 className="text-2xl sm:text-4xl lg:text-5xl font-black text-gray-900 mt-1">₨{stats.income.toLocaleString('en-PK')}</h3>
          </div>
-         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group">
+         <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
             <TrendingDown className="w-8 h-8 text-red-400 mb-4" />
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Approved Expenses</p>
-            <h3 className="text-2xl font-black text-gray-900 mt-1">₨{stats.expense.toLocaleString('en-PK')}</h3>
+            <h3 className="text-2xl sm:text-4xl lg:text-5xl font-black text-gray-900 mt-1">₨{stats.expense.toLocaleString('en-PK')}</h3>
          </div>
-         <div className="p-6 rounded-3xl border border-teal-500 shadow-xl relative overflow-hidden group bg-teal-600">
+         <div className="p-5 sm:p-8 lg:p-10 rounded-3xl border border-teal-500 shadow-xl relative overflow-hidden group bg-teal-600">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
             <DollarSign className="w-8 h-8 text-white/80 mb-4" />
             <p className="text-[10px] font-black text-teal-100 uppercase tracking-widest">Net Cash Balance</p>
-            <h3 className="text-2xl font-black text-white mt-1">₨{stats.net.toLocaleString('en-PK')}</h3>
+            <h3 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white mt-1">₨{stats.net.toLocaleString('en-PK')}</h3>
          </div>
       </div>
 
@@ -194,21 +194,21 @@ export default function SuperAdminDashboardPage() {
           <span className="text-[10px] font-black bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 text-gray-400 uppercase tracking-widest">{allUsers.length} Total Users</span>
         </div>
         
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left">
             <thead>
               <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">
-                <th className="px-8 py-5">System Identity</th>
-                <th className="px-6 py-5">Assigned Role</th>
-                <th className="px-6 py-5">Account Status</th>
-                <th className="px-6 py-5">Joining Date</th>
-                <th className="px-8 py-5 text-right">Profile View</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap">System Identity</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap">Assigned Role</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap">Account Status</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap">Joining Date</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap text-right">Profile View</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {allUsers.map(u => (
                 <tr key={u.id} className="hover:bg-gray-50/50 transition-all group">
-                  <td className="px-8 py-5">
+                  <td className="px-3 py-2 text-xs whitespace-nowrap">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-gray-400 font-black text-sm border border-gray-100 group-hover:scale-110 transition-transform">
                         {u.displayName?.charAt(0) || 'U'}
@@ -219,7 +219,7 @@ export default function SuperAdminDashboardPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-3 py-2 text-xs whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
                       u.role === 'superadmin' ? 'bg-purple-50 text-purple-600 border-purple-100' :
                       u.role === 'admin' ? 'bg-blue-50 text-blue-600 border-blue-100' :
@@ -229,20 +229,20 @@ export default function SuperAdminDashboardPage() {
                       {u.role}
                     </span>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-3 py-2 text-xs whitespace-nowrap">
                     <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest ${u.isActive !== false ? 'text-green-500' : 'text-red-400'}`}>
                        <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`} />
                        {u.isActive !== false ? 'Active' : 'Disabled'}
                     </div>
                   </td>
-                  <td className="px-6 py-5 text-gray-400 text-xs font-bold uppercase tracking-tighter">
+                  <td className="px-3 py-2 text-xs whitespace-nowrap text-gray-400 text-xs font-bold uppercase tracking-tighter">
                     {u.createdAt?.toDate?.()
                       ? new Date(u.createdAt.toDate()).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
                       : u.createdAt 
                       ? new Date(u.createdAt).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }) 
                       : '—'}
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-3 py-2 text-xs whitespace-nowrap text-right">
                     <button 
                       onClick={() => handleViewProfile(u)}
                       className="text-teal-600 hover:text-white font-black text-[10px] uppercase tracking-widest bg-teal-50 hover:bg-teal-600 px-5 py-2.5 rounded-2xl transition-all hover:shadow-lg hover:shadow-teal-100 active:scale-95"
@@ -270,7 +270,7 @@ export default function SuperAdminDashboardPage() {
 function StatCard({ label, value, color, urgent }: { label: string; value: any; color: string; urgent?: boolean }) {
   return (
     <div className={`rounded-3xl p-5 border border-transparent transition-all shadow-sm ${color.split(' ')[0]} ${urgent ? 'ring-2 ring-amber-300 shadow-xl shadow-amber-100' : ''}`}>
-      <p className={`text-3xl font-black ${color.split(' ')[1]}`}>{value}</p>
+      <p className={`text-2xl sm:text-4xl lg:text-5xl font-black ${color.split(' ')[1]}`}>{value}</p>
       <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1 opacity-70">{label}</p>
     </div>
   );

@@ -123,12 +123,15 @@ export default function AuditLogPage() {
         </div>
 
         {/* Filter */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row items-center gap-4">
-          <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <div className="flex items-center gap-2 text-gray-400">
+            <Filter className="w-4 h-4 flex-shrink-0" />
+            <span className="text-xs font-bold uppercase tracking-widest sm:hidden">Filter Actions</span>
+          </div>
           <select
             value={filter}
             onChange={e => handleFilterChange(e.target.value)}
-            className="w-full sm:w-64 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full sm:w-64 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500"
           >
             {ACTION_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
           </select>
@@ -161,25 +164,27 @@ export default function AuditLogPage() {
                   </div>
 
                   <div className={`flex-1 bg-white rounded-2xl border shadow-sm p-4 ${getActionColor(entry.action)}`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
                       <div className="flex items-center gap-2">
                         <span className="sm:hidden">{getActionIcon(entry.action)}</span>
-                        <span className="font-bold text-gray-900">{formatAction(entry.action)}</span>
+                        <span className="font-black text-gray-900 text-sm uppercase tracking-tight">{formatAction(entry.action)}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                         <Clock className="w-3 h-3" />
                         <span title={date.toLocaleString()}>{relativeTime(date)}</span>
-                        <span className="text-gray-300">·</span>
-                        <span>{date.toLocaleString()}</span>
+                        <span className="text-gray-300 hidden sm:inline">·</span>
+                        <span className="hidden sm:inline">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1 text-sm">
-                      <p className="text-gray-500 text-xs font-mono">
-                        By: <span className="font-bold text-gray-700">{entry.performedBy}</span>
+                    <div className="flex flex-col gap-1.5 text-xs">
+                      <p className="text-gray-500">
+                        Performed by: <span className="font-black text-gray-800">{entry.performedBy}</span>
                       </p>
                       {detailStr && (
-                        <p className="text-gray-400 text-xs">{detailStr}</p>
+                        <p className="text-gray-400 leading-relaxed bg-black/5 p-2 rounded-lg italic">
+                          {detailStr}
+                        </p>
                       )}
                     </div>
                   </div>

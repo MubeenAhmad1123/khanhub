@@ -226,36 +226,34 @@ export default function StaffDetailPage() {
       </button>
 
       {/* Staff Header Card */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-        <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center text-teal-600 font-black text-2xl shadow-sm flex-shrink-0">
-            {staff.photoUrl
-              ? <img src={staff.photoUrl} className="w-full h-full object-cover rounded-2xl" alt={staff.name} />
-              : staff.name.charAt(0)
-            }
+      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6">
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-[2rem] bg-gradient-to-br from-teal-400 to-teal-600 p-1 shadow-lg shadow-teal-100 transform rotate-3">
+             <div className="w-full h-full bg-white rounded-[1.8rem] flex items-center justify-center text-teal-600 font-black text-3xl overflow-hidden border-4 border-white">
+                {staff.photoUrl
+                  ? <img src={staff.photoUrl} className="w-full h-full object-cover" alt={staff.name} />
+                  : staff.name.charAt(0).toUpperCase()
+                }
+             </div>
           </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-black text-gray-900">{staff.name}</h1>
-            <div className="flex flex-wrap items-center gap-3 mt-2">
-              <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg uppercase tracking-widest">{staff.role}</span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase capitalize">{staff.gender}</span>
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight uppercase tracking-tight">{staff.name}</h1>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
+              <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100 shadow-sm uppercase tracking-widest">{staff.role}</span>
+              <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 uppercase tracking-widest">{staff.gender}</span>
               {staff.phone && (
-                <span className="flex items-center gap-1 text-xs text-gray-400 font-medium">
+                <span className="flex items-center gap-1.5 text-[10px] text-gray-400 font-black bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 uppercase tracking-widest">
                   <Phone size={10} /> {staff.phone}
                 </span>
               )}
-              <span className="flex items-center gap-1 text-xs text-gray-400 font-medium">
-                <Calendar size={10} /> Joined {staff.joiningDate 
-                  ? new Date(staff.joiningDate).toLocaleDateString('en-PK')
-                  : '—'
-                }
-              </span>
             </div>
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-2xl font-black text-gray-900">₨{staff.salary.toLocaleString()}</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase">Monthly Salary</p>
-            <p className="text-xs text-gray-400 mt-0.5">₨{dailyRate.toLocaleString()}/day</p>
+          <div className="text-center md:text-right bg-gray-50 md:bg-transparent p-4 md:p-0 rounded-2xl w-full md:w-auto border border-gray-100 md:border-0 shadow-sm md:shadow-none">
+            <p className="text-3xl font-black text-gray-900 leading-none">₨{staff.salary.toLocaleString()}</p>
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Monthly Salary</p>
+            <div className="h-px bg-gray-200 w-12 mx-auto md:ml-auto my-2"></div>
+            <p className="text-[10px] text-teal-600 font-black uppercase">₨{dailyRate.toLocaleString()} / DAY RATE</p>
           </div>
         </div>
       </div>
@@ -271,13 +269,13 @@ export default function StaffDetailPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl w-fit">
+      <div className="flex flex-wrap gap-1 bg-gray-100/80 p-1 rounded-2xl w-full sm:w-fit backdrop-blur-sm">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key as any)}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${
-              activeTab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+            className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              activeTab === t.key ? 'bg-white text-gray-900 shadow-md transform scale-[1.02]' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             {t.label}

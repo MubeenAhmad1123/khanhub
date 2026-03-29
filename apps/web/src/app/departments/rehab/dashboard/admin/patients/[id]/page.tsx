@@ -120,7 +120,17 @@ export default function PatientDetailPage() {
         return;
       }
       const data = pDoc.data();
-      setPatient({ id: pDoc.id, ...data });
+      
+      // Calculate Remaining Days
+      let remainingDays = 0;
+      if (data.admissionDate) {
+        const admission = data.admissionDate.toDate();
+        const diffTime = Math.abs(new Date().getTime() - admission.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        remainingDays = Math.max(0, 100 - diffDays);
+      }
+
+      setPatient({ id: pDoc.id, ...data, remainingDays });
       setEditForm({
         name: data.name || '',
         diagnosis: data.diagnosis || '',
@@ -567,12 +577,15 @@ export default function PatientDetailPage() {
               </span>
               <span className="hidden md:inline">•</span>
               <span className="flex items-center justify-center md:justify-start gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
-                PKR {patient.packageAmount?.toLocaleString()} / month
+                PKR {patient.packageAmount?.toLocaleString()} / m
+              </span>
+              <span className="flex items-center justify-center md:justify-start gap-1 text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full animate-pulse shadow-sm border border-orange-100">
+                ⏳ {patient.remainingDays} Days Left
               </span>
             </div>
             {patient.diagnosis && (
               <p className="text-gray-600 max-w-2xl bg-gray-50 px-4 py-3 rounded-xl text-sm border border-gray-100">
-                <span className="font-medium text-gray-800">Diagnosis/Notes:</span><br/>
+                <span className="font-bold text-gray-800">Diagnosis/Notes:</span><br/>
                 {patient.diagnosis}
               </p>
             )}
@@ -726,22 +739,33 @@ export default function PatientDetailPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
+                  <div className="bg-orange-50 border border-orange-100 p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
+                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Discharge Countdown</p>
+                    <p className="text-4xl font-black text-orange-700">{patient.remainingDays}</p>
+                    <p className="text-xs font-bold text-orange-500 mt-1">Days remaining in 100-day program</p>
+                    <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
+                      <div 
+                        className="bg-orange-500 h-full transition-all duration-1000" 
+                        style={{ width: `${Math.min(100, (100 - (patient.remainingDays || 0)))}%` }}
+                      ></div>
+                    </div>
+                  </div>
                   <div>
-                    <span className="block text-sm text-gray-500 mb-1 lowercase tracking-widest font-bold">Package</span>
-                    <span className="font-medium text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Package</span>
+                    <span className="font-black text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
                       PKR {patient.packageAmount?.toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-sm text-gray-500 mb-1 lowercase tracking-widest font-bold">Assigned Staff ID</span>
-                    <span className="font-mono text-gray-900 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100">
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
+                    <span className="font-mono font-bold text-gray-900 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100">
                       {patient.assignedStaffId || 'None'}
                     </span>
                   </div>
-                  <div>
-                    <span className="block text-sm text-gray-500 mb-1 lowercase tracking-widest font-bold">Patient Doc ID</span>
-                    <span className="font-mono text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg inline-block border border-gray-100">
+                  <div className="sm:col-span-2 pt-2">
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
+                    <span className="font-mono text-[10px] text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg inline-block border border-gray-100 w-full truncate">
                       {patient.id}
                     </span>
                   </div>

@@ -172,35 +172,35 @@ export default function FinanceLogPage() {
             <Filter className="w-4 h-4 text-teal-600" /> Filters
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">From</label>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white" />
+              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">From</label>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">To</label>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white" />
+              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">To</label>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Type</label>
-              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white capitalize">
+              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">Type</label>
+              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
                 <option value="all">All Types</option>
                 <option value="income">Income</option>
                 <option value="expense">Expense</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Status</label>
-              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white capitalize">
+              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">Status</label>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Category</label>
-              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all bg-gray-50 focus:bg-white capitalize">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">Category</label>
+              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
                 <option value="all">All Categories</option>
                 {allCategories.map(cat => (
                   <option key={cat} value={cat}>{formatCategory(cat)}</option>
@@ -224,37 +224,37 @@ export default function FinanceLogPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white border text-green-700 border-green-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <TrendingUp className="w-16 h-16" />
+          <div className="bg-white border border-green-100 rounded-2xl shadow-sm p-5 relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <TrendingUp className="w-16 h-16 text-green-600" />
             </div>
             <div className="flex items-center gap-2 text-green-600 mb-3">
               <TrendingUp className="w-5 h-5" />
-              <span className="font-bold text-sm uppercase tracking-wider">Approved Income</span>
+              <span className="font-black text-[10px] uppercase tracking-widest">Approved Income</span>
             </div>
-            <div className="text-3xl font-black text-gray-900">₨{stats.income.toLocaleString('en-PK')}</div>
+            <div className="text-3xl font-black text-gray-900 leading-none">₨{stats.income.toLocaleString('en-PK')}</div>
           </div>
 
-          <div className="bg-white border text-red-700 border-red-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-4 opacity-10">
-              <TrendingDown className="w-16 h-16" />
+          <div className="bg-white border border-red-100 rounded-2xl shadow-sm p-5 relative overflow-hidden group hover:shadow-md transition-all">
+             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <TrendingDown className="w-16 h-16 text-red-600" />
             </div>
             <div className="flex items-center gap-2 text-red-600 mb-3">
               <TrendingDown className="w-5 h-5" />
-              <span className="font-bold text-sm uppercase tracking-wider">Approved Expense</span>
+              <span className="font-black text-[10px] uppercase tracking-widest">Approved Expense</span>
             </div>
-            <div className="text-3xl font-black text-gray-900">₨{stats.expense.toLocaleString('en-PK')}</div>
+            <div className="text-3xl font-black text-gray-900 leading-none">₨{stats.expense.toLocaleString('en-PK')}</div>
           </div>
 
-          <div className="bg-white border text-teal-700 border-teal-100 rounded-2xl shadow-sm p-6 relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-4 opacity-10">
-              <DollarSign className="w-16 h-16" />
+          <div className="bg-white border border-teal-100 rounded-2xl shadow-sm p-5 relative overflow-hidden group hover:shadow-md transition-all sm:col-span-1 md:col-span-1">
+             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <DollarSign className="w-16 h-16 text-teal-600" />
             </div>
             <div className="flex items-center gap-2 text-teal-600 mb-3">
               <DollarSign className="w-5 h-5" />
-              <span className="font-bold text-sm uppercase tracking-wider">Net Balance</span>
+              <span className="font-black text-[10px] uppercase tracking-widest">Net Balance</span>
             </div>
-            <div className={`text-3xl font-black ${stats.net >= 0 ? 'text-teal-600' : 'text-red-500'}`}>
+            <div className={`text-3xl font-black leading-none ${stats.net >= 0 ? 'text-teal-600' : 'text-red-500'}`}>
               ₨{stats.net.toLocaleString('en-PK')}
             </div>
           </div>

@@ -272,7 +272,9 @@ service cloud.firestore {
     // Staff can read their own profile only.
     // Admin/superadmin can read and write all.
     match /rehab_staff/{staffId} {
-      allow read: if isRehabAdminOrAbove() || isRehabRole('staff');
+      allow read: if isRehabAdminOrAbove()
+        || isRehabRole('cashier')
+        || (isRehabRole('staff') && rehabStaffId() == staffId);
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -348,6 +350,13 @@ service cloud.firestore {
             && resource.data.staffId == request.auth.uid);
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
+    }
+
+    match /rehab_salary_records/{docId} {
+      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier');
+      allow create: if isRehabSuperAdmin(); // only via server after approval
+      allow update: if isRehabSuperAdmin();
+      allow delete: if false;
     }
 
   }

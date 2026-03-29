@@ -9,29 +9,29 @@ import {
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 
 const INCOME_CATEGORIES = [
-  { value: 'patient_fee',      label: 'Patient Monthly Fee',   needsPatient: true },
-  { value: 'canteen_deposit',  label: 'Canteen Deposit',        needsPatient: true },
-  { value: 'donation',         label: 'Donation',               needsPatient: false },
-  { value: 'other_income',     label: 'Other Income',           needsPatient: false },
+  { value: 'patient_fee',      label: 'Patient Monthly Fee',   needsPatient: true,  needsStaff: false },
+  { value: 'canteen_deposit',  label: 'Canteen Deposit',        needsPatient: true,  needsStaff: false },
+  { value: 'donation',         label: 'Donation',               needsPatient: false, needsStaff: false },
+  { value: 'other_income',     label: 'Other Income',           needsPatient: false, needsStaff: false },
 ];
 
 const EXPENSE_CATEGORIES = [
-  { value: 'staff_salary',     label: 'Staff Salary',           needsPatient: false },
-  { value: 'rent',             label: 'Rent',                   needsPatient: false },
-  { value: 'electricity',      label: 'Electricity',            needsPatient: false },
-  { value: 'gas',              label: 'Gas',                    needsPatient: false },
-  { value: 'water',            label: 'Water',                  needsPatient: false },
-  { value: 'medicine',         label: 'Medicine',               needsPatient: false },
-  { value: 'food',             label: 'Food / Ration',          needsPatient: false },
-  { value: 'canteen_expense',  label: 'Canteen Expense',        needsPatient: true  },
-  { value: 'maintenance',      label: 'Maintenance',            needsPatient: false },
-  { value: 'transport',        label: 'Transport',              needsPatient: false },
-  { value: 'equipment',        label: 'Equipment',              needsPatient: false },
-  { value: 'security',         label: 'Security',               needsPatient: false },
-  { value: 'cleaning',         label: 'Cleaning',               needsPatient: false },
-  { value: 'patient_welfare',  label: 'Patient Welfare',        needsPatient: false },
-  { value: 'office_supplies',  label: 'Office Supplies',        needsPatient: false },
-  { value: 'other_expense',    label: 'Other Expense',          needsPatient: false },
+  { value: 'staff_salary',     label: 'Staff Salary',           needsPatient: false, needsStaff: true },
+  { value: 'rent',             label: 'Rent',                   needsPatient: false, needsStaff: false },
+  { value: 'electricity',      label: 'Electricity',            needsPatient: false, needsStaff: false },
+  { value: 'gas',              label: 'Gas',                    needsPatient: false, needsStaff: false },
+  { value: 'water',            label: 'Water',                  needsPatient: false, needsStaff: false },
+  { value: 'medicine',         label: 'Medicine',               needsPatient: false, needsStaff: false },
+  { value: 'food',             label: 'Food / Ration',          needsPatient: false, needsStaff: false },
+  { value: 'canteen_expense',  label: 'Canteen Expense',        needsPatient: true,  needsStaff: false },
+  { value: 'maintenance',      label: 'Maintenance',            needsPatient: false, needsStaff: false },
+  { value: 'transport',        label: 'Transport',              needsPatient: false, needsStaff: false },
+  { value: 'equipment',        label: 'Equipment',              needsPatient: false, needsStaff: false },
+  { value: 'security',         label: 'Security',               needsPatient: false, needsStaff: false },
+  { value: 'cleaning',         label: 'Cleaning',               needsPatient: false, needsStaff: false },
+  { value: 'patient_welfare',  label: 'Patient Welfare',        needsPatient: false, needsStaff: false },
+  { value: 'office_supplies',  label: 'Office Supplies',        needsPatient: false, needsStaff: false },
+  { value: 'other_expense',    label: 'Other Expense',          needsPatient: false, needsStaff: false },
 ];
 
 export default function CashierPage() {
@@ -45,10 +45,17 @@ export default function CashierPage() {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [patientSearch, setPatientSearch] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState<{id: string; name: string} | null>(null);
-  const [patientResults, setPatientResults] = useState<{id: string; name: string}[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<{id: string; name: string; admissionDate?: any; customId?: string} | null>(null);
+  const [patientResults, setPatientResults] = useState<{id: string; name: string; admissionDate?: any; customId?: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [allPatients, setAllPatients] = useState<{id: string; name: string}[]>([]);
+  const [allPatients, setAllPatients] = useState<{id: string; name: string; admissionDate?: any; customId?: string}[]>([]);
+
+  // staff state
+  const [staffSearch, setStaffSearch] = useState('');
+  const [selectedStaff, setSelectedStaff] = useState<{id: string; name: string; salary: number} | null>(null);
+  const [staffResults, setStaffResults] = useState<{id: string; name: string; salary: number}[]>([]);
+  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
+  const [allStaff, setAllStaff] = useState<{id: string; name: string; salary: number}[]>([]);
 
   // today's transactions
   const [todayEntries, setTodayEntries] = useState<any[]>([]);
@@ -59,10 +66,12 @@ export default function CashierPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isStaffPaid, setIsStaffPaid] = useState(false);
 
   const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const currentCat = categories.find(c => c.value === category);
   const needsPatient = currentCat?.needsPatient ?? false;
+  const needsStaff = (currentCat as any)?.needsStaff ?? false;
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -71,6 +80,7 @@ export default function CashierPage() {
       return;
     }
     loadPatients();
+    loadStaff();
     loadTodayEntries();
   }, [user, sessionLoading]);
 
@@ -79,6 +89,8 @@ export default function CashierPage() {
     setCategory(type === 'income' ? 'patient_fee' : 'staff_salary');
     setSelectedPatient(null);
     setPatientSearch('');
+    setSelectedStaff(null);
+    setStaffSearch('');
   }, [type]);
 
   // Reset patient when category changes to non-patient
@@ -92,11 +104,30 @@ export default function CashierPage() {
   async function loadPatients() {
     try {
       const snap = await getDocs(collection(db, 'rehab_patients'));
-      const list = snap.docs.map(d => ({ id: d.id, name: d.data().name || 'Unknown' }));
-      console.log('Loaded patients:', list.length, list);
+      const list = snap.docs.map(d => ({
+        id: d.id,
+        name: d.data().name || 'Unknown',
+        admissionDate: d.data().admissionDate || null,
+        customId: d.data().customId || d.id.slice(0, 8),
+      }));
+      console.log('Loaded patients:', list.length);
       setAllPatients(list);
     } catch (e) {
       console.error('Load patients error:', e);
+    }
+  }
+
+  async function loadStaff() {
+    try {
+      const snap = await getDocs(collection(db, 'rehab_staff'));
+      const list = snap.docs.map(d => ({
+        id: d.id,
+        name: d.data().name || 'Unknown',
+        salary: d.data().salary || 0,
+      }));
+      setAllStaff(list);
+    } catch (e) {
+      console.error('Load staff error:', e);
     }
   }
 
@@ -137,16 +168,61 @@ export default function CashierPage() {
     if (val.length < 1) { setPatientResults([]); setShowDropdown(false); return; }
     const results = allPatients.filter(p =>
       p.name.toLowerCase().includes(val.toLowerCase()) ||
-      p.id.toLowerCase().includes(val.toLowerCase())
+      p.id.toLowerCase().includes(val.toLowerCase()) ||
+      (p as any).customId?.toLowerCase().includes(val.toLowerCase())
     );
     setPatientResults(results);
     setShowDropdown(true);
   }
 
-  function selectPatient(p: {id: string; name: string}) {
+  function selectPatient(p: any) {
     setSelectedPatient(p);
     setPatientSearch(p.name);
     setShowDropdown(false);
+  }
+
+  function handleStaffSearch(val: string) {
+    setStaffSearch(val);
+    setSelectedStaff(null);
+    if (val.length < 1) { setStaffResults([]); setShowStaffDropdown(false); return; }
+    const results = allStaff.filter(s =>
+      s.name.toLowerCase().includes(val.toLowerCase())
+    );
+    setStaffResults(results);
+    setShowStaffDropdown(true);
+  }
+
+  async function selectStaff(s: {id: string; name: string; salary: number}) {
+    setSelectedStaff(s);
+    setStaffSearch(s.name);
+    setShowStaffDropdown(false);
+    setAmount(String(s.salary));
+    
+    // Check if ALREADY PAID for this month
+    try {
+      const monthStr = date.slice(0, 7); // "2026-03"
+      const startOfMonth = new Date(date);
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0,0,0,0);
+      
+      const endOfMonth = new Date(date);
+      endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+      endOfMonth.setDate(0);
+      endOfMonth.setHours(23,59,59,999);
+
+      const qSalary = query(
+        collection(db, 'rehab_transactions'),
+        where('staffId', '==', s.id),
+        where('category', '==', 'staff_salary'),
+        where('status', '==', 'approved'),
+        where('date', '>=', Timestamp.fromDate(startOfMonth)),
+        where('date', '<=', Timestamp.fromDate(endOfMonth))
+      );
+      const snap = await getDocs(qSalary);
+      setIsStaffPaid(!snap.empty);
+    } catch (err) {
+      console.error("Check paid error", err);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -160,6 +236,10 @@ export default function CashierPage() {
     }
     if (needsPatient && !selectedPatient) {
       setError('Please select a patient for this category');
+      return;
+    }
+    if (needsStaff && !selectedStaff) {
+      setError('Please select a staff member for salary payment');
       return;
     }
 
@@ -200,6 +280,11 @@ export default function CashierPage() {
       if (needsPatient && selectedPatient) {
         txData.patientId = selectedPatient.id;
         txData.patientName = selectedPatient.name;
+      }
+
+      if (needsStaff && selectedStaff) {
+        txData.staffId = selectedStaff.id;
+        txData.staffName = selectedStaff.name;
       }
 
       await addDoc(collection(db, 'rehab_transactions'), txData);
@@ -328,8 +413,14 @@ export default function CashierPage() {
                   {patientResults.map(p => (
                     <button key={p.id} type="button"
                       onClick={() => selectPatient(p)}
-                      className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-teal-50 transition-colors">
-                      {p.name}
+                      className="w-full text-left px-4 py-2.5 hover:bg-teal-50 transition-colors border-b border-gray-50 last:border-0">
+                      <p className="text-sm font-semibold text-gray-700">{p.name}</p>
+                      <p className="text-xs text-gray-400">
+                        ID: {p.customId} • 
+                        Admitted: {p.admissionDate
+                          ? new Date(p.admissionDate?.toDate?.() || p.admissionDate).toLocaleDateString('en-PK')
+                          : 'N/A'}
+                      </p>
                     </button>
                   ))}
                 </div>
@@ -339,6 +430,59 @@ export default function CashierPage() {
                   No patient found
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Staff search — shown only when needed */}
+          {needsStaff && (
+            <div className="relative">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                Staff Member <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={staffSearch}
+                onChange={e => handleStaffSearch(e.target.value)}
+                placeholder="Type staff name..."
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              />
+              {selectedStaff && (
+                <div className={`mt-1.5 flex items-center gap-2 rounded-lg px-3 py-2 ${isStaffPaid ? 'bg-red-50' : 'bg-teal-50'}`}>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className={`${isStaffPaid ? 'text-red-600' : 'text-teal-600'} text-sm font-bold`}>
+                        {isStaffPaid ? '⚠ ALREADY PAID' : '✓'} {selectedStaff.name}
+                      </p>
+                      {isStaffPaid && (
+                        <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full animate-pulse">
+                          DUPLICATE WARNING
+                        </span>
+                      )}
+                    </div>
+                    <p className={`${isStaffPaid ? 'text-red-500' : 'text-teal-500'} text-xs font-medium`}>
+                      Monthly salary: PKR {selectedStaff.salary.toLocaleString()}
+                    </p>
+                  </div>
+                  <button type="button"
+                    onClick={() => { setSelectedStaff(null); setStaffSearch(''); setAmount(''); setIsStaffPaid(false); }}
+                    className="text-gray-400 hover:text-red-500 text-xs">✕</button>
+                </div>
+              )}
+              {showStaffDropdown && staffResults.length > 0 && (
+                <div className="absolute z-10 top-full mt-1 w-full bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden">
+                  {staffResults.map(s => (
+                    <button key={s.id} type="button"
+                      onClick={() => selectStaff(s)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-teal-50 transition-colors border-b border-gray-50 last:border-0">
+                      <p className="text-sm font-semibold text-gray-700">{s.name}</p>
+                      <p className="text-xs text-gray-400">Monthly: PKR {s.salary.toLocaleString()}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-gray-400 mt-1 ml-1">
+                Salary amount will be auto-filled when you select staff
+              </p>
             </div>
           )}
 

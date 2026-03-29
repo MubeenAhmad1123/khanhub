@@ -217,14 +217,14 @@ export default function SuperAdminReportsPage() {
             {/* Patients Summary */}
             <div>
               <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-teal-500" /> Patient Summary</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
                   <div className="text-3xl font-black text-teal-800">{reportData.totalActivePatients}</div>
                   <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">Active Patients</div>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
                   <div className="text-3xl font-black text-blue-800">{reportData.newAdmissions}</div>
-                  <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mt-1">New This Month</div>
+                  <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mt-1">New Admissions</div>
                 </div>
               </div>
             </div>
@@ -259,26 +259,28 @@ export default function SuperAdminReportsPage() {
                 {Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
-                    <table className="w-full text-sm border-collapse border border-gray-200 rounded-xl overflow-hidden">
-                      <thead className="bg-teal-50">
-                        <tr>
-                          <th className="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">Category</th>
-                          <th className="border border-gray-200 px-4 py-3 text-right font-bold text-teal-800">Amount (PKR)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(reportData.incomeByCategory).map(([cat, amt]: any) => (
-                          <tr key={cat} className="hover:bg-gray-50">
-                            <td className="border border-gray-200 px-4 py-3 text-gray-700">{formatCat(cat)}</td>
-                            <td className="border border-gray-200 px-4 py-3 text-right font-medium">{formatPKR(amt)}</td>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-sm border-collapse min-w-[300px]">
+                        <thead className="bg-teal-50">
+                          <tr>
+                            <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-teal-800">Category</th>
+                            <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-teal-800">Amount</th>
                           </tr>
-                        ))}
-                        <tr className="bg-teal-50 font-bold">
-                          <td className="border border-gray-200 px-4 py-3 text-teal-800">Total Income</td>
-                          <td className="border border-gray-200 px-4 py-3 text-right text-teal-800">{formatPKR(reportData.totalIncome)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {Object.entries(reportData.incomeByCategory).map(([cat, amt]: any) => (
+                            <tr key={cat} className="hover:bg-gray-50 transition-colors">
+                              <td className="border-b border-gray-200 px-4 py-3 text-gray-700">{formatCat(cat)}</td>
+                              <td className="border-b border-gray-200 px-4 py-3 text-right font-medium">{formatPKR(amt)}</td>
+                            </tr>
+                          ))}
+                          <tr className="bg-teal-50/50 font-black">
+                            <td className="px-4 py-3 text-teal-800">Total Income</td>
+                            <td className="px-4 py-3 text-right text-teal-800">{formatPKR(reportData.totalIncome)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
 
@@ -286,26 +288,28 @@ export default function SuperAdminReportsPage() {
                 {Object.keys(reportData.expenseByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingDown className="w-5 h-5 text-red-500" /> Expense Breakdown</h3>
-                    <table className="w-full text-sm border-collapse border border-gray-200 rounded-xl overflow-hidden">
-                      <thead className="bg-red-50">
-                        <tr>
-                          <th className="border border-gray-200 px-4 py-3 text-left font-bold text-red-700">Category</th>
-                          <th className="border border-gray-200 px-4 py-3 text-right font-bold text-red-700">Amount (PKR)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(reportData.expenseByCategory).map(([cat, amt]: any) => (
-                          <tr key={cat} className="hover:bg-gray-50">
-                            <td className="border border-gray-200 px-4 py-3 text-gray-700">{formatCat(cat)}</td>
-                            <td className="border border-gray-200 px-4 py-3 text-right font-medium">{formatPKR(amt)}</td>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-sm border-collapse min-w-[300px]">
+                        <thead className="bg-red-50">
+                          <tr>
+                            <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-red-700">Category</th>
+                            <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-red-700">Amount</th>
                           </tr>
-                        ))}
-                        <tr className="bg-red-50 font-bold">
-                          <td className="border border-gray-200 px-4 py-3 text-red-700">Total Expenses</td>
-                          <td className="border border-gray-200 px-4 py-3 text-right text-red-700">{formatPKR(reportData.totalExpenses)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {Object.entries(reportData.expenseByCategory).map(([cat, amt]: any) => (
+                            <tr key={cat} className="hover:bg-gray-50 transition-colors">
+                              <td className="border-b border-gray-200 px-4 py-3 text-gray-700">{formatCat(cat)}</td>
+                              <td className="border-b border-gray-200 px-4 py-3 text-right font-medium">{formatPKR(amt)}</td>
+                            </tr>
+                          ))}
+                          <tr className="bg-red-50/50 font-black">
+                            <td className="px-4 py-3 text-red-700">Total Expenses</td>
+                            <td className="px-4 py-3 text-right text-red-700">{formatPKR(reportData.totalExpenses)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
 
@@ -347,33 +351,35 @@ export default function SuperAdminReportsPage() {
             {/* Staff Salary Summary */}
             {reportData.staffSalaries.length > 0 && (
               <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-purple-500" /> Staff Salary Summary</h3>
-                <table className="w-full text-sm border-collapse border border-gray-200 rounded-xl overflow-hidden">
-                  <thead className="bg-purple-50">
-                    <tr>
-                      <th className="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">Name</th>
-                      <th className="border border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Gross Salary</th>
-                      <th className="border border-gray-200 px-4 py-3 text-center font-bold text-purple-800">Absent Days</th>
-                      <th className="border border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Fines</th>
-                      <th className="border border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Net Payable</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.staffSalaries.map((s: any, i: number) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">{s.name}</td>
-                        <td className="border border-gray-200 px-4 py-3 text-right text-gray-700">{formatPKR(s.gross)}</td>
-                        <td className="border border-gray-200 px-4 py-3 text-center text-orange-700 font-semibold">{s.absentDays}</td>
-                        <td className="border border-gray-200 px-4 py-3 text-right text-red-700">{formatPKR(s.fines)}</td>
-                        <td className="border border-gray-200 px-4 py-3 text-right font-bold text-green-800">{formatPKR(s.netPayable)}</td>
+                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-purple-500" /> Staff Payroll Summary</h3>
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full text-sm border-collapse min-w-[600px]">
+                    <thead className="bg-purple-50">
+                      <tr>
+                        <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-purple-800">Staff Member</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Gross</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-center font-bold text-purple-800">Absent</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Fines</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Net Payable</th>
                       </tr>
-                    ))}
-                    <tr className="bg-purple-50 font-bold">
-                      <td colSpan={4} className="border border-gray-200 px-4 py-3 text-purple-800">Total Payroll</td>
-                      <td className="border border-gray-200 px-4 py-3 text-right text-purple-800">{formatPKR(reportData.totalPayroll)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {reportData.staffSalaries.map((s: any, i: number) => (
+                        <tr key={i} className="hover:bg-gray-50 transition-colors">
+                          <td className="border-b border-gray-200 px-4 py-3 font-medium text-gray-900">{s.name}</td>
+                          <td className="border-b border-gray-200 px-4 py-3 text-right text-gray-700">{formatPKR(s.gross)}</td>
+                          <td className="border-b border-gray-200 px-4 py-3 text-center text-orange-700 font-black">{s.absentDays}</td>
+                          <td className="border-b border-gray-200 px-4 py-3 text-right text-red-700">{formatPKR(s.fines)}</td>
+                          <td className="border-b border-gray-200 px-4 py-3 text-right font-black text-green-800">{formatPKR(s.netPayable)}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-purple-50/50 font-black">
+                        <td colSpan={4} className="px-4 py-3 text-purple-800">Total Payroll</td>
+                        <td className="px-4 py-3 text-right text-purple-800">{formatPKR(reportData.totalPayroll)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
