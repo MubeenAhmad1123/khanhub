@@ -12,13 +12,22 @@ interface ReelPlayerProps {
     videoId: string;
     isMuted?: boolean;
     userHasInteracted?: boolean;
+    isMobileDevice?: boolean;
 }
 
-const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isActive, isAdjacent, videoId, userHasInteracted }: ReelPlayerProps) {
+const ReelPlayer = memo(function ReelPlayer({
+    cloudinaryUrl,
+    thumbnailUrl,
+    isActive,
+    isAdjacent,
+    videoId,
+    userHasInteracted,
+}: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const userPausedRef = useRef(false);
-    // FIX 1: isMuted starts true — always muted until user interacts and video is active
+
+    // Always start muted — unmuted only after user interaction + video is active
     const [isMuted, setIsMuted] = useState(true);
     const [isPaused, setIsPaused] = useState(false);
     const [isBuffering, setIsBuffering] = useState(true);
@@ -28,24 +37,22 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
     const [isSlowConnection, setIsSlowConnection] = useState(false);
     const [showRetry, setShowRetry] = useState(false);
 
-    // FIX 2: cancelledRef tracks the current "active session" — every time isActive
-    // flips, we increment this counter so in-flight async play() promises can
-    // detect they are stale and must not unmute/play.
+    // activeSessionRef — incremented every time isActive changes.
+    // Any in-flight async play() promise that captured a previous value
+    // is stale and must bail out before mutating audio or calling play().
     const activeSessionRef = useRef(0);
 
+    // ── Offline / slow-connection detection ──────────────────────
     useEffect(() => {
-        // Offline detection
         const onOffline = () => setIsOffline(true);
         const onOnline = () => setIsOffline(false);
         window.addEventListener('offline', onOffline);
         window.addEventListener('online', onOnline);
 
-        // Slow connection detection
         const conn = (navigator as any).connection;
         if (conn) {
             const checkSpeed = () => {
-                const slow = ['slow-2g', '2g'].includes(conn.effectiveType);
-                setIsSlowConnection(slow);
+                setIsSlowConnection(['slow-2g', '2g'].includes(conn.effectiveType));
             };
             checkSpeed();
             conn.addEventListener('change', checkSpeed);
@@ -61,6 +68,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         };
     }, []);
 
+    // ── Retry button — shown after 15s of buffering while active ─
     useEffect(() => {
         if (!isActive) { setShowRetry(false); return; }
         const timer = setTimeout(() => {
@@ -69,7 +77,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         return () => clearTimeout(timer);
     }, [isActive, isBuffering]);
 
-    // Tap handler — toggle pause/play
+    // ── Tap handler — toggle pause / play ────────────────────────
     const handleVideoTap = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
@@ -87,52 +95,48 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         }
     }, []);
 
-    // Mute toggle — disabled as per request
+    // Mute toggle disabled per product requirement
     const handleMuteTap = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        // User asked to disable manual muting/unmuting
     }, []);
 
-    // FIX 1 + FIX 2: Consolidated active/inactive logic with session token to
-    // prevent race conditions from late-resolving play() promises.
+    // ── Core active / inactive logic ──────────────────────────────
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        // FIX 2: Increment session ID — any closure that captured a previous value
-        // is now stale and must bail out before mutating audio or calling play().
+        // Increment session — all previous in-flight closures are now stale
         activeSessionRef.current += 1;
         const mySession = activeSessionRef.current;
-
-        // FIX 2: Helper — returns true if this closure is still the "current" session.
         const isCurrentSession = () => mySession === activeSessionRef.current;
 
         if (!isActive) {
-            // FIX 1 + FIX 2: Immediately silence and stop — do this synchronously so
-            // there is zero window where sound leaks from a newly-inactive video.
+            // Silence and stop synchronously — zero window for sound to leak
             video.muted = true;
             setIsMuted(true);
             try { video.pause(); } catch (_) { }
             setIsPaused(false);
 
-            if (!isAdjacent) video.currentTime = 0;
+            // Always reset to start (TikTok/Shorts behaviour)
+            video.currentTime = 0;
+
             if (hlsRef.current) hlsRef.current.stopLoad();
             if (!isAdjacent) setIsBuffering(true);
             userPausedRef.current = false;
             return;
         }
 
-        // --- isActive === true path ---
+        // --- isActive === true ---
         userPausedRef.current = false;
 
         const attemptPlay = async (retryCount = 0) => {
-            if (!isCurrentSession()) return; // FIX 2: stale session — bail out
+            if (!isCurrentSession()) return;
             const vid = videoRef.current;
             if (!vid) return;
             if (userPausedRef.current) return;
 
             try {
-                // FIX 1: Always start muted to satisfy browser autoplay policy
+                // Always start muted to satisfy browser autoplay policy
                 vid.muted = true;
 
                 if (vid.readyState < 2) {
@@ -142,25 +146,22 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                             resolve();
                         };
                         vid.addEventListener('canplay', onCanPlay);
-                        // FIX 6 (iOS): reduce wait so retry kicks in faster
-                        setTimeout(resolve, 2500);
+                        setTimeout(resolve, 2500); // iOS fallback timeout
                     });
                 }
 
-                // FIX 2: Re-check session after every await
                 if (!isCurrentSession() || userPausedRef.current) return;
 
                 await vid.play();
 
-                // FIX 2: Re-check after play() resolves — this is the main race condition
+                // Re-check after play() resolves — this is the main race condition
                 if (!isCurrentSession()) {
-                    // We scrolled away while play() was resolving — silence immediately
                     vid.muted = true;
                     vid.pause();
                     return;
                 }
 
-                // FIX 1: Only unmute when STILL the active session and user has interacted
+                // Only unmute when still the active session and user has interacted
                 if (userHasInteracted && isCurrentSession()) {
                     vid.muted = false;
                     setIsMuted(false);
@@ -169,18 +170,14 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 setIsPaused(false);
 
             } catch (err: any) {
-                if (!isCurrentSession()) return; // FIX 2: stale, ignore
+                if (!isCurrentSession()) return;
 
-                if (err?.name === 'AbortError') {
-                    // AbortError means a new play/pause happened — don't retry
-                    return;
-                }
+                if (err?.name === 'AbortError') return;
 
-                // FIX 6 (iOS): retry up to 2 times on NotAllowedError / generic failure
+                // Retry up to 2 times on iOS NotAllowedError / generic failure
                 if (retryCount < 2) {
                     setTimeout(() => attemptPlay(retryCount + 1), 400);
                 } else {
-                    // Give up — stay muted so at least it plays silently
                     vid.muted = true;
                     setIsMuted(true);
                 }
@@ -188,30 +185,26 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         };
 
         attemptPlay();
-
-        return () => {
-            // Cleanup: invalidate this session so the in-flight promise bails out
-            // Note: we do NOT increment here — the next run of this effect does that.
-            // We just need any in-flight closures to see they are stale.
-            // (activeSessionRef.current is incremented at the top of the NEXT run)
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isActive]); // ONLY isActive — intentional
 
-    // FIX 1: When user interacts, unmute ONLY if this video is currently active
+    // ── userHasInteracted → unmute with real session guard ───────
     useEffect(() => {
-        if (!userHasInteracted) return;
-        if (!isActive) return;
+        if (!userHasInteracted || !isActive) return;
         const video = videoRef.current;
         if (!video) return;
-        // FIX 2: Only act if this is still the current session
-        if (activeSessionRef.current === activeSessionRef.current) { // always true — just explicit
+
+        // Capture session NOW — before the async gap
+        const capturedSession = activeSessionRef.current;
+
+        setTimeout(() => {
+            if (activeSessionRef.current !== capturedSession) return;
+            if (!isActive) return;
             video.muted = false;
             setIsMuted(false);
-        }
+        }, 50);
     }, [userHasInteracted, isActive]);
 
-    // Ensure the video src is actually set
+    // ── Video source initialisation ───────────────────────────────
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !cloudinaryUrl || (!isActive && !isAdjacent)) return;
@@ -245,34 +238,28 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                         hls.destroy();
                         hlsRef.current = null;
                         video.src = optimizedMp4;
+                        // load() only — attemptPlay handles play() with session guards
                         video.load();
-                        // FIX 3: onCanPlay / onPlaying events on the video element will
-                        // fire after load() and clear isBuffering — no manual setState needed here.
-                        if (isActive) video.play().catch(() => { });
                     }
                 });
             } else {
                 video.src = optimizedMp4;
+                // load() only — attemptPlay handles play() with session guards
                 video.load();
-                if (isActive) video.play().catch(() => { });
             }
         }
     }, [cloudinaryUrl, isActive, isAdjacent]);
 
-    // Loading feedback
+    // ── Loading feedback — "slow connection" hint after 8s ───────
     useEffect(() => {
-        if (!isActive) {
-            setLoadingTooLong(false);
-            return;
-        }
+        if (!isActive) { setLoadingTooLong(false); return; }
         const timer = setTimeout(() => {
             if (isBuffering) setLoadingTooLong(true);
         }, 8000);
         return () => clearTimeout(timer);
     }, [isActive, isBuffering]);
 
-    // FIX 4: Stall detection based on currentTime progress, not just readyState.
-    // Only retries when playback is genuinely frozen (currentTime not advancing).
+    // ── Stall detection — retries only on genuine currentTime freeze
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !isActive) return;
@@ -281,12 +268,10 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
         const MAX_FALLBACK = 2;
         const optimizedMp4 = getOptimizedVideoUrl(cloudinaryUrl);
 
-        // FIX 4: Track currentTime to detect genuine stalls (not just buffering pauses)
         let lastCurrentTime = -1;
-        let stallCount = 0; // FIX 4: require 2 consecutive stall-checks before acting
+        let stallCount = 0;
 
         const stallTimeout = setInterval(() => {
-            // FIX 4: If video is paused by user or not active, skip check
             if (video.paused || userPausedRef.current) {
                 lastCurrentTime = video.currentTime;
                 stallCount = 0;
@@ -295,11 +280,9 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
 
             const currentTime = video.currentTime;
 
-            // FIX 4: Stall = currentTime hasn't moved since last check
             if (currentTime === lastCurrentTime && video.readyState < 3) {
                 stallCount++;
             } else {
-                // Progress detected — reset stall counter
                 stallCount = 0;
                 lastCurrentTime = currentTime;
                 return;
@@ -307,18 +290,14 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
 
             lastCurrentTime = currentTime;
 
-            // FIX 4: Only act after 2 consecutive stall intervals (~24s total)
-            // to avoid jank from brief buffering pauses on slow connections
+            // Require 2 consecutive stall intervals (~24s) before acting
             if (stallCount < 2) return;
-            stallCount = 0; // reset after acting
+            stallCount = 0;
 
             fallbackAttempts++;
             console.log(`Video genuinely stalled — fallback level ${fallbackAttempts}`);
 
-            if (fallbackAttempts > MAX_FALLBACK) {
-                // FIX 4: Exceeded max retries — stop the loop to prevent infinite janking
-                return;
-            }
+            if (fallbackAttempts > MAX_FALLBACK) return;
 
             if (hlsRef.current) {
                 hlsRef.current.destroy();
@@ -331,13 +310,14 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
             } else {
                 video.src = optimizedMp4;
             }
+            // load() only — let attemptPlay handle play()
             video.load();
-            video.play().catch(() => { });
         }, 12000);
 
         return () => clearInterval(stallTimeout);
     }, [isActive, cloudinaryUrl]);
 
+    // ── Render ────────────────────────────────────────────────────
     return (
         <div
             onClick={handleVideoTap}
@@ -353,11 +333,13 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
             }}
             className="video-slide"
         >
-            {/* Buffering spinner */}
+            {/* Buffering spinner with thumbnail behind it */}
             {isBuffering && (
                 <div style={{
                     position: 'absolute', inset: 0, zIndex: 2,
-                    background: thumbnailUrl ? `url(${thumbnailUrl}) center/cover no-repeat` : '#000',
+                    background: thumbnailUrl
+                        ? `url(${thumbnailUrl}) center/cover no-repeat`
+                        : '#000',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                     <div style={{
@@ -369,7 +351,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 </div>
             )}
 
-            {/* Loading Feedback */}
+            {/* Slow connection hint */}
             {loadingTooLong && (
                 <div style={{
                     position: 'absolute', bottom: '200px', left: '50%',
@@ -382,6 +364,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 </div>
             )}
 
+            {/* Retry button */}
             {showRetry && (
                 <div style={{
                     position: 'absolute', bottom: '160px', left: '50%',
@@ -408,7 +391,7 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 </div>
             )}
 
-            {/* Pause indicator */}
+            {/* Pause / play indicator */}
             {(isPaused || showTapIcon) && (
                 <div style={{
                     position: 'absolute', inset: 0, zIndex: 10,
@@ -421,7 +404,13 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                         {isPaused
-                            ? <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '18px solid white', marginLeft: '4px' }} />
+                            ? <div style={{
+                                width: 0, height: 0,
+                                borderTop: '10px solid transparent',
+                                borderBottom: '10px solid transparent',
+                                borderLeft: '18px solid white',
+                                marginLeft: '4px',
+                            }} />
                             : <div style={{ display: 'flex', gap: '5px' }}>
                                 <div style={{ width: '4px', height: '18px', background: 'white', borderRadius: '2px' }} />
                                 <div style={{ width: '4px', height: '18px', background: 'white', borderRadius: '2px' }} />
@@ -431,21 +420,17 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                 </div>
             )}
 
-            {/* User requested removal of "Tap to unmute" prompt and Mute button */}
-
-            {/* FIX 3: `muted` attribute is always on the element — JS controls it after.
-                onCanPlay + onPlaying clear isBuffering including after HLS→MP4 fallback. */}
+            {/* Video element — muted always on, JS controls after play() */}
             <video
                 ref={videoRef}
                 poster={thumbnailUrl}
                 playsInline
                 muted
-                autoPlay
                 loop
-                preload={isActive || isAdjacent ? 'auto' : 'metadata'}
-                onCanPlay={() => setIsBuffering(false)}   // FIX 3: clears spinner on fallback too
-                onWaiting={() => setIsBuffering(true)}
-                onPlaying={() => setIsBuffering(false)}   // FIX 3: belt-and-suspenders for fallback
+                preload={isActive || isAdjacent ? 'auto' : 'none'}
+                onCanPlay={() => setIsBuffering(false)}
+                onWaiting={() => { if (isActive) setIsBuffering(true); }}
+                onPlaying={() => setIsBuffering(false)}
                 style={{
                     width: '100%',
                     height: '100%',
@@ -466,11 +451,11 @@ const ReelPlayer = memo(function ReelPlayer({ cloudinaryUrl, thumbnailUrl, isAct
                     fontFamily: 'DM Sans', fontWeight: 600,
                     zIndex: 30, whiteSpace: 'nowrap',
                 }}>
-                    📶 You're offline
+                    📶 You&apos;re offline
                 </div>
             )}
 
-            {/* Slow connection banner — auto hides after 5s */}
+            {/* Slow connection banner */}
             {isSlowConnection && isBuffering && (
                 <div style={{
                     position: 'absolute', top: 12, left: '50%',

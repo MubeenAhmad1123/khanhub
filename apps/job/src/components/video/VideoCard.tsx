@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Play, MapPin, User, Building2, Eye, Link as LinkIcon, Edit, CheckCircle2, Clock, Volume2, VolumeX, Maximize2, Pause } from 'lucide-react';
+import { Play, User, Building2, Eye, Link as LinkIcon, Edit, CheckCircle2, Clock, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConnections } from '@/hooks/useConnections';
 import { useAuth } from '@/hooks/useAuth';
 import ConnectModal from './ConnectModal';
 import VideoModal from './VideoModal';
-import Image from 'next/image';
 
 interface VideoCardProps {
     seekerId: string;
+    videoId?: string;
     role: 'job_seeker' | 'employer';
     industry: string;
     subcategory: string;
@@ -30,6 +30,7 @@ interface VideoCardProps {
 
 export default function VideoCard({
     seekerId,
+    videoId,
     role,
     industry,
     subcategory,
@@ -60,24 +61,6 @@ export default function VideoCard({
     const coverImage = thumbnailUrl || (role === 'job_seeker'
         ? 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=800'
         : 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800');
-
-    const togglePlay = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (videoRef.current) {
-            if (playing) {
-                videoRef.current.pause();
-                setPlaying(false);
-            } else {
-                videoRef.current.play().catch(() => { });
-                setPlaying(true);
-            }
-        }
-    };
-
-    const toggleMute = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setMuted(!muted);
-    };
 
     const handleMouseEnter = () => {
         if (window.innerWidth >= 1024) {
@@ -111,7 +94,6 @@ export default function VideoCard({
         window.location.href = `/profile/${role}/${seekerId}`;
     };
 
-    // Fullscreen toggler
     const toggleFullscreen = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (videoRef.current) {
@@ -124,7 +106,6 @@ export default function VideoCard({
     };
 
     const handleCardClick = () => {
-        // On mobile, card click toggles play/pause for the preview
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
         if (isMobile) {
             if (videoRef.current) {
@@ -138,12 +119,15 @@ export default function VideoCard({
             }
             return;
         }
+        // Desktop: go to feed at this specific video
+        if (videoId) {
+            window.location.href = `/feed?v=${videoId}`;
+            return;
+        }
         setShowVideoModal(true);
     };
 
     const connectionStatus = isOwnVideo ? 'own' : (connection?.status || 'none');
-
-
 
     return (
         <>
@@ -159,7 +143,6 @@ export default function VideoCard({
             >
                 {/* Video Area */}
                 <div className="relative aspect-[3/4] bg-slate-950 overflow-hidden">
-                    {/* Video Element - Always present but opacity changes for smooth transition */}
                     <video
                         ref={videoRef}
                         src={videoUrl}
@@ -173,11 +156,11 @@ export default function VideoCard({
                         )}
                     />
 
-                    {/* Enhanced Overlays */}
+                    {/* Overlays */}
                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
                     <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
 
-                    {/* Floating Controls - Visible on mobile ALWAYS, on desktop on HOVER */}
+                    {/* Floating Controls */}
                     <div className="absolute top-4 right-4 flex flex-col gap-2 transition-all duration-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 translate-x-0 lg:translate-x-4 lg:group-hover:translate-x-0 z-30 pointer-events-auto">
                         <button
                             onClick={(e) => { e.stopPropagation(); setMuted(!muted); }}
@@ -193,7 +176,7 @@ export default function VideoCard({
                         </button>
                     </div>
 
-                    {/* Central Play Button (Visible when not playing) */}
+                    {/* Central Play Button */}
                     {!playing && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                             <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center animate-pulse lg:animate-none group-hover:scale-110 transition-transform duration-500">
@@ -204,7 +187,7 @@ export default function VideoCard({
                         </div>
                     )}
 
-                    {/* Info Badges inside Video Area */}
+                    {/* Info Badges */}
                     <div className="absolute bottom-6 left-6 right-6 flex flex-col gap-3 pointer-events-none">
                         <div className="flex flex-wrap gap-2">
                             <span className={cn(

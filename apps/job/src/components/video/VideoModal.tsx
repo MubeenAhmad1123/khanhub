@@ -1,8 +1,7 @@
 'use client';
 
-import { X, User, Building2, ExternalLink, Zap } from 'lucide-react';
+import { X, User, Building2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
 
 interface VideoModalProps {
     isOpen: boolean;

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Send, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useConnections } from '@/hooks/useConnections';
 import { useAuth } from '@/hooks/useAuth';
-import { Timestamp } from 'firebase/firestore';
+// Removed unused Timestamp import
 
 interface ConnectModalProps {
     seekerId: string;
@@ -22,17 +22,12 @@ export default function ConnectModal({ seekerId, isOpen, onClose }: ConnectModal
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-
-
     useEffect(() => {
         if (isOpen) {
             const isPaid = user?.paymentStatus === 'approved' || user?.profile_status === 'active';
             setModalState(isPaid ? 'REQUEST' : 'PAYMENT');
         }
     }, [isOpen, user?.paymentStatus, user?.profile_status]);
-
-
-
 
     if (!isOpen) return null;
 
@@ -47,12 +42,6 @@ export default function ConnectModal({ seekerId, isOpen, onClose }: ConnectModal
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const handleMockPayment = () => {
-        // In a real app, this would redirect to a checkout or show a payment form
-        // For now, we move to success state (admin would verify the actual payment later in a real flow)
-        setModalState('SUCCESS');
     };
 
     return (

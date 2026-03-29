@@ -1,3 +1,4 @@
+//BlurredProfile.tsx
 import { Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

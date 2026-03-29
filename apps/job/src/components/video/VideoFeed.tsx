@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useCategory } from '@/context/CategoryContext';
-import ReelPlayer from './ReelPlayer'; // Ensure default import or named if needed
+import ReelPlayer from './ReelPlayer';
 import { VideoOverlay } from '@/components/feed/VideoOverlay';
 import { ActionButtons } from '@/components/feed/ActionButtons';
 import { GuestWall } from '@/components/feed/GuestWall';
@@ -12,13 +12,15 @@ import { CategoryStoriesBar } from '@/components/feed/CategoryStoriesBar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-// import { CategoryDropdown } from '@/components/feed/CategoryDropdown'; // Removed for inline placement
 import { CATEGORY_PLACEHOLDERS, PLACEHOLDER_OVERLAY_DATA } from '@/lib/categories';
-import { collection, query, where, orderBy, getDocs, doc, limit, getDoc, updateDoc, increment } from 'firebase/firestore';
+import {
+    collection, query, where, orderBy, getDocs,
+    doc, limit, getDoc, updateDoc, increment,
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 
+// ─── helpers ────────────────────────────────────────────────────────────────
 
-// Shuffle helper:
 const shuffleArray = <T,>(arr: T[]): T[] => {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -28,239 +30,259 @@ const shuffleArray = <T,>(arr: T[]): T[] => {
     return a;
 };
 
-// Preload window config:
-const PRELOAD_AHEAD = 2   // preload 2 videos ahead
-const PRELOAD_BEHIND = 1  // keep 1 video behind buffered
+const PRELOAD_AHEAD  = 2;
+const PRELOAD_BEHIND = 1;
+
+// ─── component ──────────────────────────────────────────────────────────────
 
 export function VideoFeed() {
-    const { activeCategory, activeRole } = useCategory();
+    const { activeCategory, activeRole, setActiveCategory } = useCategory();
     const { user, loading, firebaseUser } = useAuth();
-    const router = useRouter();
+    const router       = useRouter();
     const searchParams = useSearchParams();
 
-    const targetVideoId = searchParams.get('v');
+    const targetVideoId    = searchParams.get('v');
     const targetCategoryId = searchParams.get('c');
 
-    if (process.env.NODE_ENV === 'development') {
-        console.log('[DEEPLINK] URL params on mount →', { targetVideoId, targetCategoryId });
-    }
-
-    const [activeIndex, setActiveIndex] = useState(0);
-    const [activeTab, setActiveTab] = useState(2); // Default to 'For You'
-    const [showGuestWall, setShowGuestWall] = useState(false);
+    // ── ui state ──────────────────────────────────────────────────
+    // Mubeen uses -1 as initial activeIndex (nothing active until IO fires)
+    const [activeIndex,    setActiveIndex]    = useState(-1);
+    const [activeTab,      setActiveTab]      = useState(2);
+    const [showGuestWall,  setShowGuestWall]  = useState(false);
     const [showStoriesBar, setShowStoriesBar] = useState(true);
     const [firestoreVideos, setFirestoreVideos] = useState<any[]>([]);
-    const [displayVideos, setDisplayVideos] = useState<any[]>([]);
-    const [isMuted, setIsMuted] = useState(true);
-    const [userHasInteracted, setUserHasInteracted] = useState(false);
-    const [videosLoading, setVideosLoading] = useState(true);
-    const allVideosRef = useRef<any[]>([]);
-    const hasLoadedOnce = useRef(false);
-    // Capture deep link params ONCE on mount — never lost
-    const mountVideoId = useRef<string | null>(
+    const [displayVideos,  setDisplayVideos]  = useState<any[]>([]);
+    const [isMuted,        setIsMuted]        = useState(true);
+    const [videosLoading,  setVideosLoading]  = useState(true);
+
+    // Deeplink open (?v=...) counts as user interaction so first video unmutes
+    const [userHasInteracted, setUserHasInteracted] = useState(
+        typeof window !== 'undefined'
+            ? new URL(window.location.href).searchParams.has('v')
+            : false,
+    );
+
+    // ─────────────────────────────────────────────────────────────
+    // ROOT CAUSE FIX — why clicking any card always opened video 0:
+    //
+    // mountVideoId was a plain ref. Refs don't trigger re-renders so
+    // the sync-scroll useEffect (depending on [displayVideos]) never
+    // re-fired after a card click — displayVideos was already loaded.
+    //
+    // Fix: store deeplink ID as STATE (activeDeeplinkId).
+    // The searchParams useEffect updates it on every URL change.
+    // The sync-scroll effect depends on [displayVideos, activeDeeplinkId]
+    // so it fires every time a new card is clicked.
+    // ─────────────────────────────────────────────────────────────
+    const [activeDeeplinkId, setActiveDeeplinkId] = useState<string | null>(
         typeof window !== 'undefined'
             ? new URL(window.location.href).searchParams.get('v')
-            : null
+            : null,
     );
+
+    // Ref copy for reads inside async callbacks (avoids stale closures)
+    const activeDeeplinkIdRef = useRef<string | null>(activeDeeplinkId);
+    useEffect(() => { activeDeeplinkIdRef.current = activeDeeplinkId; }, [activeDeeplinkId]);
+
     const mountCategoryId = useRef<string | null>(
         typeof window !== 'undefined'
             ? new URL(window.location.href).searchParams.get('c')
-            : null
+            : null,
     );
+
+    // Keep activeDeeplinkId in sync with URL on every navigation.
+    // This makes the 2nd, 3rd, Nth card click work correctly.
+    useEffect(() => {
+        const newVid = searchParams.get('v');
+        const newCat = searchParams.get('c');
+
+        if (newVid !== activeDeeplinkIdRef.current) {
+            hasDeeplinked.current = false;   // allow sync-scroll to fire again
+            setActiveDeeplinkId(newVid);     // state update → re-render → effect fires
+        }
+        if (newCat !== mountCategoryId.current) {
+            mountCategoryId.current = newCat;
+        }
+    }, [searchParams]);
+
     const sessionResumeId = useRef<string | null>(
         typeof window !== 'undefined'
             ? sessionStorage.getItem('jobreel_last_video')
-            : null
+            : null,
     );
 
+    // Block IO from racing back to index 0 while a programmatic scroll settles
+    const ignoreObserverUntilRef = useRef<number | null>(null);
+
+    // ── interaction detection ─────────────────────────────────────
     useEffect(() => {
-        const markInteracted = () => setUserHasInteracted(true);
-        document.addEventListener('click', markInteracted, { once: true });
-        document.addEventListener('keydown', markInteracted, { once: true });
-        document.addEventListener('scroll', markInteracted, { once: true });
+        const mark = () => setUserHasInteracted(true);
+        document.addEventListener('click',   mark, { once: true });
+        document.addEventListener('keydown', mark, { once: true });
+        document.addEventListener('scroll',  mark, { once: true });
         return () => {
-            document.removeEventListener('click', markInteracted);
-            document.removeEventListener('keydown', markInteracted);
-            document.removeEventListener('scroll', markInteracted);
+            document.removeEventListener('click',   mark);
+            document.removeEventListener('keydown', mark);
+            document.removeEventListener('scroll',  mark);
         };
     }, []);
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const hasDeeplinked = useRef(false);
-    const videoRefs = useRef<(HTMLDivElement | null)[]>([]);
+    // ── refs ──────────────────────────────────────────────────────
+    const containerRef        = useRef<HTMLDivElement>(null);
+    const hasDeeplinked       = useRef(false);
+    const videoRefs           = useRef<(HTMLDivElement | null)[]>([]);
+    const allVideosRef        = useRef<any[]>([]);
+    const hasLoadedOnce       = useRef(false);
+    const ioActiveIndexRef    = useRef(0);
+    const lastUpdatedVideoRef = useRef<string | null>(null);
 
-    // Ensure videoRefs array is scaled
     if (videoRefs.current.length < displayVideos.length) {
-        videoRefs.current = [...videoRefs.current, ...new Array(displayVideos.length - videoRefs.current.length).fill(null)];
+        videoRefs.current = [
+            ...videoRefs.current,
+            ...new Array(displayVideos.length - videoRefs.current.length).fill(null),
+        ];
     }
+
+    // ── auth changes ──────────────────────────────────────────────
     useEffect(() => {
         if (user) {
             setShowGuestWall(false);
-            // Reset deeplink flag so it doesn't re-scroll on next category change
             hasDeeplinked.current = false;
         }
     }, [user]);
 
+    // ── tab / category change — clear deeplink state ──────────────
     const isMountedRef = useRef(false);
     useEffect(() => {
-        if (!isMountedRef.current) {
-            isMountedRef.current = true;
-            return; // skip first run on mount
-        }
-        // Only runs on actual tab/category CHANGE, not on mount
-        hasDeeplinked.current = false;
-        mountVideoId.current = null;
+        if (!isMountedRef.current) { isMountedRef.current = true; return; }
+        hasDeeplinked.current   = false;
         mountCategoryId.current = null;
         sessionResumeId.current = null;
+        // Note: intentionally NOT clearing activeDeeplinkId here so that
+        // a deeplink video opened before a tab switch is still tracked
         sessionStorage.removeItem('jobreel_last_video');
     }, [activeCategory, activeTab]);
 
-    // Reset feed on signal (but NOT automatically on category change to prevent jumpiness)
+    // ── feed-reset signal from CategoryStoriesBar ─────────────────
     useEffect(() => {
-        const resetRequested = sessionStorage.getItem('feed_reset_requested');
-
-        if (resetRequested === 'true') {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[RESET] Feed reset requested by CategoryStoriesBar');
-            }
-            setActiveTab(2); // Back to For You
-            sessionStorage.removeItem('feed_reset_requested');
-
-            // Scroll to top immediately
-            const timer = setTimeout(() => {
-                videoRefs.current[0]?.scrollIntoView({ behavior: 'instant' });
-            }, 50);
-            return () => clearTimeout(timer);
-        }
+        if (sessionStorage.getItem('feed_reset_requested') !== 'true') return;
+        if (process.env.NODE_ENV === 'development') console.log('[RESET] Feed reset requested');
+        setActiveTab(2);
+        sessionStorage.removeItem('feed_reset_requested');
+        const t = setTimeout(() => videoRefs.current[0]?.scrollIntoView({ behavior: 'instant' }), 50);
+        return () => clearTimeout(t);
     }, [searchParams]);
 
-    // Ensure first video active on mount and preserve active index on list update
+    // Keep refs in sync
     const prevDisplayRef = useRef<any[]>([]);
-    const prevActiveRef = useRef<number>(0);
-
-    // List updated — just sync refs
+    const prevActiveRef  = useRef<number>(0);
     useEffect(() => {
         prevDisplayRef.current = displayVideos;
-        prevActiveRef.current = activeIndex;
+        prevActiveRef.current  = activeIndex;
     }, [displayVideos, activeIndex]);
 
-    // ── Load User Profile & Watched Videos ────────────────────────
-    // User Profile Snapshot removed to stop chain reaction
-
-    // ── Fetch Firestore Videos ────────────────────────────────────
+    // ── fetch videos ──────────────────────────────────────────────
     useEffect(() => {
         const fetchVideos = async () => {
-            // ONLY show hard spinner if we don't have videos yet or category/tab changed
-            if (displayVideos.length === 0) {
-                setVideosLoading(true);
-            }
+            if (displayVideos.length === 0) setVideosLoading(true);
             hasLoadedOnce.current = false;
-            const isForYou = activeTab === 2;
 
-            // Clear resume on intentional tab/category change
-            if (hasLoadedOnce.current) {
-                sessionResumeId.current = null;
-                sessionStorage.removeItem('jobreel_last_video');
-            }
+            const isForYou    = activeTab === 2;
+            const deeplinkVid = activeDeeplinkIdRef.current;
+            const deeplinkCat = mountCategoryId.current;
 
-            let q;
-            if (isForYou && !mountVideoId.current) {
-                // Pure For You — no deep link active
+            let q: any;
+            if (isForYou && !deeplinkVid) {
                 q = query(
                     collection(db, 'videos'),
                     where('is_live', '==', true),
                     where('admin_status', '==', 'approved'),
                     orderBy('createdAt', 'desc'),
-                    limit(50)
+                    limit(50),
                 );
-            } else if (isForYou && mountVideoId.current && mountCategoryId.current) {
-                // Deep link from Explore — fetch that category so clicked video is in results
+            } else if (isForYou && deeplinkVid && deeplinkCat) {
                 q = query(
                     collection(db, 'videos'),
                     where('is_live', '==', true),
                     where('admin_status', '==', 'approved'),
-                    where('category', '==', mountCategoryId.current),
+                    where('category', '==', deeplinkCat),
                     orderBy('createdAt', 'desc'),
-                    limit(30)
+                    limit(30),
                 );
-            } else if (isForYou && mountVideoId.current && !mountCategoryId.current) {
-                // Deep link but no category — fetch all
+            } else if (isForYou && deeplinkVid && !deeplinkCat) {
                 q = query(
                     collection(db, 'videos'),
                     where('is_live', '==', true),
                     where('admin_status', '==', 'approved'),
                     orderBy('createdAt', 'desc'),
-                    limit(50)
+                    limit(50),
                 );
-            } else if (!isForYou) {
-                const qCategory = (mountCategoryId.current && mountVideoId.current)
-                    ? mountCategoryId.current
-                    : activeCategory;
-
+            } else {
+                const qCategory = deeplinkCat && deeplinkVid ? deeplinkCat : activeCategory;
                 q = query(
                     collection(db, 'videos'),
                     where('is_live', '==', true),
                     where('admin_status', '==', 'approved'),
                     where('category', '==', qCategory),
                     orderBy('createdAt', 'desc'),
-                    limit(30)
+                    limit(30),
                 );
             }
 
             const getTabFilter = (tabIndex: number) => {
-                if (tabIndex === 2) return null; // 'For You' — no role filter
+                if (tabIndex === 2) return null;
                 if (activeCategory === 'jobs') return tabIndex === 0 ? 'seeker' : 'provider';
                 return tabIndex === 0 ? 'provider' : 'seeker';
             };
 
             try {
-                const snapshot = await getDocs(q);
+                const snapshot   = await getDocs(q);
                 const roleFilter = getTabFilter(activeTab);
-                const hiddenIds = JSON.parse(localStorage.getItem('jobreel_hidden_videos') || '[]');
+                const hiddenIds  = JSON.parse(localStorage.getItem('jobreel_hidden_videos') || '[]');
+
                 let videos = snapshot.docs
                     .map(d => ({ id: d.id, ...(d.data() as object) } as any))
                     .filter(d => {
                         if (hiddenIds.includes(d.id)) return false;
-                        const matchesCategory = isForYou || d.category === (mountCategoryId.current || activeCategory);
-                        const matchesRole = !roleFilter || d.userRole === roleFilter;
-                        const url = d.cloudinaryUrl;
-                        const isValidCloudinary = url && url.includes('cloudinary.com') && !url.includes('youtube.com');
-                        return d.admin_status === 'approved' && matchesCategory && matchesRole && isValidCloudinary;
+                        const matchesCategory = isForYou || d.category === (deeplinkCat || activeCategory);
+                        const matchesRole     = !roleFilter || d.userRole === roleFilter;
+                        const url             = d.cloudinaryUrl;
+                        const validCloudinary = url && url.includes('cloudinary.com') && !url.includes('youtube.com');
+                        return d.admin_status === 'approved' && matchesCategory && matchesRole && validCloudinary;
                     })
                     .map(d => ({
                         id: d.id,
                         isPlaceholder: false,
                         cloudinaryUrl: d.cloudinaryUrl,
-                        thumbnailUrl: d.thumbnailUrl || d.userPhoto || '',
-                        ...d
+                        thumbnailUrl:  d.thumbnailUrl || d.userPhoto || '',
+                        ...d,
                     }));
 
-                // FIX 3: For You priority sort
+                // Active-category videos first, rest shuffled
                 const priority = videos.filter(v => v.category === activeCategory);
-                const rest = videos.filter(v => v.category !== activeCategory);
+                const rest      = videos.filter(v => v.category !== activeCategory);
                 videos = priority.length > 0
                     ? [...priority, ...shuffleArray(rest)]
                     : shuffleArray(videos);
 
-                // FIX 4: New videos first, seen videos later
+                // Unseen before seen
                 if (user?.uid) {
-                    const watchedIds: string[] = user.watchedVideos || [];
-                    const unseen = videos.filter(v => !watchedIds.includes(v.id));
-                    const seen = videos.filter(v => watchedIds.includes(v.id));
+                    const watchedIds = (user.watchedVideos as string[]) || [];
+                    const unseen     = videos.filter(v => !watchedIds.includes(v.id));
+                    const seen       = videos.filter(v =>  watchedIds.includes(v.id));
                     videos = [...unseen, ...seen];
                 }
 
                 setFirestoreVideos(videos);
                 allVideosRef.current = videos;
 
-                // Problem 1 Fix: Only set displayVideos if it's the first load for this query
                 if (!hasLoadedOnce.current) {
                     setDisplayVideos(videos);
                     hasLoadedOnce.current = true;
                 }
 
-                // Session resume — scroll to last watched video on refresh
-                if (!mountVideoId.current && sessionResumeId.current && !hasDeeplinked.current) {
+                // Session resume
+                if (!deeplinkVid && sessionResumeId.current && !hasDeeplinked.current) {
                     const resumeIdx = videos.findIndex(v => v.id === sessionResumeId.current);
                     if (resumeIdx > 0) {
                         hasDeeplinked.current = true;
@@ -274,7 +296,7 @@ export function VideoFeed() {
                 setVideosLoading(false);
             } catch (error: any) {
                 if (process.env.NODE_ENV === 'development') {
-                    console.warn('[VideoFeed Videos] Fetch error:', error.message);
+                    console.warn('[VideoFeed] Fetch error:', error.message);
                 }
                 setVideosLoading(false);
             }
@@ -282,67 +304,51 @@ export function VideoFeed() {
 
         fetchVideos();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeCategory, activeTab]); // Problem 1 & 3 Fix: Remove URL params from deps
+    }, [activeCategory, activeTab]);
 
-
-
-
-    // Track last updated video ID to prevent unnecessary URL updates
-    const lastUpdatedVideoRef = useRef<string | null>(null);
-
-    // ── Intersection Observer for Active Index & URL ───────────────
-    // FIX 5: IntersectionObserver is the sole source of truth for activeIndex.
-    // The scroll-event fallback is kept only in development for DevTools emulation.
-    // A `ioActiveIndexRef` is used so the scroll fallback can read the latest value
-    // without being in the observer's closure (avoids double-firing in production).
-    const ioActiveIndexRef = useRef(0); // FIX 5: mirrors activeIndex for scroll fallback
-
+    // ── IntersectionObserver ──────────────────────────────────────
     useEffect(() => {
         if (displayVideos.length === 0) return;
-
         const observers: IntersectionObserver[] = [];
-        const refs = videoRefs.current;
 
-        refs.forEach((ref, index) => {
+        videoRefs.current.forEach((ref, index) => {
             if (!ref) return;
             const observer = new IntersectionObserver(
                 (entries) => {
+                    const now = Date.now();
+                    if (ignoreObserverUntilRef.current && now < ignoreObserverUntilRef.current) return;
+
                     entries.forEach(entry => {
-                        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                            const currentVideo = displayVideos[index];
-                            if (!currentVideo || currentVideo.isPlaceholder) return;
+                        if (!entry.isIntersecting || entry.intersectionRatio < 0.5) return;
 
-                            // FIX 5: Update the ref so scroll fallback stays in sync
-                            ioActiveIndexRef.current = index;
-                            setActiveIndex(index);
-                            sessionStorage.setItem('jobreel_last_video', currentVideo.id);
+                        const currentVideo = displayVideos[index];
+                        if (!currentVideo || currentVideo.isPlaceholder) return;
 
-                            // Update URL only when video changes (not on every scroll)
-                            if (currentVideo.id !== lastUpdatedVideoRef.current && typeof window !== 'undefined') {
-                                lastUpdatedVideoRef.current = currentVideo.id;
-                                const url = new URL(window.location.href);
-                                if (url.searchParams.get('v') !== currentVideo.id) {
-                                    url.searchParams.set('v', currentVideo.id);
-                                    window.history.replaceState(null, '', url.pathname + url.search);
-                                }
+                        ioActiveIndexRef.current = index;
+                        setActiveIndex(index);
+                        sessionStorage.setItem('jobreel_last_video', currentVideo.id);
+
+                        if (currentVideo.id !== lastUpdatedVideoRef.current && typeof window !== 'undefined') {
+                            lastUpdatedVideoRef.current = currentVideo.id;
+                            const url = new URL(window.location.href);
+                            if (url.searchParams.get('v') !== currentVideo.id) {
+                                url.searchParams.set('v', currentVideo.id);
+                                window.history.replaceState(null, '', url.pathname + url.search);
                             }
+                        }
 
-                            // Guest Wall Logic — only trigger if user is completely unauthenticated
-                            if (!user && !firebaseUser && !loading) {
-                                const watchedCount = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
-                                localStorage.setItem('jobreel_videos_watched', String(watchedCount));
-                                if (watchedCount >= 3) {
-                                    setShowGuestWall(true);
-                                }
-                            }
+                        if (!user && !firebaseUser && !loading) {
+                            const count = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
+                            localStorage.setItem('jobreel_videos_watched', String(count));
+                            if (count >= 3) setShowGuestWall(true);
                         }
                     });
                 },
                 {
                     root: containerRef.current,
-                    threshold: 0.8,
-                    rootMargin: '0px',
-                }
+                    threshold: 0.6,
+                    rootMargin: '-10% 0px',
+                },
             );
             observer.observe(ref);
             observers.push(observer);
@@ -351,44 +357,48 @@ export function VideoFeed() {
         return () => observers.forEach(o => o.disconnect());
     }, [displayVideos, user, loading]);
 
-    // FIX 5: Scroll fallback — only active in development (DevTools emulation).
-    // In production it is a no-op so there is no double-firing with IntersectionObserver.
+    // Development-only scroll fallback
     useEffect(() => {
-        if (process.env.NODE_ENV !== 'development') return; // FIX 5: production no-op
-
+        if (process.env.NODE_ENV !== 'development') return;
         const container = containerRef.current;
         if (!container || displayVideos.length === 0) return;
 
         const handleScroll = () => {
-            const containerHeight = container.clientHeight;
-            if (containerHeight === 0) return;
-
-            const scrollTop = container.scrollTop;
-            const newIndex = Math.round(scrollTop / containerHeight);
-
-            // FIX 5: Read from ref (set by IO) to avoid stale closure fighting IO
-            if (newIndex !== ioActiveIndexRef.current && newIndex >= 0 && newIndex < displayVideos.length) {
-                ioActiveIndexRef.current = newIndex;
-                setActiveIndex(newIndex);
+            const now = Date.now();
+            if (ignoreObserverUntilRef.current && now < ignoreObserverUntilRef.current) return;
+            const h = container.clientHeight;
+            if (!h) return;
+            const idx = Math.round(container.scrollTop / h);
+            if (idx !== ioActiveIndexRef.current && idx >= 0 && idx < displayVideos.length) {
+                ioActiveIndexRef.current = idx;
+                setActiveIndex(idx);
             }
         };
 
         container.addEventListener('scroll', handleScroll, { passive: true });
         return () => container.removeEventListener('scroll', handleScroll);
-    }, [displayVideos.length]); // FIX 5: removed activeIndex dep — read from ref instead
+    }, [displayVideos.length]);
 
-    // ── Keyboard Navigation ───────────────────────────────────────
+    // ── keyboard navigation (Mubeen's improved version) ───────────
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'ArrowDown') {
+                e.preventDefault();
                 const next = activeIndex + 1;
                 if (next < displayVideos.length) {
+                    ignoreObserverUntilRef.current = Date.now() + 800;
                     videoRefs.current[next]?.scrollIntoView({ behavior: 'instant' });
+                    setActiveIndex(next);
+                    ioActiveIndexRef.current = next;
                 }
             } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
                 const prev = activeIndex - 1;
                 if (prev >= 0) {
+                    ignoreObserverUntilRef.current = Date.now() + 800;
                     videoRefs.current[prev]?.scrollIntoView({ behavior: 'instant' });
+                    setActiveIndex(prev);
+                    ioActiveIndexRef.current = prev;
                 }
             }
         };
@@ -396,73 +406,73 @@ export function VideoFeed() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [activeIndex, displayVideos.length]);
 
-    // ── Deep Linking Support (?v=videoId&c=categoryId) ────────────
-    const { setActiveCategory } = useCategory();
-
-    // 1. Sync Category if needed
+    // ── deeplink: sync category ───────────────────────────────────
     useEffect(() => {
-        if (targetCategoryId && targetCategoryId !== activeCategory) {
-            // Ensure it's a valid category
-            const { CATEGORY_CONFIG } = require('@/lib/categories');
-            if (CATEGORY_CONFIG && Object.keys(CATEGORY_CONFIG).includes(targetCategoryId)) {
-                setActiveCategory(targetCategoryId as any);
-            }
+        if (!targetCategoryId || targetCategoryId === activeCategory) return;
+        const { CATEGORY_CONFIG } = require('@/lib/categories');
+        if (CATEGORY_CONFIG && Object.keys(CATEGORY_CONFIG).includes(targetCategoryId)) {
+            setActiveCategory(targetCategoryId as any);
         }
     }, [targetCategoryId, activeCategory, setActiveCategory]);
 
-    // 2. Sync Video Index
+    // ── deeplink: scroll to correct video ─────────────────────────
+    // Depends on BOTH [displayVideos, activeDeeplinkId]:
+    //   • when video list loads        → displayVideos changes → fires
+    //   • when user clicks a new card  → activeDeeplinkId state changes → fires
     useEffect(() => {
         if (process.env.NODE_ENV === 'development') {
-            console.log('[SCROLL] Sync Video Index triggered →', {
-                mountVideoId: mountVideoId.current,
-                displayVideosCount: displayVideos.length,
-                foundAtIndex: displayVideos.findIndex(v => v.id === mountVideoId.current),
-                currentActiveIndex: activeIndex
+            console.log('[SCROLL] sync effect →', {
+                activeDeeplinkId,
+                count: displayVideos.length,
+                foundAt: displayVideos.findIndex(v => v.id === activeDeeplinkId),
+                hasDeeplinked: hasDeeplinked.current,
             });
         }
 
-        if (!mountVideoId.current || displayVideos.length === 0) return;
+        if (!activeDeeplinkId || displayVideos.length === 0) return;
         if (hasDeeplinked.current) return;
 
-        const idx = displayVideos.findIndex(v => v.id === mountVideoId.current);
+        const idx = displayVideos.findIndex(v => v.id === activeDeeplinkId);
 
         if (idx !== -1) {
-            hasDeeplinked.current = true;
-            // Video found in list — scroll to it
+            hasDeeplinked.current          = true;
+            ignoreObserverUntilRef.current = Date.now() + 700;
+
             if (idx !== activeIndex) {
+                // Scroll first, then set index (Mubeen's approach — no setTimeout needed)
+                videoRefs.current[idx]?.scrollIntoView({ behavior: 'instant' });
                 setActiveIndex(idx);
-                setTimeout(() => {
-                    videoRefs.current[idx]?.scrollIntoView({ behavior: 'instant' });
-                }, 100);
+                ioActiveIndexRef.current = idx;
             }
         } else {
-            // Video NOT in list (e.g. has no category field, was excluded by Firestore query)
-            // Fetch it directly by document ID and prepend it to the feed
+            // Video not in list — fetch by ID and prepend
             const fetchAndPrepend = async () => {
                 try {
-                    const docSnap = await getDoc(doc(db, 'videos', mountVideoId.current!));
-                    if (docSnap.exists()) {
-                        const data = docSnap.data() as any;
-                        const missingVideo = {
-                            id: docSnap.id,
-                            isPlaceholder: false,
-                            cloudinaryUrl: data.cloudinaryUrl,
-                            thumbnailUrl: data.thumbnailUrl || data.userPhoto || '',
-                            ...data,
-                        };
-                        // Prepend the missing video so it becomes index 0
-                        setDisplayVideos(prev => {
-                            // Avoid duplicates in case of race condition
-                            if (prev.some(v => v.id === mountVideoId.current)) return prev;
-                            return [missingVideo, ...prev];
-                        });
-                        hasDeeplinked.current = true;
-                        // Scroll to index 0 after prepend
-                        setTimeout(() => {
-                            setActiveIndex(0);
-                            videoRefs.current[0]?.scrollIntoView({ behavior: 'instant' });
-                        }, 150);
-                    }
+                    const docSnap = await getDoc(doc(db, 'videos', activeDeeplinkId));
+                    if (!docSnap.exists()) return;
+
+                    const data = docSnap.data() as any;
+                    const missingVideo = {
+                        id: docSnap.id,
+                        isPlaceholder: false,
+                        cloudinaryUrl: data.cloudinaryUrl,
+                        thumbnailUrl:  data.thumbnailUrl || data.userPhoto || '',
+                        ...data,
+                    };
+
+                    setDisplayVideos(prev => {
+                        if (prev.some(v => v.id === activeDeeplinkId)) return prev;
+                        return [missingVideo, ...prev];
+                    });
+
+                    hasDeeplinked.current          = true;
+                    ignoreObserverUntilRef.current = Date.now() + 700;
+
+                    setTimeout(() => {
+                        setActiveIndex(0);
+                        ioActiveIndexRef.current = 0;
+                        videoRefs.current[0]?.scrollIntoView({ behavior: 'instant' });
+                    }, 150);
                 } catch (err) {
                     if (process.env.NODE_ENV === 'development') {
                         console.warn('[DEEPLINK] Failed to fetch missing video:', err);
@@ -471,43 +481,28 @@ export function VideoFeed() {
             };
             fetchAndPrepend();
         }
-    }, [displayVideos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [displayVideos, activeDeeplinkId]); // ← activeDeeplinkId is the real fix
 
-    // ── Stories Bar Visibility ────────────────────────────────────
-    useEffect(() => {
-        setShowStoriesBar(activeIndex === 0);
-    }, [activeIndex]);
+    // ── stories bar ───────────────────────────────────────────────
+    useEffect(() => { setShowStoriesBar(activeIndex === 0); }, [activeIndex]);
 
-    // ── Watched video tracking — SAFE version: ──
+    // ── view tracking ─────────────────────────────────────────────
     const markWatched = useCallback(async (videoId: string) => {
-        // Rule 1: guests never write:
         if (!user?.uid) return;
-
-        // Rule 2: silent failure — never crash feed:
-        try {
-            await updateDoc(doc(db, 'videos', videoId), {
-                views: increment(1)
-            });
-            // ← NO watchedVideos write here
-        } catch (_) {
-            // Silently ignore — permissions, offline, etc.
-        }
+        try { await updateDoc(doc(db, 'videos', videoId), { views: increment(1) }); }
+        catch (_) { /* silent */ }
     }, [user?.uid]);
 
-    // ── View Tracking Timer ────────────────
     useEffect(() => {
         if (!user?.uid || displayVideos.length === 0) return;
-        const currentVideo = displayVideos[activeIndex];
-        if (!currentVideo || currentVideo.isPlaceholder) return;
-
-        const timer = setTimeout(() => {
-            markWatched(currentVideo.id);
-        }, 3000);
-
-        return () => clearTimeout(timer);
+        const video = displayVideos[activeIndex];
+        if (!video || video.isPlaceholder) return;
+        const t = setTimeout(() => markWatched(video.id), 3000);
+        return () => clearTimeout(t);
     }, [activeIndex, displayVideos, user, markWatched]);
 
-    // Fix D: If user logs in while GuestWall is showing — hide it immediately
+    // ── guest wall recovery ───────────────────────────────────────
     useEffect(() => {
         if (firebaseUser && showGuestWall) {
             if (process.env.NODE_ENV === 'development') {
@@ -518,21 +513,18 @@ export function VideoFeed() {
         }
     }, [firebaseUser, showGuestWall]);
 
+    // ── video state helper ────────────────────────────────────────
     const getVideoState = (index: number) => {
-        const distance = index - activeIndex;
-        if (distance === 0) return { isActive: true, isAdjacent: false };
-        if (distance >= -PRELOAD_BEHIND && distance <= PRELOAD_AHEAD) {
-            return { isActive: false, isAdjacent: true };
-        }
+        const d = index - activeIndex;
+        if (d === 0) return { isActive: true, isAdjacent: false };
+        if (d >= -PRELOAD_BEHIND && d <= PRELOAD_AHEAD) return { isActive: false, isAdjacent: true };
         return { isActive: false, isAdjacent: false };
     };
 
-    // Problem 2 Fix: Memoize video list to prevent remounting/animation replay
-    // Strictly following Rules of Hooks - must be at top level
+    // ── video slides ──────────────────────────────────────────────
     const renderedVideos = useMemo(() => {
         return displayVideos.map((video, index) => {
             const { isActive, isAdjacent } = getVideoState(index);
-            const isVisible = Math.abs(index - activeIndex) <= 3;
 
             return (
                 <div
@@ -553,82 +545,78 @@ export function VideoFeed() {
                         paddingBottom: '0px',
                     }}
                 >
-                    {isVisible ? (
-                        <>
-                            {/* BLACK SPACE above video — absorbs all extra height */}
+                    <div style={{
+                        position: 'relative',
+                        width: '100%',
+                        flex: 1,
+                        overflow: 'hidden',
+                        background: '#000',
+                        flexShrink: 0,
+                    }}>
+                        <ReelPlayer
+                            cloudinaryUrl={video.cloudinaryUrl}
+                            thumbnailUrl={video.thumbnailUrl}
+                            isActive={isActive}
+                            isAdjacent={isAdjacent}
+                            videoId={video.id}
+                            userHasInteracted={userHasInteracted}
+                            isMobileDevice={false}
+                        />
+                    </div>
 
-                            {/* VIDEO BOX — 3:4 ratio */}
-                            <div style={{
-                                position: 'relative',
-                                width: '100%',
-                                flex: 1,
-                                overflow: 'hidden',
-                                background: '#000',
-                                flexShrink: 0,
-                            }}>
-                                <ReelPlayer
-                                    cloudinaryUrl={video.cloudinaryUrl}
-                                    thumbnailUrl={video.thumbnailUrl}
-                                    isActive={isActive}
-                                    isAdjacent={isAdjacent}
-                                    videoId={video.id}
-                                    isMuted={isMuted}
-                                    userHasInteracted={userHasInteracted}
-                                />
-
-                                {/* Avatar + Like + Save — moved to fixed column */}
-                            </div>
-
-                            {/* End of feed label */}
-                            {index === displayVideos.length - 1 && (
-                                <div style={{
-                                    position: 'absolute', bottom: 'calc(180px + env(safe-area-inset-bottom, 0px))', left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    background: 'rgba(0,0,0,0.6)', color: '#fff',
-                                    padding: '8px 16px', borderRadius: '20px',
-                                    fontSize: '13px', fontWeight: 600,
-                                    whiteSpace: 'nowrap', zIndex: 20, pointerEvents: 'none',
-                                }}>
-                                    You're all caught up ✓
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
+                    {index === displayVideos.length - 1 && (
+                        <div style={{
+                            position: 'absolute',
+                            bottom: 'calc(180px + env(safe-area-inset-bottom, 0px))',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: 'rgba(0,0,0,0.6)',
+                            color: '#fff',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            zIndex: 20,
+                            pointerEvents: 'none',
+                        }}>
+                            You&apos;re all caught up ✓
+                        </div>
                     )}
                 </div>
             );
         });
     }, [displayVideos, activeIndex, isMuted, userHasInteracted, activeCategory, activeRole, router]);
 
+    // ── render ────────────────────────────────────────────────────
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000', display: 'flex', justifyContent: 'center' }}>
-
-            {/* Desktop UI Arrows (Side) */}
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: '#000', display: 'flex', justifyContent: 'center',
+        }}>
+            {/* Desktop nav arrows */}
             <div className="hidden md:flex flex-col justify-center gap-4 fixed left-8 z-50">
-                <button onClick={() => videoRefs.current[activeIndex - 1]?.scrollIntoView({ behavior: 'instant' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↑</button>
-                <button onClick={() => videoRefs.current[activeIndex + 1]?.scrollIntoView({ behavior: 'instant' })} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md">↓</button>
+                <button
+                    onClick={() => videoRefs.current[activeIndex - 1]?.scrollIntoView({ behavior: 'instant' })}
+                    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md"
+                >↑</button>
+                <button
+                    onClick={() => videoRefs.current[activeIndex + 1]?.scrollIntoView({ behavior: 'instant' })}
+                    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md"
+                >↓</button>
             </div>
 
             <div style={{
-                width: '100%',
-                maxWidth: '480px', // Constrain on desktop for better reel experience
-                height: '100dvh',
-                position: 'absolute',
-                overflow: 'hidden',
-                boxShadow: '0 0 100px rgba(0,0,0,0.5)', // Add depth on desktop
+                width: '100%', maxWidth: '480px', height: '100dvh',
+                position: 'absolute', overflow: 'hidden',
+                boxShadow: '0 0 100px rgba(0,0,0,0.5)',
             }}>
-
-                {/* Overlay layer — floats above video */}
+                {/* Top overlay: tabs + stories bar */}
                 <div style={{
-                    position: 'absolute',
-                    top: 0, left: 0, right: 0,
-                    zIndex: 100,
-                    // Gradient fades to transparent so video visible below stories
+                    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
                     background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 30%, transparent 100%)',
-                    pointerEvents: 'none',    // clicks pass through to video
+                    pointerEvents: 'none',
                 }}>
-                    {/* Give pointer events back to interactive elements */}
                     <div style={{ pointerEvents: 'all' }}>
                         <div className="flex items-center p-2 pt-4">
                             <FeedTabs activeTab={activeTab} onChange={setActiveTab} />
@@ -640,27 +628,28 @@ export function VideoFeed() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     style={{
-                                        background: 'rgba(0, 0, 0, 0.6)',
+                                        background: 'rgba(0,0,0,0.6)',
                                         backdropFilter: 'blur(8px)',
                                         paddingBottom: 8,
                                     }}
                                 >
-                                    <CategoryStoriesBar onCategoryChange={() => { }} />
+                                    <CategoryStoriesBar onCategoryChange={() => {}} />
                                 </motion.div>
                             )}
                         </AnimatePresence>
                     </div>
                 </div>
 
+                {/* Scrollable feed */}
                 <div
                     ref={containerRef}
                     className="feed-container no-scrollbar"
                     style={{
                         height: '100dvh',
-                        minHeight: '-webkit-fill-available', // iOS Safari fix
+                        minHeight: '-webkit-fill-available',
                         overflowY: 'scroll',
                         scrollSnapType: 'y mandatory',
-                        scrollBehavior: 'smooth',
+                        scrollBehavior: 'auto',          // Mubeen's value
                         WebkitOverflowScrolling: 'touch',
                         scrollbarWidth: 'none',
                         msOverflowStyle: 'none',
@@ -669,41 +658,28 @@ export function VideoFeed() {
                     }}
                 >
                     {videosLoading ? (
-                        /* ── Loading spinner while Firestore fetches ── */
                         <div style={{
-                            height: '100dvh',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: '#000',
+                            height: '100dvh', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', background: '#000',
                         }}>
                             <div style={{
                                 width: 36, height: 36, borderRadius: '50%',
-                                border: '3px solid #333',
-                                borderTop: '3px solid #FF0069',
-                                animation: 'spin 0.75s linear infinite'
+                                border: '3px solid #333', borderTop: '3px solid #FF0069',
+                                animation: 'spin 0.75s linear infinite',
                             }} />
-                            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+                            <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
                         </div>
                     ) : displayVideos.length === 0 ? (
-                        /* ── Empty state after fetch resolves with 0 results ── */
                         <div style={{
-                            height: '100dvh',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '40px',
-                            textAlign: 'center',
-                            background: '#000',
-                            color: '#fff'
+                            height: '100dvh', display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center',
+                            padding: '40px', textAlign: 'center', background: '#000', color: '#fff',
                         }}>
                             <div style={{
                                 width: 80, height: 80, borderRadius: '50%',
                                 background: 'rgba(255,255,255,0.05)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                marginBottom: 24,
-                                border: '1px solid rgba(255,255,255,0.1)'
+                                marginBottom: 24, border: '1px solid rgba(255,255,255,0.1)',
                             }}>
                                 <span style={{ fontSize: 32 }}>📹</span>
                             </div>
@@ -714,56 +690,46 @@ export function VideoFeed() {
                                 Be the first one to upload a video in this category.
                             </p>
                         </div>
-                    ) : (
-                        renderedVideos
-                    )}
+                    ) : renderedVideos}
                 </div>
 
-                {/* ── FIXED INFO BAR — always above bottom nav, never scrolls ── */}
+                {/* Bottom-left: video info */}
                 {displayVideos[activeIndex] && !displayVideos[activeIndex].isPlaceholder && (
                     <div style={{
-                        position: 'fixed',
-                        left: 0,
-                        right: 0,
+                        position: 'fixed', left: 0, right: 0,
                         bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-                        zIndex: 200,
-                        maxWidth: '480px',
-                        margin: '0 auto',
+                        zIndex: 200, maxWidth: '480px', margin: '0 auto',
                         background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
-                        display: 'flex',
-                        alignItems: 'flex-end',
-                        justifyContent: 'space-between',
-                        paddingBottom: '10px',
-                        pointerEvents: 'none',
+                        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+                        paddingBottom: '10px', pointerEvents: 'none',
                     }}>
-                        {/* Left: VideoOverlay */}
                         <div style={{ flex: 1, minWidth: 0, pointerEvents: 'auto' }}>
                             <VideoOverlay data={displayVideos[activeIndex]} />
                         </div>
                     </div>
                 )}
 
-                {/* ── TOP 3 BUTTONS: Avatar + Like + Save (above info bar) ── */}
+                {/* Right side: avatar + like + save */}
                 {displayVideos[activeIndex] && !displayVideos[activeIndex].isPlaceholder && (
                     <div style={{
-                        position: 'fixed',
-                        right: 10,
+                        position: 'fixed', right: 10,
                         bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
-                        zIndex: 201,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 20,
+                        zIndex: 201, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 20,
                     }}>
-                        {/* Avatar */}
                         <div
-                            onClick={() => router.push(`/profile/${displayVideos[activeIndex].userRole || 'user'}/${displayVideos[activeIndex].userId}`)}
+                            onClick={() => router.push(
+                                `/profile/${displayVideos[activeIndex].userRole || 'user'}/${displayVideos[activeIndex].userId}`
+                            )}
                             style={{ position: 'relative', cursor: 'pointer' }}
                         >
                             <img
                                 src={displayVideos[activeIndex].userPhoto || '/default-avatar.svg'}
                                 alt="profile"
-                                style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid #fff', objectFit: 'cover' }}
+                                style={{
+                                    width: 44, height: 44, borderRadius: '50%',
+                                    border: '2px solid #fff', objectFit: 'cover',
+                                }}
                             />
                             <div style={{
                                 position: 'absolute', bottom: -6, left: '50%',
@@ -774,16 +740,12 @@ export function VideoFeed() {
                                 fontSize: 12, color: '#fff', fontWeight: 700,
                             }}>+</div>
                         </div>
-
-                        {/* Like */}
                         <ActionButtons
                             mode="like-only"
                             videoId={displayVideos[activeIndex].id}
                             videoUserId={displayVideos[activeIndex].userId}
                             likes={displayVideos[activeIndex].likes || 0}
                         />
-
-                        {/* Save */}
                         <ActionButtons
                             mode="save-only"
                             videoId={displayVideos[activeIndex].id}
@@ -793,26 +755,19 @@ export function VideoFeed() {
                     </div>
                 )}
 
-                {/* ── BOTTOM 2 BUTTONS: Share + Three Dots (right side of info bar zone) ── */}
+                {/* Right side: share + dots */}
                 {displayVideos[activeIndex] && !displayVideos[activeIndex].isPlaceholder && (
                     <div style={{
-                        position: 'fixed',
-                        right: 10,
+                        position: 'fixed', right: 10,
                         bottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 20px)',
-                        zIndex: 201,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 20,
+                        zIndex: 201, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 20,
                     }}>
-                        {/* Share */}
                         <ActionButtons
                             mode="share-only"
                             videoId={displayVideos[activeIndex].id}
                             shares={displayVideos[activeIndex].shares || 0}
                         />
-
-                        {/* Three Dots */}
                         <ActionButtons
                             mode="dots-only"
                             videoId={displayVideos[activeIndex].id}
@@ -828,12 +783,15 @@ export function VideoFeed() {
                 )}
             </div>
 
-            {/* Only show wall if user is NOT logged in (both profile and firebase auth) */}
+            {/* Guest wall */}
             {!user && !firebaseUser && showGuestWall && (
-                <GuestWall isVisible={true} onContinue={() => {
-                    localStorage.removeItem('jobreel_videos_watched');
-                    setShowGuestWall(false);
-                }} />
+                <GuestWall
+                    isVisible={true}
+                    onContinue={() => {
+                        localStorage.removeItem('jobreel_videos_watched');
+                        setShowGuestWall(false);
+                    }}
+                />
             )}
         </div>
     );

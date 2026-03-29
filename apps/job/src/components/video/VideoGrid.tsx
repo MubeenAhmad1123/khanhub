@@ -1,3 +1,4 @@
+//VideoGrid.tsx
 import VideoCard from './VideoCard';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ export default function VideoGrid({ items, className }: VideoGridProps) {
                 <VideoCard
                     key={video.id + idx}
                     seekerId={video.seekerId}
+                    videoId={video.id}
                     role={video.role}
                     industry={video.industry}
                     subcategory={video.subcategory}
