@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createspimsUserServer } from '@/app/departments/spims/actions/createspimsUser';
+import { createSpimsUser } from '../../actions/createSpimsUser';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 

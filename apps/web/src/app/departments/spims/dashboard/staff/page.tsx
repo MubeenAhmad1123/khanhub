@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { usespimsSession } from '@/hooks/spims/usespimsSession';
+import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import {
   collection, query, where, getDocs, addDoc,
   updateDoc, doc, getDoc, Timestamp
@@ -16,7 +16,7 @@ import {
 
 export default function StaffSelfPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = usespimsSession();
+  const { session: user, loading: sessionLoading } = useSpimsSession();
 
   const [staffProfile, setStaffProfile] = useState<StaffMember | null>(null);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);

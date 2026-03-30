@@ -2,13 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usespimsSession } from '@/hooks/spims/usespimsSession';
+import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import { Loader2, User, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function FamilyDashboardIndex() {
   const router = useRouter();
-  const { session, loading } = usespimsSession();
+  const { session, loading } = useSpimsSession();
 
   useEffect(() => {
     if (!loading) {

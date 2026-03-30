@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { usespimsSession } from '@/hooks/spims/usespimsSession';
+import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { overrideAttendance } from '@/lib/spims/attendance';
-import { createStaffMemberServer } from '../../../actions/createspimsUser';
+import { createStaffMemberServer } from '../../actions/createSpimsUser';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { StaffMember, AttendanceRecord, StaffDuty } from '@/types/spims';
 import {
