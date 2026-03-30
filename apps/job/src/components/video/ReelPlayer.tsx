@@ -1,5 +1,5 @@
 'use client';
-
+//ReelPlayer.tsx
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import Hls from 'hls.js';
 import { getHlsUrl, getOptimizedVideoUrl } from '@/lib/services/cloudinary';
@@ -111,18 +111,24 @@ const ReelPlayer = memo(function ReelPlayer({
         const isCurrentSession = () => mySession === activeSessionRef.current;
 
         if (!isActive) {
-            // Silence and stop synchronously — zero window for sound to leak
             video.muted = true;
             setIsMuted(true);
             try { video.pause(); } catch (_) { }
             setIsPaused(false);
 
-            // Always reset to start (TikTok/Shorts behaviour)
             video.currentTime = 0;
 
             if (hlsRef.current) hlsRef.current.stopLoad();
             if (!isAdjacent) setIsBuffering(true);
             userPausedRef.current = false;
+
+            Promise.resolve().then(() => {
+                const vid = videoRef.current;
+                if (!vid) return;
+                vid.muted = true;
+                try { vid.pause(); } catch (_) { }
+            });
+
             return;
         }
 
@@ -150,39 +156,50 @@ const ReelPlayer = memo(function ReelPlayer({
                     });
                 }
 
-                if (!isCurrentSession() || userPausedRef.current) return;
+                        if (!isCurrentSession() || userPausedRef.current) return;
 
-                await vid.play();
+        await vid.play();
 
-                // Re-check after play() resolves — this is the main race condition
-                if (!isCurrentSession()) {
-                    vid.muted = true;
-                    vid.pause();
-                    return;
-                }
+        if (!isCurrentSession()) {
+          vid.muted = true;
+          try { vid.pause(); } catch (_) {}
+          return;
+        }
 
-                // Only unmute when still the active session and user has interacted
-                if (userHasInteracted && isCurrentSession()) {
-                    vid.muted = false;
-                    setIsMuted(false);
-                }
+        // Agar user ne pause kar diya ya video paused hai to force mute
+        if (userPausedRef.current || vid.paused) {
+          vid.muted = true;
+          setIsMuted(true);
+          return;
+        }
 
-                setIsPaused(false);
+        // Sirf tabhi unmute jab:
+        //  - yahi current session ho
+        //  - userHasInteracted true ho
+        if (userHasInteracted && isCurrentSession()) {
+          vid.muted = false;
+          setIsMuted(false);
+        } else {
+          vid.muted = true;
+          setIsMuted(true);
+        }
 
-            } catch (err: any) {
-                if (!isCurrentSession()) return;
+        setIsPaused(false);
 
-                if (err?.name === 'AbortError') return;
+      } catch (err: any) {
+        if (!isCurrentSession()) return;
 
-                // Retry up to 2 times on iOS NotAllowedError / generic failure
-                if (retryCount < 2) {
-                    setTimeout(() => attemptPlay(retryCount + 1), 400);
-                } else {
-                    vid.muted = true;
-                    setIsMuted(true);
-                }
-            }
-        };
+        if (err?.name === 'AbortError') return;
+
+        // Retry up to 2 times on iOS NotAllowedError / generic failure
+        if (retryCount < 2) {
+          setTimeout(() => attemptPlay(retryCount + 1), 400);
+        } else {
+          vid.muted = true;
+          setIsMuted(true);
+        }
+      }
+    };
 
         attemptPlay();
     }, [isActive]); // ONLY isActive — intentional
@@ -199,7 +216,14 @@ const ReelPlayer = memo(function ReelPlayer({
         setTimeout(() => {
             if (activeSessionRef.current !== capturedSession) return;
             if (!isActive) return;
-            video.muted = false;
+
+            const vid = videoRef.current;
+            if (!vid) return;
+
+            // Agar user ne pause kiya hai ya video paused hai, unmute na karo
+            if (userPausedRef.current || vid.paused) return;
+
+            vid.muted = false;
             setIsMuted(false);
         }, 50);
     }, [userHasInteracted, isActive]);
@@ -425,7 +449,6 @@ const ReelPlayer = memo(function ReelPlayer({
                 ref={videoRef}
                 poster={thumbnailUrl}
                 playsInline
-                muted
                 loop
                 preload={isActive || isAdjacent ? 'auto' : 'none'}
                 onCanPlay={() => setIsBuffering(false)}
