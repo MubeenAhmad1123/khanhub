@@ -161,3 +161,57 @@ export interface SpimsAttendance {
   checkInTime?: any;
   overriddenBy?: string;
 }
+
+export interface StaffDuty {
+  id: string;
+  description: string;
+}
+
+export interface StaffMember {
+  id: string;
+  name?: string;
+  gender?: string;
+  role?: string;
+  customId?: string;
+  phone?: string;
+  photoUrl?: string;
+  salary?: number;
+  duties?: StaffDuty[];
+  dutyStartTime?: string;
+  dutyEndTime?: string;
+  isActive?: boolean;
+  loginUserId?: string;
+  joiningDate?: any;
+  [key: string]: any;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  staffId?: string;
+  date?: string;
+  status?: 'present' | 'absent' | 'leave';
+  checkInTime?: any;
+  checkOutTime?: any;
+  [key: string]: any;
+}
+
+export interface StaffFine {
+  id: string;
+  staffId?: string;
+  amount?: number;
+  reason?: string;
+  date?: any;
+  createdAt?: any;
+  [key: string]: any;
+}
+
+export interface LeaveRecord {
+  id: string;
+  staffId?: string;
+  startDate?: any;
+  endDate?: any;
+  type?: 'casual' | 'sick' | 'annual' | 'unpaid';
+  status?: 'pending' | 'approved' | 'rejected';
+  reason?: string;
+  [key: string]: any;
+}

@@ -2,18 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usespimsSession } from '@/hooks/spims/usespimsSession';
-import { createspimsUserServer, deactivatespimsUser, resetspimsPassword } from '../../../actions/createspimsUser';
+import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
+import { createSpimsUserServer, deactivateSpimsUser, resetSpimsPassword } from '../../../actions/createSpimsUser';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { spimsUser } from '@/types/spims';
+import type { SpimsUser } from '@/types/spims';
 
 export default function SuperAdminUserManagement() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = usespimsSession();
-  const [admins, setAdmins] = useState<spimsUser[]>([]);
-  const [cashier, setCashier] = useState<spimsUser | null>(null);
+  const { session: user, loading: sessionLoading } = useSpimsSession();
+  const [admins, setAdmins] = useState<SpimsUser[]>([]);
+  const [cashier, setCashier] = useState<SpimsUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -29,8 +29,8 @@ export default function SuperAdminUserManagement() {
       
       const [snapAdmins, snapCashier] = await Promise.all([getDocs(qAdmins), getDocs(qCashier)]);
       
-      setAdmins(snapAdmins.docs.map(doc => ({ uid: doc.id, ...doc.data() } as spimsUser)));
-      setCashier(snapCashier.docs.length > 0 ? ({ uid: snapCashier.docs[0].id, ...snapCashier.docs[0].data() } as spimsUser) : null);
+      setAdmins(snapAdmins.docs.map(doc => ({ uid: doc.id, ...doc.data() } as SpimsUser)));
+      setCashier(snapCashier.docs.length > 0 ? ({ uid: snapCashier.docs[0].id, ...snapCashier.docs[0].data() } as SpimsUser) : null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -51,7 +51,7 @@ export default function SuperAdminUserManagement() {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
-    const res = await createspimsUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
+    const res = await createSpimsUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
     if (res.success) {
       setMessage({ type: 'success', text: `Admin ${adminForm.id} created!` });
       setAdminForm({ name: '', id: 'spims-ADM-001', pass: '' });
@@ -66,7 +66,7 @@ export default function SuperAdminUserManagement() {
     e.preventDefault();
     if (cashier) return;
     setActionLoading(true);
-    const res = await createspimsUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
+    const res = await createSpimsUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
     if (res.success) {
       setMessage({ type: 'success', text: 'Cashier created successfully!' });
       setCashierForm({ id: 'spims-CSH-001', pass: '' });
@@ -80,7 +80,7 @@ export default function SuperAdminUserManagement() {
   const handleDeactivate = async (uid: string) => {
     if (!confirm('Are you sure? This user will lose all access.')) return;
     setActionLoading(true);
-    const res = await deactivatespimsUser(uid);
+    const res = await deactivateSpimsUser(uid);
     if (res.success) {
       setMessage({ type: 'success', text: 'User deactivated successfully' });
       fetchData();
@@ -92,7 +92,7 @@ export default function SuperAdminUserManagement() {
     const newPass = prompt('Enter new password (min 6 chars):');
     if (!newPass || newPass.length < 6) return;
     setActionLoading(true);
-    const res = await resetspimsPassword(uid, newPass);
+    const res = await resetSpimsPassword(uid, newPass);
     if (res.success) setMessage({ type: 'success', text: 'Password reset successful' });
     setActionLoading(false);
   };

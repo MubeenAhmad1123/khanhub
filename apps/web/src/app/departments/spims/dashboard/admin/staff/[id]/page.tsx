@@ -68,8 +68,8 @@ export default function StaffDetailPage() {
         .map(d => ({
           id: d.id,
           ...d.data(),
-        } as AttendanceRecord))
-        .filter(a => a.date >= firstDayStr && a.date <= lastDayStr)
+        } as unknown as AttendanceRecord))
+        .filter(a => a.date && a.date >= firstDayStr && a.date <= lastDayStr)
 
       setAttendance(attendanceData);
 
@@ -78,8 +78,8 @@ export default function StaffDetailPage() {
           id: d.id,
           ...d.data(),
           createdAt: d.data().createdAt?.toDate?.() || new Date(d.data().createdAt || Date.now()),
-        } as StaffFine))
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        } as unknown as StaffFine))
+        .sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime())
       );
 
       setLeaves(leaveSnap.docs
@@ -87,13 +87,13 @@ export default function StaffDetailPage() {
           id: d.id,
           ...d.data(),
           createdAt: d.data().createdAt?.toDate?.() || new Date(d.data().createdAt || Date.now()),
-        } as LeaveRecord))
+        } as unknown as LeaveRecord))
         .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime())
       );
 
       // Streak Calculation
       const allAtt = attSnap.docs.map(d => d.data() as AttendanceRecord)
-        .sort((a, b) => b.date.localeCompare(a.date));
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       
       let currentStreak = 0;
       const today = new Date().toISOString().split('T')[0];
@@ -106,7 +106,7 @@ export default function StaffDetailPage() {
           currentStreak++;
           const prevDate = new Date(new Date(checkDate).getTime() - 86400000);
           checkDate = prevDate.toISOString().split('T')[0];
-        } else if (att.date < checkDate) {
+        } else if (att.date && att.date < checkDate) {
           break;
         }
       }
@@ -232,13 +232,13 @@ export default function StaffDetailPage() {
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-[2rem] bg-gradient-to-br from-teal-400 to-teal-600 p-1 shadow-lg shadow-teal-100 transform rotate-3">
              <div className="w-full h-full bg-white rounded-[1.8rem] flex items-center justify-center text-teal-600 font-black text-3xl overflow-hidden border-4 border-white">
                 {staff.photoUrl
-                  ? <img src={staff.photoUrl} className="w-full h-full object-cover" alt={staff.name} />
-                  : staff.name.charAt(0).toUpperCase()
+                  ? <img src={staff.photoUrl} className="w-full h-full object-cover" alt={staff.name || 'Staff'} />
+                  : (staff.name || 'S').charAt(0).toUpperCase()
                 }
              </div>
           </div>
           <div className="flex-1 text-center md:text-left">
-            <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight uppercase tracking-tight">{staff.name}</h1>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight uppercase tracking-tight">{staff.name || 'Unknown Staff'}</h1>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
               <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100 shadow-sm uppercase tracking-widest">{staff.role}</span>
               <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 uppercase tracking-widest">{staff.gender}</span>
@@ -250,7 +250,7 @@ export default function StaffDetailPage() {
             </div>
           </div>
           <div className="text-center md:text-right bg-gray-50 md:bg-transparent p-4 md:p-0 rounded-2xl w-full md:w-auto border border-gray-100 md:border-0 shadow-sm md:shadow-none">
-            <p className="text-3xl font-black text-gray-900 leading-none">₨{staff.salary.toLocaleString()}</p>
+            <p className="text-3xl font-black text-gray-900 leading-none">₨{salaryVal.toLocaleString()}</p>
             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Monthly Salary</p>
             <div className="h-px bg-gray-200 w-12 mx-auto md:ml-auto my-2"></div>
             <p className="text-[10px] text-teal-600 font-black uppercase">₨{dailyRate.toLocaleString()} / DAY RATE</p>
@@ -292,9 +292,9 @@ export default function StaffDetailPage() {
               <List size={18} className="text-teal-500" />
               <h2 className="font-black text-gray-900">Assigned Duties</h2>
             </div>
-            {staff.duties?.length > 0 ? (
+            {(staff.duties?.length ?? 0) > 0 ? (
               <ul className="space-y-2">
-                {staff.duties.map((d, i) => (
+                {(staff.duties || []).map((d, i) => (
                   <li key={d.id || i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                     <span className="w-5 h-5 rounded-lg bg-teal-100 text-teal-600 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
                       {i + 1}
@@ -365,7 +365,7 @@ export default function StaffDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-2">Earnings</h3>
-                <Row label="Base Salary" value={`₨${staff.salary.toLocaleString()}`} />
+                <Row label="Base Salary" value={`₨${salaryVal.toLocaleString()}`} />
                 <Row label="Performance Bonus" value="₨0" muted />
                 <Row label="Other Allowances" value="₨0" muted />
               </div>
@@ -500,7 +500,7 @@ export default function StaffDetailPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-black text-blue-500 text-sm">{l.days} day{Number(l.days) > 1 ? 's' : ''}</p>
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${l.type === 'paid' ? 'bg-green-50 text-green-500' : 'bg-orange-50 text-orange-500'}`}>{l.type}</span>
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${l.type === ('paid' as string) ? 'bg-green-50 text-green-500' : 'bg-orange-50 text-orange-500'}`}>{l.type}</span>
                     </div>
                   </div>
                 ))}

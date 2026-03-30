@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
-import { usespimsSession } from '@/hooks/spims/usespimsSession';
+import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import { 
   TrendingUp, TrendingDown, DollarSign, Users, 
   CheckCircle, Receipt, ShieldCheck, AlertCircle, XCircle, 
@@ -15,7 +15,7 @@ import { toast } from 'react-hot-toast';
 
 export default function SuperAdminDashboardPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = usespimsSession();
+  const { session: user, loading: sessionLoading } = useSpimsSession();
   
   const [stats, setStats] = useState({
     pendingApprovals: 0,

@@ -75,7 +75,7 @@ export default function StudentDetailPage() {
         router.push('/departments/spims/dashboard/admin/patients');
         return;
       }
-      const sData = sDoc.id ? { id: sDoc.id, ...sDoc.data() } : null;
+      const sData: any = sDoc.id ? { id: sDoc.id, ...sDoc.data() } : null;
       setStudent(sData);
       setEditForm(sData);
       setPhotoPreview(sData?.photoUrl || '');

@@ -6,7 +6,7 @@ import { useSpimsSession } from '@/hooks/spims/useSpimsSession';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { overrideAttendance } from '@/lib/spims/attendance';
-import { createStaffMemberServer } from '../../actions/createSpimsUser';
+import { createStaffMemberServer } from '../../../actions/createSpimsUser';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { StaffMember, AttendanceRecord, StaffDuty } from '@/types/spims';
 import {
@@ -18,7 +18,7 @@ import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 export default function AdminStaffPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = usespimsSession();
+  const { session: user, loading: sessionLoading } = useSpimsSession();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord>>({});
   const [streaks, setStreaks] = useState<Record<string, number>>({});
