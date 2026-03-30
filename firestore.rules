@@ -352,12 +352,122 @@ service cloud.firestore {
       allow delete: if isRehabSuperAdmin();
     }
 
-    match /rehab_salary_records/{docId} {
-      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier');
-      allow create: if isRehabSuperAdmin(); // only via server after approval
-      allow update: if isRehabSuperAdmin();
+
+    // ═══════════════════════════════════════════════════════════
+    //  SPIMS COLLEGE PORTAL HELPERS
+    // ═══════════════════════════════════════════════════════════
+
+    function isSpimsAuth() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/spims_users/$(request.auth.uid));
+    }
+    function spimsRole() {
+      return get(/databases/$(database)/documents/spims_users/$(request.auth.uid)).data.role;
+    }
+    function isSpimsRole(role) {
+      return isSpimsAuth() && spimsRole() == role;
+    }
+    function isSpimsAdminOrAbove() {
+      return isSpimsAuth()
+        && (spimsRole() == 'admin' || spimsRole() == 'superadmin');
+    }
+    function isSpimsSuperAdmin() {
+      return isSpimsRole('superadmin');
+    }
+    function spimsStudentId() {
+      return get(/databases/$(database)/documents/spims_users/$(request.auth.uid)).data.studentId;
+    }
+    function spimsStaffId() {
+      return get(/databases/$(database)/documents/spims_users/$(request.auth.uid)).data.staffId;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SPIMS COLLEGE PORTAL COLLECTIONS
+    // ═══════════════════════════════════════════════════════════
+
+    match /spims_meta/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /spims_users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isSpimsAdminOrAbove());
+      allow create: if false;
+      allow delete: if false;
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly(['photoUrl', 'displayName', 'phone']);
+    }
+
+    match /spims_students/{studentId} {
+      allow read: if isSpimsAdminOrAbove()
+        || isSpimsRole('cashier')
+        || (isSpimsRole('student') && spimsStudentId() == studentId);
+      allow create, update: if isSpimsAdminOrAbove();
+      allow delete: if isSpimsSuperAdmin();
+    }
+
+    match /spims_fees/{docId} {
+      allow read: if isSpimsAdminOrAbove()
+        || (isSpimsRole('cashier'))
+        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId);
+      allow write: if isSpimsRole('cashier') || isSpimsSuperAdmin();
+    }
+
+    // Student specific records (similar to patient records)
+    match /spims_board_fees/{docId} {
+      allow read: if isSpimsAdminOrAbove()
+        || (isSpimsRole('cashier'))
+        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId);
+      allow write: if isSpimsRole('cashier') || isSpimsSuperAdmin();
+    }
+
+    match /spims_exams/{docId} {
+      allow read: if isSpimsAdminOrAbove()
+        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId);
+      allow create, update: if isSpimsAdminOrAbove();
+      allow delete: if isSpimsSuperAdmin();
+    }
+
+    match /spims_transactions/{docId} {
+      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier');
+      allow create: if isSpimsRole('cashier') || isSpimsSuperAdmin();
+      allow update: if isSpimsSuperAdmin();
+      allow delete: if false;
+    }
+
+    match /spims_staff/{staffId} {
+      allow read: if isSpimsAdminOrAbove()
+        || isSpimsRole('cashier')
+        || (isSpimsRole('staff') && spimsStaffId() == staffId);
+      allow create, update: if isSpimsAdminOrAbove();
+      allow delete: if isSpimsSuperAdmin();
+    }
+
+    match /spims_attendance/{docId} {
+      allow read: if isSpimsAdminOrAbove()
+        || isSpimsRole('cashier')
+        || isSpimsRole('staff');
+      allow create, update: if isSpimsRole('staff') || isSpimsAdminOrAbove();
+      allow delete: if false;
+    }
+
+    match /spims_audit/{docId} {
+      allow read: if isSpimsSuperAdmin();
+      allow create: if isSpimsAuth();
+      allow update, delete: if false;
+    }
+
+    match /spims_salary_records/{docId} {
+      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier');
+      allow create: if isSpimsSuperAdmin();
+      allow update: if isSpimsSuperAdmin();
       allow delete: if false;
     }
 
   }
 }
+

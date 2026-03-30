@@ -9,11 +9,10 @@ import FloatingDonateButton from '@/components/FloatingDonateButton';
 export default function ConditionalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // Hide main site layout components on these paths
-  const isRehabDashboard = pathname.startsWith('/departments/rehab/dashboard') || 
-                           pathname.startsWith('/departments/rehab/login') ||
-                           pathname.startsWith('/departments/rehab/setup');
+  const isDepartmentDashboard = pathname.startsWith('/departments/rehab/') || 
+                               pathname.startsWith('/departments/spims/');
 
-  if (isRehabDashboard) {
+  if (isDepartmentDashboard) {
     return <>{children}</>;
   }
 
