@@ -301,8 +301,8 @@ export default function AdminStaffPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden shadow-inner flex-shrink-0">
                         {s.photoUrl 
-                          ? <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
-                          : <span className="text-gray-400 font-black text-xs">{s.name.charAt(0)}</span>
+                          ? <img src={s.photoUrl} alt={s.name || 'Staff'} className="w-full h-full object-cover" />
+                          : <span className="text-gray-400 font-black text-xs">{s.name?.charAt(0) || '?'}</span>
                         }
                       </div>
                       <div>
@@ -387,8 +387,8 @@ export default function AdminStaffPage() {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden border border-gray-100 shadow-sm flex-shrink-0">
                               {s.photoUrl
-                                ? <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
-                                : <div className="w-full h-full flex items-center justify-center text-gray-400 font-black text-sm">{s.name.charAt(0)}</div>
+                                ? <img src={s.photoUrl} alt={s.name || 'Staff'} className="w-full h-full object-cover" />
+                                : <div className="w-full h-full flex items-center justify-center text-gray-400 font-black text-sm">{s.name?.charAt(0) || '?'}</div>
                               }
                             </div>
                             <div>
@@ -416,9 +416,9 @@ export default function AdminStaffPage() {
                             <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-lg uppercase tracking-widest block w-fit">
                               {s.role}
                             </span>
-                            {s.duties?.length > 0 && (
+                            {(s.duties?.length || 0) > 0 && (
                               <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                                <List size={9} /> {s.duties.length} duties
+                                <List size={9} /> {s.duties?.length || 0} duties
                               </span>
                             )}
                           </div>
@@ -655,7 +655,7 @@ export default function AdminStaffPage() {
                     <label key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-[10px] font-black text-gray-400 uppercase">
-                          {s.name.charAt(0)}
+                          {s.name?.charAt(0) || '?'}
                         </div>
                         <div>
                           <p className="text-sm font-bold text-gray-700">{s.name}</p>
