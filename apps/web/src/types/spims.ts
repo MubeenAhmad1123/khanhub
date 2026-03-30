@@ -23,8 +23,10 @@ export interface SpimsUser {
   role: SpimsRole;
   displayName: string;
   studentId?: string;
+  patientId?: string;
   createdAt: any;
   isActive: boolean;
+  [key: string]: any;
 }
 
 export interface Student {
@@ -54,6 +56,11 @@ export interface Student {
   status: 'enrolled' | 'completed' | 'dropped' | 'suspended';
   createdAt: any;
   createdBy?: string;
+  // Additional fields
+  admissionDate?: any;
+  diagnosis?: string;
+  packageAmount?: number;
+  [key: string]: any;
 }
 
 export interface FeeRecord {
@@ -129,6 +136,7 @@ export interface SpimsFeeTransaction {
   cashierId: string;
   cashierName: string;
   studentId?: string;
+  patientId?: string;
   studentName?: string;
   boardFeeId?: string;
   staffId?: string;
@@ -137,6 +145,7 @@ export interface SpimsFeeTransaction {
   approvedBy?: string;
   approvedAt?: any;
   createdAt: any;
+  [key: string]: any;
 }
 
 export interface SpimsStaff {
@@ -213,5 +222,57 @@ export interface LeaveRecord {
   type?: 'casual' | 'sick' | 'annual' | 'unpaid';
   status?: 'pending' | 'approved' | 'rejected';
   reason?: string;
+  [key: string]: any;
+}
+
+export interface StaffContribution {
+  id: string;
+  staffId: string;
+  staffName?: string;
+  month?: string;
+  year?: number;
+  amount?: number;
+  type?: 'salary' | 'bonus' | 'deduction';
+  date?: any;
+  note?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  createdAt?: any;
+  [key: string]: any;
+}
+
+export interface CanteenRecord {
+  id: string;
+  studentId: string;
+  studentName?: string;
+  month?: string;
+  balance?: number;
+  totalDeposited?: number;
+  totalSpent?: number;
+  transactions?: CanteenTransaction[];
+  lastTransactionDate?: any;
+  createdAt?: any;
+  [key: string]: any;
+}
+
+export interface CanteenTransaction {
+  id?: string;
+  type?: 'expense' | 'topup';
+  amount?: number;
+  description?: string;
+  date?: any;
+  addedBy?: string;
+  [key: string]: any;
+}
+
+export type Patient = Student;
+
+export type Transaction = SpimsFeeTransaction;
+
+export interface SpimsSession {
+  uid: string;
+  email?: string;
+  displayName: string;
+  role: SpimsRole;
+  studentId?: string;
   [key: string]: any;
 }

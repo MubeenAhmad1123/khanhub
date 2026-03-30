@@ -21,11 +21,11 @@ export default function PatientCard({ patient }: { patient: Patient }) {
         <div className="flex gap-4 text-xs font-medium uppercase tracking-wider">
           <div className="flex flex-col">
             <span className="text-gray-400">Admitted</span>
-            <span className="text-gray-700">{patient.admissionDate.toLocaleDateString()}</span>
+            <span className="text-gray-700">{patient.admissionDate?.toLocaleDateString() || 'N/A'}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-gray-400">Package</span>
-            <span className="text-[#1D9E75]">{patient.packageAmount.toLocaleString()} PKR</span>
+            <span className="text-[#1D9E75]">{patient.packageAmount?.toLocaleString() || '0'} PKR</span>
           </div>
         </div>
       </div>

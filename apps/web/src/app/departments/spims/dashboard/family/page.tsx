@@ -14,9 +14,9 @@ export default function FamilyDashboardIndex() {
     if (!loading) {
       if (!session) {
         router.push('/departments/spims/login');
-      } else if (session.role === 'family' && session.patientId) {
+      } else if (session.role === 'family' && session.studentId) {
         // Automatically redirect family members to their specific patient
-        router.push(`/departments/spims/dashboard/family/${session.patientId}`);
+        router.push(`/departments/spims/dashboard/family/${session.studentId}`);
       }
     }
   }, [session, loading, router]);

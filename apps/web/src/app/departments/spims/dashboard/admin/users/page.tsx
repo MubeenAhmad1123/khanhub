@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createSpimsUser } from '../../actions/createSpimsUser';
+import { createSpimsUserServer } from '../../../actions/createSpimsUser';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
@@ -82,7 +82,7 @@ export default function UserManagementPage() {
 
     try {
       setIsSubmitting(true);
-      const result = await createspimsUserServer(
+      const result = await createSpimsUserServer(
         customId.toUpperCase(),
         password,
         'family',
