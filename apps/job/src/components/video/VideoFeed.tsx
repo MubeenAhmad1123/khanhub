@@ -47,6 +47,10 @@ export function VideoFeed() {
     // ── ui state ──────────────────────────────────────────────────
     // Mubeen uses -1 as initial activeIndex (nothing active until IO fires)
     const [activeIndex,    setActiveIndex]    = useState(-1);
+    const [forceStopAll,   setForceStopAll]   = useState(false);
+    const activeIndexRef                      = useRef<number | null>(null);
+    const debounceTimerRef                    = useRef<NodeJS.Timeout | null>(null);
+    const playingRef                          = useRef<number | null>(null);
     const [activeTab,      setActiveTab]      = useState(2);
     const [showGuestWall,  setShowGuestWall]  = useState(false);
     const [showStoriesBar, setShowStoriesBar] = useState(true);
@@ -287,6 +291,10 @@ export function VideoFeed() {
                     if (resumeIdx > 0) {
                         hasDeeplinked.current = true;
                         setTimeout(() => {
+                            setForceStopAll(false);
+                            activeIndexRef.current = resumeIdx;
+                            playingRef.current = resumeIdx;
+                            ioActiveIndexRef.current = resumeIdx;
                             setActiveIndex(resumeIdx);
                             videoRefs.current[resumeIdx]?.scrollIntoView({ behavior: 'instant' });
                         }, 150);
@@ -319,34 +327,56 @@ export function VideoFeed() {
                     if (ignoreObserverUntilRef.current && now < ignoreObserverUntilRef.current) return;
 
                     entries.forEach(entry => {
-                        if (!entry.isIntersecting || entry.intersectionRatio < 0.5) return;
+                        if (!entry.isIntersecting || entry.intersectionRatio < 0.7) return;
 
                         const currentVideo = displayVideos[index];
                         if (!currentVideo || currentVideo.isPlaceholder) return;
 
-                        ioActiveIndexRef.current = index;
-                        setActiveIndex(index);
-                        sessionStorage.setItem('jobreel_last_video', currentVideo.id);
+                        setForceStopAll(true);
 
-                        if (currentVideo.id !== lastUpdatedVideoRef.current && typeof window !== 'undefined') {
-                            lastUpdatedVideoRef.current = currentVideo.id;
-                            const url = new URL(window.location.href);
-                            if (url.searchParams.get('v') !== currentVideo.id) {
-                                url.searchParams.set('v', currentVideo.id);
-                                window.history.replaceState(null, '', url.pathname + url.search);
+                        if (playingRef.current !== null && playingRef.current !== index) {
+                            const prevContainer = videoRefs.current[playingRef.current];
+                            if (prevContainer) {
+                                const prevVidEl = prevContainer.querySelector('video');
+                                if (prevVidEl) {
+                                    try {
+                                        prevVidEl.pause();
+                                        prevVidEl.muted = true;
+                                    } catch (e) {}
+                                }
                             }
                         }
 
-                        if (!user && !firebaseUser && !loading) {
-                            const count = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
-                            localStorage.setItem('jobreel_videos_watched', String(count));
-                            if (count >= 3) setShowGuestWall(true);
-                        }
+                        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                        debounceTimerRef.current = setTimeout(() => {
+                            setForceStopAll(false);
+                            activeIndexRef.current = index;
+                            playingRef.current = index;
+
+                            ioActiveIndexRef.current = index;
+                            setActiveIndex(index);
+                            sessionStorage.setItem('jobreel_last_video', currentVideo.id);
+
+                            if (currentVideo.id !== lastUpdatedVideoRef.current && typeof window !== 'undefined') {
+                                lastUpdatedVideoRef.current = currentVideo.id;
+                                const url = new URL(window.location.href);
+                                if (url.searchParams.get('v') !== currentVideo.id) {
+                                    url.searchParams.set('v', currentVideo.id);
+                                    window.history.replaceState(null, '', url.pathname + url.search);
+                                }
+                            }
+
+                            if (!user && !firebaseUser && !loading) {
+                                const count = parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
+                                localStorage.setItem('jobreel_videos_watched', String(count));
+                                if (count >= 3) setShowGuestWall(true);
+                            }
+                        }, 80);
                     });
                 },
                 {
                     root: containerRef.current,
-                    threshold: 0.6,
+                    threshold: 0.7,
                     rootMargin: '-10% 0px',
                 },
             );
@@ -370,8 +400,19 @@ export function VideoFeed() {
             if (!h) return;
             const idx = Math.round(container.scrollTop / h);
             if (idx !== ioActiveIndexRef.current && idx >= 0 && idx < displayVideos.length) {
-                ioActiveIndexRef.current = idx;
-                setActiveIndex(idx);
+                setForceStopAll(true);
+                if (playingRef.current !== null && playingRef.current !== idx) {
+                    const prevVid = videoRefs.current[playingRef.current]?.querySelector('video');
+                    if (prevVid) { try { prevVid.pause(); prevVid.muted = true; } catch (e) {} }
+                }
+                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                debounceTimerRef.current = setTimeout(() => {
+                    setForceStopAll(false);
+                    activeIndexRef.current = idx;
+                    playingRef.current = idx;
+                    ioActiveIndexRef.current = idx;
+                    setActiveIndex(idx);
+                }, 80);
             }
         };
 
@@ -388,8 +429,22 @@ export function VideoFeed() {
                 if (next < displayVideos.length) {
                     ignoreObserverUntilRef.current = Date.now() + 800;
                     videoRefs.current[next]?.scrollIntoView({ behavior: 'instant' });
-                    setActiveIndex(next);
-                    ioActiveIndexRef.current = next;
+                    setForceStopAll(true);
+                    if (playingRef.current !== null && playingRef.current !== next) {
+                        const prevContainer = videoRefs.current[playingRef.current];
+                        if (prevContainer) {
+                            const prevVidEl = prevContainer.querySelector('video');
+                            if (prevVidEl) { try { prevVidEl.pause(); prevVidEl.muted = true; } catch (e) {} }
+                        }
+                    }
+                    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                    debounceTimerRef.current = setTimeout(() => {
+                        setForceStopAll(false);
+                        activeIndexRef.current = next;
+                        playingRef.current = next;
+                        setActiveIndex(next);
+                        ioActiveIndexRef.current = next;
+                    }, 80);
                 }
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
@@ -397,8 +452,22 @@ export function VideoFeed() {
                 if (prev >= 0) {
                     ignoreObserverUntilRef.current = Date.now() + 800;
                     videoRefs.current[prev]?.scrollIntoView({ behavior: 'instant' });
-                    setActiveIndex(prev);
-                    ioActiveIndexRef.current = prev;
+                    setForceStopAll(true);
+                    if (playingRef.current !== null && playingRef.current !== prev) {
+                        const prevContainer = videoRefs.current[playingRef.current];
+                        if (prevContainer) {
+                            const prevVidEl = prevContainer.querySelector('video');
+                            if (prevVidEl) { try { prevVidEl.pause(); prevVidEl.muted = true; } catch (e) {} }
+                        }
+                    }
+                    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                    debounceTimerRef.current = setTimeout(() => {
+                        setForceStopAll(false);
+                        activeIndexRef.current = prev;
+                        playingRef.current = prev;
+                        setActiveIndex(prev);
+                        ioActiveIndexRef.current = prev;
+                    }, 80);
                 }
             }
         };
@@ -441,8 +510,22 @@ export function VideoFeed() {
             if (idx !== activeIndex) {
                 // Scroll first, then set index (Mubeen's approach — no setTimeout needed)
                 videoRefs.current[idx]?.scrollIntoView({ behavior: 'instant' });
-                setActiveIndex(idx);
-                ioActiveIndexRef.current = idx;
+                setForceStopAll(true);
+                if (playingRef.current !== null && playingRef.current !== idx) {
+                    const prevContainer = videoRefs.current[playingRef.current];
+                    if (prevContainer) {
+                        const prevVidEl = prevContainer.querySelector('video');
+                        if (prevVidEl) { try { prevVidEl.pause(); prevVidEl.muted = true; } catch (e) {} }
+                    }
+                }
+                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                debounceTimerRef.current = setTimeout(() => {
+                    setForceStopAll(false);
+                    activeIndexRef.current = idx;
+                    playingRef.current = idx;
+                    setActiveIndex(idx);
+                    ioActiveIndexRef.current = idx;
+                }, 80);
             }
         } else {
             // Video not in list — fetch by ID and prepend
@@ -469,6 +552,9 @@ export function VideoFeed() {
                     ignoreObserverUntilRef.current = Date.now() + 700;
 
                     setTimeout(() => {
+                        setForceStopAll(false);
+                        activeIndexRef.current = 0;
+                        playingRef.current = 0;
                         setActiveIndex(0);
                         ioActiveIndexRef.current = 0;
                         videoRefs.current[0]?.scrollIntoView({ behavior: 'instant' });
@@ -561,6 +647,7 @@ export function VideoFeed() {
                             videoId={video.id}
                             userHasInteracted={userHasInteracted}
                             isMobileDevice={false}
+                            forceStop={forceStopAll}
                         />
                     </div>
 
@@ -586,7 +673,7 @@ export function VideoFeed() {
                 </div>
             );
         });
-    }, [displayVideos, activeIndex, isMuted, userHasInteracted, activeCategory, activeRole, router]);
+    }, [displayVideos, activeIndex, isMuted, userHasInteracted, activeCategory, activeRole, router, forceStopAll]);
 
     // ── render ────────────────────────────────────────────────────
     return (

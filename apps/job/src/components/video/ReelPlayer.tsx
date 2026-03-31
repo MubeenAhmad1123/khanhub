@@ -13,6 +13,7 @@ interface ReelPlayerProps {
     isMuted?: boolean;
     userHasInteracted?: boolean;
     isMobileDevice?: boolean;
+    forceStop?: boolean;
 }
 
 const ReelPlayer = memo(function ReelPlayer({
@@ -22,6 +23,7 @@ const ReelPlayer = memo(function ReelPlayer({
     isAdjacent,
     videoId,
     userHasInteracted,
+    forceStop = false,
 }: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
@@ -110,7 +112,7 @@ const ReelPlayer = memo(function ReelPlayer({
         const mySession = activeSessionRef.current;
         const isCurrentSession = () => mySession === activeSessionRef.current;
 
-        if (!isActive) {
+        if (!isActive || forceStop) {
             // Silence and stop synchronously — zero window for sound to leak
             video.muted = true;
             setIsMuted(true);
@@ -120,14 +122,20 @@ const ReelPlayer = memo(function ReelPlayer({
             // Always reset to start (TikTok/Shorts behaviour)
             video.currentTime = 0;
 
-            if (hlsRef.current) hlsRef.current.stopLoad();
+            if (hlsRef.current && !isAdjacent) hlsRef.current.stopLoad();
             if (!isAdjacent) setIsBuffering(true);
             userPausedRef.current = false;
-            return;
+            return () => {
+                if (video) {
+                    video.pause();
+                    video.muted = true;
+                }
+            };
         }
 
-        // --- isActive === true ---
+        // --- isActive === true && !forceStop ---
         userPausedRef.current = false;
+        if (hlsRef.current) hlsRef.current.startLoad();
 
         const attemptPlay = async (retryCount = 0) => {
             if (!isCurrentSession()) return;
@@ -185,7 +193,14 @@ const ReelPlayer = memo(function ReelPlayer({
         };
 
         attemptPlay();
-    }, [isActive]); // ONLY isActive — intentional
+
+        return () => {
+            if (videoRef.current) {
+                videoRef.current.pause();
+                videoRef.current.muted = true;
+            }
+        };
+    }, [isActive, forceStop, isAdjacent, userHasInteracted]);
 
     // ── userHasInteracted → unmute with real session guard ───────
     useEffect(() => {

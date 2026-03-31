@@ -18,7 +18,7 @@ export async function createSpimsUser(
   password: string, 
   role: SpimsRole, 
   displayName: string, 
-  patientId?: string
+  studentId?: string
 ): Promise<string> {
   // NOTE: This will sign the current user out and the new user in if called on the client.
   // In a real app, this should be a Server Action or Firebase Admin SDK call.
@@ -29,7 +29,7 @@ export async function createSpimsUser(
     customId,
     role,
     displayName,
-    patientId,
+    studentId,
     createdAt: new Date(),
     isActive: true
   };
