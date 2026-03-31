@@ -813,11 +813,12 @@ export default function UploadVideoPage() {
                                 muted
                                 playsInline
                                 style={{
+                                    position: 'absolute',
+                                    inset: 0,
                                     width: '100%',
                                     height: '100%',
-                                    objectFit: 'contain',
+                                    objectFit: 'cover',
                                     transform: cameraMode === 'user' ? 'scaleX(-1)' : 'none',
-                                    background: '#000',
                                 }}
                                 onLoadedMetadata={(e) => {
                                     const v = e.currentTarget;
