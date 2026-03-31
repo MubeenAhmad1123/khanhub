@@ -468,6 +468,225 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ═══════════════════════════════════════════════════════════ 
+    //  HQ PORTAL HELPERS 
+    //  Global system: superadmin, manager, cashier 
+    //  Uses hq_users collection (doc ID = Firebase Auth uid) 
+    // ═══════════════════════════════════════════════════════════ 
+
+    function isHqAuth() { 
+      return request.auth != null 
+        && exists(/databases/$(database)/documents/hq_users/$(request.auth.uid)); 
+    } 
+    function hqRole() { 
+      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.role; 
+    } 
+    function isHqRole(role) { 
+      return isHqAuth() && hqRole() == role; 
+    } 
+    function isHqSuperAdmin() { 
+      return isHqRole('superadmin'); 
+    } 
+    function isHqManager() { 
+      return isHqRole('manager'); 
+    } 
+    function isHqCashier() { 
+      return isHqRole('cashier'); 
+    } 
+    function isHqSuperOrManager() { 
+      return isHqAuth() && (hqRole() == 'superadmin' || hqRole() == 'manager'); 
+    } 
+    function isHqTier1() { 
+      return isHqAuth() && hqRole() in ['superadmin', 'manager', 'cashier']; 
+    } 
+
+    // ═══════════════════════════════════════════════════════════ 
+    //  HQ PORTAL COLLECTIONS 
+    // ═══════════════════════════════════════════════════════════ 
+
+    // hq_meta — one-time setup flag 
+    // Public read so setup page can check initialization status. 
+    // Write: Firebase Admin SDK only (server action). 
+    match /hq_meta/{docId} { 
+      allow read: if true; 
+      allow write: if false; 
+    } 
+
+    // hq_users — superadmin / manager / cashier profiles 
+    // Read: own doc, OR any HQ tier1 user. 
+    // Write: Firebase Admin SDK only (createHqUserServer server action). 
+    // Exception: superadmin can toggle isActive on other users. 
+    match /hq_users/{userId} { 
+      allow read: if (request.auth != null && request.auth.uid == userId) 
+        || isHqTier1(); 
+      allow update: if isHqSuperAdmin(); 
+      allow create: if false; 
+      allow delete: if false; 
+    } 
+
+    // hq_staff — global staff profiles across all departments 
+    // Read: any HQ tier1 OR rehab/spims admin 
+    // Write: superadmin or manager only 
+    match /hq_staff/{staffId} { 
+      allow read: if isHqTier1() 
+        || (request.auth != null && exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid))) 
+        || (request.auth != null && exists(/databases/$(database)/documents/spims_users/$(request.auth.uid))); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+
+    // hq_attendance — staff attendance records (marked by manager only) 
+    // Staff CANNOT mark own attendance — manager does it. 
+    // Staff can read their own record. Manager/superadmin read+write all. 
+    match /hq_attendance/{docId} { 
+      allow read: if isHqSuperOrManager() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+
+    // hq_dress_code — daily dress code checks per staff 
+    match /hq_dress_code/{docId} { 
+      allow read: if isHqSuperOrManager() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+
+    // hq_duties — duties assigned to each staff (set by manager) 
+    match /hq_duties/{docId} { 
+      allow read: if isHqSuperOrManager() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperOrManager(); 
+    } 
+
+    // hq_duty_logs — daily duty performance logs 
+    match /hq_duty_logs/{docId} { 
+      allow read: if isHqSuperOrManager() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+
+    // hq_targets — monthly targets assigned to admin/staff 
+    match /hq_targets/{docId} { 
+      allow read: if isHqSuperOrManager() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+
+    // hq_salary_records — staff salary payment records 
+    match /hq_salary_records/{docId} { 
+      allow read: if isHqSuperOrManager() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+
+    // hq_fines — late/discipline fines auto-created on attendance 
+    match /hq_fines/{docId} { 
+      allow read: if isHqSuperOrManager() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+
+    // hq_audit — cross-system audit log 
+    // Read: superadmin only. Write: any authenticated user (immutable after creation). 
+    match /hq_audit/{docId} { 
+      allow read: if isHqSuperAdmin(); 
+      allow create: if request.auth != null; 
+      allow update: if false; 
+      allow delete: if false; 
+    } 
+
+    // ── Cross-department transaction access for HQ roles ────── 
+    // Manager needs to read+approve transactions from both rehab and spims. 
+    // Cashier needs to create transactions in both. 
+    // These rules EXTEND the existing rehab_transactions and spims_transactions 
+    // rules above — Firestore merges them (most permissive wins). 
+
+    match /rehab_transactions/{docId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqCashier() || isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+    } 
+
+    match /rehab_fees/{docId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqCashier() || isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+    } 
+
+    match /rehab_patients/{patientId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+    } 
+
+    match /rehab_canteen/{docId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqCashier() || isHqSuperOrManager(); 
+      allow update: if isHqCashier() || isHqSuperOrManager(); 
+    } 
+
+    match /rehab_staff/{staffId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+    } 
+
+    match /rehab_users/{uid} { 
+      allow read: if isHqTier1(); 
+      allow update: if isHqSuperAdmin(); 
+    } 
+
+    match /rehab_reports/{docId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqTier1(); 
+      allow update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+
+    match /spims_transactions/{docId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqCashier() || isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+    } 
+
+    match /spims_fees/{docId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqCashier() || isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+    } 
+
+    match /spims_students/{studentId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+    } 
+
+    match /spims_staff/{staffId} { 
+      allow read: if isHqTier1(); 
+      allow create: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager(); 
+    } 
+
+    match /spims_users/{uid} { 
+      allow read: if isHqTier1(); 
+      allow update: if isHqSuperAdmin(); 
+    }
+
   }
 }
 
