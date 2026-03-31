@@ -318,6 +318,7 @@ export function ActionButtons({
 
     if (mode === 'share-only') {
         return (
+            <>
             <div onClick={() => setShowShareMenu(true)} style={{
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 4,
@@ -334,11 +335,44 @@ export function ActionButtons({
                     {fmt(shares)}
                 </span>
             </div>
+            {showShareMenu && (
+                <>
+                    <div onClick={() => setShowShareMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)' }} />
+                    <div style={{
+                        position: 'fixed', bottom: 0, left: 0, right: 0,
+                        background: '#fff', borderRadius: '20px 20px 0 0',
+                        padding: '12px 16px 40px', zIndex: 100,
+                        maxWidth: 600, margin: '0 auto',
+                        boxShadow: '0 -4px 30px rgba(0,0,0,0.15)',
+                    }}>
+                        <div style={{ width: 36, height: 4, borderRadius: 999, background: '#E5E5E5', margin: '0 auto 16px' }} />
+                        <h3 style={{ fontFamily: 'Poppins', fontWeight: 800, fontSize: 18, textAlign: 'center', marginBottom: 20 }}>Share</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+                            {[
+                                { name: 'WhatsApp', icon: 'https://cdn-icons-png.flaticon.com/512/124/124034.png', link: `https://wa.me/?text=${encodeURIComponent(`${window.location.origin}/feed?v=${videoId}`)}` },
+                                { name: 'Facebook', icon: 'https://cdn-icons-png.flaticon.com/512/124/124010.png', link: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/feed?v=${videoId}`)}` },
+                                { name: 'LinkedIn', icon: 'https://cdn-icons-png.flaticon.com/512/174/174857.png', link: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${window.location.origin}/feed?v=${videoId}`)}` },
+                                { name: 'Copy', icon: 'https://cdn-icons-png.flaticon.com/512/1621/1621635.png', action: () => { navigator.clipboard.writeText(`${window.location.origin}/feed?v=${videoId}`).then(() => showToast('🔗 Link copied!')); setShowShareMenu(false); } }
+                            ].map((platform) => (
+                                <div key={platform.name} onClick={() => { if (platform.action) { platform.action(); } else { window.open(platform.link, '_blank'); setShowShareMenu(false); } }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                    <div style={{ width: 50, height: 50, borderRadius: 12, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <img src={platform.icon} alt={platform.name} style={{ width: '60%', height: '60%', objectFit: 'contain' }} />
+                                    </div>
+                                    <span style={{ fontSize: 11, fontFamily: 'DM Sans', fontWeight: 600, color: '#666' }}>{platform.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={() => setShowShareMenu(false)} style={{ width: '100%', padding: '14px', borderRadius: 12, background: '#F5F5F5', color: '#0A0A0A', border: 'none', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>Cancel</button>
+                    </div>
+                </>
+            )}
+            </>
         );
     }
 
     if (mode === 'dots-only') {
         return (
+            <>
             <div onClick={() => setShowMenu(true)} style={{
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 4,
@@ -356,6 +390,54 @@ export function ActionButtons({
                     <MoreVertical size={26} stroke="#fff" strokeWidth={2.5} />
                 </div>
             </div>
+            {showMenu && (
+                <>
+                    <div onClick={() => setShowMenu(false)} style={{
+                        position: 'fixed', inset: 0, zIndex: 9999,
+                        background: 'rgba(0,0,0,0.4)',
+                    }} />
+                    <div style={{
+                        position: 'fixed', bottom: 0, left: 0, right: 0,
+                        background: '#fff', borderRadius: '20px 20px 0 0',
+                        padding: '12px 0 40px', zIndex: 10000,
+                        maxWidth: 600, margin: '0 auto',
+                        boxShadow: '0 -4px 30px rgba(0,0,0,0.15)',
+                    }}>
+                        <div style={{
+                            width: 36, height: 4, borderRadius: 999,
+                            background: '#E5E5E5', margin: '0 auto 16px',
+                        }} />
+                        {[
+                            { icon: '✨', label: 'Interested', sub: 'Add to your career interests', action: 'interested', color: '#7638FA' },
+                            { icon: '🚩', label: 'Report', sub: 'Flag inappropriate content', action: 'report', color: '#FF3B30' },
+                            { icon: '🚫', label: 'Not Interested', sub: 'See less like this', action: 'not_interested', color: '#0A0A0A' },
+                            { icon: '🔗', label: 'Copy Link', sub: 'Share uploader profile', action: 'copy_link', color: '#0A0A0A' },
+                        ].map(opt => (
+                            <button key={opt.action} onClick={() => handleMenuAction(opt.action)} style={{
+                                width: '100%', padding: '16px 20px',
+                                background: 'none', border: 'none',
+                                borderBottom: '1px solid #F0F0F0',
+                                display: 'flex', alignItems: 'center', gap: 14,
+                                cursor: 'pointer', textAlign: 'left',
+                            }}>
+                                <span style={{ fontSize: 24 }}>{opt.icon}</span>
+                                <div>
+                                    <div style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: 15, color: opt.color }}>{opt.label}</div>
+                                    <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#888', marginTop: 1 }}>{opt.sub}</div>
+                                </div>
+                            </button>
+                        ))}
+                        <button onClick={() => setShowMenu(false)} style={{
+                            width: '100%', padding: '14px', background: 'none',
+                            border: 'none', color: '#888',
+                            fontFamily: 'DM Sans', fontSize: 14, cursor: 'pointer',
+                        }}>
+                            Cancel
+                        </button>
+                    </div>
+                </>
+            )}
+            </>
         );
     }
 

@@ -1,5 +1,5 @@
 'use client';
-
+//VideoCard.tsx
 import { useState, useRef } from 'react';
 import { Play, User, Building2, Eye, Link as LinkIcon, Edit, CheckCircle2, Clock, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
