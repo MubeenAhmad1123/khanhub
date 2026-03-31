@@ -735,10 +735,11 @@ export default function UploadVideoPage() {
                             borderRadius: 20,
                             overflow: 'hidden',
                             cursor: videoFile ? 'default' : 'pointer',
-                            background: '#F8F8F8',
+                            background: '#000',
                             marginBottom: 16,
-                            minHeight: videoFile ? 300 : 220,
-                            maxHeight: videoFile ? '75dvh' : 'auto',
+                            aspectRatio: videoFile ? '9/16' : 'auto',
+                            minHeight: videoFile ? 'auto' : 220,
+                            width: '100%',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -757,19 +758,17 @@ export default function UploadVideoPage() {
                             </div>
                         ) : (
                             <video
-                            src={previewUrl!}
-                            controls
-                            playsInline
-                            style={{
-                                width: '100%',
-                                height: 'auto',
-                                maxHeight: '70dvh',
-                                objectFit: 'contain',
-                                display: 'block',
-                                borderRadius: 12,
-                                background: '#000',
-                            }}
-                        />
+                                src={previewUrl!}
+                                controls
+                                playsInline
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                    background: '#000',
+                                }}
+                            />
                         )}
                     </div>
 
@@ -879,6 +878,28 @@ export default function UploadVideoPage() {
                                 background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
                                 zIndex: 2,
                             }}>
+                                {/* Zoom slider */}
+                                <input
+                                    type="range"
+                                    min={1}
+                                    max={3}
+                                    step={0.1}
+                                    defaultValue={1}
+                                    onChange={(e) => {
+                                        const track = stream?.getVideoTracks()[0];
+                                        if (track) {
+                                            const capabilities = track.getCapabilities() as any;
+                                            if (capabilities.zoom) {
+                                                track.applyConstraints({ advanced: [{ zoom: parseFloat(e.target.value) } as any] });
+                                            }
+                                        }
+                                    }}
+                                    style={{
+                                        width: '60%',
+                                        accentColor: '#FF0069',
+                                    }}
+                                />
+
                                 {/* Hint text */}
                                 {!isRecording && (
                                     <span style={{
