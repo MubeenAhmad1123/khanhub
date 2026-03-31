@@ -737,7 +737,8 @@ export default function UploadVideoPage() {
                             cursor: videoFile ? 'default' : 'pointer',
                             background: '#F8F8F8',
                             marginBottom: 16,
-                            minHeight: videoFile ? 'auto' : 220,
+                            minHeight: videoFile ? 300 : 220,
+                            maxHeight: videoFile ? '75dvh' : 'auto',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -756,11 +757,19 @@ export default function UploadVideoPage() {
                             </div>
                         ) : (
                             <video
-                                src={previewUrl!}
-                                controls
-                                playsInline
-                                style={{ width: '100%', maxHeight: 480, objectFit: 'contain', display: 'block' }}
-                            />
+                            src={previewUrl!}
+                            controls
+                            playsInline
+                            style={{
+                                width: '100%',
+                                height: 'auto',
+                                maxHeight: '70dvh',
+                                objectFit: 'contain',
+                                display: 'block',
+                                borderRadius: 12,
+                                background: '#000',
+                            }}
+                        />
                         )}
                     </div>
 
@@ -806,8 +815,9 @@ export default function UploadVideoPage() {
                                 style={{
                                     width: '100%',
                                     height: '100%',
-                                    objectFit: 'cover',
+                                    objectFit: 'contain',
                                     transform: cameraMode === 'user' ? 'scaleX(-1)' : 'none',
+                                    background: '#000',
                                 }}
                                 onLoadedMetadata={(e) => {
                                     const v = e.currentTarget;
