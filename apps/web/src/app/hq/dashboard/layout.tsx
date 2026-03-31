@@ -1,0 +1,264 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import {
+  LayoutDashboard, Users, Shield, Eye, FileText,
+  UserCog, CalendarCheck, CheckCircle, CreditCard, History,
+  LogOut, Menu, X, ArrowLeft, Sun, Moon
+} from 'lucide-react';
+import type { HqRole, HqSession } from '@/types/hq';
+
+const SESSION_KEY = 'hq_session';
+const SESSION_TIMEOUT = 43200000;
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  roles: HqRole[];
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Overview', href: '/hq/dashboard/superadmin', icon: <LayoutDashboard size={16} />, roles: ['superadmin'] },
+  { label: 'Create Users', href: '/hq/dashboard/superadmin/users', icon: <Users size={16} />, roles: ['superadmin'] },
+  { label: 'All Passwords', href: '/hq/dashboard/superadmin/passwords', icon: <Eye size={16} />, roles: ['superadmin'] },
+  { label: 'Audit Log', href: '/hq/dashboard/superadmin/audit', icon: <FileText size={16} />, roles: ['superadmin'] },
+  { label: 'Overview', href: '/hq/dashboard/manager', icon: <LayoutDashboard size={16} />, roles: ['manager'] },
+  { label: 'Staff Roster', href: '/hq/dashboard/manager/staff', icon: <UserCog size={16} />, roles: ['manager'] },
+  { label: 'Mark Attendance', href: '/hq/dashboard/manager/staff/attendance', icon: <CalendarCheck size={16} />, roles: ['manager'] },
+  { label: 'Approvals', href: '/hq/dashboard/manager/approvals', icon: <CheckCircle size={16} />, roles: ['manager'] },
+  { label: 'Create Users', href: '/hq/dashboard/manager/users', icon: <Users size={16} />, roles: ['manager'] },
+  { label: 'Cashier Station', href: '/hq/dashboard/cashier', icon: <CreditCard size={16} />, roles: ['cashier'] },
+  { label: 'Transaction History', href: '/hq/dashboard/cashier/history', icon: <History size={16} />, roles: ['cashier'] },
+];
+
+const ROLE_COLORS: Record<HqRole, string> = {
+  superadmin: 'bg-purple-100 text-purple-700',
+  manager: 'bg-blue-100 text-blue-700',
+  cashier: 'bg-amber-100 text-amber-700',
+};
+
+const ROLE_LABELS: Record<HqRole, string> = {
+  superadmin: 'Super Admin',
+  manager: 'Manager',
+  cashier: 'Cashier',
+};
+
+export default function HqDashboardLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isChecking, setIsChecking] = useState(true);
+  const [user, setUser] = useState<HqSession | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const session = localStorage.getItem(SESSION_KEY);
+    if (!session) { router.push('/hq/login'); return; }
+
+    try {
+      const parsed: HqSession = JSON.parse(session);
+      const elapsed = Date.now() - parsed.loginTime;
+      if (elapsed > SESSION_TIMEOUT) {
+        localStorage.removeItem(SESSION_KEY);
+        router.push('/hq/login');
+        return;
+      }
+      setUser(parsed);
+      setIsChecking(false);
+      setTimeout(() => setMounted(true), 50);
+    } catch {
+      localStorage.removeItem(SESSION_KEY);
+      router.push('/hq/login');
+    }
+  }, [router]);
+
+  const toggleDark = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem('hq_dark_mode', String(next));
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('hq_dark_mode');
+    if (saved === 'true') setDarkMode(true);
+  }, []);
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const role = user?.role as HqRole;
+  const navItems = NAV_ITEMS.filter(item => user && item.roles.includes(role));
+
+  const handleSignOut = () => {
+    localStorage.removeItem(SESSION_KEY);
+    router.push('/hq/login');
+  };
+
+  const SidebarContent = () => (
+    <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-teal-600 text-xs font-semibold mb-4 transition-colors group">
+          <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
+          Back to KhanHub
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center text-white shadow-lg">
+            <Shield size={18} />
+          </div>
+          <div>
+            <p className="font-black text-gray-900 text-sm leading-none">KhanHub HQ</p>
+            <p className="text-gray-400 text-[10px] font-semibold mt-0.5">Central Control</p>
+          </div>
+        </div>
+      </div>
+
+      <div className={`px-4 py-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4`}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm shadow-sm">
+              {user?.name?.[0]?.toUpperCase() || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`font-bold text-sm truncate ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{user?.name}</p>
+              <p className="text-gray-400 text-[10px] font-mono truncate">{user?.customId}</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
+              {ROLE_LABELS[role]}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <nav className="flex-1 px-4 py-4 space-y-0.5 overflow-y-auto">
+        {navItems.map((item, i) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setSidebarOpen(false)}
+              style={{ animationDelay: `${i * 40}ms` }}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                isActive
+                  ? 'bg-gray-800 text-white shadow-md'
+                  : darkMode
+                    ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-100 hover:translate-x-1'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
+              }`}
+            >
+              <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
+              <span>{item.label}</span>
+              {isActive ? (
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />
+              ) : null}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className={`px-4 pb-6 pt-2 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <button
+          onClick={toggleDark}
+          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold mb-1 transition-all ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+        >
+          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+          {darkMode ? 'Light Mode' : 'Dark Mode'}
+        </button>
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all group"
+        >
+          <LogOut size={16} className="group-hover:translate-x-0.5 transition-transform" />
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`min-h-screen flex ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <aside className={`hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+        <SidebarContent />
+      </aside>
+
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors"
+        >
+          <X size={16} />
+        </button>
+        <SidebarContent />
+      </aside>
+
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        <header className="lg:hidden sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            <Menu size={20} />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-gray-800 rounded-lg flex items-center justify-center text-white">
+              <Shield size={14} />
+            </div>
+            <span className="font-black text-gray-900 text-sm">KhanHub HQ</span>
+          </div>
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${ROLE_COLORS[role]}`}>
+            {ROLE_LABELS[role]}
+          </span>
+        </header>
+
+        <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${
+          darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
+        }`}>
+          <div className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            KhanHub HQ Portal
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={toggleDark} className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-400 hover:bg-gray-100'}`} title="Toggle dark mode">
+              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
+              {ROLE_LABELS[role]}
+            </span>
+            <div className="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm">
+              {user?.name?.[0]?.toUpperCase() || '?'}
+            </div>
+            <span className="text-gray-700 text-sm font-semibold">{user?.name}</span>
+          </div>
+        </header>
+
+        <main className={`flex-1 p-4 lg:p-8 overflow-x-hidden transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="max-w-6xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
