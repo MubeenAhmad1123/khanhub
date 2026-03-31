@@ -568,7 +568,7 @@ const ReelPlayer = memo(function ReelPlayer({
                  onClick={e => { e.stopPropagation(); e.preventDefault(); }}
                 style={{
     position: 'absolute',
-    right: 429,
+    left:12,
     bottom: 257,
     zIndex: 5210,
     pointerEvents: 'auto',
