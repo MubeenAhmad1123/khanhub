@@ -819,7 +819,7 @@ export function VideoFeed() {
               left: 0,
               right: 0,
               bottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-              zIndex: 200,
+              zIndex: 2,
               maxWidth: '480px',
               margin: '0 auto',
               background:

@@ -129,13 +129,13 @@ const ReelPlayer = memo(function ReelPlayer({
     // stopPropagation prevents the click from reaching handleVideoTap
     // (which would toggle play/pause unintentionally).
     const handleMuteClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      e.preventDefault();
-      onToggleMute();
-    },
-    [onToggleMute],
-  );
+        (e: React.MouseEvent) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onToggleMute();
+        },
+        [onToggleMute],
+    );
 
     // ── Active / inactive state ───────────────────────────────────
     useEffect(() => {
@@ -565,16 +565,17 @@ const ReelPlayer = memo(function ReelPlayer({
         padding zone or the <button> itself.
       */}
             <div
-                 onClick={e => { e.stopPropagation(); e.preventDefault(); }}
+                onClick={e => { e.stopPropagation(); e.preventDefault(); }}
                 style={{
-    position: 'absolute',
-    left:12,
-    bottom: 257,
-    zIndex: 5210,
-    pointerEvents: 'auto',
-    width: 40,
-    height: 40,
-}}
+                    position: 'absolute',
+                    right: 12,
+                    top: '47%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 5210,
+                    pointerEvents: 'auto',
+                    width: 40,
+                    height: 40,
+                }}
             >
                 <button
                     onClick={handleMuteClick}
