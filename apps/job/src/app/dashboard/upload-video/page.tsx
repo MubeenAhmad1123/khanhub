@@ -306,12 +306,12 @@ export default function UploadVideoPage() {
 
     const startCamera = async (mode: 'user' | 'environment' = 'user') => {
         try {
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             const constraints = {
                 video: {
                     facingMode: mode,
-                    width: { ideal: 1080 },
-                    height: { ideal: 1920 },
-                    aspectRatio: 9 / 16
+                    width: { ideal: isMobile ? 1080 : 1280 },
+                    height: { ideal: isMobile ? 1920 : 720 },
                 },
                 audio: true
             };
@@ -319,7 +319,15 @@ export default function UploadVideoPage() {
             setStream(s);
             if (videoPreviewRef.current) {
                 videoPreviewRef.current.srcObject = s;
-                videoPreviewRef.current.play();
+                videoPreviewRef.current.play().catch(() => {});
+            } else {
+                // DOM not ready yet — wait one frame
+                setTimeout(() => {
+                    if (videoPreviewRef.current) {
+                        videoPreviewRef.current.srcObject = s;
+                        videoPreviewRef.current.play().catch(() => {});
+                    }
+                }, 100);
             }
             setIsCameraActive(true);
             setCameraMode(mode);
@@ -781,7 +789,111 @@ export default function UploadVideoPage() {
                             </div>
                         </div>
                     )}
+{/* Camera Recording UI */}
+                    {isCameraActive && (
+                        <div style={{
+                            position: 'fixed', inset: 0, zIndex: 9999,
+                            background: '#000', display: 'flex',
+                            flexDirection: 'column',
+                        }}>
+                            {/* Live preview */}
+                           <video
+                                ref={videoPreviewRef}
+                                autoPlay
+                                muted
+                                playsInline
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onLoadedMetadata={(e) => {
+                                    const v = e.currentTarget;
+                                    v.play().catch(() => {});
+                                }}
+                            />
 
+                            {/* Top bar */}
+                            <div style={{
+                                position: 'absolute', top: 0, left: 0, right: 0,
+                                padding: '20px 16px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)',
+                            }}>
+                                <button onClick={stopCamera} style={{
+                                    background: 'rgba(0,0,0,0.5)', border: 'none',
+                                    borderRadius: '50%', width: 40, height: 40,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer',
+                                }}>
+                                    <X size={20} color="#fff" />
+                                </button>
+
+                                {/* Recording timer */}
+                                {isRecording && (
+                                    <div style={{
+                                        background: 'rgba(255,0,0,0.8)', borderRadius: 999,
+                                        padding: '6px 14px', display: 'flex',
+                                        alignItems: 'center', gap: 6,
+                                    }}>
+                                        <div style={{
+                                            width: 8, height: 8, borderRadius: '50%',
+                                            background: '#fff', animation: 'blink 1s infinite',
+                                        }} />
+                                        <span style={{ color: '#fff', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 14 }}>
+                                            {recordingTime}s / 80s
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Flip camera */}
+                                <button onClick={switchCamera} style={{
+                                    background: 'rgba(0,0,0,0.5)', border: 'none',
+                                    borderRadius: '50%', width: 40, height: 40,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer',
+                                }}>
+                                    <RefreshCw size={20} color="#fff" />
+                                </button>
+                            </div>
+
+                            {/* Bottom controls */}
+                            <div style={{
+                                position: 'absolute', bottom: 0, left: 0, right: 0,
+                                padding: '40px 16px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
+                            }}>
+                                {!isRecording ? (
+                                    <button onClick={startRecording} style={{
+                                        width: 72, height: 72, borderRadius: '50%',
+                                        background: '#FF0069', border: '4px solid #fff',
+                                        cursor: 'pointer', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                        <Circle size={28} color="#fff" fill="#fff" />
+                                    </button>
+                                ) : (
+                                    <button onClick={stopRecording} style={{
+                                        width: 72, height: 72, borderRadius: '50%',
+                                        background: '#fff', border: '4px solid #FF0069',
+                                        cursor: 'pointer', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                        <div style={{
+                                            width: 24, height: 24, borderRadius: 4,
+                                            background: '#FF0069',
+                                        }} />
+                                    </button>
+                                )}
+                            </div>
+
+                            <style>{`
+                                @keyframes blink {
+                                    0%, 100% { opacity: 1; }
+                                    50% { opacity: 0; }
+                                }
+                            `}</style>
+                        </div>
+                    )}
+
+                    {/* Validation error */}
                     {/* Validation error */}
                     {validationError && (
                         <div style={{
