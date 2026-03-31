@@ -3,6 +3,7 @@
 
 // NOTE: Volume2 / VolumeX are NO LONGER imported here.
 // The mute button and its icons now live inside ReelPlayer.tsx.
+import { Volume2, VolumeX } from 'lucide-react';
 import React, {
   useState,
   useEffect,
@@ -840,19 +841,39 @@ export function VideoFeed() {
         {/* Right side: avatar + like + save */}
         {displayVideos[activeIndex] && !displayVideos[activeIndex].isPlaceholder && (
           <div
-            style={{
-              position: 'fixed',
-              right: 10,
-              bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
-              zIndex: 199,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 20,
-            }}
-          >
-            <div
-              onClick={() =>
+              style={{
+                position: 'fixed',
+                right: 10,
+                bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
+                zIndex: 300,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 20,
+              }}
+            >
+              {/* Mute button — top of action column */}
+              <div
+                onClick={handleToggleMute}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                {globalMuted
+                  ? <VolumeX size={22} color="#fff" />
+                  : <Volume2 size={22} color="#fff" />}
+              </div>
+
+              <div
+                onClick={() =>
                 router.push(
                   `/profile/${displayVideos[activeIndex].userRole || 'user'}/${displayVideos[activeIndex].userId}`,
                 )

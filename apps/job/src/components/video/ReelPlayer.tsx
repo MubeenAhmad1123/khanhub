@@ -564,39 +564,7 @@ const ReelPlayer = memo(function ReelPlayer({
         the stop-propagation fires whether the user hits the <div>
         padding zone or the <button> itself.
       */}
-            <div
-                onClick={e => { e.stopPropagation(); e.preventDefault(); }}
-                style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '47%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 5210,
-                    pointerEvents: 'auto',
-                    width: 40,
-                    height: 40,
-                }}
-            >
-                <button
-                    onClick={handleMuteClick}
-                    aria-label={globalMuted ? 'Unmute' : 'Mute'}
-                    style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '999px',
-                        border: 'none',
-                        background: 'rgba(0,0,0,0.75)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        WebkitTapHighlightColor: 'transparent',
-                    }}
-                >
-                    {globalMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                </button>
-            </div>
+            
 
             {isOffline && (
                 <div
