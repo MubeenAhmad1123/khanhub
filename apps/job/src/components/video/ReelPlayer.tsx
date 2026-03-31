@@ -253,7 +253,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 videoRef.current.muted = true;
             }
         };
-    }, [isActive, forceStop, isAdjacent, userHasInteracted, globalMuted]);
+    }, [isActive, isAdjacent, userHasInteracted]);
 
     // ── Auto-unmute when userHasInteracted first fires ────────────
     useEffect(() => {
