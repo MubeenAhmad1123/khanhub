@@ -310,8 +310,8 @@ export default function UploadVideoPage() {
             const constraints = {
                 video: {
                     facingMode: mode,
-                    width: { ideal: isMobile ? 1080 : 1280 },
-                    height: { ideal: isMobile ? 1920 : 720 },
+                    width: { ideal: isMobile ? 720 : 1280 },
+                    height: { ideal: isMobile ? 1280 : 720 },
                 },
                 audio: true
             };
