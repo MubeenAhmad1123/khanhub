@@ -803,11 +803,10 @@ export default function UploadVideoPage() {
                     {isCameraActive && (
                         <div style={{
                             position: 'fixed', inset: 0, zIndex: 9999,
-                            background: '#000', display: 'flex',
-                            flexDirection: 'column',
+                            background: '#000',
                         }}>
                             {/* Live preview */}
-                           <video
+                            <video
                                 ref={videoPreviewRef}
                                 autoPlay
                                 muted
@@ -820,82 +819,97 @@ export default function UploadVideoPage() {
                                     objectFit: 'cover',
                                     transform: cameraMode === 'user' ? 'scaleX(-1)' : 'none',
                                 }}
-                                onLoadedMetadata={(e) => {
-                                    const v = e.currentTarget;
-                                    v.play().catch(() => {});
-                                }}
+                                onLoadedMetadata={(e) => { e.currentTarget.play().catch(() => {}); }}
                             />
 
                             {/* Top bar */}
                             <div style={{
                                 position: 'absolute', top: 0, left: 0, right: 0,
-                                padding: '20px 16px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)',
+                                padding: 'calc(env(safe-area-inset-top, 16px) + 16px) 20px 20px',
+                                display: 'flex', alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)',
+                                zIndex: 2,
                             }}>
+                                {/* Close */}
                                 <button onClick={stopCamera} style={{
                                     background: 'rgba(0,0,0,0.5)', border: 'none',
-                                    borderRadius: '50%', width: 40, height: 40,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer',
+                                    borderRadius: '50%', width: 44, height: 44,
+                                    display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', cursor: 'pointer',
                                 }}>
-                                    <X size={20} color="#fff" />
+                                    <X size={22} color="#fff" />
                                 </button>
 
-                                {/* Recording timer */}
+                                {/* Timer */}
                                 {isRecording && (
                                     <div style={{
-                                        background: 'rgba(255,0,0,0.8)', borderRadius: 999,
-                                        padding: '6px 14px', display: 'flex',
-                                        alignItems: 'center', gap: 6,
+                                        background: 'rgba(255,0,0,0.85)',
+                                        borderRadius: 999, padding: '8px 16px',
+                                        display: 'flex', alignItems: 'center', gap: 8,
                                     }}>
                                         <div style={{
                                             width: 8, height: 8, borderRadius: '50%',
                                             background: '#fff', animation: 'blink 1s infinite',
                                         }} />
-                                        <span style={{ color: '#fff', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 14 }}>
+                                        <span style={{ color: '#fff', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 15 }}>
                                             {recordingTime}s / 80s
                                         </span>
                                     </div>
                                 )}
 
-                                {/* Flip camera */}
+                                {/* Flip */}
                                 <button onClick={switchCamera} style={{
                                     background: 'rgba(0,0,0,0.5)', border: 'none',
-                                    borderRadius: '50%', width: 40, height: 40,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer',
+                                    borderRadius: '50%', width: 44, height: 44,
+                                    display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', cursor: 'pointer',
                                 }}>
-                                    <RefreshCw size={20} color="#fff" />
+                                    <RefreshCw size={22} color="#fff" />
                                 </button>
                             </div>
 
                             {/* Bottom controls */}
                             <div style={{
                                 position: 'absolute', bottom: 0, left: 0, right: 0,
-                                padding: '40px 16px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
+                                paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 30px)',
+                                paddingTop: 40,
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', gap: 16,
+                                background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+                                zIndex: 2,
                             }}>
+                                {/* Hint text */}
+                                {!isRecording && (
+                                    <span style={{
+                                        color: 'rgba(255,255,255,0.7)',
+                                        fontFamily: 'DM Sans', fontSize: 13,
+                                    }}>
+                                        Tap to start recording
+                                    </span>
+                                )}
+
+                                {/* Record / Stop button */}
                                 {!isRecording ? (
                                     <button onClick={startRecording} style={{
-                                        width: 72, height: 72, borderRadius: '50%',
-                                        background: '#FF0069', border: '4px solid #fff',
-                                        cursor: 'pointer', display: 'flex',
-                                        alignItems: 'center', justifyContent: 'center',
-                                    }}>
-                                        <Circle size={28} color="#fff" fill="#fff" />
-                                    </button>
+                                        width: 80, height: 80, borderRadius: '50%',
+                                        background: '#FF0069',
+                                        border: '5px solid rgba(255,255,255,0.8)',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 0 0 4px rgba(255,0,105,0.3)',
+                                    }} />
                                 ) : (
                                     <button onClick={stopRecording} style={{
-                                        width: 72, height: 72, borderRadius: '50%',
-                                        background: '#fff', border: '4px solid #FF0069',
-                                        cursor: 'pointer', display: 'flex',
-                                        alignItems: 'center', justifyContent: 'center',
+                                        width: 80, height: 80, borderRadius: '50%',
+                                        background: 'rgba(255,255,255,0.15)',
+                                        border: '5px solid #fff',
+                                        cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center',
+                                        justifyContent: 'center',
                                     }}>
                                         <div style={{
-                                            width: 24, height: 24, borderRadius: 4,
-                                            background: '#FF0069',
+                                            width: 28, height: 28,
+                                            borderRadius: 6, background: '#FF0069',
                                         }} />
                                     </button>
                                 )}
