@@ -309,9 +309,10 @@ export default function UploadVideoPage() {
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             const constraints = {
                 video: {
-                    facingMode: mode,
-                    width: { ideal: isMobile ? 720 : 1280 },
-                    height: { ideal: isMobile ? 1280 : 720 },
+                    facingMode: { ideal: mode },
+                    width: { min: 640, ideal: isMobile ? 720 : 1280, max: 1920 },
+                    height: { min: 480, ideal: isMobile ? 1280 : 720, max: 1920 },
+                    zoom: 1,
                 },
                 audio: true
             };
@@ -802,7 +803,12 @@ export default function UploadVideoPage() {
                                 autoPlay
                                 muted
                                 playsInline
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    transform: cameraMode === 'user' ? 'scaleX(-1)' : 'none',
+                                }}
                                 onLoadedMetadata={(e) => {
                                     const v = e.currentTarget;
                                     v.play().catch(() => {});
