@@ -62,8 +62,13 @@ const ReelPlayer = memo(function ReelPlayer({
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
+        // Non-active videos are ALWAYS muted, no exceptions
+        if (!isActive) {
+            video.muted = true;
+            return;
+        }
         video.muted = globalMuted;
-    }, [globalMuted]);
+    }, [globalMuted, isActive]);
 
     // ── Offline / slow connection detection ───────────────────────
     useEffect(() => {
@@ -276,6 +281,11 @@ const ReelPlayer = memo(function ReelPlayer({
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !cloudinaryUrl || (!isActive && !isAdjacent)) return;
+
+        // Always enforce mute on non-active videos
+        if (!isActive) {
+            video.muted = true;
+        }
 
         if (!video.src || video.src === window.location.href) {
             const hlsUrl = getHlsUrl(cloudinaryUrl);
