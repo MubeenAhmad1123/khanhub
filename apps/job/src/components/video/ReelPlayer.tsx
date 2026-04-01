@@ -63,12 +63,19 @@ const ReelPlayer = memo(function ReelPlayer({
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
-        // Non-active videos are ALWAYS muted, no exceptions
+        // Non-active videos are ALWAYS muted — both JS property AND HTML attribute
         if (!isActive) {
             video.muted = true;
+            video.setAttribute('muted', '');
             return;
         }
+        // Active video: sync JS property. HTML attribute was removed in attemptPlay.
         video.muted = globalMuted;
+        if (!globalMuted) {
+            video.removeAttribute('muted');
+        } else {
+            video.setAttribute('muted', '');
+        }
     }, [globalMuted, isActive]);
 
     // ── Offline / slow connection detection ───────────────────────
@@ -157,6 +164,7 @@ const ReelPlayer = memo(function ReelPlayer({
         // Point 2 & 5: Immediate synchronous closure
         if (!isActive || forceStop) {
             video.muted = true;
+            video.setAttribute('muted', '');
             try { video.pause(); } catch { }
             setIsPaused(false);
             
@@ -195,9 +203,10 @@ const ReelPlayer = memo(function ReelPlayer({
         }
 
         const attemptPlay = async (retryCount = 0) => {
-            // isMine: am I STILL the intended active video right now?
-            // Uses BOTH the session counter AND the live activeVideoIdRef
-            // so it's immune to closure-staleness race conditions.
+            // Helper: am I still the intended active video RIGHT NOW?
+            // Checks BOTH the session counter AND the live activeVideoIdRef.
+            // activeVideoIdRef is updated synchronously on every scroll,
+            // so this is immune to all closure-staleness race conditions.
             const isMine = () =>
                 mySession === activeSessionRef.current &&
                 activeVideoIdRef.current === videoId;
@@ -221,6 +230,7 @@ const ReelPlayer = memo(function ReelPlayer({
                     });
                 }
 
+                // Re-check after async canplay wait
                 if (!isMine() || userPausedRef.current) {
                     vid.muted = true;
                     try { vid.pause(); } catch {}
@@ -228,6 +238,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 }
 
                 const elapsed = performance.now() - loadingStart;
+                // Skip the artificial delay entirely if the video was already buffered
                 const extraDelay = alreadyBuffered
                     ? 0
                     : Math.max(0, MIN_LOADING_MS - elapsed);
@@ -235,25 +246,22 @@ const ReelPlayer = memo(function ReelPlayer({
                     await new Promise(res => setTimeout(res, extraDelay));
                 }
 
+                // Re-check after MIN_LOADING_MS delay
                 if (!isMine() || userPausedRef.current || forceStop) {
                     vid.muted = true;
+                    vid.setAttribute('muted', '');
                     try { vid.pause(); } catch {}
                     return;
                 }
 
-                // ── ALWAYS start play() muted ──────────────────────────
-                // On mobile Safari, audio output starts 50-200ms AFTER
-                // play() resolves. If the user scrolled away in that window,
-                // ghost audio plays with nobody to stop it.
-                // Fix: play muted unconditionally, then check again after
-                // the audio-start delay before unmuting.
-                vid.muted = true;
+                // Play muted — the HTML attribute is still set.
+                // iOS Safari will not produce audio while the attribute exists.
                 await vid.play();
 
-                // play() resolved — but audio hasn't started yet on mobile.
-                // Re-check ownership right now.
+                // Re-check immediately after play() resolves
                 if (!isMine()) {
                     vid.muted = true;
+                    vid.setAttribute('muted', '');
                     try { vid.pause(); } catch {}
                     return;
                 }
@@ -261,21 +269,24 @@ const ReelPlayer = memo(function ReelPlayer({
                 setIsPaused(false);
                 setShowInitialLoading(false);
 
-                // Wait 200ms — enough for mobile audio pipeline to start.
-                // Then do a FINAL ownership check before unmuting.
-                // This is the permanent fix for the ghost-audio-on-mobile bug.
-                await new Promise(res => setTimeout(res, 200));
+                // Wait for the iOS audio pipeline start window (50-200ms).
+                // Only after this are we sure no ghost audio will leak.
+                await new Promise(res => setTimeout(res, 250));
 
+                // Final ownership check after the audio-start delay
                 if (!isMine()) {
-                    // We lost ownership during the audio-start window.
                     vid.muted = true;
+                    vid.setAttribute('muted', '');
                     try { vid.pause(); } catch {}
                     return;
                 }
 
-                // Confirmed owner after audio-start delay — safe to unmute.
+                // Confirmed owner — remove HTML muted attribute and set JS property.
+                // Both must be done: attribute for iOS, property for all browsers.
+                if (!globalMuted) {
+                    vid.removeAttribute('muted');
+                }
                 vid.muted = globalMuted;
-
             } catch (err: any) {
                 if (!isMine()) return;
                 if (err?.name === 'AbortError') return;
@@ -299,6 +310,7 @@ const ReelPlayer = memo(function ReelPlayer({
             if (videoRef.current) {
                 videoRef.current.pause();
                 videoRef.current.muted = true;
+                videoRef.current.setAttribute('muted', '');
             }
         };
     }, [isActive, isAdjacent, userHasInteracted, forceStop]);
@@ -589,21 +601,29 @@ const ReelPlayer = memo(function ReelPlayer({
                 </div>
             )}
 
-            {/* Video element */}
+            {/* Video element — muted HTML attribute is PERMANENT.
+                iOS Safari ignores JS .muted=true for buffered adjacent videos.
+                Only the HTML attribute reliably prevents audio from starting.
+                We call removeAttribute('muted') only after confirmed ownership. */}
             <video
                 ref={videoRef}
                 poster={thumbnailUrl}
                 playsInline
+                muted
                 loop
-                preload={isActive || isAdjacent ? 'auto' : 'none'}
+                preload={isAdjacent ? 'metadata' : isActive ? 'auto' : 'none'}
                 onCanPlay={() => {
-                    setIsBuffering(false);
-                    setShowInitialLoading(false);
+                    if (isActive) {
+                        setIsBuffering(false);
+                        setShowInitialLoading(false);
+                    }
                 }}
                 onWaiting={() => {
                     if (isActive) setIsBuffering(true);
                 }}
-                onPlaying={() => setIsBuffering(false)}
+                onPlaying={() => {
+                    if (isActive) setIsBuffering(false);
+                }}
                 style={{
                     width: '100%',
                     height: '100%',
