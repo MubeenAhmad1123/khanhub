@@ -404,7 +404,12 @@ export function VideoFeed() {
         if (playingRef.current !== null && playingRef.current !== idx) {
           const prevEl = videoRefs.current[playingRef.current]?.querySelector('video');
           if (prevEl) {
-            try { prevEl.pause(); prevEl.muted = true; } catch {}
+            try {
+              prevEl.pause();
+              prevEl.muted = true;
+              prevEl.setAttribute('muted', '');
+              prevEl.volume = 0;
+            } catch {}
           }
         }
 
@@ -414,11 +419,16 @@ export function VideoFeed() {
           // Guard: only activate if this index is still the pending one
           if (pendingIndex !== idx) return;
 
-          setForceStopAll(false);
-          activeIndexRef.current = idx;
-          playingRef.current = idx;
-          ioActiveIndexRef.current = idx;
-          setActiveIndex(idx);
+          // Briefly force-stop all then release — ensures iOS audio session 
+          // is cut on the previously playing video before new one starts. 
+          setForceStopAll(true);
+          setTimeout(() => {
+            setForceStopAll(false);
+            activeIndexRef.current = idx;
+            playingRef.current = idx;
+            ioActiveIndexRef.current = idx;
+            setActiveIndex(idx);
+          }, 80);
 
           const currentVideo = displayVideos[idx];
           if (currentVideo && !currentVideo.isPlaceholder) {
@@ -466,6 +476,8 @@ export function VideoFeed() {
                 try {
                   prevVidEl.pause();
                   prevVidEl.muted = true;
+                  prevVidEl.setAttribute('muted', '');
+                  prevVidEl.volume = 0;
                 } catch (e) {}
               }
             }
@@ -496,6 +508,8 @@ export function VideoFeed() {
                 try {
                   prevVidEl.pause();
                   prevVidEl.muted = true;
+                  prevVidEl.setAttribute('muted', '');
+                  prevVidEl.volume = 0;
                 } catch (e) {}
               }
             }
@@ -553,6 +567,8 @@ export function VideoFeed() {
               try {
                 prevVidEl.pause();
                 prevVidEl.muted = true;
+                prevVidEl.setAttribute('muted', '');
+                prevVidEl.volume = 0;
               } catch (e) {}
             }
           }

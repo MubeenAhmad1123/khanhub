@@ -258,6 +258,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 if (!isMine() || userPausedRef.current || forceStop) {
                     vid.muted = true;
                     vid.setAttribute('muted', '');
+                    vid.volume = 0;
                     try { vid.pause(); } catch {}
                     return;
                 }
