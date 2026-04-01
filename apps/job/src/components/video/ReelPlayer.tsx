@@ -20,11 +20,11 @@ interface ReelPlayerProps {
     userHasInteracted?: boolean;
     isMobileDevice?: boolean;
     forceStop?: boolean;
-    // globalMuted is the single source of truth for mute state.
-    // ReelPlayer never owns mute state — it reads globalMuted and
-    // calls onToggleMute() to ask VideoFeed to flip it.
     globalMuted: boolean;
     onToggleMute: () => void;
+    // Live ref from VideoFeed — always holds the currently active video ID.
+    // Async code reads this to abort immediately when video changes.
+    activeVideoIdRef: React.MutableRefObject<string>;
 }
 
 const MIN_LOADING_MS = 800;
@@ -39,6 +39,7 @@ const ReelPlayer = memo(function ReelPlayer({
     forceStop = false,
     globalMuted,
     onToggleMute,
+    activeVideoIdRef,
 }: ReelPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
@@ -191,13 +192,22 @@ const ReelPlayer = memo(function ReelPlayer({
         }
 
         const attemptPlay = async (retryCount = 0) => {
-            if (!isCurrentSession()) return;
+            // Helper: am I still the intended active video RIGHT NOW?
+            // Checks BOTH the session counter AND the live activeVideoIdRef.
+            // activeVideoIdRef is updated synchronously on every scroll,
+            // so this is immune to all closure-staleness race conditions.
+            const isMine = () =>
+                mySession === activeSessionRef.current &&
+                activeVideoIdRef.current === videoId;
+
+            if (!isMine()) return;
             const vid = videoRef.current;
             if (!vid) return;
             if (userPausedRef.current) return;
 
             try {
-                // Point 2: Set muted state before play
+                // Set muted ONLY if I am still the active video
+                if (!isMine()) return;
                 vid.muted = globalMuted;
 
                 if (vid.readyState < 2) {
@@ -211,7 +221,12 @@ const ReelPlayer = memo(function ReelPlayer({
                     });
                 }
 
-                if (!isCurrentSession() || userPausedRef.current) return;
+                // Re-check after async canplay wait
+                if (!isMine() || userPausedRef.current) {
+                    vid.muted = true;
+                    try { vid.pause(); } catch {}
+                    return;
+                }
 
                 const elapsed = performance.now() - loadingStart;
                 const extraDelay = Math.max(0, MIN_LOADING_MS - elapsed);
@@ -219,23 +234,28 @@ const ReelPlayer = memo(function ReelPlayer({
                     await new Promise(res => setTimeout(res, extraDelay));
                 }
 
-                // Point 2: Call video.play()
-                if (forceStop) return;
-                await vid.play();
-
-                if (!isCurrentSession()) {
+                // Re-check after MIN_LOADING_MS delay
+                if (!isMine() || userPausedRef.current || forceStop) {
                     vid.muted = true;
-                    try { vid.pause(); } catch { }
+                    try { vid.pause(); } catch {}
                     return;
                 }
 
-                // Recalibrate mute state post-play
-                vid.muted = globalMuted;
+                await vid.play();
 
+                // Re-check immediately after play() resolves
+                if (!isMine()) {
+                    vid.muted = true;
+                    try { vid.pause(); } catch {}
+                    return;
+                }
+
+                // Confirmed: I am still the active video
+                vid.muted = globalMuted;
                 setIsPaused(false);
                 setShowInitialLoading(false);
             } catch (err: any) {
-                if (!isCurrentSession()) return;
+                if (!isMine()) return;
                 if (err?.name === 'AbortError') return;
 
                 if (retryCount < 2) {

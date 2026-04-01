@@ -1,8 +1,7 @@
 // apps/job/src/components/video/VideoFeed.tsx
 'use client';
 
-// NOTE: Volume2 / VolumeX are NO LONGER imported here.
-// The mute button and its icons now live inside ReelPlayer.tsx.
+// The mute button and its icons are used in the desktop overlay.
 import { Volume2, VolumeX } from 'lucide-react';
 import React, {
   useState,
@@ -70,6 +69,10 @@ export function VideoFeed() {
   const activeIndexRef = useRef<number | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const playingRef = useRef<number | null>(null);
+  // ── LIVE active video ID ref ───────────────────────────────────
+  // Updated synchronously the moment we decide a new video is active.
+  // All async attemptPlay calls read this — immune to closure staleness.
+  const activeVideoIdRef = useRef<string>('');
 
   const [activeTab, setActiveTab] = useState(2);
   const [showGuestWall, setShowGuestWall] = useState(false);
@@ -318,16 +321,18 @@ export function VideoFeed() {
         if (!deeplinkVid && sessionResumeId.current && !hasDeeplinked.current) {
           const resumeIdx = videos.findIndex(v => v.id === sessionResumeId.current);
           if (resumeIdx > 0) {
-            hasDeeplinked.current = true;
-            setTimeout(() => {
-              setForceStopAll(false);
-              activeIndexRef.current = resumeIdx;
-              playingRef.current = resumeIdx;
-              ioActiveIndexRef.current = resumeIdx;
-              setActiveIndex(resumeIdx);
-              videoRefs.current[resumeIdx]?.scrollIntoView({ behavior: 'instant' });
-            }, 150);
-          }
+          hasDeeplinked.current = true;
+          // Synchronously set ID ref to prevent any other video playing
+          activeVideoIdRef.current = videos[resumeIdx]?.id ?? '';
+          setTimeout(() => {
+            setForceStopAll(false);
+            activeIndexRef.current = resumeIdx;
+            playingRef.current = resumeIdx;
+            ioActiveIndexRef.current = resumeIdx;
+            setActiveIndex(resumeIdx);
+            videoRefs.current[resumeIdx]?.scrollIntoView({ behavior: 'instant' });
+          }, 150);
+        }
         }
 
         setVideosLoading(false);
@@ -375,6 +380,11 @@ export function VideoFeed() {
         if (idx < 0 || idx >= displayVideos.length) return;
 
         pendingIndex = idx;
+
+        // ── CRITICAL: update live ID ref IMMEDIATELY (before debounce)
+        // This aborts any in-flight attemptPlay on the old video right now,
+        // not 80ms later. This is the permanent fix for ghost audio.
+        activeVideoIdRef.current = displayVideos[idx]?.id ?? '';
 
         // Immediately mute + pause the current video element
         if (playingRef.current !== null && playingRef.current !== idx) {
@@ -430,6 +440,8 @@ export function VideoFeed() {
         const next = activeIndex + 1;
         if (next < displayVideos.length) {
           ignoreObserverUntilRef.current = Date.now() + 800;
+          // Sync set ID ref immediately to kill previous video's attemptPlay
+          activeVideoIdRef.current = displayVideos[next]?.id ?? '';
           videoRefs.current[next]?.scrollIntoView({ behavior: 'instant' });
           setForceStopAll(true);
           if (playingRef.current !== null && playingRef.current !== next) {
@@ -458,6 +470,8 @@ export function VideoFeed() {
         const prev = activeIndex - 1;
         if (prev >= 0) {
           ignoreObserverUntilRef.current = Date.now() + 800;
+          // Sync set ID ref immediately to kill previous video's attemptPlay
+          activeVideoIdRef.current = displayVideos[prev]?.id ?? '';
           videoRefs.current[prev]?.scrollIntoView({ behavior: 'instant' });
           setForceStopAll(true);
           if (playingRef.current !== null && playingRef.current !== prev) {
@@ -510,6 +524,8 @@ export function VideoFeed() {
     if (idx !== -1) {
       hasDeeplinked.current = true;
       ignoreObserverUntilRef.current = Date.now() + 700;
+      // Sync set ID ref immediately to prevent race conditions during scrolling
+      activeVideoIdRef.current = displayVideos[idx]?.id ?? '';
 
       if (idx !== activeIndex) {
         videoRefs.current[idx]?.scrollIntoView({ behavior: 'instant' });
@@ -559,6 +575,8 @@ export function VideoFeed() {
 
           hasDeeplinked.current = true;
           ignoreObserverUntilRef.current = Date.now() + 700;
+          // Sync set ID ref immediately
+          activeVideoIdRef.current = activeDeeplinkId;
 
           setTimeout(() => {
             setForceStopAll(false);
@@ -678,6 +696,7 @@ export function VideoFeed() {
               forceStop={forceStopAll}
               globalMuted={globalMuted}
               onToggleMute={handleToggleMute}
+              activeVideoIdRef={activeVideoIdRef}
             />
           </div>
 
@@ -710,8 +729,6 @@ export function VideoFeed() {
     activeIndex,
     globalMuted,
     userHasInteracted,
-    activeCategory,
-    activeRole,
     router,
     handleToggleMute,
     forceStopAll,
