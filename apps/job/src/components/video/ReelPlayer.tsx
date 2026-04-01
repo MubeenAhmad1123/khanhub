@@ -67,14 +67,17 @@ const ReelPlayer = memo(function ReelPlayer({
         if (!isActive) {
             video.muted = true;
             video.setAttribute('muted', '');
+            video.volume = 0;
             return;
         }
         // Active video: sync JS property. HTML attribute was removed in attemptPlay.
         video.muted = globalMuted;
         if (!globalMuted) {
             video.removeAttribute('muted');
+            video.volume = 1;
         } else {
             video.setAttribute('muted', '');
+            video.volume = 0;
         }
     }, [globalMuted, isActive]);
 
@@ -165,6 +168,7 @@ const ReelPlayer = memo(function ReelPlayer({
         if (!isActive || forceStop) {
             video.muted = true;
             video.setAttribute('muted', '');
+            video.volume = 0;
             try { video.pause(); } catch { }
             setIsPaused(false);
             
@@ -179,11 +183,13 @@ const ReelPlayer = memo(function ReelPlayer({
             }
             userPausedRef.current = false;
 
-            // Point 5: Explicit synchronous cleanup
+            // Explicit synchronous cleanup
             return () => {
                 if (videoRef.current) {
                     videoRef.current.pause();
                     videoRef.current.muted = true;
+                    videoRef.current.setAttribute('muted', '');
+                    videoRef.current.volume = 0;
                 }
             };
         }
@@ -233,6 +239,8 @@ const ReelPlayer = memo(function ReelPlayer({
                 // Re-check after async canplay wait
                 if (!isMine() || userPausedRef.current) {
                     vid.muted = true;
+                    vid.setAttribute('muted', '');
+                    vid.volume = 0;
                     try { vid.pause(); } catch {}
                     return;
                 }
@@ -258,10 +266,10 @@ const ReelPlayer = memo(function ReelPlayer({
                 // iOS Safari will not produce audio while the attribute exists.
                 await vid.play();
 
-                // Re-check immediately after play() resolves
                 if (!isMine()) {
                     vid.muted = true;
                     vid.setAttribute('muted', '');
+                    vid.volume = 0;
                     try { vid.pause(); } catch {}
                     return;
                 }
@@ -277,6 +285,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 if (!isMine()) {
                     vid.muted = true;
                     vid.setAttribute('muted', '');
+                    vid.volume = 0;
                     try { vid.pause(); } catch {}
                     return;
                 }
@@ -285,6 +294,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 // Both must be done: attribute for iOS, property for all browsers.
                 if (!globalMuted) {
                     vid.removeAttribute('muted');
+                    vid.volume = 1;
                 }
                 vid.muted = globalMuted;
             } catch (err: any) {
@@ -311,6 +321,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 videoRef.current.pause();
                 videoRef.current.muted = true;
                 videoRef.current.setAttribute('muted', '');
+                videoRef.current.volume = 0;
             }
         };
     }, [isActive, isAdjacent, userHasInteracted, forceStop]);
@@ -327,7 +338,9 @@ const ReelPlayer = memo(function ReelPlayer({
             if (!isActive) return;
             const vid = videoRef.current;
             if (!vid || vid.paused || userPausedRef.current) return;
+            vid.removeAttribute('muted');
             vid.muted = false;
+            vid.volume = 1;
         }, 80);
     }, [userHasInteracted, isActive, globalMuted]);
 
@@ -347,6 +360,7 @@ const ReelPlayer = memo(function ReelPlayer({
 
             if (Hls.isSupported() && hlsUrl.includes('.m3u8')) {
                 const hls = new Hls({
+                    autoStartLoad: false,
                     startLevel: 0,
                     abrEwmaDefaultEstimate: 300000,
                     maxBufferLength: 10,
@@ -611,7 +625,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 playsInline
                 muted
                 loop
-                preload={isAdjacent ? 'metadata' : isActive ? 'auto' : 'none'}
+                preload="none"
                 onCanPlay={() => {
                     if (isActive) {
                         setIsBuffering(false);

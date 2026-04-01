@@ -49,7 +49,7 @@ const shuffleArray = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-const PRELOAD_AHEAD = 2;
+const PRELOAD_AHEAD = 1;
 const PRELOAD_BEHIND = 1;
 
 // ─── component ──────────────────────────────────────────────────────────────
