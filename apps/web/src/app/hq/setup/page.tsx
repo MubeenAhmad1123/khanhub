@@ -79,8 +79,10 @@ export default function HqSetupPage() {
 
   if (!mounted || checking) {
     return (
-      <div style={{ minHeight: '60vh', display: 'flex', 
-                    alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{
+        minHeight: '60vh', display: 'flex',
+        alignItems: 'center', justifyContent: 'center'
+      }}>
         <p className="text-gray-500 text-sm animate-pulse">Checking system status...</p>
       </div>
     );
@@ -89,19 +91,23 @@ export default function HqSetupPage() {
   try {
     if (alreadySetup) {
       return (
-        <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+        <div style={{
+          minHeight: '60vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: '12px'
+        }}>
           <p className="text-gray-700 font-medium">Setup already complete.</p>
           <button onClick={() => router.push('/hq/login')}
-             className="text-teal-600 underline text-sm">Go to Login</button>
+            className="text-teal-600 underline text-sm">Go to Login</button>
         </div>
       );
     }
 
     if (success) {
       return (
-        <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+        <div style={{
+          minHeight: '60vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: '12px'
+        }}>
           <p className="text-green-600 font-medium text-lg">
             Setup complete! Redirecting to login...
           </p>
@@ -153,16 +159,15 @@ export default function HqSetupPage() {
                   <input
                     type="text"
                     value="KHAN-SA-001"
-                    readOnly
+
                     className="w-full bg-gray-100 border border-gray-200 rounded-2xl px-6 
                                py-4 text-sm font-bold text-gray-500 cursor-not-allowed"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="relative">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] 
-                                      text-gray-400 block mb-1 ml-2">Password</label>
                     <EyePasswordInput
+                      label="Password"
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       required
@@ -170,9 +175,8 @@ export default function HqSetupPage() {
                     />
                   </div>
                   <div className="relative">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] 
-                                      text-gray-400 block mb-1 ml-2">Confirm</label>
                     <EyePasswordInput
+                      label="Confirm"
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
                       required
