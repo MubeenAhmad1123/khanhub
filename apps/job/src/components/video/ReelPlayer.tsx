@@ -215,6 +215,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 }
 
                 // Point 2: Call video.play()
+                if (forceStop) return;
                 await vid.play();
 
                 if (!isCurrentSession()) {
@@ -253,7 +254,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 videoRef.current.muted = true;
             }
         };
-    }, [isActive, isAdjacent, userHasInteracted]);
+    }, [isActive, isAdjacent, userHasInteracted, forceStop]);
 
     // ── Auto-unmute when userHasInteracted first fires ────────────
     useEffect(() => {

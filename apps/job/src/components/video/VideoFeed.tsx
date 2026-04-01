@@ -345,142 +345,82 @@ export function VideoFeed() {
 
 
 
-  // ── IntersectionObserver ──────────────────────────────────────
+  // ── Unified Scroll Listener ──────────────────────────────────
   useEffect(() => {
-    if (displayVideos.length === 0) return;
-    const observers: IntersectionObserver[] = [];
-
-    videoRefs.current.forEach((ref, index) => {
-      if (!ref) return;
-      const observer = new IntersectionObserver(
-        entries => {
-          const now = Date.now();
-          if (
-            ignoreObserverUntilRef.current &&
-            now < ignoreObserverUntilRef.current
-          )
-            return;
-
-          entries.forEach(entry => {
-            // Point 4: Strict 0.7 threshold
-            if (!entry.isIntersecting || entry.intersectionRatio < 0.7) return;
-
-            const currentVideo = displayVideos[index];
-            if (!currentVideo || currentVideo.isPlaceholder) return;
-
-            // Point 1: Immediate PAUSE_ALL signal
-            setForceStopAll(true);
-
-            // Point 3: Single Active Enforcement - Send pause command to previous index first
-            if (playingRef.current !== null && playingRef.current !== index) {
-              const prevContainer = videoRefs.current[playingRef.current];
-              if (prevContainer) {
-                const prevVidEl = prevContainer.querySelector('video');
-                if (prevVidEl) {
-                  try {
-                    prevVidEl.pause();
-                    prevVidEl.muted = true;
-                  } catch (e) {}
-                }
-              }
-            }
-
-            // Point 1 & 3: Debounced activation with 100ms safety gap for old video closure
-            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-            debounceTimerRef.current = setTimeout(() => {
-              // Ensure we wait at least 100ms total if we were playing something else
-              const finalWait = (playingRef.current !== null && playingRef.current !== index) ? 20 : 0;
-              
-              setTimeout(() => {
-                setForceStopAll(false);
-                activeIndexRef.current = index;
-                playingRef.current = index;
-
-                ioActiveIndexRef.current = index;
-                setActiveIndex(index);
-                sessionStorage.setItem('jobreel_last_video', currentVideo.id);
-
-                if (
-                  currentVideo.id !== lastUpdatedVideoRef.current &&
-                  typeof window !== 'undefined'
-                ) {
-                  lastUpdatedVideoRef.current = currentVideo.id;
-                  const url = new URL(window.location.href);
-                  if (url.searchParams.get('v') !== currentVideo.id) {
-                    url.searchParams.set('v', currentVideo.id);
-                    window.history.replaceState(null, '', url.pathname + url.search);
-                  }
-                }
-
-                if (!user && !firebaseUser && !loading) {
-                  const count =
-                    parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
-                  localStorage.setItem('jobreel_videos_watched', String(count));
-                  if (count >= 3) setShowGuestWall(true);
-                }
-              }, finalWait);
-            }, 80);
-          });
-        },
-        {
-          root: containerRef.current,
-          threshold: 0.7,
-          rootMargin: '0px',
-        },
-      );
-      observer.observe(ref);
-      observers.push(observer);
-    });
-
-    return () => observers.forEach(o => o.disconnect());
-  }, [displayVideos, user, firebaseUser, loading]);
-
-  // Development-only scroll fallback
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
     const container = containerRef.current;
     if (!container || displayVideos.length === 0) return;
 
+    let ticking = false;
+    let pendingIndex = activeIndexRef.current ?? 0;
+
     const handleScroll = () => {
-      const now = Date.now();
-      if (
-        ignoreObserverUntilRef.current &&
-        now < ignoreObserverUntilRef.current
-      )
-        return;
-      const h = container.clientHeight;
-      if (!h) return;
-      const idx = Math.round(container.scrollTop / h);
-      if (
-        idx !== ioActiveIndexRef.current &&
-        idx >= 0 &&
-        idx < displayVideos.length
-      ) {
-        setForceStopAll(true);
+      if (ticking) return;
+      ticking = true;
+
+      requestAnimationFrame(() => {
+        ticking = false;
+        const h = container.clientHeight;
+        if (!h) return;
+
+        const now = Date.now();
+        if (
+          ignoreObserverUntilRef.current &&
+          now < ignoreObserverUntilRef.current
+        ) return;
+
+        const rawIdx = container.scrollTop / h;
+        const idx = Math.round(rawIdx);
+
+        if (idx === activeIndexRef.current) return;
+        if (idx < 0 || idx >= displayVideos.length) return;
+
+        pendingIndex = idx;
+
+        // Immediately mute + pause the current video element
         if (playingRef.current !== null && playingRef.current !== idx) {
-          const prevVid =
-            videoRefs.current[playingRef.current]?.querySelector('video');
-          if (prevVid) {
-            try {
-              prevVid.pause();
-              prevVid.muted = true;
-            } catch (e) {}
+          const prevEl = videoRefs.current[playingRef.current]?.querySelector('video');
+          if (prevEl) {
+            try { prevEl.pause(); prevEl.muted = true; } catch {}
           }
         }
+
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
         debounceTimerRef.current = setTimeout(() => {
+          // Guard: only activate if this index is still the pending one
+          if (pendingIndex !== idx) return;
+
           setForceStopAll(false);
           activeIndexRef.current = idx;
           playingRef.current = idx;
           ioActiveIndexRef.current = idx;
           setActiveIndex(idx);
+
+          const currentVideo = displayVideos[idx];
+          if (currentVideo && !currentVideo.isPlaceholder) {
+            sessionStorage.setItem('jobreel_last_video', currentVideo.id);
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href);
+              if (url.searchParams.get('v') !== currentVideo.id) {
+                url.searchParams.set('v', currentVideo.id);
+                window.history.replaceState(null, '', url.pathname + url.search);
+              }
+            }
+            if (!user && !firebaseUser && !loading) {
+              const count =
+                parseInt(localStorage.getItem('jobreel_videos_watched') || '0') + 1;
+              localStorage.setItem('jobreel_videos_watched', String(count));
+              if (count >= 3) setShowGuestWall(true);
+            }
+          }
         }, 80);
-      }
+      });
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [displayVideos.length]);
+  }, [displayVideos, user, firebaseUser, loading]);
+
 
   // ── keyboard navigation ───────────────────────────────────────
   useEffect(() => {
