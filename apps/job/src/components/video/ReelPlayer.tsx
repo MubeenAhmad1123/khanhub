@@ -195,10 +195,9 @@ const ReelPlayer = memo(function ReelPlayer({
         }
 
         const attemptPlay = async (retryCount = 0) => {
-            // Helper: am I still the intended active video RIGHT NOW?
-            // Checks BOTH the session counter AND the live activeVideoIdRef.
-            // activeVideoIdRef is updated synchronously on every scroll,
-            // so this is immune to all closure-staleness race conditions.
+            // isMine: am I STILL the intended active video right now?
+            // Uses BOTH the session counter AND the live activeVideoIdRef
+            // so it's immune to closure-staleness race conditions.
             const isMine = () =>
                 mySession === activeSessionRef.current &&
                 activeVideoIdRef.current === videoId;
@@ -222,7 +221,6 @@ const ReelPlayer = memo(function ReelPlayer({
                     });
                 }
 
-                // Re-check after async canplay wait
                 if (!isMine() || userPausedRef.current) {
                     vid.muted = true;
                     try { vid.pause(); } catch {}
@@ -230,7 +228,6 @@ const ReelPlayer = memo(function ReelPlayer({
                 }
 
                 const elapsed = performance.now() - loadingStart;
-                // Skip the artificial delay entirely if the video was already buffered
                 const extraDelay = alreadyBuffered
                     ? 0
                     : Math.max(0, MIN_LOADING_MS - elapsed);
@@ -238,25 +235,47 @@ const ReelPlayer = memo(function ReelPlayer({
                     await new Promise(res => setTimeout(res, extraDelay));
                 }
 
-                // Re-check after MIN_LOADING_MS delay
                 if (!isMine() || userPausedRef.current || forceStop) {
                     vid.muted = true;
                     try { vid.pause(); } catch {}
                     return;
                 }
 
+                // ── ALWAYS start play() muted ──────────────────────────
+                // On mobile Safari, audio output starts 50-200ms AFTER
+                // play() resolves. If the user scrolled away in that window,
+                // ghost audio plays with nobody to stop it.
+                // Fix: play muted unconditionally, then check again after
+                // the audio-start delay before unmuting.
+                vid.muted = true;
                 await vid.play();
 
-                // Re-check immediately after play() resolves
+                // play() resolved — but audio hasn't started yet on mobile.
+                // Re-check ownership right now.
                 if (!isMine()) {
                     vid.muted = true;
                     try { vid.pause(); } catch {}
                     return;
                 }
 
-                // Confirmed: I am still the active video
                 setIsPaused(false);
                 setShowInitialLoading(false);
+
+                // Wait 200ms — enough for mobile audio pipeline to start.
+                // Then do a FINAL ownership check before unmuting.
+                // This is the permanent fix for the ghost-audio-on-mobile bug.
+                await new Promise(res => setTimeout(res, 200));
+
+                if (!isMine()) {
+                    // We lost ownership during the audio-start window.
+                    vid.muted = true;
+                    try { vid.pause(); } catch {}
+                    return;
+                }
+
+                // Confirmed owner after audio-start delay — safe to unmute.
+                vid.muted = globalMuted;
+
             } catch (err: any) {
                 if (!isMine()) return;
                 if (err?.name === 'AbortError') return;

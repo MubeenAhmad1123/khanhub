@@ -648,6 +648,44 @@ export function VideoFeed() {
     }
   }, [firebaseUser, showGuestWall]);
 
+  // ── SAFETY: mute every non-active video element directly ──────
+  // This is the final line of defense against ghost audio on mobile.
+  // Runs every time activeIndex changes and directly touches the DOM,
+  // bypassing React state and async promise chains entirely.
+  // On mobile, audio output can start 50-200ms after play() resolves —
+  // this effect kills any non-active audio at the DOM level immediately.
+  useEffect(() => {
+    if (activeIndex < 0) return;
+    const activeVideoEl = videoRefs.current[activeIndex]?.querySelector('video');
+
+    videoRefs.current.forEach((container, i) => {
+      if (!container) return;
+      const el = container.querySelector('video') as HTMLVideoElement | null;
+      if (!el) return;
+      if (i === activeIndex) return; // leave active video alone
+      // Hard-mute and pause every non-active video directly in the DOM
+      el.muted = true;
+      if (!el.paused) {
+        try { el.pause(); } catch {}
+      }
+    });
+
+    // Also run again after 250ms to catch the mobile audio-start delay window
+    const t = setTimeout(() => {
+      videoRefs.current.forEach((container, i) => {
+        if (!container || i === activeIndex) return;
+        const el = container.querySelector('video') as HTMLVideoElement | null;
+        if (!el) return;
+        el.muted = true;
+        if (!el.paused) {
+          try { el.pause(); } catch {}
+        }
+      });
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [activeIndex]);
+
   // ── video state helper ────────────────────────────────────────
   const getVideoState = (index: number) => {
     const d = index - activeIndex;
