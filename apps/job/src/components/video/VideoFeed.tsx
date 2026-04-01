@@ -320,7 +320,7 @@ export function VideoFeed() {
         // Session resume
         if (!deeplinkVid && sessionResumeId.current && !hasDeeplinked.current) {
           const resumeIdx = videos.findIndex(v => v.id === sessionResumeId.current);
-          if (resumeIdx > 0) {
+          if (resumeIdx > -1) {
           hasDeeplinked.current = true;
           // Synchronously set ID ref to prevent any other video playing
           activeVideoIdRef.current = videos[resumeIdx]?.id ?? '';
@@ -334,6 +334,20 @@ export function VideoFeed() {
           }, 150);
         }
         }
+
+    // ── Auto-activate first video on clean load (no deeplink, no session resume)
+     if (
+       !deeplinkVid &&
+       !hasDeeplinked.current &&
+       videos.length > 0 &&
+       activeIndexRef.current === null
+     ) {
+       activeVideoIdRef.current = videos[0].id;
+       activeIndexRef.current = 0;
+       playingRef.current = 0;
+       ioActiveIndexRef.current = 0;
+       setActiveIndex(0);
+     }
 
         setVideosLoading(false);
       } catch (error: any) {

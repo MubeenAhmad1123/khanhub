@@ -182,8 +182,11 @@ const ReelPlayer = memo(function ReelPlayer({
 
         // --- isActive === true && !forceStop ---
         userPausedRef.current = false;
-        setShowInitialLoading(true);
-        setIsBuffering(true);
+        const alreadyBuffered = !!video && video.readyState >= 3; // HAVE_FUTURE_DATA or better
+        if (!alreadyBuffered) {
+            setShowInitialLoading(true);
+            setIsBuffering(true);
+        }
         const loadingStart = performance.now();
         
         // Point 2: Call hls.startLoad() if needed
@@ -206,9 +209,7 @@ const ReelPlayer = memo(function ReelPlayer({
             if (userPausedRef.current) return;
 
             try {
-                // Set muted ONLY if I am still the active video
                 if (!isMine()) return;
-                vid.muted = globalMuted;
 
                 if (vid.readyState < 2) {
                     await new Promise<void>(resolve => {
@@ -229,7 +230,10 @@ const ReelPlayer = memo(function ReelPlayer({
                 }
 
                 const elapsed = performance.now() - loadingStart;
-                const extraDelay = Math.max(0, MIN_LOADING_MS - elapsed);
+                // Skip the artificial delay entirely if the video was already buffered
+                const extraDelay = alreadyBuffered
+                    ? 0
+                    : Math.max(0, MIN_LOADING_MS - elapsed);
                 if (extraDelay > 0) {
                     await new Promise(res => setTimeout(res, extraDelay));
                 }
@@ -251,7 +255,6 @@ const ReelPlayer = memo(function ReelPlayer({
                 }
 
                 // Confirmed: I am still the active video
-                vid.muted = globalMuted;
                 setIsPaused(false);
                 setShowInitialLoading(false);
             } catch (err: any) {
