@@ -13,6 +13,7 @@ export default function HqSetupPage() {
   const [alreadySetup, setAlreadySetup] = useState(false);
 
   const [name, setName] = useState('');
+  const [adminId, setAdminId] = useState('KHAN-SA-001');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -55,7 +56,7 @@ export default function HqSetupPage() {
     setLoading(true);
     try {
       const result = await createHqUserServer({
-        customId: 'KHAN-SA-001',
+        customId: adminId,
         name,
         role: 'superadmin',
         password,
@@ -150,7 +151,7 @@ export default function HqSetupPage() {
                     required
                     placeholder="Enter your full name"
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
-                               py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                                py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
                   />
                 </div>
                 <div>
@@ -158,10 +159,12 @@ export default function HqSetupPage() {
                                     text-gray-400 block mb-1 ml-2">Admin ID</label>
                   <input
                     type="text"
-                    value="KHAN-SA-001"
-
-                    className="w-full bg-gray-100 border border-gray-200 rounded-2xl px-6 
-                               py-4 text-sm font-bold text-gray-500 cursor-not-allowed"
+                    value={adminId}
+                    onChange={e => setAdminId(e.target.value)}
+                    required
+                    placeholder="Enter admin ID (e.g. KHAN-SA-001)"
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
+                                py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
