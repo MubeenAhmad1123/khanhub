@@ -79,7 +79,7 @@ export default function HqRehabFinancePage() {
   const getMonthlyData = () => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const now = new Date();
-    const last6Months = [];
+    const last6Months: { month: string; year: number; income: number; expense: number }[] = [];
     
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
