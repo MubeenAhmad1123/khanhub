@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { doc, onSnapshot, collection, query, where, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase-config';
 import { User } from '@/types/user';

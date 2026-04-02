@@ -38,6 +38,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "firebase": "^10.14.1",
+    "firebase-admin": "^12.0.0",
     "framer-motion": "^11.18.2",
     "hls.js": "^1.6.15",
     "lucide-react": "^0.379.0",

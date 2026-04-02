@@ -327,7 +327,7 @@ const ReelPlayer = memo(function ReelPlayer({
                 videoRef.current.volume = 0;
             }
         };
-    }, [isActive, isAdjacent, userHasInteracted, forceStop]);
+    }, [isActive, isAdjacent, userHasInteracted, forceStop, activeVideoIdRef, globalMuted, videoId]);
 
     // ── Auto-unmute when userHasInteracted first fires ────────────
     useEffect(() => {
@@ -398,8 +398,8 @@ const ReelPlayer = memo(function ReelPlayer({
 
     // ── Unmount cleanup ───────────────────────────────────────────
     useEffect(() => {
+        const video = videoRef.current;
         return () => {
-            const video = videoRef.current;
             if (hlsRef.current) {
                 try { hlsRef.current.destroy(); } catch { }
                 hlsRef.current = null;

@@ -321,33 +321,33 @@ export function VideoFeed() {
         if (!deeplinkVid && sessionResumeId.current && !hasDeeplinked.current) {
           const resumeIdx = videos.findIndex(v => v.id === sessionResumeId.current);
           if (resumeIdx > -1) {
-          hasDeeplinked.current = true;
-          // Synchronously set ID ref to prevent any other video playing
-          activeVideoIdRef.current = videos[resumeIdx]?.id ?? '';
-          setTimeout(() => {
-            setForceStopAll(false);
-            activeIndexRef.current = resumeIdx;
-            playingRef.current = resumeIdx;
-            ioActiveIndexRef.current = resumeIdx;
-            setActiveIndex(resumeIdx);
-            videoRefs.current[resumeIdx]?.scrollIntoView({ behavior: 'instant' });
-          }, 150);
-        }
+            hasDeeplinked.current = true;
+            // Synchronously set ID ref to prevent any other video playing
+            activeVideoIdRef.current = videos[resumeIdx]?.id ?? '';
+            setTimeout(() => {
+              setForceStopAll(false);
+              activeIndexRef.current = resumeIdx;
+              playingRef.current = resumeIdx;
+              ioActiveIndexRef.current = resumeIdx;
+              setActiveIndex(resumeIdx);
+              videoRefs.current[resumeIdx]?.scrollIntoView({ behavior: 'instant' });
+            }, 150);
+          }
         }
 
-    // ── Auto-activate first video on clean load (no deeplink, no session resume)
-     if (
-       !deeplinkVid &&
-       !hasDeeplinked.current &&
-       videos.length > 0 &&
-       activeIndexRef.current === null
-     ) {
-       activeVideoIdRef.current = videos[0].id;
-       activeIndexRef.current = 0;
-       playingRef.current = 0;
-       ioActiveIndexRef.current = 0;
-       setActiveIndex(0);
-     }
+        // ── Auto-activate first video on clean load (no deeplink, no session resume)
+        if (
+          !deeplinkVid &&
+          !hasDeeplinked.current &&
+          videos.length > 0 &&
+          activeIndexRef.current === null
+        ) {
+          activeVideoIdRef.current = videos[0].id;
+          activeIndexRef.current = 0;
+          playingRef.current = 0;
+          ioActiveIndexRef.current = 0;
+          setActiveIndex(0);
+        }
 
         setVideosLoading(false);
       } catch (error: any) {
@@ -409,7 +409,7 @@ export function VideoFeed() {
               prevEl.muted = true;
               prevEl.setAttribute('muted', '');
               prevEl.volume = 0;
-            } catch {}
+            } catch { }
           }
         }
 
@@ -478,7 +478,7 @@ export function VideoFeed() {
                   prevVidEl.muted = true;
                   prevVidEl.setAttribute('muted', '');
                   prevVidEl.volume = 0;
-                } catch (e) {}
+                } catch (e) { }
               }
             }
           }
@@ -510,7 +510,7 @@ export function VideoFeed() {
                   prevVidEl.muted = true;
                   prevVidEl.setAttribute('muted', '');
                   prevVidEl.volume = 0;
-                } catch (e) {}
+                } catch (e) { }
               }
             }
           }
@@ -527,7 +527,7 @@ export function VideoFeed() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeIndex, displayVideos.length]);
+  }, [activeIndex, displayVideos]);
 
   // ── deeplink: category sync ───────────────────────────────────
   useEffect(() => {
@@ -569,7 +569,7 @@ export function VideoFeed() {
                 prevVidEl.muted = true;
                 prevVidEl.setAttribute('muted', '');
                 prevVidEl.volume = 0;
-              } catch (e) {}
+              } catch (e) { }
             }
           }
         }
@@ -683,7 +683,7 @@ export function VideoFeed() {
           el.muted = true;
           el.setAttribute('muted', '');
           if (!el.paused) {
-            try { el.pause(); } catch {}
+            try { el.pause(); } catch { }
           }
         }
       });
@@ -698,13 +698,13 @@ export function VideoFeed() {
   }, [activeIndex]);
 
   // ── video state helper ────────────────────────────────────────
-  const getVideoState = (index: number) => {
+  const getVideoState = useCallback((index: number) => {
     const d = index - activeIndex;
     if (d === 0) return { isActive: true, isAdjacent: false };
     if (d >= -PRELOAD_BEHIND && d <= PRELOAD_AHEAD)
       return { isActive: false, isAdjacent: true };
     return { isActive: false, isAdjacent: false };
-  };
+  }, [activeIndex]);
 
   // ── video slides ──────────────────────────────────────────────
   const renderedVideos = useMemo(() => {
@@ -795,6 +795,7 @@ export function VideoFeed() {
     router,
     handleToggleMute,
     forceStopAll,
+    getVideoState,
   ]);
 
   // ── render ────────────────────────────────────────────────────
@@ -867,7 +868,7 @@ export function VideoFeed() {
                     paddingBottom: 8,
                   }}
                 >
-                  <CategoryStoriesBar onCategoryChange={() => {}} />
+                  <CategoryStoriesBar onCategoryChange={() => { }} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -990,39 +991,39 @@ export function VideoFeed() {
         {/* Right side: avatar + like + save */}
         {displayVideos[activeIndex] && !displayVideos[activeIndex].isPlaceholder && (
           <div
+            style={{
+              position: 'fixed',
+              right: 10,
+              bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
+              zIndex: 300,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 20,
+            }}
+          >
+            {/* Mute button — top of action column */}
+            <div
+              onClick={handleToggleMute}
               style={{
-                position: 'fixed',
-                right: 10,
-                bottom: 'calc(30px + env(safe-area-inset-bottom, 0px) + 160px + 20px)',
-                zIndex: 300,
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.5)',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                gap: 20,
+                justifyContent: 'center',
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {/* Mute button — top of action column */}
-              <div
-                onClick={handleToggleMute}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                {globalMuted
-                  ? <VolumeX size={22} color="#fff" />
-                  : <Volume2 size={22} color="#fff" />}
-              </div>
+              {globalMuted
+                ? <VolumeX size={22} color="#fff" />
+                : <Volume2 size={22} color="#fff" />}
+            </div>
 
-              <div
-                onClick={() =>
+            <div
+              onClick={() =>
                 router.push(
                   `/profile/${displayVideos[activeIndex].userRole || 'user'}/${displayVideos[activeIndex].userId}`,
                 )
