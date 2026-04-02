@@ -15,7 +15,8 @@ import {
     CreditCard,
     ArrowRight,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -326,6 +327,61 @@ export default function JobSeekerDashboard() {
                     {/* Profile Engagement & Completion Tips */}
                     <div className="mb-10">
                         <ProfileEngagement user={userData} />
+                    </div>
+
+                    {/* Growth & Referral Status Card */}
+                    <div className="mb-8 p-8 bg-[#0F172A] rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Sparkles className="w-32 h-32 text-blue-500" />
+                        </div>
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
+                                    <Users className="w-6 h-6 text-blue-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">Growth Hub</h3>
+                                    <p className="text-blue-200/60 text-xs font-bold uppercase tracking-widest">Referral Program</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10">
+                                    <p className="text-blue-200/60 text-[10px] font-bold uppercase tracking-widest mb-1">Total Referrals</p>
+                                    <p className="text-3xl font-black text-white">{userData?.referralCount || 0}</p>
+                                </div>
+                                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10">
+                                    <p className="text-blue-200/60 text-[10px] font-bold uppercase tracking-widest mb-1">Videos Uploaded</p>
+                                    <p className="text-3xl font-black text-white">{userData?.videoUploadCount || 0}</p>
+                                </div>
+                                <div className="bg-blue-500/10 backdrop-blur-md rounded-2xl p-5 border border-blue-500/20">
+                                    <p className="text-blue-400 text-[10px] font-bold uppercase tracking-widest mb-1">Next Upload Goal</p>
+                                    <div className="flex items-end justify-between">
+                                        <p className="text-2xl font-black text-white">
+                                            {userData?.videoUploadCount === 0 
+                                                ? 'First Upload Free' 
+                                                : `${Math.max(0, ((userData?.videoUploadCount || 0)) * 3 - (userData?.referralCount || 0))}`}
+                                        </p>
+                                        <span className="text-[10px] font-bold text-blue-300 pb-1">Ref. Needed</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Progress Bar (Example: 3 referrals per upload) */}
+                            <div className="mt-8">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-bold text-blue-200/60 uppercase tracking-widest">Milestone Progress</span>
+                                    <span className="text-xs font-bold text-white">{((userData?.referralCount || 0) % 3)} / 3</span>
+                                </div>
+                                <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${((userData?.referralCount || 0) % 3) / 3 * 100}%` }}
+                                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Stats Grid */}

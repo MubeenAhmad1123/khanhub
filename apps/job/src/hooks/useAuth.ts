@@ -68,6 +68,25 @@ const _broadcast = (newState: AuthState) => {
 let _listenerStarted = false;
 let _unsubscribeAuth: (() => void) | null = null;
 
+async function _incrementReferrer(refCode: string) {
+  try {
+    const { collection, query, where, getDocs, updateDoc, increment, limit } = await import('firebase/firestore');
+    const { db } = await import('@/lib/firebase/firebase-config');
+    const q = query(collection(db, 'users'), where('referralCode', '==', refCode), limit(1));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      await updateDoc(snap.docs[0].ref, {
+        referralCount: increment(1)
+      });
+      console.log(`[useAuth] 📈 Incremented referralCount for referrer: ${refCode}`);
+      return snap.docs[0].id; // Return referrer UID
+    }
+  } catch (err) {
+    console.error('[useAuth] ❌ Failed to increment referrer:', err);
+  }
+  return null;
+}
+
 const _startListener = async () => {
   if (_listenerStarted) {
     console.log('[useAuth] 🎧 Auth listener already running');
@@ -125,6 +144,9 @@ const _startListener = async () => {
           followerCount: 0,
           followingCount: 0,
           totalLikes: 0,
+          referralCode: firebaseUser.uid.slice(-6).toUpperCase(),
+          referralCount: 0,
+          videoUploadCount: 0,
         };
         _broadcast({ user: fallback, firebaseUser, loading: false, error: 'profile_load_failed' });
       }
@@ -135,7 +157,7 @@ const _startListener = async () => {
   });
 };
 
-const _safeGetOrCreateProfile = async (fbUser: FirebaseUser, role: UserRole): Promise<any> => {
+const _safeGetOrCreateProfile = async (fbUser: FirebaseUser, role: UserRole, referredBy?: string): Promise<any> => {
   let userProfile: any = null;
 
   try {
@@ -165,7 +187,16 @@ const _safeGetOrCreateProfile = async (fbUser: FirebaseUser, role: UserRole): Pr
         followerCount: 0,
         followingCount: 0,
         totalLikes: 0,
+        referralCode: fbUser.uid.slice(-6).toUpperCase(),
+        referralCount: 0,
+        videoUploadCount: 0,
+        referredBy: referredBy || null,
       });
+
+      if (referredBy) {
+        await _incrementReferrer(referredBy);
+      }
+
       userProfile = await getUserProfile(fbUser.uid);
     } catch (err) {
       console.warn('[useAuth] 🔴 createUserProfile failed:', err);
@@ -192,6 +223,9 @@ const _safeGetOrCreateProfile = async (fbUser: FirebaseUser, role: UserRole): Pr
       followerCount: 0,
       followingCount: 0,
       totalLikes: 0,
+      referralCode: fbUser.uid.slice(-6).toUpperCase(),
+      referralCount: 0,
+      videoUploadCount: 0,
     };
   }
 
@@ -221,12 +255,12 @@ export function useAuth() {
       _subscribers.delete(setAuthState);
     };
   }, []);
-
   const register = async (
     email: string,
     password: string,
     additionalData: any,
-    role: UserRole = 'job_seeker'
+    role: UserRole = 'job_seeker',
+    referredBy?: string
   ): Promise<void> => {
     const trimmedEmail = email.trim();
     try {
@@ -252,9 +286,18 @@ export function useAuth() {
         isBanned: false,
         onboardingCompleted: false,
         registrationMethod: 'email',
+        referralCode: userCredential.user.uid.slice(-6).toUpperCase(),
+        referralCount: 0,
+        videoUploadCount: 0,
+        referredBy: referredBy || null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+
+      if (referredBy) {
+        await _incrementReferrer(referredBy);
+      }
+
       const userProfile = await getUserProfile(userCredential.user.uid);
       _broadcast({ user: userProfile, firebaseUser: userCredential.user, loading: false, error: null });
     } catch (error: any) {
@@ -277,7 +320,7 @@ export function useAuth() {
     }
   };
 
-  const loginWithGoogle = async (role: UserRole): Promise<void> => {
+  const loginWithGoogle = async (role: UserRole, referredBy?: string): Promise<void> => {
     try {
       _broadcast({ ..._state, loading: true, error: null });
 
@@ -311,6 +354,9 @@ export function useAuth() {
         followerCount: 0,
         followingCount: 0,
         totalLikes: 0,
+        referralCode: fbUser.uid.slice(-6).toUpperCase(),
+        referralCount: 0,
+        videoUploadCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -321,7 +367,7 @@ export function useAuth() {
       console.log('[useAuth] ✅ loginWithGoogle complete');
 
       // Background Firestore sync — non-blocking
-      _safeGetOrCreateProfile(fbUser, role).then((profile) => {
+      _safeGetOrCreateProfile(fbUser, role, referredBy).then((profile) => {
         if (profile) {
           console.log('[useAuth] ✅ Firestore profile loaded in background');
           _broadcast({ user: profile, firebaseUser: fbUser, loading: false, error: null });
@@ -412,6 +458,9 @@ export function useAuth() {
     resendVerificationEmail,
     updateProfile,
     refreshProfile,
+    referralCode: authState.user?.referralCode,
+    referralCount: authState.user?.referralCount || 0,
+    videoUploadCount: authState.user?.videoUploadCount || 0,
   };
 }
 

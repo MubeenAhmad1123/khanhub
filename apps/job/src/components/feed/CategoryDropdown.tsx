@@ -41,12 +41,16 @@ export function CategoryDropdown() {
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
                             className="absolute top-full left-0 mt-2 w-64 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 p-2 overflow-hidden"
                         >
                             <div className="max-h-[60vh] overflow-y-auto scrollbar-hide py-1">
-                                {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config]) => (
-                                    <button
+                                {(Object.entries(CATEGORY_CONFIG) as [CategoryKey, CategoryConfig][]).map(([key, config], index) => (
+                                    <motion.button
                                         key={key}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.03 }}
                                         onClick={() => handleSelect(key)}
                                         className={`flex items-center gap-3 w-full p-2.5 rounded-xl transition-all ${activeCategory === key
                                                 ? 'bg-white/20 text-white'
@@ -56,9 +60,13 @@ export function CategoryDropdown() {
                                         <span className="text-xl">{config.emoji}</span>
                                         <span className="text-[12px] font-bold uppercase tracking-wider font-poppins">{config.label}</span>
                                         {activeCategory === key && (
-                                            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" />
+                                            <motion.div 
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="ml-auto w-1.5 h-1.5 rounded-full bg-[--accent]" 
+                                            />
                                         )}
-                                    </button>
+                                    </motion.button>
                                 ))}
                             </div>
                         </motion.div>

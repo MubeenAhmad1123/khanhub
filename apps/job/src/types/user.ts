@@ -327,6 +327,12 @@ export interface User {
     likedVideos: string[];
     isVerified: boolean;
     watchedVideos: string[];
+
+    // Referral System
+    referralCode?: string;
+    referralCount: number;
+    videoUploadCount: number;
+    referredBy?: string;
 }
 
 // ==================== ROLE-SPECIFIC USER TYPES ====================

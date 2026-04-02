@@ -7,7 +7,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
 import { db } from '@/lib/firebase/firebase-config';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { ArrowLeft, Video, CheckCircle, AlertCircle, X, Camera, Circle, RefreshCw, Loader2 } from 'lucide-react';
+import { 
+    ArrowLeft, Video, CheckCircle, AlertCircle, X, Camera, Circle, RefreshCw, Loader2,
+    Shield, Share2
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useCategory } from '@/context/CategoryContext';
 import TagInput from '@/components/ui/TagInput';
 
 /* ─── helpers ─────────────────────────────────────────────────── */
@@ -183,7 +188,7 @@ function TextInput({ label, placeholder, value, onChange, required, type = 'text
 /* ─── EXPERIENCE LEVELS (shared) ────────────────────────────────── */
 const EXP_LEVELS = ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs'];
 
-/* ─── ConditionalFields ─────────────────────────────────────────── */
+/* ─── ConditionalFields (Redesigned) ─── */
 function ConditionalFields({
     category, role, formData, onChange,
 }: {
@@ -191,74 +196,107 @@ function ConditionalFields({
 }) {
     const set = (key: string) => (val: any) => onChange(key, val);
 
-    if (category === 'jobs' && role === 'provider') {
-        return (
-            <>
-                <TextInput label="Skill / Type of Work" placeholder='e.g. "Electrician"' value={formData.specialization || ''} onChange={set('specialization')} required />
-                <PillSelector label="Experience Level" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
-            </>
-        );
-    }
-    if (category === 'healthcare' && role === 'provider') {
-        return <TextInput label="Specialization" placeholder='e.g. "Dentist"' value={formData.specialization || ''} onChange={set('specialization')} required />;
-    }
-    if (category === 'education' && role === 'provider') {
-        return (
-            <>
-                <TextInput label="Subject / Field" placeholder='e.g. "Physics"' value={formData.subject || ''} onChange={set('subject')} required />
-                <PillSelector label="Experience Level" options={EXP_LEVELS} value={formData.experienceLevel || ''} onChange={set('experienceLevel')} required />
-            </>
-        );
-    }
-    if (category === 'marriage') {
-        const label = role === 'provider' ? "Groom's Profession" : "Bride's Profession";
-        return (
-            <>
-                <TextInput label={label} placeholder='e.g. "Engineer"' value={formData.specialization || ''} onChange={set('specialization')} required />
-                <TextInput label="Age" placeholder='e.g. "28"' value={formData.age || ''} onChange={set('age')} required type="number" />
-                <TextInput label="City" placeholder='e.g. "Lahore"' value={formData.city || ''} onChange={set('city')} required />
-            </>
-        );
-    }
-    if (category === 'legal' && role === 'provider') {
-        return <TextInput label="Legal Specialization" placeholder='e.g. "Criminal Lawyer"' value={formData.specialization || ''} onChange={set('specialization')} required />;
-    }
-    if (category === 'realestate' || category === 'property') {
-        return (
-            <>
-                <TextInput label="Area / City" placeholder='e.g. "DHA Phase 6"' value={formData.city || ''} onChange={set('city')} required />
-                <TextInput label="Description" placeholder='e.g. "Beautiful 500yd House"' value={formData.companyName || ''} onChange={set('companyName')} required />
-            </>
-        );
-    }
-    if (category === 'transport' || category === 'automobiles') {
-        return (
-            <>
-                <TextInput label="Vehicle / Service Name" placeholder='e.g. "Honda Civic 2022"' value={formData.companyName || ''} onChange={set('companyName')} required />
-                <TextInput label="City" placeholder='e.g. "Rawalpindi"' value={formData.city || ''} onChange={set('city')} required />
-            </>
-        );
-    }
-    if (category === 'travel' && role === 'provider') {
-        return <TextInput label="Travel Service / Package" placeholder='e.g. "Dubai Tour Package"' value={formData.companyName || ''} onChange={set('companyName')} required />;
-    }
-    if (category === 'agriculture' && role === 'provider') {
-        return <TextInput label="Products Offered" placeholder='e.g. "Organic Wheat"' value={formData.companyName || ''} onChange={set('companyName')} required />;
-    }
-    if (category === 'sellbuy' || category === 'buysell') {
-        return (
-            <>
-                <TextInput label="Item Name" placeholder='e.g. "iPhone 15 Pro Max"' value={formData.companyName || ''} onChange={set('companyName')} required />
-                <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />
-            </>
-        );
-    }
-    if (role === 'seeker') {
-        return <TextInput label="City" placeholder='e.g. "Karachi"' value={formData.city || ''} onChange={set('city')} required />;
-    }
-    // Fallback
     return (
-        <TextInput label="Describe Your Video" placeholder="Tell us what this video is about..." value={formData.description || ''} onChange={set('description')} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* 1. Job / Profile Title */}
+            <TextInput 
+                label="Job / Profile Title" 
+                placeholder='e.g. "Civil Engineer" or "Expert Painter"' 
+                value={formData.title || ''} 
+                onChange={set('title')} 
+                required 
+            />
+
+            {/* 2. Father's Name */}
+            <TextInput 
+                label="Father's Name" 
+                placeholder='Full Name' 
+                value={formData.fatherName || ''} 
+                onChange={set('fatherName')} 
+                required 
+            />
+
+            {/* 3. Phone Number */}
+            <TextInput 
+                label="Phone / WhatsApp Number" 
+                placeholder='e.g. "+92 300 1234567"' 
+                value={formData.phone || ''} 
+                onChange={set('phone')} 
+                required 
+                type="tel"
+            />
+
+            {/* 3. Category */}
+            <PillSelector 
+                label="Category" 
+                options={[
+                    'Jobs', 'Doctor', 'Teacher', 'Real Estate', 'Legal', 'Transport', 'Agriculture', 'Marriage', 'Other'
+                ]} 
+                value={formData.category || category || ''} 
+                onChange={set('category')} 
+                required 
+            />
+
+            {/* 4. Intent / Badge */}
+            <PillSelector 
+                label="Intent" 
+                options={[
+                    'I am hiring', 'I am looking for job', 'I am providing service', 'I am looking for service'
+                ]} 
+                value={formData.intent || ''} 
+                onChange={set('intent')} 
+                required 
+            />
+
+            {/* 5. Company / Institution Name */}
+            <TextInput 
+                label="Company / Institution Name" 
+                placeholder='e.g. "ABC Corp" or "Freelance"' 
+                value={formData.companyName || ''} 
+                onChange={set('companyName')} 
+                required 
+            />
+
+            {/* 6. Skills (TagInput) */}
+            <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
+                    Skills / Expertise <span style={{ color: 'var(--accent)', marginLeft: 4 }}>*</span>
+                </label>
+                <TagInput 
+                    tags={formData.skills || []} 
+                    onChange={set('skills')} 
+                    placeholder="Add skills (press Enter)..." 
+                />
+            </div>
+
+            {/* 7. Salary / Fee */}
+            <TextInput 
+                label="Expected Salary / Fee" 
+                placeholder='e.g. "50,000" or "Negotiable"' 
+                value={formData.salary || ''} 
+                onChange={set('salary')} 
+                required 
+                type="text" 
+            />
+
+            {/* 8. Experience Level */}
+            <PillSelector 
+                label="Experience Level" 
+                options={EXP_LEVELS} 
+                value={formData.experienceLevel || ''} 
+                onChange={set('experienceLevel')} 
+                required 
+            />
+
+            {/* 9. City */}
+            <TextInput 
+                label="City" 
+                placeholder='e.g. "Lahore"' 
+                value={formData.city || ''} 
+                onChange={set('city')} 
+                required 
+            />
+        </div>
     );
 }
 
@@ -269,6 +307,46 @@ export default function UploadVideoPage() {
 
     const [step, setStep] = useState<1 | 2 | 'success'>(1);
     const [firestoreProfile, setFirestoreProfile] = useState<any>(null);
+
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
+    /* ─── STYLES ────────────────────────────────────────────────── */
+    const pageStyle: React.CSSProperties = {
+        minHeight: '100dvh',
+        background: '#FFFFFF',
+        paddingBottom: 80,
+    };
+
+    const headerStyle: React.CSSProperties = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 20px',
+        borderBottom: '1px solid #E5E5E5',
+        position: 'sticky',
+        top: 0,
+        background: 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(12px)',
+        zIndex: 50,
+    };
+
+    const accentBtn: React.CSSProperties = {
+        width: '100%',
+        padding: '15px',
+        background: 'linear-gradient(135deg, var(--accent), #7638FA)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 14,
+        fontFamily: 'Poppins, sans-serif',
+        fontWeight: 700,
+        fontSize: 16,
+        cursor: 'pointer',
+        marginTop: 8,
+        opacity: uploading ? 0.7 : 1,
+    };
+
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [videoDuration, setVideoDuration] = useState<number>(0);
@@ -286,10 +364,6 @@ export default function UploadVideoPage() {
     const [profilePhone, setProfilePhone] = useState('');
     // Video topic
     const [videoTopic, setVideoTopic] = useState('');
-
-    const [uploading, setUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [uploadError, setUploadError] = useState<string | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -404,7 +478,16 @@ export default function UploadVideoPage() {
     useEffect(() => {
         if (!user) return;
         const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-            if (snap.exists()) setFirestoreProfile(snap.data());
+            if (snap.exists()) {
+                const data = snap.data();
+                setFirestoreProfile(data);
+                // Pre-fill formData if not set
+                setFormData(prev => ({
+                    ...prev,
+                    city: prev.city || data.city || '',
+                    phone: prev.phone || data.phone || data.phoneNumber || '',
+                }));
+            }
         }, (error) => {
             console.warn('[UploadVideo Profile] Snapshot error:', error.message);
         });
@@ -435,6 +518,115 @@ export default function UploadVideoPage() {
 
     if (!user || !firestoreProfile) {
         return null;
+    }
+
+    // --- Referral Gate Logic ---
+    const uploadCount = firestoreProfile.videoUploadCount || 0;
+    const referralCount = firestoreProfile.referralCount || 0;
+    // 1 free upload, then 3 referrals per additional upload
+    const canUpload = uploadCount === 0 || referralCount >= (uploadCount * 3);
+
+    if (!canUpload) {
+        const referralsNeeded = (uploadCount * 3) - referralCount;
+        const referralLink = `${window.location.origin}/auth/register?ref=${firestoreProfile.referralCode}`;
+
+        return (
+            <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden">
+                {/* Background Decorative Elements */}
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px] animate-pulse delay-700" />
+                
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative z-10 w-full max-w-md bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl overflow-hidden"
+                >
+                    {/* Header Icon */}
+                    <div className="flex justify-center mb-8">
+                        <div className="relative">
+                            <motion.div 
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ repeat: Infinity, duration: 3 }}
+                                className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-3xl flex items-center justify-center shadow-xl shadow-blue-500/20 rotate-12"
+                            >
+                                <Shield className="w-10 h-10 text-white -rotate-12" />
+                            </motion.div>
+                            <motion.div 
+                                initial={{ rotate: 0 }}
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                                className="absolute -inset-2 border-2 border-dashed border-white/20 rounded-full"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="text-center mb-10">
+                        <h2 className="text-3xl font-black text-white mb-4 tracking-tight">
+                            Access Locked
+                        </h2>
+                        <p className="text-blue-100/60 text-sm font-medium leading-relaxed">
+                            You've exhausted your free upload. Help the community grow to unlock unlimited access!
+                        </p>
+                    </div>
+
+                    {/* Progress Card */}
+                    <div className="bg-white/5 border border-white/10 rounded-3xl p-6 mb-8 relative overflow-hidden group">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Referral Progress</span>
+                            <span className="text-sm font-black text-white">{referralCount} / {uploadCount * 3}</span>
+                        </div>
+                        
+                        <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden mb-4">
+                            <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.min(100, (referralCount / (uploadCount * 3)) * 100)}%` }}
+                                transition={{ duration: 1.5, ease: "easeOut" }}
+                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                            />
+                        </div>
+
+                        <p className="text-center text-xs font-bold text-blue-100/40">
+                            {referralsNeeded > 0 
+                                ? `Invite ${referralsNeeded} more ${referralsNeeded === 1 ? 'friend' : 'friends'} to unlock`
+                                : "Success! You've unlocked your next upload."
+                            }
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(referralLink);
+                                alert('Referral link copied to clipboard!');
+                            }}
+                            className="w-full py-4 bg-white text-[#0F172A] rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl"
+                        >
+                            <Share2 className="w-4 h-4" />
+                            Copy Invite Link
+                        </button>
+
+                        <button
+                            onClick={() => router.push('/dashboard')}
+                            className="w-full py-4 bg-white/5 text-white/60 rounded-2xl font-bold text-sm hover:bg-white/10 transition-all border border-white/5"
+                        >
+                            Return to Dashboard
+                        </button>
+                    </div>
+
+                    <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-center gap-6">
+                        <div className="flex flex-col items-center">
+                            <span className="text-white font-black text-lg">1</span>
+                            <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter">Free Token</span>
+                        </div>
+                        <div className="w-px h-8 bg-white/10" />
+                        <div className="flex flex-col items-center">
+                            <span className="text-white font-black text-lg">3</span>
+                            <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter">Refs / Life</span>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+        );
     }
 
     const userCategory = firestoreProfile.category || 'jobs';
@@ -535,11 +727,8 @@ export default function UploadVideoPage() {
                 await updateDoc(doc(db, 'users', user.uid), profileUpdates);
             }
 
-            // 4. Write to Firestore 'videos' collection (schema admin page reads)
-            const effectiveCity = profileCity || firestoreProfile?.city || (user as any).city || '';
-            const effectivePhone = profilePhone || firestoreProfile?.phone || '';
+            // 4. Write to Firestore 'videos' collection
             const videoDocRef = await addDoc(collection(db, 'videos'), {
-                // User info
                 userId: user.uid,
                 userEmail: user.email,
                 userName: (user as any).displayName || (user as any).name || '',
@@ -550,31 +739,32 @@ export default function UploadVideoPage() {
                 cloudinaryPublicId: result.publicId,
                 thumbnailUrl,
 
-                // Category
-                category: userCategory,
-                userRole: userRole,
-                city: effectiveCity,
-                phone: effectivePhone,
-                videoTopic,
+                // Metadata (New Redesign)
+                title: formData.title || '',
+                fatherName: formData.fatherName || '',
+                category: formData.category || userCategory,
+                intent: formData.intent || '',
+                companyName: formData.companyName || '',
+                skills: formData.skills || [],
+                salary: formData.salary || '',
+                experienceLevel: formData.experienceLevel || '',
+                city: formData.city || profileCity || firestoreProfile?.city || '',
+                phone: profilePhone || firestoreProfile?.phone || firestoreProfile?.phoneNumber || '',
+                videoTopic: videoTopic || 'Introduction',
 
-                // Overlay (shown on feed card)
+                // Overlay Data
                 overlayData: {
-                    title: overlayData.title,
-                    badge: overlayData.badge,
-                    field1: overlayData.field1,
-                    field2: overlayData.field2,
-                    location: effectiveCity || formData.city || formData.companyLocation || '',
+                    title: formData.title || '',
+                    badge: formData.intent || '',
+                    field1: formData.experienceLevel || '',
+                    field2: formData.city || '',
                     userPhoto: (user as any).photoURL || '',
                     userName: (user as any).displayName || (user as any).name || '',
                 },
 
-                // All form fields flat
-                ...formData,
-                caption,
-
-                // Admin fields (MUST match what admin page reads)
-                admin_status: 'pending',
-                is_live: false,
+                // Automatic Live
+                admin_status: 'approved',
+                is_live: true,
                 transcriptionStatus: 'pending',
 
                 // Stats
@@ -588,22 +778,10 @@ export default function UploadVideoPage() {
                 updatedAt: serverTimestamp(),
             });
 
-            // 4. Update user profile_status
+            // 5. Update user upload count
             await updateDoc(doc(db, 'users', user.uid), {
-                profile_status: 'video_submitted',
+                videoUploadCount: (firestoreProfile.videoUploadCount || 0) + 1,
                 lastVideoUploadAt: serverTimestamp(),
-            });
-
-            // 5. Admin notification
-            await addDoc(collection(db, 'adminNotifications'), {
-                type: 'new_video',
-                title: 'New Video Submitted',
-                message: `${(user as any).displayName || (user as any).name || 'A user'} submitted a video for review — ${userCategory}/${userRole}`,
-                read: false,
-                is_read: false,
-                targetId: videoDocRef.id,
-                targetType: 'video',
-                createdAt: serverTimestamp(),
             });
 
             setStep('success');
@@ -633,40 +811,7 @@ export default function UploadVideoPage() {
         setProfilePhone('');
     };
 
-    /* ─── STYLES ────────────────────────────────────────────────── */
-    const pageStyle: React.CSSProperties = {
-        minHeight: '100dvh',
-        background: '#FFFFFF',
-        paddingBottom: 80,
-    };
-
-    const headerStyle: React.CSSProperties = {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px 20px',
-        borderBottom: '1px solid #E5E5E5',
-        position: 'sticky',
-        top: 0,
-        background: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(12px)',
-        zIndex: 50,
-    };
-
-    const accentBtn: React.CSSProperties = {
-        width: '100%',
-        padding: '15px',
-        background: 'linear-gradient(135deg, var(--accent), #7638FA)',
-        color: '#fff',
-        border: 'none',
-        borderRadius: 14,
-        fontFamily: 'Poppins, sans-serif',
-        fontWeight: 700,
-        fontSize: 16,
-        cursor: 'pointer',
-        marginTop: 8,
-        opacity: uploading ? 0.7 : 1,
-    };
+    /* ─── SUCCESS SCREEN ─────────────────────────────────────────── */
 
     /* ─── SUCCESS SCREEN ─────────────────────────────────────────── */
     if (step === 'success') {

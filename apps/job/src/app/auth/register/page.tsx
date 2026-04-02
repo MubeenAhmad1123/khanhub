@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { auth, db } from '@/lib/firebase/firebase-config';
 import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
@@ -13,7 +13,13 @@ import { useAuth } from '@/hooks/useAuth';
 export default function RegisterPage() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { loginWithGoogle } = useAuth();
+
+    const referralCode = searchParams.get('ref') || undefined;
+    if (referralCode) {
+        console.log('🔗 [Register] Referral code detected:', referralCode);
+    }
 
     const handleGoogleRegister = async () => {
         try {
@@ -21,7 +27,7 @@ export default function RegisterPage() {
             console.log('🔵 [Register] Step 1: Starting Google registration via useAuth...');
 
             // loginWithGoogle handles the popup, Firestore creation, and select_account
-            await loginWithGoogle('job_seeker');
+            await loginWithGoogle('job_seeker', referralCode);
             
             console.log('✅ [Register] Step 2: loginWithGoogle successful!');
 

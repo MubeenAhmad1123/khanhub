@@ -33,19 +33,21 @@ interface VideoOverlayProps {
 export function VideoOverlay({ data }: VideoOverlayProps) {
     const router = useRouter();
     const overlay = data?.overlayData || {};
-    const title = overlay.title || data.title || 'No title added';
-    const field1 = overlay.field1 || data.field1 || 'No skills listed';
-    const field2 = overlay.field2 || data.field2 || 'No salary info';
-    const location = overlay.location || data.location || data.city || 'Location not added';
+    const title = data.title || overlay.title || 'Untitled';
+    const fatherName = data.fatherName || '';
+    const skills = data.skills || overlay.field1 || []; // skills is an array now
+    const salary = data.salary || overlay.field2 || '';
+    const experience = data.experienceLevel || '';
+    const company = data.companyName || '';
+    const city = data.city || overlay.location || 'Unknown';
+    const intent = data.intent || resolveRoleLabel(data) || '';
+    
     const userPhoto = overlay.userPhoto || data.userPhoto;
-    const userName = overlay.userName || data.userName || 'Anonymous';
+    const userName = overlay.userName || data.userName || 'Member';
     const userId = data?.userId;
 
-    const roleLabel = resolveRoleLabel(data);
     const category = data?.category || '';
     const catConfig = category ? getCatConfig(category) : null;
-
-    // Check if user is verified
     const isVerified = data?.isVerified || data?.verified || false;
 
     const handleConnectClick = () => {
@@ -55,237 +57,155 @@ export function VideoOverlay({ data }: VideoOverlayProps) {
     };
 
     return (
-        <div 
-            className="w-full px-4"
-            style={{ paddingBottom: '12px' }}
-        >
-            {/* Uploader avatar + name + contact icon */}
-            {(userPhoto || userName) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    {userPhoto && (
-                        <Image
-                            src={userPhoto}
-                            alt={userName || 'User profile'}
-                            width={32}
-                            height={32}
-                            style={{
-                                borderRadius: '50%',
-                                border: '1.5px solid rgba(255,255,255,0.8)',
-                                objectFit: 'cover', flexShrink: 0,
-                                width: 32, height: 32
-                            }}
-                        />
-                    )}
-                    {userName && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Sans' }}>
-                                {userName}
-                            </div>
-                            {/* Contact/Message icon - appears next to username */}
-                            <span style={{ 
-                                fontSize: 12, 
-                                display: 'flex', 
-                                alignItems: 'center',
-                                color: '#fff',
-                                background: 'rgba(255,255,255,0.2)',
-                                borderRadius: '50%',
-                                width: 18,
-                                height: 18,
-                                justifyContent: 'center',
-                            }} title="Contact">
-                                💬
-                            </span>
-                            {/* Verified badge */}
-                            {isVerified && (
-                                <span style={{ 
-                                    fontSize: 10, 
-                                    display: 'flex', 
-                                    alignItems: 'center',
-                                    color: '#00C853',
-                                }} title="Verified">
-                                    ✓
-                                </span>
-                            )}
+        <div className="w-full px-4" style={{ paddingBottom: '16px', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)' }}>
+            {/* Header: User Profile */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                {userPhoto ? (
+                    <Image
+                        src={userPhoto}
+                        alt={userName}
+                        width={36}
+                        height={36}
+                        style={{
+                            borderRadius: '50%',
+                            border: '1.5px solid rgba(255,255,255,0.9)',
+                            objectFit: 'cover',
+                            width: 36, height: 36
+                        }}
+                    />
+                ) : (
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14 }}>
+                        👤
+                    </div>
+                )}
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: 'Poppins' }}>{userName}</span>
+                        {isVerified && <span style={{ color: '#00C853', fontSize: 12 }}>✓</span>}
+                    </div>
+                    {fatherName && (
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: 'DM Sans', marginTop: -2 }}>
+                            S/O {fatherName}
                         </div>
                     )}
                 </div>
-            )}
 
-            {/* Category pill + Role badge + Contact Button — side by side */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                {/* Contact Button Moved Here */}
-                {userId && (
-                    <motion.button
-                        initial="rest"
-                        whileHover="hover"
-                        animate="rest"
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleConnectClick}
-                        style={{
-                            background: '#4169E1',
-                            border: 'none',
-                            borderRadius: '16px',
-                            padding: '7px 16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            cursor: 'pointer',
-                            pointerEvents: 'auto',
-                            boxShadow: '0 4px 15px rgba(65, 105, 225, 0.3)',
-                            overflow: 'hidden',
-                            position: 'relative',
-                            transition: 'all 0.3s ease',
-                        }}
-                    >
-                        {/* SVG Wrapper with bobbing animation */}
-                        <motion.div 
-                            variants={{
-                                rest: { x: 0, rotate: 0, scale: 1 },
-                                hover: { 
-                                    x: 55, 
-                                    rotate: 45, 
-                                    scale: 1.2,
-                                    transition: { type: 'spring', stiffness: 300, damping: 20 }
-                                }
-                            }}
+                <div style={{ marginLeft: 'auto' }}>
+                    {userId && (
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleConnectClick}
                             style={{
-                                width: 24,
-                                height: 24,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 2,
-                            }}
-                        >
-                            <motion.svg 
-                                animate={{ 
-                                    y: [0, -2, 0] 
-                                }}
-                                transition={{ 
-                                    duration: 1.5, 
-                                    repeat: Infinity, 
-                                    ease: "easeInOut" 
-                                }}
-                                xmlns="http://www.w3.org/2000/svg" 
-                                viewBox="0 0 24 24" 
-                                width={20} 
-                                height={20}
-                            >
-                                <path fill="none" d="M0 0h24v24H0z" />
-                                <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
-                            </motion.svg>
-                        </motion.div>
-                        
-                        <motion.span 
-                            variants={{
-                                rest: { x: 0, opacity: 1 },
-                                hover: { x: 100, opacity: 0 }
-                            }}
-                            style={{ 
-                                color: '#fff', 
-                                fontSize: '13px', 
-                                fontWeight: 700, 
+                                background: 'rgba(255,255,255,0.2)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '12px',
+                                padding: '6px 14px',
+                                color: '#fff',
+                                fontSize: 12,
+                                fontWeight: 600,
                                 fontFamily: 'Poppins',
-                                whiteSpace: 'nowrap',
-                                zIndex: 1,
+                                cursor: 'pointer'
                             }}
                         >
-                            Contact
-                        </motion.span>
-                    </motion.button>
-                )}
+                            Connect
+                        </motion.button>
+                    )}
+                </div>
+            </div>
 
-                {/* Category pill - Hidden as per user request to show only role */}
-                {/* catConfig && (
+            {/* Badges: Category & Intent */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                {catConfig && (
                     <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 3,
-                        background: 'rgba(0,0,0,0.55)',
-                        backdropFilter: 'blur(6px)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        padding: '3px 8px', borderRadius: 999,
+                        background: 'rgba(0,0,0,0.4)',
+                        backdropFilter: 'blur(4px)',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: '#fff',
+                        fontFamily: 'Poppins',
+                        textTransform: 'uppercase',
+                        border: '1px solid rgba(255,255,255,0.1)'
                     }}>
-                        <span style={{ fontSize: 10 }}>{catConfig.emoji}</span>
-                        <span style={{
-                            fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.9)',
-                            textTransform: 'uppercase', letterSpacing: '0.06em',
-                            fontFamily: 'Poppins'
-                        }}>
-                            {catConfig.label}
-                        </span>
+                        {catConfig.emoji} {catConfig.label}
                     </span>
-                ) */}
-                {roleLabel && (
+                )}
+                {intent && (
                     <span style={{
-                        display: 'inline-flex', alignItems: 'center',
-                        background: catConfig ? `${catConfig.accent}DD` : '#FF0069DD',
-                        padding: '3px 8px', borderRadius: 999,
+                        background: catConfig?.accent || '#FF0069',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: '#fff',
+                        fontFamily: 'Poppins',
+                        textTransform: 'uppercase'
                     }}>
-                        <span style={{
-                            fontSize: 9, fontWeight: 800,
-                            color: '#fff',
-                            textTransform: 'uppercase', letterSpacing: '0.06em',
-                            fontFamily: 'Poppins'
-                        }}>
-                            {roleLabel}
-                        </span>
+                        {intent}
                     </span>
                 )}
             </div>
 
-            {/* Title */}
+            {/* Title & Company */}
             <h3 style={{
                 fontFamily: 'Poppins',
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 18,
                 color: '#fff',
-                margin: '0 0 3px',
-                lineHeight: 1.2,
-                textShadow: '0 1px 4px rgba(0,0,0,0.8)',
-                maxWidth: '90%',
+                marginBottom: company ? 2 : 8,
+                lineHeight: 1.2
             }}>
                 {title}
             </h3>
-
-            {/* Fields */}
-            <p style={{
-                fontSize: 11,
-                color: 'rgba(255,255,255,0.85)',
-                margin: '0 0 2px',
-                fontFamily: 'DM Sans',
-                display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-                <span style={{ width: 4, height: 4, borderRadius: '50%', background: catConfig?.accent || '#FF0069', flexShrink: 0 }} />
-                {field1}
-            </p>
-            <p style={{
-                fontSize: 10,
-                color: 'rgba(255,255,255,0.7)',
-                margin: '0 0 6px',
-                fontFamily: 'DM Sans',
-                display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
-                {field2}
-            </p>
-
-            {/* Location + Verified */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'rgba(255,255,255,0.8)' }}>
-                    <span style={{ fontSize: 10 }}>📍</span>
-                    <span style={{ fontSize: 10, fontFamily: 'DM Sans', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        {location}
-                    </span>
+            {company && (
+                <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 8, fontFamily: 'DM Sans', fontWeight: 500 }}>
+                    at {company}
                 </div>
-                {isVerified && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#00C853' }}>
-                        <span style={{ fontSize: 10 }}>✓</span>
-                        <span style={{ fontSize: 9, fontFamily: 'Poppins', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            Verified
-                        </span>
+            )}
+
+            {/* Details: Salary & Experience */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                {salary && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#fff', fontSize: 12, fontFamily: 'DM Sans' }}>
+                        <span>💰</span>
+                        <span style={{ fontWeight: 600 }}>{salary}</span>
+                    </div>
+                )}
+                {experience && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#fff', fontSize: 12, fontFamily: 'DM Sans' }}>
+                        <span>⏳</span>
+                        <span style={{ fontWeight: 600 }}>{experience}</span>
                     </div>
                 )}
             </div>
-        </div>
 
+            {/* Skills Pills */}
+            {Array.isArray(skills) && skills.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                    {skills.map((skill: string, idx: number) => (
+                        <span key={idx} style={{
+                            background: 'rgba(255,255,255,0.1)',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: 10,
+                            color: 'rgba(255,255,255,0.9)',
+                            fontFamily: 'DM Sans',
+                            border: '1px solid rgba(255,255,255,0.05)'
+                        }}>
+                            {skill}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* Footer: Location */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.6)', fontSize: 11, fontFamily: 'DM Sans' }}>
+                <span>📍</span>
+                <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{city}</span>
+            </div>
+        </div>
     );
 }

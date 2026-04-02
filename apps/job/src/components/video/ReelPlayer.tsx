@@ -8,7 +8,9 @@ import React, {
     memo,
 } from 'react';
 import Hls from 'hls.js';
-import { Volume2, VolumeX } from 'lucide-react';
+import { motion } from 'framer-motion';
+import NextImage from 'next/image';
+import { Volume2, VolumeX, Play, Pause, Maximize2, RotateCcw, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { getHlsUrl, getOptimizedVideoUrl } from '@/lib/services/cloudinary';
 
 interface ReelPlayerProps {
@@ -620,8 +622,24 @@ const ReelPlayer = memo(function ReelPlayer({
                 iOS Safari ignores JS .muted=true for buffered adjacent videos.
                 Only the HTML attribute reliably prevents audio from starting.
                 We call removeAttribute('muted') only after confirmed ownership. */}
-            <video
+            {/* Background Thumbnail with blur during loading */}
+            {thumbnailUrl && (showInitialLoading || isBuffering) && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+                    <NextImage
+                        src={thumbnailUrl}
+                        alt="Video Thumbnail"
+                        fill
+                        style={{ objectFit: 'cover', filter: 'blur(20px) brightness(0.6)', transform: 'scale(1.1)' }}
+                    />
+                </div>
+            )}
+
+            {/* Video element */}
+            <motion.video
                 ref={videoRef}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: (showInitialLoading || isBuffering) ? 0 : 1 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
                 poster={thumbnailUrl}
                 playsInline
                 muted
@@ -644,6 +662,7 @@ const ReelPlayer = memo(function ReelPlayer({
                     height: '100%',
                     objectFit: 'cover',
                     background: '#000',
+                    zIndex: 2
                 }}
             />
 
