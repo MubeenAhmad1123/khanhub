@@ -70,7 +70,7 @@ export async function createHqUserServer(data: {
       role: data.role,
       password: data.password,
       email,
-      phone: data.phone || undefined,
+      ...(data.phone ? { phone: data.phone } : {}),
       createdBy: data.createdBy,
       createdAt: new Date().toISOString(),
       isActive: true,
