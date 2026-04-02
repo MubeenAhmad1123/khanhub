@@ -68,23 +68,22 @@ const _broadcast = (newState: AuthState) => {
 let _listenerStarted = false;
 let _unsubscribeAuth: (() => void) | null = null;
 
-async function _incrementReferrer(refCode: string) {
+async function _trackReferral(refCode: string, newUserId: string) {
   try {
-    const { collection, query, where, getDocs, updateDoc, increment, limit } = await import('firebase/firestore');
-    const { db } = await import('@/lib/firebase/firebase-config');
-    const q = query(collection(db, 'users'), where('referralCode', '==', refCode), limit(1));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      await updateDoc(snap.docs[0].ref, {
-        referralCount: increment(1)
-      });
-      console.log(`[useAuth] 📈 Incremented referralCount for referrer: ${refCode}`);
-      return snap.docs[0].id; // Return referrer UID
+    const res = await fetch('/api/referral/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refCode, newUserId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      console.log(`[useAuth] 🔗 Success: Tracked referral for ${refCode}`);
+    } else {
+      console.warn(`[useAuth] ⚠️ Server skip: ${data.error}`);
     }
   } catch (err) {
-    console.error('[useAuth] ❌ Failed to increment referrer:', err);
+    console.error('[useAuth] ❌ Failed to track referral:', err);
   }
-  return null;
 }
 
 const _startListener = async () => {
@@ -194,7 +193,7 @@ const _safeGetOrCreateProfile = async (fbUser: FirebaseUser, role: UserRole, ref
       });
 
       if (referredBy) {
-        await _incrementReferrer(referredBy);
+        await _trackReferral(referredBy, fbUser.uid);
       }
 
       userProfile = await getUserProfile(fbUser.uid);
@@ -295,7 +294,7 @@ export function useAuth() {
       });
 
       if (referredBy) {
-        await _incrementReferrer(referredBy);
+        await _trackReferral(referredBy, userCredential.user.uid);
       }
 
       const userProfile = await getUserProfile(userCredential.user.uid);

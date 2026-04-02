@@ -8,7 +8,8 @@ import Image from 'next/image';
 import {
     LogOut, User, Users, Settings, LayoutDashboard,
     Search, Briefcase, PlusCircle, BookmarkCheck,
-    Shield, Menu, X, ChevronDown, Sparkles, Bell
+    Shield, Menu, X, ChevronDown, Sparkles, Bell,
+    Copy, Check
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useCategory } from '@/context/CategoryContext';
@@ -89,6 +90,7 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
     const { activeCategory, categoryConfig, setCategory } = useCategory();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     // Category Switcher state
     const [showSwitcher, setShowSwitcher] = useState(false);
@@ -146,6 +148,14 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
             console.error('Logout error:', error);
         }
     }, [router]);
+
+    const handleCopyReferral = useCallback(() => {
+        const code = (user as any)?.referralCode || '';
+        const url = `${window.location.origin}/auth/register?ref=${code}`;
+        navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }, [user]);
 
     useEffect(() => {
         setShowProfileMenu(false);
@@ -366,44 +376,76 @@ export default function ImprovedNavbar({ onMenuOpen }: ImprovedNavbarProps) {
                                                                     <span className="mt-2 px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-600 uppercase tracking-widest">{displayRole}</span>
                                                                 </div>
 
-                                                                <div className="grid grid-cols-2 gap-3 mb-8">
-                                                                    <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                                                        <p className="text-[10px] font-black text-gray-400 uppercase">Referrals</p>
-                                                                        <p className="text-xl font-black text-blue-600">{(user as any)?.referralCount || 0}</p>
-                                                                    </div>
-                                                                    <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                                                        <p className="text-[10px] font-black text-gray-400 uppercase">Videos</p>
-                                                                        <p className="text-xl font-black text-orange-600">{(user as any)?.videoUploadCount || 0}</p>
-                                                                    </div>
+                                                                <div className="grid grid-cols-2 gap-4 mb-8">
+                                                                    <motion.div 
+                                                                        whileHover={{ y: -2 }}
+                                                                        className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100/50 shadow-sm"
+                                                                    >
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <Users className="w-3.5 h-3.5 text-blue-500" />
+                                                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider">Referrals</p>
+                                                                        </div>
+                                                                        <p className="text-2xl font-black text-blue-700">{(user as any)?.referralCount || 0}</p>
+                                                                    </motion.div>
+                                                                    <motion.div 
+                                                                        whileHover={{ y: -2 }}
+                                                                        className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-5 border border-orange-100/50 shadow-sm"
+                                                                    >
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <PlusCircle className="w-3.5 h-3.5 text-orange-500" />
+                                                                            <p className="text-[10px] font-black text-orange-400 uppercase tracking-wider">Videos</p>
+                                                                        </div>
+                                                                        <p className="text-2xl font-black text-orange-700">{(user as any)?.videoUploadCount || 0}</p>
+                                                                    </motion.div>
                                                                 </div>
 
-                                                                <div className="space-y-2">
+                                                                <div className="space-y-1">
                                                                     {navItems.map(item => (
                                                                         <Link
                                                                             key={item.path}
                                                                             href={item.path}
                                                                             onClick={() => setShowProfileMenu(false)}
-                                                                            className="flex items-center gap-3 p-4 rounded-xl text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-all"
+                                                                            className="flex items-center gap-3.5 p-4 rounded-2xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all group"
                                                                         >
-                                                                            {item.icon}
+                                                                            <span className="p-2 bg-gray-100 rounded-xl group-hover:bg-white group-hover:shadow-sm transition-all">{item.icon}</span>
                                                                             {item.name}
                                                                         </Link>
                                                                     ))}
                                                                 </div>
 
-                                                                <div className="mt-8 p-5 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl text-white">
-                                                                    <h4 className="text-sm font-black mb-1">REFER A FRIEND</h4>
-                                                                    <p className="text-xs opacity-70 mb-4 font-bold">Earn free uploads by referring others.</p>
-                                                                    <button 
-                                                                        onClick={() => {
-                                                                            const code = (user as any)?.referralCode || '';
-                                                                            navigator.clipboard.writeText(`${window.location.origin}/auth/register?ref=${code}`);
-                                                                            alert('Referral link copied!');
-                                                                        }}
-                                                                        className="w-full py-2 bg-white text-blue-700 rounded-full text-[11px] font-black uppercase hover:scale-105 transition-transform"
-                                                                    >
-                                                                        Copy Link
-                                                                    </button>
+                                                                <div className="mt-8 relative overflow-hidden p-6 rounded-3xl bg-gray-900 shadow-xl">
+                                                                    {/* Background patterns */}
+                                                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl -mr-16 -mt-16" />
+                                                                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl -ml-12 -mb-12" />
+                                                                    
+                                                                    <div className="relative z-10">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <Sparkles className="w-4 h-4 text-blue-400" />
+                                                                            <h4 className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em]">Refer a Friend</h4>
+                                                                        </div>
+                                                                        <p className="text-white text-sm font-bold mb-5 leading-relaxed">Refer others and earn rewards.</p>
+                                                                        
+                                                                        <motion.button 
+                                                                            onClick={handleCopyReferral}
+                                                                            whileHover={{ scale: 1.02 }}
+                                                                            whileTap={{ scale: 0.98 }}
+                                                                            className={`w-full py-3.5 rounded-2xl flex items-center justify-center gap-2.5 text-[11px] font-black uppercase tracking-wider transition-all shadow-lg ${
+                                                                                copied ? 'bg-green-500 text-white' : 'bg-white text-gray-900 hover:bg-blue-50'
+                                                                            }`}
+                                                                        >
+                                                                            {copied ? (
+                                                                                <>
+                                                                                    <Check className="w-4 h-4" />
+                                                                                    Copied!
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <Copy className="w-4 h-4" />
+                                                                                    Copy Referral Link
+                                                                                </>
+                                                                            )}
+                                                                        </motion.button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 

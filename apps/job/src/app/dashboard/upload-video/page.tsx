@@ -6,14 +6,16 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadToCloudinary } from '@/lib/services/cloudinaryUpload';
 import { db } from '@/lib/firebase/firebase-config';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, onSnapshot, increment } from 'firebase/firestore';
 import { 
     ArrowLeft, Video, CheckCircle, AlertCircle, X, Camera, Circle, RefreshCw, Loader2,
-    Shield, Share2
+    Shield, Share2, User, Phone, Briefcase, MapPin, Tag, Info, UserCheck
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCategory } from '@/context/CategoryContext';
 import TagInput from '@/components/ui/TagInput';
+import CitySearch from '@/components/forms/CitySearch';
+import { INDUSTRY_CATEGORIES } from '@/lib/data/categories';
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 const validateVideo = (file: File, duration: number): string | null => {
@@ -84,50 +86,15 @@ const getCloudinaryThumb = (videoUrl: string): string => {
 };
 
 /* ─── buildOverlayData ─────────────────────────────────────────── */
-function buildOverlayData(formData: Record<string, any>, category: string, role: string) {
-    const map: Record<string, Record<string, any>> = {
-        jobs: {
-            worker: { title: formData.specialization || '', badge: 'Job Seeker', field1: formData.specialization || '', field2: formData.experienceLevel || '' },
-            hiring: { title: formData.companyName || '', badge: 'Company', field1: formData.city || '', field2: formData.phone || '' },
-        },
-        healthcare: {
-            doctor: { title: formData.specialization || '', badge: 'Healthcare', field1: formData.specialization || '', field2: formData.city || '' },
-            patient: { title: 'Seeking Care', badge: 'Patient', field1: formData.city || '', field2: '' },
-        },
-        education: {
-            teacher: { title: formData.subject || '', badge: 'Teacher', field1: formData.subject || '', field2: formData.experienceLevel || '' },
-            student: { title: 'Student Profile', badge: 'Student', field1: formData.city || '', field2: '' },
-        },
-        marriage: {
-            groom: { title: `Groom Profile`, badge: 'Groom', field1: `${formData.age || ''} Years`, field2: formData.city || '' },
-            bride: { title: `Bride Profile`, badge: 'Bride', field1: `${formData.age || ''} Years`, field2: formData.city || '' },
-        },
-        legal: {
-            lawyer: { title: 'Legal Professional', badge: 'Lawyer', field1: formData.specialization || '', field2: formData.city || '' },
-            client: { title: 'Seeking Advice', badge: 'Client', field1: formData.city || '', field2: '' },
-        },
-        realestate: {
-            agent: { title: formData.companyName || '', badge: 'Agent', field1: formData.city || '', field2: 'Property Expert' },
-            buyer: { title: 'Looking for Property', badge: 'Buyer', field1: formData.city || '', field2: '' },
-        },
-        transport: {
-            seller: { title: 'Transport Service', badge: 'Driver', field1: formData.city || '', field2: '' },
-            buyer: { title: 'Passenger / Seeker', badge: 'Passenger', field1: formData.city || '', field2: '' },
-        },
-        travel: {
-            agency: { title: formData.companyName || '', badge: 'Travel Agency', field1: formData.city || '', field2: '' },
-            traveler: { title: 'Looking for Tour', badge: 'Traveler', field1: formData.city || '', field2: '' },
-        },
-        agriculture: {
-            farmer: { title: 'Agri Supplier', badge: 'Farmer', field1: formData.city || '', field2: '' },
-            buyer: { title: 'Looking for Agri Products', badge: 'Buyer', field1: formData.city || '', field2: '' },
-        },
-        sellbuy: {
-            seller: { title: 'Item for Sale', badge: 'Seller', field1: formData.city || '', field2: '' },
-            buyer: { title: 'Looking to Buy', badge: 'Buyer', field1: formData.city || '', field2: '' },
-        },
+function buildOverlayData(formData: Record<string, any>) {
+    return {
+        title: formData.title || '',
+        badge: formData.intent || 'JobReel',
+        field1: formData.experienceLevel || formData.specialization || '',
+        field2: formData.city || '',
+        userPhoto: formData.userPhoto || '',
+        userName: formData.userName || '',
     };
-    return map[category]?.[role] || { title: '', badge: '', field1: '', field2: '' };
 }
 
 /* ─── PillSelector ─────────────────────────────────────────────── */
@@ -188,114 +155,239 @@ function TextInput({ label, placeholder, value, onChange, required, type = 'text
 /* ─── EXPERIENCE LEVELS (shared) ────────────────────────────────── */
 const EXP_LEVELS = ['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs'];
 
-/* ─── ConditionalFields (Redesigned) ─── */
+/* ─── Form Components ────────────────────────────────────────── */
+function FormSection({ title, icon: Icon, children, description }: { title: string; icon: any; children: React.ReactNode; description?: string }) {
+    return (
+        <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 shadow-sm border border-teal-100/50">
+                    <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h3>
+                    {description && <p className="text-xs text-gray-400 font-medium">{description}</p>}
+                </div>
+            </div>
+            <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm space-y-5">
+                {children}
+            </div>
+        </div>
+    );
+}
+
+function FormField({ label, children, required, isSaved, hint }: { label: string; children: React.ReactNode; required?: boolean; isSaved?: boolean; hint?: string }) {
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+                <label className="text-[13px] font-bold text-gray-600 flex items-center gap-2">
+                    {label}{required && <span className="text-rose-500">*</span>}
+                    {isSaved && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 text-[10px] font-black text-teal-600 uppercase tracking-tighter border border-teal-100">
+                            <CheckCircle className="h-2.5 w-2.5" /> Saved
+                        </span>
+                    )}
+                </label>
+                {hint && <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{hint}</span>}
+            </div>
+            {children}
+        </div>
+    );
+}
+
+const INPUT_CLASSES = "w-full px-4 py-3.5 bg-gray-50/50 border-2 border-gray-100 rounded-2xl focus:border-teal-500 focus:ring-4 focus:ring-teal-50 outline-none transition-all font-medium text-gray-900 placeholder:text-gray-300";
+
 function ConditionalFields({
-    category, role, formData, onChange,
+    category, firestoreProfile, formData, onChange,
 }: {
-    category: string; role: string; formData: Record<string, any>; onChange: (key: string, val: any) => void;
+    category: string; firestoreProfile: any; formData: Record<string, any>; onChange: (key: string, val: any) => void;
 }) {
     const set = (key: string) => (val: any) => onChange(key, val);
 
+    // Get subcategories for the current sector
+    const sector = INDUSTRY_CATEGORIES.find(c => c.id === category);
+    const subcats = sector ? sector.subcategories : [];
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {/* 1. Job / Profile Title */}
-            <TextInput 
-                label="Job / Profile Title" 
-                placeholder='e.g. "Civil Engineer" or "Expert Painter"' 
-                value={formData.title || ''} 
-                onChange={set('title')} 
-                required 
-            />
+        <div className="space-y-2">
+            {/* SECTION 1: Personal & Contact */}
+            <FormSection 
+                title="Your Contact Info" 
+                icon={UserCheck} 
+                description="This will be updated in your profile"
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FormField label="Your Full Name" required isSaved={!!firestoreProfile?.name}>
+                        <input
+                            type="text"
+                            value={formData.userName || ''}
+                            onChange={(e) => set('userName')(e.target.value)}
+                            placeholder="Full Name"
+                            className={INPUT_CLASSES}
+                        />
+                    </FormField>
 
-            {/* 2. Father's Name */}
-            <TextInput 
-                label="Father's Name" 
-                placeholder='Full Name' 
-                value={formData.fatherName || ''} 
-                onChange={set('fatherName')} 
-                required 
-            />
+                    <FormField label="Father's Name" required isSaved={!!firestoreProfile?.fatherName}>
+                        <input
+                            type="text"
+                            value={formData.fatherName || ''}
+                            onChange={(e) => set('fatherName')(e.target.value)}
+                            placeholder="Father's Name"
+                            className={INPUT_CLASSES}
+                        />
+                    </FormField>
+                </div>
 
-            {/* 3. Phone Number */}
-            <TextInput 
-                label="Phone / WhatsApp Number" 
-                placeholder='e.g. "+92 300 1234567"' 
-                value={formData.phone || ''} 
-                onChange={set('phone')} 
-                required 
-                type="tel"
-            />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FormField label="Phone / WhatsApp" required hint="03XX-XXXXXXX" isSaved={!!(firestoreProfile?.phone || firestoreProfile?.phoneNumber)}>
+                        <div className="relative">
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input
+                                type="tel"
+                                value={formData.phone || ''}
+                                onChange={(e) => set('phone')(e.target.value)}
+                                placeholder="03XXXXXXXXX"
+                                className={`${INPUT_CLASSES} pl-11`}
+                            />
+                        </div>
+                    </FormField>
 
-            {/* 3. Category */}
-            <PillSelector 
-                label="Category" 
-                options={[
-                    'Jobs', 'Doctor', 'Teacher', 'Real Estate', 'Legal', 'Transport', 'Agriculture', 'Marriage', 'Other'
-                ]} 
-                value={formData.category || category || ''} 
-                onChange={set('category')} 
-                required 
-            />
+                    <FormField label="Your City" required isSaved={!!firestoreProfile?.city}>
+                        <div className="relative">
+                            <CitySearch
+                                value={formData.city || ''}
+                                onChange={set('city')}
+                                placeholder="Select city..."
+                                className="w-full"
+                            />
+                        </div>
+                    </FormField>
+                </div>
+            </FormSection>
 
-            {/* 4. Intent / Badge */}
-            <PillSelector 
-                label="Intent" 
-                options={[
-                    'I am hiring', 'I am looking for job', 'I am providing service', 'I am looking for service'
-                ]} 
-                value={formData.intent || ''} 
-                onChange={set('intent')} 
-                required 
-            />
+            {/* SECTION 2: Video & Professional Metadata */}
+            <FormSection 
+                title="About This Video" 
+                icon={Briefcase} 
+                description="Professional details for the video overlay"
+            >
+                <FormField label="Introduction Topic" required hint="Current video focus">
+                    <div className="flex flex-wrap gap-2">
+                        {['Self Introduction', 'Job Seeking', 'Hiring Pitch', 'Property Tour', 'Legal Brief'].map(topic => (
+                            <button
+                                key={topic}
+                                type="button"
+                                onClick={() => set('videoTopic')(topic)}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
+                                    formData.videoTopic === topic 
+                                    ? 'bg-teal-600 border-teal-600 text-white shadow-lg shadow-teal-200' 
+                                    : 'bg-white border-gray-100 text-gray-500 hover:border-teal-200'
+                                }`}
+                            >
+                                {topic}
+                            </button>
+                        ))}
+                    </div>
+                </FormField>
 
-            {/* 5. Company / Institution Name */}
-            <TextInput 
-                label="Company / Institution Name" 
-                placeholder='e.g. "ABC Corp" or "Freelance"' 
-                value={formData.companyName || ''} 
-                onChange={set('companyName')} 
-                required 
-            />
+                <FormField label="Job / Profile Title" required hint="Appears on overlay">
+                    <input
+                        type="text"
+                        value={formData.title || ''}
+                        onChange={(e) => set('title')(e.target.value)}
+                        placeholder='e.g. "Civil Engineer" or "Expert Painter"'
+                        className={INPUT_CLASSES}
+                    />
+                </FormField>
 
-            {/* 6. Skills (TagInput) */}
-            <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#444444', marginBottom: 8, fontFamily: 'DM Sans' }}>
-                    Skills / Expertise <span style={{ color: 'var(--accent)', marginLeft: 4 }}>*</span>
-                </label>
-                <TagInput 
-                    tags={formData.skills || []} 
-                    onChange={set('skills')} 
-                    placeholder="Add skills (press Enter)..." 
-                />
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FormField label="Sector Focus" required>
+                        <div className="relative">
+                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <select
+                                value={formData.category || category}
+                                onChange={(e) => set('category')(e.target.value)}
+                                className={`${INPUT_CLASSES} pl-11 appearance-none bg-no-repeat`}
+                                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem' }}
+                            >
+                                {INDUSTRY_CATEGORIES.map(sector => (
+                                    <option key={sector.id} value={sector.id}>{sector.icon} {sector.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </FormField>
 
-            {/* 7. Salary / Fee */}
-            <TextInput 
-                label="Expected Salary / Fee" 
-                placeholder='e.g. "50,000" or "Negotiable"' 
-                value={formData.salary || ''} 
-                onChange={set('salary')} 
-                required 
-                type="text" 
-            />
+                    <FormField label="Intent / Badge" required>
+                        <div className="relative">
+                            <Tag className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <select
+                                value={formData.intent || ''}
+                                onChange={(e) => set('intent')(e.target.value)}
+                                className={`${INPUT_CLASSES} pl-11 appearance-none bg-no-repeat`}
+                                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundPosition: 'right 1rem center', backgroundSize: '1.25rem' }}
+                            >
+                                <option value="" disabled>Select intent...</option>
+                                {subcats.map(sub => (
+                                    <option key={sub} value={sub}>{sub}</option>
+                                ))}
+                                <option value="Provider">Service Provider</option>
+                                <option value="Seeker">Service Seeker</option>
+                            </select>
+                        </div>
+                    </FormField>
+                </div>
 
-            {/* 8. Experience Level */}
-            <PillSelector 
-                label="Experience Level" 
-                options={EXP_LEVELS} 
-                value={formData.experienceLevel || ''} 
-                onChange={set('experienceLevel')} 
-                required 
-            />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FormField label="Company / Business Name" required>
+                        <div className="relative">
+                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input
+                                type="text"
+                                value={formData.companyTitle || ''}
+                                onChange={(e) => set('companyTitle')(e.target.value)}
+                                placeholder='e.g. "ABC Corp" or "Self-Employed"'
+                                className={`${INPUT_CLASSES} pl-11`}
+                            />
+                        </div>
+                    </FormField>
 
-            {/* 9. City */}
-            <TextInput 
-                label="City" 
-                placeholder='e.g. "Lahore"' 
-                value={formData.city || ''} 
-                onChange={set('city')} 
-                required 
-            />
+                    <FormField label="Salary / Fee" required hint="PKR">
+                        <input
+                            type="text"
+                            value={formData.salary || ''}
+                            onChange={(e) => set('salary')(e.target.value)}
+                            placeholder='e.g. "50,000" or "Negotiable"'
+                            className={INPUT_CLASSES}
+                        />
+                    </FormField>
+                </div>
+
+                <FormField label="Skills / Expertise" required hint="Press Enter to add">
+                     <TagInput
+                        tags={formData.skills || []}
+                        onChange={set('skills')}
+                        placeholder="Add professional skills..."
+                    />
+                </FormField>
+
+                <FormField label="Experience Level" required>
+                    <div className="flex flex-wrap gap-2">
+                        {['Fresher', '1-2 yrs', '3-5 yrs', '5-10 yrs', '10+ yrs'].map(level => (
+                            <button
+                                key={level}
+                                type="button"
+                                onClick={() => set('experienceLevel')(level)}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
+                                    formData.experienceLevel === level 
+                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' 
+                                    : 'bg-white border-gray-100 text-gray-500 hover:border-indigo-200'
+                                }`}
+                            >
+                                {level}
+                            </button>
+                        ))}
+                    </div>
+                </FormField>
+            </FormSection>
         </div>
     );
 }
@@ -717,57 +809,60 @@ export default function UploadVideoPage() {
             }
 
             // 3. Build overlay data
-            const overlayData = buildOverlayData(formData, userCategory, userRole);
+            const overlayData = buildOverlayData(formData);
 
-            // 3b. Save profile fields if filled in (city / phone)
+            // 3b. Save profile fields if filled in (Atomic synchronization)
             const profileUpdates: Record<string, any> = {};
-            if (profileCity && !firestoreProfile?.city) profileUpdates.city = profileCity;
-            if (profilePhone && !firestoreProfile?.phone) profileUpdates.phone = profilePhone;
+            if (formData.fatherName && !firestoreProfile?.fatherName) profileUpdates.fatherName = formData.fatherName;
+            if (formData.city && !firestoreProfile?.city) profileUpdates.city = formData.city;
+            if (formData.phone && !(firestoreProfile?.phone || firestoreProfile?.phoneNumber)) {
+                profileUpdates.phone = formData.phone;
+            }
+            if (formData.userName && !firestoreProfile?.name) profileUpdates.name = formData.userName;
+            
             if (Object.keys(profileUpdates).length > 0) {
-                await updateDoc(doc(db, 'users', user.uid), profileUpdates);
+                await updateDoc(doc(db, 'users', user.uid), {
+                    ...profileUpdates,
+                    updatedAt: serverTimestamp(),
+                });
             }
 
-            // 4. Write to Firestore 'videos' collection
-            const videoDocRef = await addDoc(collection(db, 'videos'), {
+            // 4. Write to Firestore 'videos' collection (Target Schema)
+            await addDoc(collection(db, 'videos'), {
+                // User & Identity
                 userId: user.uid,
                 userEmail: user.email,
-                userName: (user as any).displayName || (user as any).name || '',
-                userPhoto: (user as any).photoURL || '',
+                userName: formData.userName || firestoreProfile?.name || firestoreProfile?.displayName || '',
+                userPhoto: firestoreProfile?.photoURL || '',
 
-                // Video
+                // Video Core
                 cloudinaryUrl: result.secureUrl,
                 cloudinaryPublicId: result.publicId,
                 thumbnailUrl,
+                duration: videoDuration,
 
-                // Metadata (New Redesign)
+                // Metadata (EXACT SCHEMA)
                 title: formData.title || '',
-                fatherName: formData.fatherName || '',
+                fatherName: formData.fatherName || firestoreProfile?.fatherName || '',
                 category: formData.category || userCategory,
                 intent: formData.intent || '',
-                companyName: formData.companyName || '',
+                companyTitle: formData.companyTitle || '',
                 skills: formData.skills || [],
                 salary: formData.salary || '',
                 experienceLevel: formData.experienceLevel || '',
-                city: formData.city || profileCity || firestoreProfile?.city || '',
-                phone: profilePhone || firestoreProfile?.phone || firestoreProfile?.phoneNumber || '',
-                videoTopic: videoTopic || 'Introduction',
+                city: formData.city || firestoreProfile?.city || '',
+                phone: formData.phone || firestoreProfile?.phone || firestoreProfile?.phoneNumber || '',
+                videoTopic: formData.videoTopic || 'Introduction',
 
                 // Overlay Data
-                overlayData: {
-                    title: formData.title || '',
-                    badge: formData.intent || '',
-                    field1: formData.experienceLevel || '',
-                    field2: formData.city || '',
-                    userPhoto: (user as any).photoURL || '',
-                    userName: (user as any).displayName || (user as any).name || '',
-                },
+                overlayData,
 
-                // Automatic Live
+                // Access Control
                 admin_status: 'approved',
                 is_live: true,
                 transcriptionStatus: 'pending',
 
-                // Stats
+                // Engagement Stats
                 views: 0,
                 likes: 0,
                 saves: 0,
@@ -778,9 +873,9 @@ export default function UploadVideoPage() {
                 updatedAt: serverTimestamp(),
             });
 
-            // 5. Update user upload count
+            // 5. Update user stats with increment
             await updateDoc(doc(db, 'users', user.uid), {
-                videoUploadCount: (firestoreProfile.videoUploadCount || 0) + 1,
+                videoUploadCount: increment(1),
                 lastVideoUploadAt: serverTimestamp(),
             });
 
@@ -1284,84 +1379,10 @@ export default function UploadVideoPage() {
                     )}
                 </div>
 
-                {/* ── Profile Completeness Gate ── */}
-                {(!firestoreProfile?.city || !firestoreProfile?.phone) && (
-                    <div style={{
-                        background: 'linear-gradient(135deg, rgba(255,0,105,0.06), rgba(118,56,250,0.06))',
-                        border: '1.5px solid rgba(255,0,105,0.18)',
-                        borderRadius: 16, padding: '16px 18px', marginBottom: 24,
-                    }}>
-                        <p style={{
-                            fontFamily: 'Poppins', fontWeight: 700, fontSize: 13,
-                            color: '#0A0A0A', marginBottom: 14,
-                            display: 'flex', alignItems: 'center', gap: 6,
-                        }}>
-                            <span>✅</span> Complete Your Profile First
-                        </p>
-                        {!firestoreProfile?.city && (
-                            <TextInput
-                                label="Your City"
-                                placeholder='e.g. "Lahore"'
-                                value={profileCity}
-                                onChange={setProfileCity}
-                                required
-                            />
-                        )}
-                        {!firestoreProfile?.phone && (
-                            <TextInput
-                                label="Phone / WhatsApp Number"
-                                placeholder='e.g. "+923001234567"'
-                                value={profilePhone}
-                                onChange={setProfilePhone}
-                                required
-                                type="tel"
-                            />
-                        )}
-                    </div>
-                )}
-
-                {/* Section label */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                    <div style={{ flex: 1, height: 1, background: '#E5E5E5' }} />
-                    <span style={{ color: '#888888', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: 1 }}>
-                        Tell us about this video
-                    </span>
-                    <div style={{ flex: 1, height: 1, background: '#E5E5E5' }} />
-                </div>
-
-                {/* Video Topic */}
-                <PillSelector
-                    label="What is this video about?"
-                    required
-                    options={
-                        userCategory === 'jobs'
-                            ? ['Job Offer', 'Portfolio / Skills', 'Company Tour', 'Testimonial', 'Other']
-                            : userCategory === 'healthcare'
-                                ? ['Service Introduction', 'Patient Story', 'Clinic Tour', 'Health Tips', 'Other']
-                                : userCategory === 'education'
-                                    ? ['Course Preview', 'Student Success', 'Teaching Demo', 'Institute Tour', 'Other']
-                                    : userCategory === 'marriage'
-                                        ? ['Self Introduction', 'Family Message', 'Lifestyle', 'Other']
-                                        : userCategory === 'realestate'
-                                            ? ['Property Tour', 'Price Offer', 'Area Overview', 'Other']
-                                            : userCategory === 'transport'
-                                                ? ['Service Demo', 'Fleet Showcase', 'Route Info', 'Other']
-                                                : userCategory === 'travel'
-                                                    ? ['Package Tour', 'Destination Showcase', 'Travel Tips', 'Other']
-                                                    : userCategory === 'agriculture'
-                                                        ? ['Product Showcase', 'Farm Tour', 'Pricing', 'Other']
-                                                        : userCategory === 'sellbuy'
-                                                            ? ['Item for Sale', 'Unboxing', 'Price Negotiable', 'Other']
-                                                            : ['About My Service', 'Promotion', 'Introduction', 'Other']
-                    }
-                    value={videoTopic}
-                    onChange={setVideoTopic}
-                />
-
-                {/* Conditional fields */}
+                {/* New Sectional Form */}
                 <ConditionalFields
                     category={userCategory}
-                    role={userRole}
+                    firestoreProfile={firestoreProfile}
                     formData={formData}
                     onChange={(key, val) => setFormData(prev => ({ ...prev, [key]: val }))}
                 />
