@@ -2,25 +2,37 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, Timestamp, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { createHqUserServer } from '../../../actions/createHqUser';
+import { createHqUserServer } from '@/app/hq/actions/createHqUser';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
-import { Loader2, Users, Plus, Copy, Check } from 'lucide-react';
+import { 
+  Loader2, Users, Plus, Search, Filter, Shield, 
+  UserCheck, UserX, Trash2, Edit2, X, Check,
+  MoreVertical, ShieldAlert, Briefcase, CreditCard, User as UserIcon
+} from 'lucide-react';
 
-type TabType = 'manager' | 'cashier';
+type TabType = 'hq' | 'rehab' | 'spims';
 
-export default function HqCreateUsersPage() {
+export default function HqUserManagementPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
-  const [activeTab, setActiveTab] = useState<TabType>('manager');
+  const [activeTab, setActiveTab] = useState<TabType>('hq');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const [form, setForm] = useState({ name: '', customId: 'KHAN-MGR-001', phone: '', password: '' });
+  // Create HQ User Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    customId: '',
+    role: 'manager' as 'manager' | 'cashier',
+    password: '',
+  });
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -33,230 +45,323 @@ export default function HqCreateUsersPage() {
   useEffect(() => {
     if (!session || session.role !== 'superadmin') return;
 
-    const fetchUsers = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'hq_users'));
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        const filtered = list.filter(u => u.role === activeTab);
+    setLoading(true);
+    const collectionName = activeTab === 'hq' ? 'hq_users' : activeTab === 'rehab' ? 'rehab_users' : 'spims_users';
+    
+    const q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const userList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setUsers(userList);
+      setLoading(false);
+    }, (error) => {
+      console.error(`Error fetching ${activeTab} users:`, error);
+      setLoading(false);
+    });
 
-        filtered.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA;
-        });
+    return () => unsubscribe();
+  }, [activeTab, session]);
 
-        setUsers(filtered);
+  const toggleUserStatus = async (user: any) => {
+    const collectionName = activeTab === 'hq' ? 'hq_users' : activeTab === 'rehab' ? 'rehab_users' : 'spims_users';
+    try {
+      await updateDoc(doc(db, collectionName, user.id), {
+        isActive: !user.isActive
+      });
+    } catch (err) {
+      console.error("Error toggling user status:", err);
+      alert("Failed to update status");
+    }
+  };
 
-        const prefix = activeTab === 'manager' ? 'KHAN-MGR-' : 'KHAN-CSH-';
-        const num = filtered.length + 1;
-        setForm(prev => ({
-          ...prev,
-          customId: `${prefix}${String(num).padStart(3, '0')}`,
-        }));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, [session, activeTab]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateHqUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
     setMessage({ type: '', text: '' });
 
-    const res = await createHqUserServer({
-      customId: form.customId,
-      name: form.name,
-      role: activeTab,
-      password: form.password,
-      phone: form.phone || undefined,
-      createdBy: session?.customId || 'superadmin',
-    });
-
-    if (res.success) {
-      setMessage({ type: 'success', text: `${activeTab === 'manager' ? 'Manager' : 'Cashier'} ${form.customId} created!` });
-      setForm(prev => ({
-        ...prev,
-        name: '',
-        phone: '',
-        password: '',
-      }));
-
-      const snap = await getDocs(collection(db, 'hq_users'));
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      const filtered = list.filter(u => u.role === activeTab);
-      filtered.sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
+    try {
+      const res = await createHqUserServer({
+        ...formData,
+        createdBy: session?.customId || 'superadmin'
       });
-      setUsers(filtered);
 
-      const prefix = activeTab === 'manager' ? 'KHAN-MGR-' : 'KHAN-CSH-';
-      const num = filtered.length + 1;
-      setForm(prev => ({
-        ...prev,
-        customId: `${prefix}${String(num).padStart(3, '0')}`,
-      }));
-    } else {
-      setMessage({ type: 'error', text: res.error || 'Failed to create user' });
+      if (res.success) {
+        setMessage({ type: 'success', text: `HQ User ${formData.customId} created successfully!` });
+        setShowCreateModal(false);
+        setFormData({ name: '', customId: '', role: 'manager', password: '' });
+      } else {
+        setMessage({ type: 'error', text: res.error || 'Failed to create user' });
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
-  if (sessionLoading || loading) {
+  const filteredUsers = users.filter(user => 
+    (user.name || user.displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.customId || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getRoleBadge = (role: string) => {
+    const roles: Record<string, { color: string, icon: any }> = {
+      superadmin: { color: 'bg-purple-500/10 text-purple-500 border-purple-500/20', icon: <ShieldAlert size={12} /> },
+      admin: { color: 'bg-blue-500/10 text-blue-500 border-blue-500/20', icon: <Shield size={12} /> },
+      manager: { color: 'bg-teal-500/10 text-teal-500 border-teal-500/20', icon: <Briefcase size={12} /> },
+      cashier: { color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', icon: <CreditCard size={12} /> },
+      staff: { color: 'bg-slate-500/10 text-slate-500 border-slate-500/20', icon: <UserIcon size={12} /> },
+      family: { color: 'bg-rose-500/10 text-rose-500 border-rose-500/20', icon: <UserIcon size={12} /> },
+    };
+
+    const config = roles[role?.toLowerCase()] || roles.staff;
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
-      </div>
+      <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${config.color}`}>
+        {config.icon}
+        {role}
+      </span>
     );
-  }
+  };
+
+  if (sessionLoading) return <div className="min-h-screen bg-[#0f172a] flex items-center justify-center"><Loader2 className="animate-spin text-teal-500" /></div>;
 
   return (
-    <div className="space-y-8 pb-12 p-4 md:p-8 bg-gray-50 min-h-screen">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-black text-gray-900 flex items-center gap-2">
-          <Users className="w-8 h-8 text-gray-800" />
-          Create Users
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">Add new managers and cashiers</p>
-      </div>
-
-      {message.text && (
-        <div className={`p-6 rounded-3xl border font-bold flex items-center gap-4 ${
-          message.type === 'success' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
-        }`}>
-          <span className="w-8 h-8 rounded-xl bg-white/50 flex items-center justify-center text-sm">{message.type === 'success' ? '✓' : '!'}</span>
-          {message.text}
-        </div>
-      )}
-
-      <div className="flex gap-2">
-        {(['manager', 'cashier'] as TabType[]).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all ${
-              activeTab === tab
-                ? 'bg-gray-800 text-white shadow-lg'
-                : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
-            }`}
-          >
-            {tab === 'manager' ? 'Create Manager' : 'Create Cashier'}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-1">Full Name</label>
-            <input
-              required
-              className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-gray-200 placeholder:text-gray-300"
-              placeholder="Enter full name"
-              value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
-            />
+            <h1 className="text-3xl font-black text-white flex items-center gap-3">
+              <Users className="text-teal-500" size={32} />
+              User Management
+            </h1>
+            <p className="text-slate-400 mt-1 font-medium text-sm">Control access across HQ, Rehab, and SPIMS</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-1">Custom ID</label>
-              <input
-                required
-                className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-gray-200"
-                value={form.customId}
-                onChange={e => setForm({ ...form, customId: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-1">Phone (optional)</label>
-              <input
-                className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-gray-200 placeholder:text-gray-300"
-                placeholder="03XX-XXXXXXX"
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 block mb-1">Password</label>
-            <EyePasswordInput
-              required
-              className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-gray-200 placeholder:text-gray-300"
-              value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
-            />
-          </div>
-          <button
-            disabled={actionLoading}
-            className="w-full bg-gray-800 text-white py-5 rounded-2xl font-black shadow-xl hover:scale-[1.01] transition-all disabled:opacity-50 uppercase tracking-widest text-sm flex items-center justify-center gap-2"
-          >
-            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus size={16} />}
-            Create {activeTab === 'manager' ? 'Manager' : 'Cashier'}
-          </button>
-        </form>
-      </div>
-
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between">
-          <h2 className="font-black text-gray-900 text-lg flex items-center gap-2">
-            <Users className="w-5 h-5 text-gray-500" />
-            Existing {activeTab === 'manager' ? 'Managers' : 'Cashiers'}
-          </h2>
-          <span className="text-[10px] font-black bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 text-gray-400 uppercase tracking-widest">
-            {users.length} Total
-          </span>
+          {activeTab === 'hq' && (
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              className="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-teal-900/20"
+            >
+              <Plus size={18} />
+              Create HQ User
+            </button>
+          )}
         </div>
 
-        {users.length === 0 ? (
-          <p className="text-center py-10 text-gray-300 font-bold uppercase tracking-widest text-[10px]">No {activeTab}s found</p>
-        ) : (
+        {/* Status Message */}
+        {message.text && (
+          <div className={`mb-6 p-4 rounded-2xl flex items-center gap-3 border ${
+            message.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+          }`}>
+            {message.type === 'success' ? <Check size={20} /> : <ShieldAlert size={20} />}
+            <p className="font-bold text-sm">{message.text}</p>
+            <button onClick={() => setMessage({type:'', text:''})} className="ml-auto opacity-50 hover:opacity-100 transition-opacity">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* Tabs & Search */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+          <div className="flex p-1 bg-slate-800/50 rounded-2xl border border-slate-700/50 w-fit">
+            {(['hq', 'rehab', 'spims'] as TabType[]).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                  activeTab === tab 
+                    ? 'bg-teal-600 text-white shadow-lg' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {tab === 'hq' ? 'HQ Central' : tab === 'rehab' ? 'Rehab Center' : 'SPIMS College'}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative group min-w-[300px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-teal-500 transition-colors" size={18} />
+            <input 
+              type="text"
+              placeholder="Search by name or ID..."
+              className="w-full bg-slate-800/50 border border-slate-700/50 focus:border-teal-500/50 rounded-2xl pl-12 pr-6 py-3 outline-none font-medium text-white transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Users Table */}
+        <div className="bg-slate-800/40 border border-slate-700/50 rounded-3xl overflow-hidden backdrop-blur-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">
-                  <th className="px-4 py-3 text-xs whitespace-nowrap">Custom ID</th>
-                  <th className="px-4 py-3 text-xs whitespace-nowrap">Name</th>
-                  <th className="px-4 py-3 text-xs whitespace-nowrap">Role</th>
-                  <th className="px-4 py-3 text-xs whitespace-nowrap">Phone</th>
-                  <th className="px-4 py-3 text-xs whitespace-nowrap">Created</th>
-                  <th className="px-4 py-3 text-xs whitespace-nowrap">Status</th>
+                <tr className="bg-slate-900/50 border-b border-slate-700/50">
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">User Info</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">System ID</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Role</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Joined</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
-                {users.map(u => (
-                  <tr key={u.id} className="hover:bg-gray-50/50 transition-all">
-                    <td className="px-4 py-3 text-xs font-mono font-bold text-gray-700 whitespace-nowrap">{u.customId}</td>
-                    <td className="px-4 py-3 text-xs font-bold text-gray-900 whitespace-nowrap">{u.name}</td>
-                    <td className="px-4 py-3 text-xs whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                        u.role === 'manager' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-green-50 text-green-600 border-green-100'
-                      }`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{u.phone || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest ${u.isActive !== false ? 'text-green-500' : 'text-red-400'}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500' : 'bg-red-400'}`} />
-                        {u.isActive !== false ? 'Active' : 'Disabled'}
-                      </span>
+              <tbody className="divide-y divide-slate-700/50">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="animate-spin text-teal-500" size={32} />
+                        <p className="text-slate-500 font-bold">Synchronizing User Data...</p>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-4 opacity-30">
+                        <Users size={48} />
+                        <p className="text-lg font-bold">No users found in this system</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-slate-700/30 transition-colors group">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-teal-500 font-black border border-slate-700/50">
+                            {(user.name || user.displayName || 'U').charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-white leading-none mb-1">{user.name || user.displayName}</p>
+                            <p className="text-xs text-slate-500">{user.email || 'No email provided'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="font-mono text-xs font-bold bg-slate-900/80 px-2 py-1 rounded border border-slate-700/50 text-slate-400">
+                          {user.customId}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        {getRoleBadge(user.role)}
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider ${user.isActive !== false ? 'text-emerald-500' : 'text-slate-500'}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${user.isActive !== false ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-500'}`} />
+                          {user.isActive !== false ? 'Active' : 'Disabled'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-xs text-slate-500 font-bold">
+                          {user.createdAt ? (user.createdAt instanceof Timestamp ? user.createdAt.toDate().toLocaleDateString() : new Date(user.createdAt).toLocaleDateString()) : 'N/A'}
+                        </p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => toggleUserStatus(user)}
+                            className={`p-2 rounded-xl transition-all ${
+                              user.isActive !== false 
+                                ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white' 
+                                : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white'
+                            }`}
+                            title={user.isActive !== false ? "Disable User" : "Enable User"}
+                          >
+                            {user.isActive !== false ? <UserX size={18} /> : <UserCheck size={18} />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-        )}
+        </div>
       </div>
+
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-800/50">
+              <h3 className="text-xl font-black text-white">Create HQ Account</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-500 hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateHqUser} className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block mb-2">Account Role</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(['manager', 'cashier'] as const).map(role => (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => setFormData({...formData, role})}
+                        className={`py-3 rounded-2xl border font-black uppercase tracking-widest text-xs transition-all ${
+                          formData.role === role 
+                            ? 'bg-teal-600 border-teal-500 text-white shadow-lg' 
+                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
+                        }`}
+                      >
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block mb-2">Full Name</label>
+                  <input 
+                    required
+                    className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 font-bold text-white outline-none focus:ring-2 focus:ring-teal-500/50 transition-all placeholder:text-slate-600"
+                    placeholder="e.g. Ahmad Khan"
+                    value={formData.name}
+                    onChange={e => setFormData({...formData, name: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block mb-2">System ID</label>
+                  <input 
+                    required
+                    className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 font-mono font-bold text-teal-500 outline-none focus:ring-2 focus:ring-teal-500/50 transition-all placeholder:text-slate-600 uppercase"
+                    placeholder="KHAN-MGR-XXX"
+                    value={formData.customId}
+                    onChange={e => setFormData({...formData, customId: e.target.value.toUpperCase()})}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block mb-2">Secure Password</label>
+                  <EyePasswordInput
+                    required
+                    className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 font-bold text-white outline-none focus:ring-2 focus:ring-teal-500/50 transition-all placeholder:text-slate-600"
+                    value={formData.password}
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <button
+                disabled={actionLoading}
+                className="w-full bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-teal-900/20 transition-all flex items-center justify-center gap-3 mt-4"
+              >
+                {actionLoading ? <Loader2 className="animate-spin" size={20} /> : <UserCheck size={20} />}
+                Provision HQ Account
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
