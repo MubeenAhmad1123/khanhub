@@ -38,7 +38,6 @@ export default function HqUserManagementPage() {
     if (sessionLoading) return;
     if (!session || session.role !== 'superadmin') {
       router.push('/hq/login');
-      return;
     }
   }, [session, sessionLoading, router]);
 
@@ -54,7 +53,7 @@ export default function HqUserManagementPage() {
       const userList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      } as any));
       setUsers(userList);
       setLoading(false);
     }, (error) => {

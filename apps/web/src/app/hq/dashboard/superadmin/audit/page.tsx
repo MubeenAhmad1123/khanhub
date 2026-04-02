@@ -27,7 +27,6 @@ export default function HqAuditLogPage() {
     if (sessionLoading) return;
     if (!session || session.role !== 'superadmin') {
       router.push('/hq/login');
-      return;
     }
   }, [session, sessionLoading, router]);
 
@@ -44,7 +43,7 @@ export default function HqAuditLogPage() {
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
       setLoading(false);
     }, (error) => {
       console.error(`Error fetching ${activeTab} audit logs:`, error);

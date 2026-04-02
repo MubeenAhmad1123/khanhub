@@ -29,7 +29,6 @@ export default function HqRehabFinancePage() {
     if (sessionLoading) return;
     if (!session || session.role !== 'superadmin') {
       router.push('/hq/login');
-      return;
     }
   }, [session, sessionLoading, router]);
 
@@ -39,7 +38,7 @@ export default function HqRehabFinancePage() {
     const q = query(collection(db, 'rehab_transactions'), orderBy('createdAt', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const txList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const txList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setTransactions(txList);
       
       // Calculate Summary
@@ -47,7 +46,7 @@ export default function HqRehabFinancePage() {
       let expenses = 0;
       let pending = 0;
 
-      txList.forEach(tx => {
+      txList.forEach((tx: any) => {
         const amount = Number(tx.amount) || 0;
         if (tx.status === 'approved') {
           if (tx.type === 'income') revenue += amount;

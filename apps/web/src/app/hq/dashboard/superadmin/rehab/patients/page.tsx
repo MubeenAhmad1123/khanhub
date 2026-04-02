@@ -28,7 +28,6 @@ export default function HqRehabPatientsPage() {
     if (sessionLoading) return;
     if (!session || session.role !== 'superadmin') {
       router.push('/hq/login');
-      return;
     }
   }, [session, sessionLoading, router]);
 
@@ -49,7 +48,7 @@ export default function HqRehabPatientsPage() {
         // Fetch Patients
         const q = query(collection(db, 'rehab_patients'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-          setPatients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          setPatients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
           setLoading(false);
         });
 

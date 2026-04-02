@@ -27,7 +27,6 @@ export default function HqApprovalsPage() {
     if (sessionLoading) return;
     if (!session || session.role !== 'superadmin') {
       router.push('/hq/login');
-      return;
     }
   }, [session, sessionLoading, router]);
 
@@ -45,7 +44,7 @@ export default function HqApprovalsPage() {
     );
     
     const unsubscribePending = onSnapshot(qPending, (snapshot) => {
-      setPendingTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setPendingTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
       setLoading(false);
     });
 
@@ -57,7 +56,7 @@ export default function HqApprovalsPage() {
     );
     
     const unsubscribeHistory = onSnapshot(qHistory, (snapshot) => {
-      setHistoryTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setHistoryTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
     });
 
     return () => {
