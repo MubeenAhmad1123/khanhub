@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { HqSession, HqRole } from '@/types/hq';
 
@@ -49,6 +50,11 @@ export default function HqLoginPage() {
     setError('');
 
     try {
+      // Step 1: Sign into Firebase Auth (authenticates the request)
+      const email = `${customId.toLowerCase().replace(/-/g, '.')}@hq.khanhub.com`;
+      await signInWithEmailAndPassword(auth, email, password);
+
+      // Step 2: Now authenticated — query Firestore
       const q = query(collection(db, 'hq_users'), where('customId', '==', customId));
       const snap = await getDocs(q);
 
@@ -61,7 +67,7 @@ export default function HqLoginPage() {
       let found = false;
       snap.forEach((doc) => {
         const data = doc.data();
-        if (data.password === password && data.isActive !== false) {
+        if (data.isActive !== false) {
           const session: HqSession = {
             uid: doc.id,
             customId: data.customId,
@@ -82,10 +88,15 @@ export default function HqLoginPage() {
       });
 
       if (!found) {
-        setError('Invalid credentials or account is disabled.');
+        setError('Account is disabled. Contact system administrator.');
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      // Firebase Auth errors
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+        setError('Invalid ID or password.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
