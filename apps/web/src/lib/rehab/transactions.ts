@@ -16,7 +16,7 @@ import type { Transaction } from '@/types/rehab';
 export async function createTransaction(data: Omit<Transaction, 'id' | 'status' | 'approvedBy' | 'approvedAt'>): Promise<string> {
   const res = await addDoc(collection(db, 'rehab_transactions'), {
     ...data,
-    date: Timestamp.fromDate(data.date),
+    date: data.date instanceof Date ? Timestamp.fromDate(data.date) : data.date,
     status: 'pending'
   });
   return res.id;

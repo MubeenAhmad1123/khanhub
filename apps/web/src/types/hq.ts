@@ -17,6 +17,7 @@ export interface HqSession {
   uid: string;
   customId: string;
   name: string;
+  displayName?: string;
   role: HqRole;
   loginTime: number;
 }

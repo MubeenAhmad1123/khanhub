@@ -233,7 +233,7 @@ export default function StaffDetailPage() {
              <div className="w-full h-full bg-white rounded-[1.8rem] flex items-center justify-center text-teal-600 font-black text-3xl overflow-hidden border-4 border-white">
                 {staff.photoUrl
                   ? <img src={staff.photoUrl} className="w-full h-full object-cover" alt={staff.name} />
-                  : staff.name.charAt(0).toUpperCase()
+                  : (staff.name || '?').charAt(0).toUpperCase()
                 }
              </div>
           </div>
@@ -250,7 +250,7 @@ export default function StaffDetailPage() {
             </div>
           </div>
           <div className="text-center md:text-right bg-gray-50 md:bg-transparent p-4 md:p-0 rounded-2xl w-full md:w-auto border border-gray-100 md:border-0 shadow-sm md:shadow-none">
-            <p className="text-3xl font-black text-gray-900 leading-none">₨{staff.salary.toLocaleString()}</p>
+            <p className="text-3xl font-black text-gray-900 leading-none">₨{(staff.salary || 0).toLocaleString()}</p>
             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Monthly Salary</p>
             <div className="h-px bg-gray-200 w-12 mx-auto md:ml-auto my-2"></div>
             <p className="text-[10px] text-teal-600 font-black uppercase">₨{dailyRate.toLocaleString()} / DAY RATE</p>
@@ -292,9 +292,9 @@ export default function StaffDetailPage() {
               <List size={18} className="text-teal-500" />
               <h2 className="font-black text-gray-900">Assigned Duties</h2>
             </div>
-            {staff.duties?.length > 0 ? (
+            {(staff.duties?.length || 0) > 0 ? (
               <ul className="space-y-2">
-                {staff.duties.map((d, i) => (
+                {(staff.duties || []).map((d: any, i: number) => (
                   <li key={d.id || i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                     <span className="w-5 h-5 rounded-lg bg-teal-100 text-teal-600 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
                       {i + 1}
@@ -365,7 +365,7 @@ export default function StaffDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-2">Earnings</h3>
-                <Row label="Base Salary" value={`₨${staff.salary.toLocaleString()}`} />
+                <Row label="Base Salary" value={`₨${(staff.salary ?? 0).toLocaleString()}`} />
                 <Row label="Performance Bonus" value="₨0" muted />
                 <Row label="Other Allowances" value="₨0" muted />
               </div>

@@ -27,7 +27,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
         type: formData.type,
         category: formData.category,
         amount: parseFloat(formData.amount),
-        description: formData.description,
+        txnDescription: formData.description,
         cashierId,
         patientId: formData.patientId || undefined,
         date: new Date(formData.date)

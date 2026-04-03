@@ -2,7 +2,56 @@
 
 import { Timestamp } from 'firebase/firestore';
 
-export type RehabRole = 'admin' | 'staff' | 'family';
+export type RehabRole = 'admin' | 'staff' | 'family' | 'cashier' | 'superadmin';
+
+// ─── REHAB USER (Auth) ───────────────────────────────────────────────────────
+
+export interface RehabUser {
+  uid: string;
+  customId: string;
+  name: string;
+  displayName?: string;
+  role: RehabRole;
+  isActive: boolean;
+  patientId?: string;
+  createdAt?: Timestamp | Date;
+}
+
+export interface Transaction {
+  id: string;
+  patientId?: string;
+  patientName?: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  txnDescription?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdBy?: string;
+  createdByName?: string;
+  cashierId?: string;
+  cashierName?: string;
+  approvedBy?: string;
+  approvedAt?: Timestamp | Date;
+  date: Date | Timestamp;
+  createdAt?: Timestamp | Date;
+}
+
+export interface StaffDuty {
+  id: string;
+  dutyDescription: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface StaffContribution {
+  id: string;
+  staffId: string;
+  patientId: string;
+  contributionType: string;
+  contributionDescription?: string;
+  date: string;
+  createdAt?: Timestamp | Date;
+}
 
 // ─── PATIENT (Full Admission Form Data) ─────────────────────────────────────
 
@@ -267,6 +316,9 @@ export interface StaffMember {
   joiningDate?: Timestamp | Date;
   isActive?: boolean;
   photoUrl?: string;
+  duties?: StaffDuty[];
+  dutyStartTime?: string;
+  dutyEndTime?: string;
   [key: string]: any;
 }
 
@@ -298,3 +350,4 @@ export interface LeaveRecord {
   status?: string;
   [key: string]: any;
 }
+

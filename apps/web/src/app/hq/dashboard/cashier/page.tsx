@@ -93,7 +93,7 @@ export default function CashierStationPage() {
         description,
         status: 'approved', // HQ Cashier txns are auto-approved
         createdBy: session?.uid,
-        createdByName: session?.displayName,
+        createdByName: session?.displayName || session?.name || 'HQ Cashier',
         createdAt: Timestamp.now(),
         date: Timestamp.now()
       };
@@ -150,7 +150,7 @@ export default function CashierStationPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">Cashier Station</h1>
-              <p className="text-gray-400 text-sm font-semibold uppercase tracking-widest leading-none mt-1.5">HQ Terminal / {session?.displayName}</p>
+              <p className="text-gray-400 text-sm font-semibold uppercase tracking-widest leading-none mt-1.5">HQ Terminal / {session?.displayName || session?.name || 'Cashier'}</p>
             </div>
           </div>
           

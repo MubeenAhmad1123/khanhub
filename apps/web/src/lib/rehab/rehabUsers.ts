@@ -27,6 +27,7 @@ export async function createRehabUser(
   
   const userData: Omit<RehabUser, 'uid'> = {
     customId,
+    name: displayName,
     role,
     displayName,
     patientId,

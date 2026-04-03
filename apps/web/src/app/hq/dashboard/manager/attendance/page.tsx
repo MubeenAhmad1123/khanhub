@@ -85,7 +85,7 @@ export default function ManagerAttendancePage() {
         date: selectedDate,
         status: newStatus,
         markedBy: session?.uid,
-        markedByName: session?.displayName,
+        markedByName: session?.displayName || session?.name || 'Manager',
         updatedAt: Timestamp.now()
       }, { merge: true });
 

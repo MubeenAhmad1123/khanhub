@@ -55,7 +55,7 @@ export default function StaffSelfPage() {
       setContributions(
         contribSnap.docs
           .map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toDate?.() || new Date() } as StaffContribution))
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime())
           .slice(0, 10)
       );
 
@@ -324,7 +324,7 @@ export default function StaffSelfPage() {
             <h2 className="font-black text-gray-900">Your Duties</h2>
           </div>
           <ol className="space-y-2">
-            {staffProfile?.duties?.map((d, i) => (
+            {staffProfile?.duties?.map((d: any, i: number) => (
               <li key={d.id || i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                 <span className="w-5 h-5 rounded-lg bg-teal-100 text-teal-600 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
                 <span className="text-gray-700 text-sm leading-snug">{d.description || String(d)}</span>
@@ -368,8 +368,8 @@ export default function StaffSelfPage() {
           <div className="space-y-3">
             {contributions.map(c => (
               <div key={c.id} className="p-4 bg-gray-50 rounded-2xl">
-                <p className="text-gray-700 text-sm leading-relaxed">{c.content}</p>
-                <p className="text-[10px] text-gray-400 font-mono mt-2">{c.date} — {c.createdAt.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</p>
+                <p className="text-gray-700 text-sm leading-relaxed">{(c as any).content || (c as any).contributionDescription || ''}</p>
+                <p className="text-[10px] text-gray-400 font-mono mt-2">{c.date} — {(c.createdAt as Date).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</p>
               </div>
             ))}
           </div>
