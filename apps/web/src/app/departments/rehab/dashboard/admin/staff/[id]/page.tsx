@@ -69,7 +69,7 @@ export default function StaffDetailPage() {
           id: d.id,
           ...d.data(),
         } as AttendanceRecord))
-        .filter(a => a.date >= firstDayStr && a.date <= lastDayStr)
+        .filter(a => (a.date || '') >= firstDayStr && (a.date || '') <= lastDayStr)
 
       setAttendance(attendanceData);
 
@@ -93,7 +93,7 @@ export default function StaffDetailPage() {
 
       // Streak Calculation
       const allAtt = attSnap.docs.map(d => d.data() as AttendanceRecord)
-        .sort((a, b) => b.date.localeCompare(a.date));
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       
       let currentStreak = 0;
       const today = new Date().toISOString().split('T')[0];

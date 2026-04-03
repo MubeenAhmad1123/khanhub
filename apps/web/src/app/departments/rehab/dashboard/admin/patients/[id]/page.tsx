@@ -11,10 +11,16 @@ import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
-  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone
+  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
+
+import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
+import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
+import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
+import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
+import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
 
 export default function PatientDetailPage() {
   const router = useRouter();
@@ -31,7 +37,7 @@ export default function PatientDetailPage() {
   const [videos, setVideos] = useState<any[]>([]);
 
   // State
-  const [activeTab, setActiveTab] = useState<'profile' | 'fees' | 'canteen' | 'videos' | 'visits'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'admission' | 'daily' | 'progress' | 'therapy' | 'meds' | 'fees' | 'canteen' | 'videos' | 'visits'>('profile');
   const [visits, setVisits] = useState<any[]>([]);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [isSavingVisit, setIsSavingVisit] = useState(false);
@@ -600,7 +606,47 @@ export default function PatientDetailPage() {
               activeTab === 'profile' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <User className="w-4 h-4" /> Profile Info
+            <User className="w-4 h-4" /> Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('admission')}
+            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'admission' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4" /> Admission
+          </button>
+          <button
+            onClick={() => setActiveTab('daily')}
+            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'daily' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Activity className="w-4 h-4" /> Daily Sheet
+          </button>
+          <button
+            onClick={() => setActiveTab('progress')}
+            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'progress' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" /> Progress
+          </button>
+          <button
+            onClick={() => setActiveTab('therapy')}
+            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'therapy' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Brain className="w-4 h-4" /> Therapy
+          </button>
+          <button
+            onClick={() => setActiveTab('meds')}
+            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'meds' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Pill className="w-4 h-4" /> Medication
           </button>
           <button
             onClick={() => setActiveTab('fees')}
@@ -784,6 +830,31 @@ export default function PatientDetailPage() {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* TAB: ADMISSION */}
+          {activeTab === 'admission' && (
+            <AdmissionTab patient={patient} onUpdate={(updated) => setPatient({...patient, ...updated})} />
+          )}
+
+          {/* TAB: DAILY SHEET */}
+          {activeTab === 'daily' && (
+            <DailySheetTab patientId={patientId} session={session} />
+          )}
+
+          {/* TAB: PROGRESS */}
+          {activeTab === 'progress' && (
+            <ProgressTab patientId={patientId} session={session} />
+          )}
+
+          {/* TAB: THERAPY */}
+          {activeTab === 'therapy' && (
+            <TherapyTab patientId={patientId} session={session} />
+          )}
+
+          {/* TAB: MEDICATION */}
+          {activeTab === 'meds' && (
+            <MedicationTab patientId={patientId} session={session} />
           )}
 
           {/* TAB: FEES */}

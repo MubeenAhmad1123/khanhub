@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, getDocs, where, Timestamp, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { 
@@ -21,8 +21,6 @@ export default function HqRehabPatientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
-  const [patientFees, setPatientFees] = useState<any>(null);
-  const [feesLoading, setFeesLoading] = useState(false);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -31,10 +29,11 @@ export default function HqRehabPatientsPage() {
     }
   }, [session, sessionLoading, router]);
 
+  // Remove individual fee fetching, we now batch load
   useEffect(() => {
     if (!session || session.role !== 'superadmin') return;
 
-    const fetchPatients = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
         // Fetch Staff for mapping
@@ -45,49 +44,25 @@ export default function HqRehabPatientsPage() {
         });
         setStaffMap(staffData);
 
-        // Fetch Patients
-        const q = query(collection(db, 'rehab_patients'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          setPatients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
-          setLoading(false);
-        });
-
-        return () => unsubscribe();
+        // Fetch patients with finance summary
+        const { getAllPatientsWithFinanceSummary } = await import('@/lib/rehab/patients');
+        const data = await getAllPatientsWithFinanceSummary();
+        setPatients(data);
       } catch (err) {
         console.error("Error fetching rehab data:", err);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchPatients();
+    loadData();
   }, [session]);
-
-  const fetchFeeSummary = async (patientId: string) => {
-    setFeesLoading(true);
-    try {
-      const q = query(collection(db, 'rehab_fees'), where('patientId', '==', patientId));
-      const snap = await getDocs(q);
-      const fees = snap.docs.map(d => d.data());
-      
-      const totalDue = fees.reduce((sum, f) => sum + (Number(f.packageAmount) || 0), 0);
-      const totalPaid = fees.reduce((sum, f) => sum + (Number(f.amountPaid) || 0), 0);
-      const balance = totalDue - totalPaid;
-
-      setPatientFees({ totalDue, totalPaid, balance });
-    } catch (err) {
-      console.error("Error fetching fee summary:", err);
-    } finally {
-      setFeesLoading(false);
-    }
-  };
 
   const handleExpand = (patientId: string) => {
     if (expandedPatient === patientId) {
       setExpandedPatient(null);
-      setPatientFees(null);
     } else {
       setExpandedPatient(patientId);
-      fetchFeeSummary(patientId);
     }
   };
 
@@ -258,31 +233,30 @@ export default function HqRehabPatientsPage() {
                                   <Wallet size={14} className="text-emerald-500" />
                                   Financial Ledger
                                 </h4>
-                                {feesLoading ? (
-                                  <div className="flex items-center gap-3 text-slate-500 p-4">
-                                    <Loader2 size={16} className="animate-spin" />
-                                    <span className="text-xs font-bold uppercase tracking-widest">Calculating...</span>
-                                  </div>
-                                ) : patientFees ? (
-                                  <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 grid grid-cols-2 gap-4">
-                                    <div className="col-span-2 pb-2 border-b border-slate-700/50">
-                                      <p className="text-[10px] text-slate-500 font-bold uppercase">Outstanding Balance</p>
-                                      <p className={`text-xl font-black ${patientFees.balance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                        Rs. {patientFees.balance.toLocaleString()}
+                                <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 grid grid-cols-2 gap-4">
+                                  <div className="col-span-2 pb-2 border-b border-slate-700/50 flex justify-between items-center">
+                                    <div>
+                                      <p className="text-[10px] text-slate-500 font-bold uppercase">Outstanding Dues</p>
+                                      <p className={`text-xl font-black ${patient.remaining > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                        Rs. {(patient.remaining || 0).toLocaleString()}
                                       </p>
                                     </div>
-                                    <div>
-                                      <p className="text-[10px] text-slate-500 font-bold uppercase">Total Due</p>
-                                      <p className="text-sm font-bold text-slate-300">Rs. {patientFees.totalDue.toLocaleString()}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[10px] text-slate-500 font-bold uppercase">Total Paid</p>
-                                      <p className="text-sm font-bold text-emerald-500">Rs. {patientFees.totalPaid.toLocaleString()}</p>
+                                    <div className="text-right">
+                                      <p className="text-[10px] text-slate-500 font-bold uppercase">Canteen Balance</p>
+                                      <p className={`text-xl font-black ${(patient.canteenBalance || 0) < 0 ? 'text-rose-500' : 'text-teal-500'}`}>
+                                        Rs. {(patient.canteenBalance || 0).toLocaleString()}
+                                      </p>
                                     </div>
                                   </div>
-                                ) : (
-                                  <p className="text-xs text-slate-500 p-4 italic">No fee records found</p>
-                                )}
+                                  <div>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase">Total Billed</p>
+                                    <p className="text-sm font-bold text-slate-300">Rs. {(patient.totalDues || 0).toLocaleString()}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase">Total Paid</p>
+                                    <p className="text-sm font-bold text-emerald-500">Rs. {(patient.totalReceived || 0).toLocaleString()}</p>
+                                  </div>
+                                </div>
                               </div>
 
                               {/* Quick Actions */}

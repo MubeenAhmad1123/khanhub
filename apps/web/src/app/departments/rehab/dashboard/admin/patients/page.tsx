@@ -3,11 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
-  Heart, Plus, Search, ChevronRight, User, Calendar, Package, Loader2 
+  Heart, Plus, Search, ChevronRight, User, Calendar, Loader2, 
+  Phone, DollarSign, CheckCircle, AlertCircle
 } from 'lucide-react';
+
+function toDate(val: any): Date {
+  if (!val) return new Date();
+  if (typeof val?.toDate === 'function') return val.toDate();
+  if (val instanceof Date) return val;
+  return new Date(val);
+}
 
 export default function PatientsListPage() {
   const router = useRouter();
@@ -15,6 +23,7 @@ export default function PatientsListPage() {
   const [loading, setLoading] = useState(true);
   const [patients, setPatients] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -34,54 +43,70 @@ export default function PatientsListPage() {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const now = new Date();
-      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-      // 1. Fetch Patients, Fees, and Canteen data
       const [snap, feesSnap, canteenSnap] = await Promise.all([
         getDocs(collection(db, 'rehab_patients')),
-        getDocs(query(collection(db, 'rehab_fees'), where('month', '==', currentMonth))),
-        getDocs(query(collection(db, 'rehab_canteen'), where('month', '==', currentMonth)))
+        getDocs(collection(db, 'rehab_fees')),
+        getDocs(collection(db, 'rehab_canteen')),
       ]);
       
-      const feesMap: Record<string, any> = {};
-      feesSnap.docs.forEach(d => { feesMap[d.data().patientId] = d.data(); });
+      const feesMap: Record<string, any[]> = {};
+      feesSnap.docs.forEach(d => {
+        const data = d.data();
+        if (!feesMap[data.patientId]) feesMap[data.patientId] = [];
+        feesMap[data.patientId].push(data);
+      });
 
-      const canteenMap: Record<string, any> = {};
-      canteenSnap.docs.forEach(d => { canteenMap[d.data().patientId] = d.data(); });
+      const canteenMap: Record<string, any[]> = {};
+      canteenSnap.docs.forEach(d => {
+        const data = d.data();
+        if (!canteenMap[data.patientId]) canteenMap[data.patientId] = [];
+        canteenMap[data.patientId].push(data);
+      });
 
       const all = snap.docs.map(d => {
         const data = d.data();
-        const fee = feesMap[d.id];
-        const canteen = canteenMap[d.id];
+        const admissionDate = toDate(data.admissionDate);
+        const pFees = feesMap[d.id] || [];
+        const pCanteen = canteenMap[d.id] || [];
         
-        const isFeeDue = !fee || (Number(fee.paidAmount || 0) < Number(data.packageAmount || 60000));
-        const isLowCanteen = (Number(canteen?.balance || 0) < 500);
+        const totalDues = (data.packageAmount || 0) * (data.durationMonths || 1) + (data.otherExpenses || 0);
+        const totalReceived = pFees.reduce((acc, f) => {
+          return acc + (f.payments || []).filter((p: any) => p.status === 'approved').reduce((s: number, p: any) => s + p.amount, 0);
+        }, 0);
+        const remaining = totalDues - totalReceived;
+
+        const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (c.totalDeposited || 0), 0);
+        const totalCanteenSpent = pCanteen.reduce((a, c) => a + (c.totalSpent || 0), 0);
+        const canteenBalance = totalCanteenDeposited - totalCanteenSpent;
+
+        const daysSinceAdmission = Math.floor((Date.now() - admissionDate.getTime()) / (1000 * 60 * 60 * 24));
+        const totalDays = (data.durationMonths || 1) * 30;
+        const progressPct = Math.min(100, Math.round((daysSinceAdmission / totalDays) * 100));
 
         return {
           id: d.id,
           name: data.name || '',
-          photoUrl: data.photoUrl || null,
-          admissionDate: data.admissionDate?.toDate?.() 
-            ? data.admissionDate.toDate() 
-            : data.admissionDate 
-              ? new Date(data.admissionDate) 
-              : new Date(),
-          packageAmount: Number(data.packageAmount) || 60000,
-          diagnosis: data.diagnosis || '',
-          isActive: data.isActive !== false,
           fatherName: data.fatherName || '',
-          phone: data.phone || '',
-          age: data.age || '',
-          isFeeDue,
-          isLowCanteen,
-          createdAt: data.createdAt?.toDate?.()
-            ? data.createdAt.toDate()
-            : new Date(),
+          photoUrl: data.photoUrl || null,
+          admissionDate,
+          packageAmount: Number(data.packageAmount) || 0,
+          durationMonths: data.durationMonths || 1,
+          inpatientNumber: data.inpatientNumber || '',
+          serialNumber: data.serialNumber || 0,
+          substanceOfAddiction: data.substanceOfAddiction || '',
+          isActive: data.isActive !== false,
+          contactNumber: data.contactNumber || '',
+          remaining,
+          canteenBalance,
+          totalDues,
+          totalReceived,
+          progressPct,
+          daysSinceAdmission,
+          totalDays,
+          createdAt: toDate(data.createdAt),
         };
       })
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .filter(p => p.isActive !== false);
+      .sort((a, b) => b.serialNumber - a.serialNumber);
 
       setPatients(all);
     } catch (err: any) {
@@ -100,89 +125,102 @@ export default function PatientsListPage() {
   }
 
   const filteredPatients = patients.filter(p => {
+    if (statusFilter === 'active' && !p.isActive) return false;
+    if (statusFilter === 'discharged' && p.isActive) return false;
     const s = searchQuery.toLowerCase();
     return (
       p.name.toLowerCase().includes(s) ||
-      p.fatherName.toLowerCase().includes(s) ||
-      p.phone.includes(s) ||
-      p.id.toLowerCase().includes(s)
+      p.inpatientNumber.toLowerCase().includes(s) ||
+      p.substanceOfAddiction.toLowerCase().includes(s) ||
+      p.fatherName.toLowerCase().includes(s)
     );
   });
 
-  const totalActive = patients.length;
-  const newThisMonth = patients.filter(p => {
-    const firstOfMonth = new Date();
-    firstOfMonth.setDate(1);
-    firstOfMonth.setHours(0, 0, 0, 0);
-    return p.admissionDate >= firstOfMonth;
-  }).length;
+  const totalActive = patients.filter(p => p.isActive).length;
+  const totalDischarged = patients.filter(p => !p.isActive).length;
+  const totalOutstanding = patients.filter(p => p.isActive && p.remaining > 0).reduce((s, p) => s + p.remaining, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Heart className="w-6 h-6 text-teal-600" />
+            <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+              <Heart className="w-7 h-7 text-teal-600" />
               Patients
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Manage all active patients</p>
+            <p className="text-sm text-gray-500 mt-1">Manage all patients and their recovery journey</p>
           </div>
           <Link 
             href="/departments/rehab/dashboard/admin/patients/new"
-            className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             Add Patient
           </Link>
         </div>
 
-        {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center text-teal-600">
-              <User className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Active</p>
-              <p className="text-2xl font-bold text-gray-900">{totalActive}</p>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600"><User className="w-5 h-5" /></div>
+              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active</p><p className="text-xl font-black text-gray-900">{totalActive}</p></div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-              <Calendar className="w-6 h-6" />
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600"><Calendar className="w-5 h-5" /></div>
+              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Discharged</p><p className="text-xl font-black text-gray-900">{totalDischarged}</p></div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">New This Month</p>
-              <p className="text-2xl font-bold text-gray-900">{newThisMonth}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600"><DollarSign className="w-5 h-5" /></div>
+              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Outstanding</p><p className="text-xl font-black text-red-600">₨{totalOutstanding.toLocaleString()}</p></div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600"><Phone className="w-5 h-5" /></div>
+              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total</p><p className="text-xl font-black text-gray-900">{patients.length}</p></div>
             </div>
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+              placeholder="Search by name, ID (REHAB-058), or substance..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-            placeholder="Search patients by name, father, phone, or ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <div className="flex gap-2">
+            {['all', 'active', 'discharged'].map(f => (
+              <button
+                key={f}
+                onClick={() => setStatusFilter(f)}
+                className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  statusFilter === f ? 'bg-gray-800 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Patient Grid */}
         {filteredPatients.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
             <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-1">No patients found</h3>
-            <p className="text-gray-500 text-sm">
-              {searchQuery ? "Try adjusting your search query." : "Add your first patient to get started."}
-            </p>
+            <h3 className="text-lg font-black text-gray-900 mb-1">No patients found</h3>
+            <p className="text-gray-500 text-sm">{searchQuery ? "Try adjusting your search." : "Add your first patient to get started."}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -198,50 +236,57 @@ export default function PatientsListPage() {
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-4 mb-5">
-                    <div className="relative">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="relative flex-shrink-0">
                         {patient.photoUrl ? (
-                            <img src={patient.photoUrl} alt={patient.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md font-black text-[10px] text-gray-300 flex items-center justify-center bg-gray-50" />
+                            <img src={patient.photoUrl} alt={patient.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md" />
                         ) : (
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 flex items-center justify-center font-black text-2xl border border-teal-200/50 shadow-inner">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 flex items-center justify-center font-black text-xl border border-teal-200/50">
                                 {patient.name.charAt(0).toUpperCase()}
                             </div>
                         )}
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
+                        <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-white rounded-full ${patient.isActive ? 'bg-green-500' : 'bg-red-400'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-black text-gray-900 truncate leading-tight">
-                            {patient.name}
-                        </h3>
-                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mt-1">
-                            Active Patient
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                            {patient.isFeeDue && (
-                                <span className="text-[8px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm shadow-red-200">Fee Due</span>
-                            )}
-                            {patient.isLowCanteen && (
-                                <span className="text-[8px] font-black bg-orange-500 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm shadow-orange-200">Low Canteen</span>
-                            )}
-                        </div>
+                        <h3 className="text-sm font-black text-gray-900 truncate leading-tight">{patient.name}</h3>
+                        <p className="text-[10px] font-mono text-teal-600 font-bold">{patient.inpatientNumber || `#${patient.serialNumber}`}</p>
+                        {patient.substanceOfAddiction && (
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 text-[9px] font-black uppercase tracking-wider">
+                            {patient.substanceOfAddiction}
+                          </span>
+                        )}
                     </div>
                 </div>
 
-                <div className="mt-auto space-y-3 pt-4 border-t border-gray-50">
+                <div className="mt-auto space-y-3 pt-3 border-t border-gray-50">
+                    <div>
+                      <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                        <span>Progress</span>
+                        <span>{patient.progressPct}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div className={`h-1.5 rounded-full transition-all ${patient.progressPct >= 80 ? 'bg-green-500' : patient.progressPct >= 50 ? 'bg-amber-500' : 'bg-teal-500'}`} style={{ width: `${patient.progressPct}%` }} />
+                      </div>
+                      <p className="text-[9px] text-gray-400 mt-1">{patient.daysSinceAdmission}d / {patient.totalDays}d ({patient.durationMonths} month{patient.durationMonths > 1 ? 's' : ''})</p>
+                    </div>
+
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            <Calendar size={12} className="text-teal-400" />
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400">
+                            <Calendar size={11} className="text-teal-400" />
                             {patient.admissionDate instanceof Date 
-                                ? patient.admissionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) 
+                                ? patient.admissionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) 
                                 : 'No date'
                             }
                         </div>
-                        <div className="text-[11px] font-black text-gray-900 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100/50">
-                            PKR {patient.packageAmount?.toLocaleString() || 0}
-                        </div>
-                    </div>
-                    <div className="text-xs font-medium text-gray-500 line-clamp-1 italic bg-gray-50/50 p-2 rounded-xl border border-gray-100/50">
-                        "{patient.diagnosis || "No diagnosis specified"}"
+                        {patient.remaining > 0 ? (
+                          <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                            <AlertCircle size={10} />₨{patient.remaining.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                            <CheckCircle size={10} /> Paid
+                          </span>
+                        )}
                     </div>
                 </div>
               </Link>

@@ -10,13 +10,13 @@ import { twMerge } from "tailwind-merge"
 /**
  * Safely converts a Firestore Timestamp or unknown date value to a Date object.
  */
-export function toDate(value: any): Date | null {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value.toDate === 'function') return value.toDate();
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? null : d;
+export function toDate(val: any): Date {
+  if (!val) return new Date();
+  if (typeof val?.toDate === 'function') return val.toDate();
+  if (val instanceof Date) return val;
+  return new Date(val);
 }
+
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

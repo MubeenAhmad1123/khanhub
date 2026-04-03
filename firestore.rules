@@ -687,6 +687,44 @@ service cloud.firestore {
       allow update: if isHqSuperAdmin(); 
     }
 
+    // ── Daily Activity Records ─────────────────────────────────────────────────
+    match /rehab_daily_activities/{docId} {
+      allow read: if isRehabRole('admin')
+        || isHqTier1()
+        || (isRehabRole('family') && resource.data.patientId == rehabPatientId());
+      allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
+      allow delete: if false;
+    }
+
+    // ── Therapy Sessions ──────────────────────────────────────────────────────
+    match /rehab_therapy_sessions/{docId} {
+      allow read: if isRehabRole('admin')
+        || isHqTier1()
+        || (isRehabRole('family') && resource.data.patientId == rehabPatientId());
+      allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
+      allow delete: if false;
+    }
+
+    // ── Medication Records ────────────────────────────────────────────────────
+    match /rehab_medication_records/{docId} {
+      allow read: if isRehabRole('admin')
+        || isHqTier1()
+        || (isRehabRole('family') && resource.data.patientId == rehabPatientId());
+      allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
+      allow delete: if false;
+    }
+
+    // ── Weekly Progress ───────────────────────────────────────────────────────
+    match /rehab_weekly_progress/{docId} {
+      allow read: if isRehabRole('admin')
+        || isHqTier1()
+        || (isRehabRole('family') && resource.data.patientId == rehabPatientId());
+      allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
+      allow delete: if false;
+    }
+
   }
 }
+
+
 
