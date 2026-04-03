@@ -4,6 +4,23 @@
 // ─────────────────────────────────────────────
 
 import { SITE } from '@/data/site';
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+/**
+ * Safely converts a Firestore Timestamp or unknown date value to a Date object.
+ */
+export function toDate(value: any): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value.toDate === 'function') return value.toDate();
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 // ─── Metadata Generator ─────────────────────────────────
 // Used in every page's generateMetadata() export.
@@ -49,12 +66,7 @@ export function generateMetadata(overrides: {
   };
 }
 
-// ─── Class Name Merger ──────────────────────────────────
-// Simple cn() utility (no dependency needed)
-
-export function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
+// ─── Slugify ────────────────────────────────────────────
 
 // ─── Slugify ────────────────────────────────────────────
 

@@ -1,3 +1,4 @@
+// src/app/departments/rehab/dashboard/admin/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -12,6 +13,7 @@ import {
   Users, Calendar, ChevronRight, Activity, Loader2,
   BarChart3, Plus
 } from 'lucide-react';
+import { toDate } from '@/lib/utils';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -37,7 +39,7 @@ export default function AdminDashboardPage() {
     const sessionData = localStorage.getItem('rehab_session');
     if (!sessionData) { router.push('/departments/rehab/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
+    if (parsed.role !== 'admin') {
       router.push('/departments/rehab/login'); return;
     }
     setSession(parsed);
@@ -81,30 +83,52 @@ export default function AdminDashboardPage() {
         getDocs(query(collection(db, 'rehab_contributions'), orderBy('createdAt', 'desc'), limit(5))),
       ]);
 
+      // Count stats
       setTotalPatients(patientsSnap.size);
+      const staffTotal = staffSnap.size;
+      setTotalStaff(staffTotal);
 
-      const staffCount = staffSnap.size;
-      setTotalStaff(staffCount);
-
+      // Financials
       setMonthlyIncome(incomeSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0));
       setMonthlyExpenses(expenseSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0));
 
+      // Attendance
       const presentCount = attendanceSnap.docs.filter(d => d.data().status === 'present').length;
       const absentCount = attendanceSnap.docs.filter(d => d.data().status === 'absent').length;
-      setAttendance({ present: presentCount, absent: absentCount, unmarked: Math.max(0, staffCount - attendanceSnap.size) });
+      setAttendance({ present: presentCount, absent: absentCount, unmarked: Math.max(0, staffTotal - attendanceSnap.size) });
 
-      setRecentTxns(txnsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-
-      // Load contributions with staff names
-      const contribData = contribSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Name Dictionaries for lookups
+      const patientNames: Record<string, string> = {};
+      patientsSnap.docs.forEach(d => { patientNames[d.id] = d.data().name; });
+      
       const staffNames: Record<string, string> = {};
-      await Promise.all(
-        [...new Set(contribData.map((c: any) => c.staffId).filter(Boolean))].map(async (sid) => {
-          const snap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', sid)));
-          if (!snap.empty) staffNames[sid] = snap.docs[0].data().name;
-        })
-      );
-      setContributions(contribData.map((c: any) => ({ ...c, staffName: staffNames[c.staffId] || 'Staff' })));
+      staffSnap.docs.forEach(d => { 
+        staffNames[d.id] = d.data().name;
+        // Also map by loginUserId if available
+        if (d.data().loginUserId) staffNames[d.data().loginUserId] = d.data().name;
+      });
+
+      // Transactions
+      setRecentTxns(txnsSnap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          date: toDate(data.date || data.createdAt),
+          patientName: data.patientId ? (patientNames[data.patientId] || 'Patient') : null
+        };
+      }));
+
+      // Contributions
+      setContributions(contribSnap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          date: toDate(data.date || data.createdAt),
+          staffName: staffNames[data.staffId] || 'Staff'
+        };
+      }));
 
     } catch (error) {
       console.error('Dashboard load error:', error);
@@ -242,6 +266,9 @@ export default function AdminDashboardPage() {
                       <span className={`font-bold text-sm ${tx.type === 'income' ? 'text-green-700' : 'text-red-600'}`}>
                         {tx.type === 'income' ? '+' : '-'} Rs. {tx.amount?.toLocaleString()}
                       </span>
+                      <span className="text-[10px] text-gray-400">
+                        {tx.date?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                      </span>
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
                         tx.status === 'approved' ? 'bg-green-50 text-green-600' :
                         tx.status === 'pending' ? 'bg-amber-50 text-amber-600' :
@@ -305,7 +332,9 @@ export default function AdminDashboardPage() {
                   <div key={c.id} className="flex flex-col gap-0.5 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
                     <div className="text-xs font-bold text-gray-700">{c.staffName}</div>
                     <div className="text-xs text-gray-500 line-clamp-2">{c.content || c.text || '—'}</div>
-                    <div className="text-[10px] text-gray-400">{c.createdAt?.toDate?.()?.toLocaleDateString()}</div>
+                    <div className="text-[10px] text-gray-400">
+                      {c.date?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
                   </div>
                 ))}
               </div>

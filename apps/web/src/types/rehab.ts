@@ -1,4 +1,7 @@
-export type RehabRole = 'family' | 'staff' | 'cashier' | 'admin' | 'superadmin';
+// src/types/rehab.ts
+import { Timestamp } from 'firebase/firestore';
+
+export type RehabRole = 'admin' | 'staff' | 'family';
 
 export interface RehabUser {
   uid: string;
@@ -6,20 +9,35 @@ export interface RehabUser {
   role: RehabRole;
   displayName: string;
   patientId?: string;
-  createdAt: Date;
+  createdAt: Timestamp | Date;
   isActive: boolean;
 }
 
 export interface Patient {
   id: string;
   name: string;
+  fatherName: string;
+  cnic?: string;
+  phone?: string;
+  address?: string;
   photoUrl?: string;
-  admissionDate: Date;
+  admissionDate: Timestamp | Date;
   packageAmount: number;
   diagnosis?: string;
+  addictionType?: string;
   assignedStaffId?: string;
   isActive: boolean;
-  createdAt: Date;
+  createdAt: Timestamp | Date;
+  dailySchedule?: DailyActivity[];
+}
+
+export interface DailyActivity {
+  id: string;
+  name: string;           // e.g. "Fajr Prayer", "Therapy Session"
+  time: string;           // "05:00"
+  days: ('mon'|'tue'|'wed'|'thu'|'fri'|'sat'|'sun')[];
+  isCompleted?: boolean;  // for today's tracking
+  notes?: string;
 }
 
 export interface FeeRecord {

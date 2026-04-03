@@ -1,3 +1,4 @@
+// src/app/departments/rehab/dashboard/layout.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -5,12 +6,12 @@ import Link from 'next/link';
 import {
   LayoutDashboard, Users, CheckCircle, Heart, UserCog,
   Banknote, FileBarChart, CreditCard, CalendarDays,
-  User, LogOut, ArrowLeft, Menu, X, Shield, Bell, Activity, Sun, Moon
+  User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon
 } from 'lucide-react';
 import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-type RehabRole = 'superadmin' | 'admin' | 'cashier' | 'staff' | 'family';
+type RehabRole = 'admin' | 'staff' | 'family';
 
 interface NavItem {
   label: string;
@@ -20,33 +21,24 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Overview',        href: '/departments/rehab/dashboard/superadmin',          icon: <LayoutDashboard size={16}/>, roles: ['superadmin'] },
-  { label: 'User Management', href: '/departments/rehab/dashboard/superadmin/users',     icon: <Users size={16}/>,           roles: ['superadmin'] },
-  { label: 'Approvals',       href: '/departments/rehab/dashboard/superadmin/approvals', icon: <CheckCircle size={16}/>,     roles: ['superadmin'] },
-  { label: 'Audit Log',       href: '/departments/rehab/dashboard/superadmin/audit',     icon: <Activity size={16}/>,        roles: ['superadmin'] },
   { label: 'Overview',        href: '/departments/rehab/dashboard/admin',                icon: <LayoutDashboard size={16}/>, roles: ['admin'] },
-  { label: 'Patients',        href: '/departments/rehab/dashboard/admin/patients',       icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
-  { label: 'Staff',           href: '/departments/rehab/dashboard/admin/staff',          icon: <UserCog size={16}/>,         roles: ['admin', 'superadmin'] },
-  { label: 'Finance',         href: '/departments/rehab/dashboard/admin/finance',        icon: <Banknote size={16}/>,        roles: ['admin', 'superadmin'] },
-  { label: 'Reports',         href: '/departments/rehab/dashboard/admin/reports',        icon: <FileBarChart size={16}/>,    roles: ['admin', 'superadmin'] },
-  { label: 'Cashier Station', href: '/departments/rehab/dashboard/cashier',              icon: <CreditCard size={16}/>,      roles: ['cashier'] },
+  { label: 'Patients',        href: '/departments/rehab/dashboard/admin/patients',       icon: <Heart size={16}/>,           roles: ['admin'] },
+  { label: 'Staff',           href: '/departments/rehab/dashboard/admin/staff',          icon: <UserCog size={16}/>,         roles: ['admin'] },
+  { label: 'Finance',         href: '/departments/rehab/dashboard/admin/finance',        icon: <Banknote size={16}/>,        roles: ['admin'] },
+  { label: 'Reports',         href: '/departments/rehab/dashboard/admin/reports',        icon: <FileBarChart size={16}/>,    roles: ['admin'] },
   { label: 'My Attendance',   href: '/departments/rehab/dashboard/staff',               icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'My Patient',      href: '/departments/rehab/dashboard/family',              icon: <User size={16}/>,            roles: ['family'] },
-  { label: 'My Profile',      href: '/departments/rehab/dashboard/profile',             icon: <User size={16}/>,            roles: ['superadmin', 'admin', 'cashier', 'staff', 'family'] },
+  { label: 'My Profile',      href: '/departments/rehab/dashboard/profile',             icon: <User size={16}/>,            roles: ['admin', 'staff', 'family'] },
 ];
 
 const ROLE_COLORS: Record<RehabRole, string> = {
-  superadmin: 'bg-purple-100 text-purple-700',
   admin:      'bg-blue-100 text-blue-700',
-  cashier:    'bg-amber-100 text-amber-700',
   staff:      'bg-teal-100 text-teal-700',
   family:     'bg-green-100 text-green-700',
 };
 
 const ROLE_LABELS: Record<RehabRole, string> = {
-  superadmin: 'Super Admin',
   admin:      'Admin',
-  cashier:    'Cashier',
   staff:      'Staff',
   family:     'Family',
 };
@@ -58,7 +50,6 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
@@ -69,6 +60,13 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       try {
         const parsed = JSON.parse(session);
         if (!parsed.uid || !parsed.role) { throw new Error('Invalid session'); }
+
+        // NEW: Redirect HQ roles to HQ login
+        if (parsed.role === 'superadmin' || parsed.role === 'cashier') {
+          localStorage.removeItem('rehab_session');
+          router.push('/hq/login?msg=Please+use+HQ+portal');
+          return;
+        }
 
         // 1. Session Timeout Check (12 Hours)
         const loginTime = localStorage.getItem('rehab_login_time');
@@ -108,20 +106,10 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     localStorage.setItem('rehab_dark_mode', String(next));
   };
 
-  useEffect(() => {
-    if (user?.role !== 'superadmin') return;
-
-    const q = query(
-      collection(db, 'rehab_transactions'),
-      where('status', '==', 'pending')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPendingCount(snapshot.size);
-    });
-
-    return () => unsubscribe();
-  }, [user?.role]);
+  const handleSignOut = () => {
+    localStorage.removeItem('rehab_session');
+    router.push('/departments/rehab/login');
+  };
 
   if (isChecking) {
     return (
@@ -134,13 +122,8 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     );
   }
 
-  const navItems = NAV_ITEMS.filter(item => user && item.roles.includes(user.role));
   const role = user?.role as RehabRole;
-
-  const handleSignOut = () => {
-    localStorage.removeItem('rehab_session');
-    router.push('/departments/rehab/login');
-  };
+  const navItems = NAV_ITEMS.filter(item => user && item.roles.includes(role));
 
   const SidebarContent = () => (
     <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
@@ -201,11 +184,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
             >
               <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
               <span>{item.label}</span>
-              {item.href.includes('approvals') && pendingCount > 0 && user?.role === 'superadmin' ? (
-                <span className="ml-auto min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
-                  {pendingCount > 99 ? '99+' : pendingCount}
-                </span>
-              ) : isActive ? (
+              {isActive ? (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />
               ) : null}
             </Link>
@@ -290,14 +269,6 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
             KhanHub Rehab Portal
           </div>
           <div className="flex items-center gap-3">
-            {role === 'superadmin' && pendingCount > 0 && (
-              <div className="relative mr-2">
-                <Bell size={18} className="text-gray-400" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center">
-                  {pendingCount > 9 ? '9+' : pendingCount}
-                </span>
-              </div>
-            )}
             <button onClick={toggleDark} className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-400 hover:bg-gray-100'}`} title="Toggle dark mode">
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
