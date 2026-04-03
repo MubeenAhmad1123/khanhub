@@ -106,7 +106,7 @@ export default function StaffDetailPage() {
           currentStreak++;
           const prevDate = new Date(new Date(checkDate).getTime() - 86400000);
           checkDate = prevDate.toISOString().split('T')[0];
-        } else if (att.date < checkDate) {
+        } else if ((att.date || '') < checkDate) {
           break;
         }
       }
