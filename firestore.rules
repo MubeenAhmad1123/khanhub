@@ -323,13 +323,15 @@ service cloud.firestore {
     }
 
     // ── Staff contributions ────────────────────────────
-    // Staff write their own contributions.
-    // Admin/superadmin can read all.
-    // Nobody deletes or edits.
     match /rehab_contributions/{docId} {
-      allow read: if isRehabAdminOrAbove() || isRehabRole('staff');
-      allow create: if isRehabRole('staff') || isRehabAdminOrAbove();
-      allow update, delete: if false;
+      allow read: if isRehabRole('admin')
+        || isHqSuperOrManager()
+        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid);
+      allow create: if isRehabRole('staff') || isRehabRole('admin');
+      allow update: if isRehabRole('admin') || isHqSuperOrManager()
+        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']));
+      allow delete: if false;
     }
 
     // ── Staff fines ────────────────────────────────────
@@ -350,6 +352,33 @@ service cloud.firestore {
             && resource.data.staffId == request.auth.uid);
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
+    }
+
+    // ── Duty Logs ─────────────────────────────────────────────────────────────
+    match /rehab_duty_logs/{docId} {
+      allow read: if isRehabRole('admin')
+        || isHqSuperOrManager()
+        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid);
+      allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
+      allow delete: if false;
+    }
+
+    // ── Dress Logs ────────────────────────────────────────────────────────────
+    match /rehab_dress_logs/{docId} {
+      allow read: if isRehabRole('admin')
+        || isHqSuperOrManager()
+        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid);
+      allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
+      allow delete: if false;
+    }
+
+    // ── Growth Points ─────────────────────────────────────────────────────────
+    match /rehab_growth_points/{docId} {
+      allow read: if isRehabRole('admin')
+        || isHqSuperOrManager()
+        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid);
+      allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
+      allow delete: if false;
     }
 
 
