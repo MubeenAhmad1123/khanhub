@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { overrideAttendance } from '@/lib/rehab/attendance';
 import { createStaffMemberServer } from '../../../actions/createRehabUser';
@@ -12,15 +12,25 @@ import type { StaffMember, AttendanceRecord } from '@/types/rehab';
 import {
   UserCog, Plus, X, CheckCircle, XCircle, Clock,
   Phone, Calendar, BadgeCheck, Loader2, AlertCircle,
-  ChevronRight, List, Camera
+  ChevronRight, List, Camera, TrendingUp, Award
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+
+// Helper for robust timestamp handling
+const toDate = (ts: any): Date | null => {
+  if (!ts) return null;
+  if (ts instanceof Date) return ts;
+  if (typeof ts.toDate === 'function') return ts.toDate();
+  if (typeof ts === 'string') return new Date(ts);
+  return null;
+};
 
 export default function AdminStaffPage() {
   const router = useRouter();
   const { session: user, loading: sessionLoading } = useRehabSession();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord>>({});
+  const [growthPoints, setGrowthPoints] = useState<Record<string, number>>({});
   const [streaks, setStreaks] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -55,9 +65,9 @@ export default function AdminStaffPage() {
       const staffList = staffSnap.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        joiningDate: doc.data().joiningDate?.toDate?.() || new Date(),
+        joiningDate: toDate(doc.data().joiningDate) || new Date(),
         duties: doc.data().duties || [],
-      } as StaffMember));
+      } as unknown as StaffMember));
       setStaff(staffList.filter(s => s.isActive));
 
       const today = new Date().toISOString().split('T')[0];
@@ -73,8 +83,8 @@ export default function AdminStaffPage() {
           attendanceMap[data.staffId] = {
             id: doc.id,
             ...data,
-            checkInTime: data.checkInTime?.toDate?.(),
-            checkOutTime: data.checkOutTime?.toDate?.(),
+            checkInTime: toDate(data.checkInTime),
+            checkOutTime: toDate(data.checkOutTime),
           } as AttendanceRecord;
         }
         
@@ -102,6 +112,18 @@ export default function AdminStaffPage() {
         streakMap[sid] = currentStreak;
       });
       setStreaks(streakMap);
+
+      // Fetch Growth Points for current month
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const growthSnap = await getDocs(query(collection(db, 'rehab_growth_points'), where('month', '==', currentMonth)));
+      const growthMap: Record<string, number> = {};
+      growthSnap.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.staffId) {
+          growthMap[data.staffId] = data.total || 0;
+        }
+      });
+      setGrowthPoints(growthMap);
     } catch (err) {
       console.error(err);
     } finally {
@@ -267,18 +289,45 @@ export default function AdminStaffPage() {
       )}
 
       {/* Today Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-green-50 rounded-2xl p-4 text-center">
-          <p className="text-3xl font-black text-green-600">{todayPresent}</p>
-          <p className="text-xs font-bold text-green-500 uppercase tracking-wide mt-1">Present</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-3xl p-6 border border-teal-100 shadow-sm shadow-teal-50/50 group hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between mb-2">
+            <CheckCircle size={20} className="text-teal-500" />
+            <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-1 rounded-lg uppercase tracking-widest">Active</span>
+          </div>
+          <p className="text-3xl font-black text-gray-900">{todayPresent}</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Today Present</p>
         </div>
-        <div className="bg-red-50 rounded-2xl p-4 text-center">
-          <p className="text-3xl font-black text-red-500">{todayAbsent}</p>
-          <p className="text-xs font-bold text-red-400 uppercase tracking-wide mt-1">Absent</p>
+
+        <div className="bg-white rounded-3xl p-6 border border-orange-100 shadow-sm shadow-orange-50/50 group hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between mb-2">
+            <XCircle size={20} className="text-orange-500" />
+            <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded-lg uppercase tracking-widest">Absent</span>
+          </div>
+          <p className="text-3xl font-black text-gray-900">{todayAbsent}</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Today Absent</p>
         </div>
-        <div className="bg-gray-100 rounded-2xl p-4 text-center">
-          <p className="text-3xl font-black text-gray-500">{notMarked}</p>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mt-1">Unmarked</p>
+
+        <div className="bg-white rounded-3xl p-6 border border-sky-100 shadow-sm shadow-sky-50/50 group hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between mb-2">
+            <TrendingUp size={20} className="text-sky-500" />
+            <span className="text-[10px] font-black text-sky-600 bg-sky-50 px-2 py-1 rounded-lg uppercase tracking-widest">Points</span>
+          </div>
+          <p className="text-3xl font-black text-gray-900">
+            {Object.values(growthPoints).reduce((a, b) => a + b, 0).toLocaleString()}
+          </p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Total Month Points</p>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-violet-100 shadow-sm shadow-violet-50/50 group hover:scale-[1.02] transition-transform">
+          <div className="flex items-center justify-between mb-2">
+            <Award size={20} className="text-violet-500" />
+            <span className="text-[10px] font-black text-violet-600 bg-violet-50 px-2 py-1 rounded-lg uppercase tracking-widest">Efficiency</span>
+          </div>
+          <p className="text-3xl font-black text-gray-900">
+            {staff.length > 0 ? Math.round((todayPresent / staff.length) * 100) : 0}%
+          </p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Avg Attendance</p>
         </div>
       </div>
 
@@ -315,6 +364,16 @@ export default function AdminStaffPage() {
                           )}
                         </div>
                         <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest mt-0.5">{s.role}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="bg-sky-50 text-sky-600 text-[8px] font-black px-1.5 py-0.5 rounded-lg border border-sky-100 uppercase tracking-widest flex items-center gap-1">
+                            <TrendingUp size={8} /> {growthPoints[s.id] || 0} pts
+                          </span>
+                          {record?.isLate && (
+                            <span className="bg-orange-50 text-orange-600 text-[8px] font-black px-1.5 py-0.5 rounded-lg border border-orange-100 uppercase tracking-widest">
+                              Late
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -373,7 +432,8 @@ export default function AdminStaffPage() {
                   <tr className="bg-gray-50 border-b border-gray-100">
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Staff Member</th>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Today</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Today Status</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Growth Points</th>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Check-in / Out</th>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Override / View</th>
                   </tr>
@@ -403,12 +463,41 @@ export default function AdminStaffPage() {
                               <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-[10px] text-gray-400 capitalize">{s.gender}</span>
                                 {s.phone && (
-                                  <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                  <span className="flex items-center gap-1 text-[10px] text-gray-400 border-l border-gray-200 pl-2">
                                     <Phone size={9} /> {s.phone}
+                                  </span>
+                                )}
+                                {record?.isLate && (
+                                  <span className="bg-orange-50 text-orange-600 text-[9px] font-black px-1.5 py-0.5 rounded-md border border-orange-100 uppercase tracking-tighter">
+                                    Late Today
                                   </span>
                                 )}
                               </div>
                             </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 w-fit border ${
+                            record?.status === 'present' ? 'bg-green-50 text-green-600 border-green-100' :
+                            record?.status === 'absent'  ? 'bg-red-50 text-red-500 border-red-100'    : 
+                            record?.status === 'leave'   ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                            'bg-gray-50 text-gray-300 border-gray-100'
+                          }`}>
+                            <div className={`w-1 h-1 rounded-full ${
+                              record?.status === 'present' ? 'bg-green-500' : 
+                              record?.status === 'absent'  ? 'bg-red-500' : 
+                              record?.status === 'leave'   ? 'bg-blue-500' : 'bg-gray-400'}`} 
+                            />
+                            {record?.status || 'Unmarked'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-black text-gray-900 flex items-center gap-1">
+                              {growthPoints[s.id] || 0}
+                              <TrendingUp size={12} className="text-sky-500" />
+                            </span>
+                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">This Month</span>
                           </div>
                         </td>
                         <td className="px-6 py-5">

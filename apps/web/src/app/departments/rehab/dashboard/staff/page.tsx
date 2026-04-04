@@ -14,6 +14,15 @@ import {
   Lightbulb, Send, Star, List, Loader2
 } from 'lucide-react';
 
+// Helper for robust timestamp handling
+const toDate = (ts: any): Date | null => {
+  if (!ts) return null;
+  if (ts instanceof Date) return ts;
+  if (typeof ts.toDate === 'function') return ts.toDate();
+  if (typeof ts === 'string') return new Date(ts);
+  return null;
+};
+
 export default function StaffSelfPage() {
   const router = useRouter();
   const { session: user, loading: sessionLoading } = useRehabSession();
@@ -40,13 +49,32 @@ export default function StaffSelfPage() {
       if (staffSnap.empty) { setLoading(false); return; }
       const staffDoc = staffSnap.docs[0];
       const staffId = staffDoc.id;
-      setStaffProfile({ id: staffId, ...staffDoc.data(), joiningDate: staffDoc.data().joiningDate?.toDate?.() || new Date(), duties: staffDoc.data().duties || [] } as StaffMember);
+      const staffData = staffDoc.data();
+      setStaffProfile({ 
+        id: staffId, 
+        ...staffData, 
+        joiningDate: toDate(staffData.joiningDate) || new Date(), 
+        duties: staffData.duties || [] 
+      } as unknown as StaffMember);
 
-      // Today's attendance
+      const today = new Date().toISOString().split('T')[0];
       const attSnap = await getDocs(
         query(collection(db, 'rehab_attendance'), where('staffId', '==', staffId), where('date', '==', today))
       );
-      setTodayRecord(attSnap.empty ? null : { id: attSnap.docs[0].id, ...attSnap.docs[0].data(), checkInTime: attSnap.docs[0].data().checkInTime?.toDate?.(), checkOutTime: attSnap.docs[0].data().checkOutTime?.toDate?.() } as AttendanceRecord);
+
+      // Today's attendance
+      const attDoc = attSnap.empty ? null : attSnap.docs[0];
+      if (attDoc) {
+        const d = attDoc.data();
+        setTodayRecord({ 
+          id: attDoc.id, 
+          ...d, 
+          checkInTime: toDate(d.checkInTime), 
+          checkOutTime: toDate(d.checkOutTime) 
+        } as AttendanceRecord);
+      } else {
+        setTodayRecord(null);
+      }
 
       // Contributions (last 7 days)
       const contribSnap = await getDocs(
@@ -54,8 +82,16 @@ export default function StaffSelfPage() {
       );
       setContributions(
         contribSnap.docs
-          .map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toDate?.() || new Date() } as StaffContribution))
-          .sort((a, b) => (b.createdAt as Date).getTime() - (a.createdAt as Date).getTime())
+          .map(d => ({ 
+            id: d.id, 
+            ...d.data(), 
+            createdAt: toDate(d.data().createdAt) || new Date() 
+          } as StaffContribution))
+          .sort((a, b) => {
+            const dateA = toDate(a.createdAt)?.getTime() || 0;
+            const dateB = toDate(b.createdAt)?.getTime() || 0;
+            return dateB - dateA;
+          })
           .slice(0, 10)
       );
 
@@ -138,7 +174,7 @@ export default function StaffSelfPage() {
           isLate,
           lateByMinutes: isLate ? lateByMinutes : 0,
           autoFineApplied: isLate,
-        } as AttendanceRecord);
+        } as unknown as AttendanceRecord);
 
         if (isLate) {
           const currentMonth = today.substring(0, 7);
@@ -249,7 +285,7 @@ export default function StaffSelfPage() {
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Check In</p>
             <p className={`font-black text-xl ${checkedIn ? 'text-green-600' : 'text-gray-300'}`}>
               {todayRecord?.checkInTime
-                ? new Date(todayRecord.checkInTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
+                ? toDate(todayRecord.checkInTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
                 : '--:--'
               }
             </p>
@@ -263,7 +299,7 @@ export default function StaffSelfPage() {
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Check Out</p>
             <p className={`font-black text-xl ${checkedOut ? 'text-blue-600' : 'text-gray-300'}`}>
               {todayRecord?.checkOutTime
-                ? new Date(todayRecord.checkOutTime).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
+                ? toDate(todayRecord.checkOutTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
                 : '--:--'
               }
             </p>
@@ -366,12 +402,12 @@ export default function StaffSelfPage() {
             <h2 className="font-black text-gray-900">Recent Contributions</h2>
           </div>
           <div className="space-y-3">
-            {contributions.map(c => (
-              <div key={c.id} className="p-4 bg-gray-50 rounded-2xl">
-                <p className="text-gray-700 text-sm leading-relaxed">{(c as any).content || (c as any).contributionDescription || ''}</p>
-                <p className="text-[10px] text-gray-400 font-mono mt-2">{c.date} — {(c.createdAt as Date).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</p>
-              </div>
-            ))}
+              {contributions.map(c => (
+                <div key={c.id} className="p-4 bg-gray-50 rounded-2xl">
+                  <p className="text-gray-700 text-sm leading-relaxed">{c.content || c.contributionDescription || ''}</p>
+                  <p className="text-[10px] text-gray-400 font-mono mt-2">{c.date} — {toDate(c.createdAt)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+              ))}
           </div>
         </div>
       )}

@@ -43,14 +43,20 @@ export interface StaffDuty {
   endTime?: string;
 }
 
+// Update StaffContribution to add approval:
 export interface StaffContribution {
   id: string;
   staffId: string;
-  patientId: string;
-  contributionType: string;
+  date: string;                 // "YYYY-MM-DD"
+  content?: string;             // support both 'content' and 'description'
+  description?: string;
   contributionDescription?: string;
-  date: string;
-  createdAt?: Timestamp | Date;
+  isApproved?: boolean;         // undefined = pending, true = approved, false = rejected
+  approvedBy?: string;          // manager uid
+  approvedAt?: any;             // support Timestamp or string
+  createdAt: any;               // support Timestamp or string
+  points?: number;
+  type?: 'service' | 'creative' | 'other';
 }
 
 // ─── PATIENT (Full Admission Form Data) ─────────────────────────────────────
@@ -306,28 +312,143 @@ export interface CanteenTransaction {
   cashierId: string;
 }
 
+// ─── STAFF MEMBER (Full Profile) ─────────────────────────────────────────────
+
+export type StaffGender = 'male' | 'female';
+
+export interface DressCodeItem {
+  id: string;           // unique within this staff's dress code
+  name: string;         // e.g. "Dress Pant", "Tie", "Employee Card", "Abaya"
+  required: boolean;    // always true — all assigned items are required
+  isCustom: boolean;    // false = from preset list, true = manually added
+}
+
+export interface StaffDutyAssigned {
+  id: string;
+  name: string;             // e.g. "Clean all rooms before 8am"
+  description?: string;
+  assignedAt: string;       // ISO date string
+  assignedBy: string;       // manager uid
+  isActive: boolean;        // can be deactivated without deletion
+}
+
 export interface StaffMember {
   id: string;
-  name?: string;
-  gender?: string;
-  role?: string;
+
+  // Basic Info
+  name: string;
+  fatherName: string;
+  employeeId: string;           // e.g. "REHAB-STF-001"
+  designation: string;          // e.g. "Counselor", "Security Guard", "Nurse"
+  department: 'rehab';          // for now always rehab
+  gender: StaffGender;
   phone?: string;
-  salary?: number;
-  joiningDate?: Timestamp | Date;
-  isActive?: boolean;
   photoUrl?: string;
-  duties?: StaffDuty[];
-  dutyStartTime?: string;
-  dutyEndTime?: string;
-  [key: string]: any;
+
+  // Duty Timing
+  dutyStartTime: string;        // "08:00" 24hr
+  dutyEndTime: string;          // "20:00" 24hr
+
+  // Dress Code (assigned per staff, differs by gender + custom)
+  dressCode: DressCodeItem[];
+
+  // Duties (assigned list — manager adds/removes)
+  duties: StaffDutyAssigned[];
+
+  // Financial
+  salary: number;               // monthly PKR
+
+  // Status
+  isActive: boolean;
+  joiningDate: string;          // "YYYY-MM-DD"
+  loginUserId?: string;         // uid in rehab_users for portal login
+  role: RehabRole;              // used for UI role indicators
+  customId?: string;            // unique staff identifier
+  createdAt: string;            // ISO
+  createdBy?: string;           // manager uid
+}
+
+// ─── DAILY DUTY LOG ────────────────────────────────────────────────────────────
+// One doc per staff per date
+// Collection: rehab_duty_logs
+
+export interface DailyDutyLog {
+  id: string;
+  staffId: string;
+  date: string;                 // "YYYY-MM-DD"
+  duties: {
+    dutyId: string;
+    dutyName: string;
+    status: 'done' | 'not_done' | 'na';
+    note?: string;              // optional performance note per duty
+  }[];
+  // UI helper fields for summaries:
+  totalItems?: number;
+  completedItems?: number;
+  items?: { description: string; completed: boolean }[]; // alias for component compatibility
+  overallPerformanceNote?: string;  // manager's general note for the day
+  markedBy: string;             // manager uid
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// ─── DAILY DRESS CODE LOG ─────────────────────────────────────────────────────
+// One doc per staff per date
+// Collection: rehab_dress_logs
+
+export interface DailyDressLog {
+  id: string;
+  staffId: string;
+  date: string;                 // "YYYY-MM-DD"
+  items: {
+    itemId: string;
+    itemName: string;
+    wearing: boolean;           // true = wearing, false = not wearing
+  }[];
+  isPerfect?: boolean;
+  remarks?: string;
+  markedBy: string;
+  createdAt: any;
+}
+
+// ─── MONTHLY GROWTH POINTS ────────────────────────────────────────────────────
+// Auto-calculated and stored monthly
+// Collection: rehab_growth_points
+// One doc per staff per month
+
+export interface MonthlyGrowthPoints {
+  id: string;
+  staffId: string;
+  month: string;                // "2025-01"
+
+  // Point breakdown (each = 0 or 1 per day, summed for month)
+  attendance: number;           // +1 per day present
+  punctuality: number;          // +1 per day on time (not late)
+  duties: number;               // +1 per day all duties done
+  dressCode: number;            // +1 per day full dress code followed
+  contributions: number;        // points from approved contributions
+  extra: number;                // bonus points from admin
+
+  total: number;                // sum of all above
+  totalPossible: number;        // max possible for the month
+  percentage: number;           // total / totalPossible * 100
+
+  lastCalculatedAt: string;     // ISO — recalculate on every mark action
 }
 
 export interface AttendanceRecord {
   id: string;
-  staffId?: string;
-  date?: string;
-  status?: 'present' | 'absent' | 'leave';
+  staffId: string;
+  date: string;
+  status: 'present' | 'absent' | 'leave';
+  arrivalTime?: string;        // "09:15" — 24hr
+  departureTime?: string;      // "20:05"
+  isLate?: boolean;            // auto: arrivalTime > dutyStartTime
+  leftEarly?: boolean;         // auto: departureTime < dutyEndTime
   checkInTime?: any;
+  checkOutTime?: any;
+  lateByMinutes?: number;
+  overriddenBy?: string;
   [key: string]: any;
 }
 

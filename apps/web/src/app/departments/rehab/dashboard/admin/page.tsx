@@ -11,7 +11,7 @@ import {
 import {
   Heart, UserCog, TrendingUp, TrendingDown,
   Users, Calendar, ChevronRight, Activity, Loader2,
-  BarChart3, Plus
+  BarChart3, Plus, AlertCircle
 } from 'lucide-react';
 import { toDate } from '@/lib/utils';
 
@@ -34,6 +34,7 @@ export default function AdminDashboardPage() {
   const [attendance, setAttendance] = useState({ present: 0, absent: 0, unmarked: 0 });
   const [recentTxns, setRecentTxns] = useState<any[]>([]);
   const [contributions, setContributions] = useState<any[]>([]);
+  const [unmarkedAlerts, setUnmarkedAlerts] = useState<{ id: string; name: string; type: 'duty' | 'dress' }[]>([]);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -59,7 +60,8 @@ export default function AdminDashboardPage() {
       const [
         patientsSnap, staffSnap,
         incomeSnap, expenseSnap,
-        attendanceSnap, txnsSnap, contribSnap
+        attendanceSnap, txnsSnap, contribSnap,
+        dutySnap, dressSnap
       ] = await Promise.all([
         getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true))),
         getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true))),
@@ -81,6 +83,8 @@ export default function AdminDashboardPage() {
         )),
         getDocs(query(collection(db, 'rehab_transactions'), orderBy('createdAt', 'desc'), limit(5))),
         getDocs(query(collection(db, 'rehab_contributions'), orderBy('createdAt', 'desc'), limit(5))),
+        getDocs(query(collection(db, 'rehab_duty_logs'), where('date', '==', todayStr))),
+        getDocs(query(collection(db, 'rehab_dress_logs'), where('date', '==', todayStr))),
       ]);
 
       // Count stats
@@ -89,8 +93,8 @@ export default function AdminDashboardPage() {
       setTotalStaff(staffTotal);
 
       // Financials
-      setMonthlyIncome(incomeSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0));
-      setMonthlyExpenses(expenseSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0));
+      setMonthlyIncome(incomeSnap.docs.reduce((s, d: any) => s + (d.data().amount || 0), 0));
+      setMonthlyExpenses(expenseSnap.docs.reduce((s, d: any) => s + (d.data().amount || 0), 0));
 
       // Attendance
       const presentCount = attendanceSnap.docs.filter(d => d.data().status === 'present').length;
@@ -130,6 +134,25 @@ export default function AdminDashboardPage() {
         };
       }));
 
+      // Unmarked Alerts logic
+      const dutyLogsSet = new Set(dutySnap.docs.map(d => d.data().staffId));
+      const dressLogsSet = new Set(dressSnap.docs.map(d => d.data().staffId));
+      
+      const alerts: { id: string; name: string; type: 'duty' | 'dress' }[] = [];
+      const presentStaffIds = attendanceSnap.docs
+        .filter(d => d.data().status === 'present')
+        .map(d => d.data().staffId);
+
+      presentStaffIds.forEach(sid => {
+        if (!dutyLogsSet.has(sid)) {
+          alerts.push({ id: sid, name: staffNames[sid] || 'Staff', type: 'duty' });
+        }
+        if (!dressLogsSet.has(sid)) {
+          alerts.push({ id: sid, name: staffNames[sid] || 'Staff', type: 'dress' });
+        }
+      });
+      setUnmarkedAlerts(alerts);
+
     } catch (error) {
       console.error('Dashboard load error:', error);
     } finally {
@@ -162,6 +185,36 @@ export default function AdminDashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Unmarked Alerts Banner */}
+      {unmarkedAlerts.length > 0 && (
+        <div className="bg-orange-50 border border-orange-100 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm shadow-orange-100/50">
+          <div className="w-14 h-14 rounded-[2rem] bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0 shadow-inner">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <h3 className="font-black text-orange-900 text-sm uppercase tracking-[0.2em]">Pending Duties</h3>
+            <div className="mt-2 flex flex-wrap justify-center md:justify-start gap-2">
+              {unmarkedAlerts.slice(0, 4).map((alert) => (
+                <span key={`${alert.id}-${alert.type}`} className="bg-white px-3 py-1 rounded-xl text-[10px] font-black text-orange-700 border border-orange-200 uppercase tracking-widest">
+                  {alert.name.split(' ')[0]} • {alert.type}
+                </span>
+              ))}
+              {unmarkedAlerts.length > 4 && (
+                <span className="text-[10px] font-black text-orange-400 self-center uppercase tracking-widest">
+                  +{unmarkedAlerts.length - 4} Others
+                </span>
+              )}
+            </div>
+          </div>
+          <button 
+            onClick={() => router.push('/departments/rehab/dashboard/admin/staff')}
+            className="w-full md:w-auto px-8 py-4 bg-orange-600 text-white rounded-[1.5rem] text-xs font-black uppercase tracking-[0.2em] hover:bg-orange-700 transition-all active:scale-95 shadow-xl shadow-orange-200"
+          >
+            Fix Issues
+          </button>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
