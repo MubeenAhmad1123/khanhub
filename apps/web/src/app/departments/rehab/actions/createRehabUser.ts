@@ -181,6 +181,7 @@ export async function createStaffMemberServer(
   dutyStartTime?: string,
   dutyEndTime?: string,
   photoUrl?: string,
+  department?: string
 ): Promise<{ success: boolean; uid?: string; staffDocId?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -223,6 +224,7 @@ export async function createStaffMemberServer(
       loginUserId: userRecord.uid,
       dutyStartTime: dutyStartTime || '08:00',
       dutyEndTime: dutyEndTime || '17:00',
+      department: department || 'rehab',
     });
     // Fire-and-forget audit log
     try {

@@ -52,28 +52,37 @@ export default function ManagerOverviewPage() {
         const today = new Date().toISOString().split('T')[0];
         const now = Date.now();
 
-        const [staffSnap, attendanceSnap, pendingSnap] = await Promise.all([
+        // 1. Fetch Staff (Unified)
+        const [hqStaffSnap, rehabStaffSnap] = await Promise.all([
           getDocs(query(collection(db, 'hq_staff'), where('isActive', '==', true))),
-          getDocs(query(collection(db, 'hq_attendance'), where('date', '==', today))),
-          getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
+          getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)))
         ]);
 
-        const totalStaff = staffSnap.size;
-        const attendanceMap = new Map<string, any>();
-        attendanceSnap.docs.forEach(d => {
-          const data = d.data();
-          attendanceMap.set(data.staffId, data);
-        });
+        const totalStaff = hqStaffSnap.size + rehabStaffSnap.size;
+
+        // 2. Fetch Attendance (Unified)
+        const [hqAttSnap, rehabAttSnap] = await Promise.all([
+          getDocs(query(collection(db, 'hq_attendance'), where('date', '==', today))),
+          getDocs(query(collection(db, 'rehab_attendance'), where('date', '==', today)))
+        ]);
+
+        const attendanceMap = new Map<string, string>();
+        hqAttSnap.docs.forEach(d => attendanceMap.set(d.data().staffId, d.data().status));
+        rehabAttSnap.docs.forEach(d => attendanceMap.set(d.data().staffId, d.data().status));
 
         let presentCount = 0;
         let absentCount = 0;
-        staffSnap.docs.forEach(d => {
-          const att = attendanceMap.get(d.id);
-          if (att) {
-            if (att.status === 'present') presentCount++;
-            else if (att.status === 'absent') absentCount++;
-          }
+        
+        // Count from both snaps
+        [...hqStaffSnap.docs, ...rehabStaffSnap.docs].forEach(d => {
+          const status = attendanceMap.get(d.id);
+          if (status === 'present') presentCount++;
+          else if (status === 'absent') absentCount++;
         });
+
+        const [pendingSnap] = await Promise.all([
+          getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
+        ]);
 
         const pending = pendingSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
         pending.sort((a, b) => {

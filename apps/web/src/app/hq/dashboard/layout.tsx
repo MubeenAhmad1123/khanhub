@@ -145,7 +145,13 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
       <nav className="flex-1 px-4 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map((item, i) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          // Find the longest match to ensure only the most specific route is highlighted
+          const matches = navItems
+            .filter(ni => pathname.startsWith(ni.href))
+            .sort((a, b) => b.href.length - a.href.length);
+          
+          const isActive = matches[0]?.href === item.href;
+
           return (
             <Link
               key={item.href}
@@ -215,10 +221,12 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <header className="lg:hidden sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+        <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between ${
+          darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
+        }`}>
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+            className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
           >
             <Menu size={20} />
           </button>
@@ -226,7 +234,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <div className="w-7 h-7 bg-gray-800 rounded-lg flex items-center justify-center text-white">
               <Shield size={14} />
             </div>
-            <span className="font-black text-gray-900 text-sm">KhanHub HQ</span>
+            <span className={`font-black text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>KhanHub HQ</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${ROLE_COLORS[role]}`}>
             {ROLE_LABELS[role]}

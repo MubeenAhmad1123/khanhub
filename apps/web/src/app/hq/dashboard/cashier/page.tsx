@@ -133,32 +133,32 @@ export default function CashierStationPage() {
 
   if (sessionLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
-        <Loader2 className="w-10 h-10 animate-spin text-teal-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0A0A0A]">
+        <Loader2 className="w-10 h-10 animate-spin text-teal-600 dark:text-teal-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] pb-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0A0A0A] pb-24">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 md:px-8 py-6 sticky top-0 z-30">
+      <div className="bg-white dark:bg-[#111111] border-b border-gray-100 dark:border-white/5 px-4 md:px-8 py-6 sticky top-0 z-30 backdrop-blur-xl bg-white/80 dark:bg-[#111111]/80">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-100">
+            <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
               <CreditCard size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight">Cashier Station</h1>
-              <p className="text-gray-400 text-sm font-semibold uppercase tracking-widest leading-none mt-1.5">HQ Terminal / {session?.displayName || session?.name || 'Cashier'}</p>
+              <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Cashier Station</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Terminal ID: {session?.customId || 'HQ-001'}</p>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="bg-teal-50 px-4 py-2 rounded-xl border border-teal-100">
-              <div className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Station Status</div>
-              <div className="text-sm font-black text-teal-700 flex items-center gap-1.5">
-                <CheckCircle2 size={12} /> Active & Secured
+            <div className="bg-teal-50 dark:bg-teal-500/10 px-4 py-2 rounded-xl border border-teal-100 dark:border-teal-500/20">
+              <div className="text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest">Operator</div>
+              <div className="text-xs font-black text-teal-700 dark:text-teal-300 flex items-center gap-1.5 capitalized">
+                {session?.displayName || session?.name || 'Authorized Cashier'}
               </div>
             </div>
           </div>
@@ -169,18 +169,18 @@ export default function CashierStationPage() {
         
         {/* Left Column: Search & Patient Info */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-[2.5rem] p-6 shadow-xl shadow-gray-100/50 border border-gray-100">
-            <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Search size={16} /> Patient Selection
+          <div className="bg-white dark:bg-[#111111] rounded-[2.5rem] p-7 shadow-sm border border-gray-100 dark:border-white/5">
+            <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Search size={14} /> Search Account
             </h2>
-            <div className="relative mb-4">
+            <div className="relative mb-6">
               <input 
                 type="text" 
-                placeholder="Search by name..."
+                placeholder="Name or Patient ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-full bg-gray-50 border-none rounded-2xl pl-5 pr-12 py-4 text-sm font-bold focus:ring-4 focus:ring-teal-50 transition-all"
+                className="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl pl-5 pr-12 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 transition-all placeholder:text-gray-400"
               />
               <button 
                 onClick={handleSearch}
@@ -191,50 +191,50 @@ export default function CashierStationPage() {
               </button>
             </div>
 
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
               {patients.map(p => (
                 <button 
                   key={p.id}
                   onClick={() => setSelectedPatient(p)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-2xl transition-all border",
+                    "w-full flex items-center gap-3 p-4 rounded-2xl transition-all border text-left active:scale-[0.98]",
                     selectedPatient?.id === p.id 
-                      ? "bg-teal-50 border-teal-200" 
-                      : "bg-white border-transparent hover:bg-gray-50 hover:border-gray-100"
+                      ? "bg-teal-50 dark:bg-teal-500/10 border-teal-200 dark:border-teal-500/30" 
+                      : "bg-white dark:bg-white/5 border-transparent hover:bg-gray-50 dark:hover:bg-white/[0.07] hover:border-gray-100 dark:hover:border-white/10"
                   )}
                 >
-                  <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">
+                  <div className="w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 font-black text-sm">
                     {p.name[0].toUpperCase()}
                   </div>
-                  <div className="text-left">
-                    <div className="text-sm font-black text-gray-900">{p.name}</div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase">{p.patientId || 'No ID'}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-black text-gray-900 dark:text-white truncate">{p.name}</div>
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{p.patientId || 'New/Unknown'}</div>
                   </div>
-                  {selectedPatient?.id === p.id && <CheckCircle2 className="ml-auto text-teal-600" size={16} />}
+                  {selectedPatient?.id === p.id && <CheckCircle2 className="text-teal-600 dark:text-teal-400" size={16} />}
                 </button>
               ))}
               {patients.length === 0 && !loading && searchQuery && (
-                <div className="py-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                  <UserIcon className="mx-auto text-gray-300 mb-2" size={24} />
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">No patient found</p>
+                <div className="py-12 text-center bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
+                  <UserIcon className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={32} />
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No matching records</p>
                 </div>
               )}
             </div>
           </div>
 
           {selectedPatient && (
-            <div className="bg-white rounded-[2.5rem] p-6 shadow-xl shadow-gray-100/50 border border-gray-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Wallet size={16} /> Balance Snapshot
+            <div className="bg-white dark:bg-[#111111] rounded-[2.5rem] p-7 shadow-sm border border-gray-100 dark:border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <Wallet size={14} /> Ledger Summary
               </h2>
               <div className="space-y-4">
-                <div className="bg-teal-50/50 border border-teal-100/50 rounded-2xl p-4">
-                  <div className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1">Canteen Balance</div>
-                  <div className="text-2xl font-black text-teal-700">Rs. {(selectedPatient.canteenBalance || 0).toLocaleString()}</div>
+                <div className="bg-teal-50 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20 rounded-3xl p-5">
+                  <p className="text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-[0.2em] mb-1">Canteen Credits</p>
+                  <p className="text-2xl font-black text-teal-700 dark:text-teal-300">₨{(selectedPatient.canteenBalance || 0).toLocaleString()}</p>
                 </div>
-                <div className="bg-blue-50/50 border border-blue-100/50 rounded-2xl p-4">
-                  <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Total Fees Paid</div>
-                  <div className="text-2xl font-black text-blue-700">Rs. {(selectedPatient.totalPaid || 0).toLocaleString()}</div>
+                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-3xl p-5">
+                  <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mb-1">Tuition Total</p>
+                  <p className="text-2xl font-black text-blue-700 dark:text-blue-300">₨{(selectedPatient.totalPaid || 0).toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -243,118 +243,120 @@ export default function CashierStationPage() {
 
         {/* Middle Column: Transaction Form */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-gray-100/50 border border-gray-100 h-full relative overflow-hidden">
-            {/* Background design elements */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-[4rem] -mr-8 -mt-8 -z-10" />
+          <div className="bg-white dark:bg-[#111111] rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-gray-100 dark:border-white/5 min-h-[600px] relative overflow-hidden group">
+            {/* Decorative background */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-bl-[8rem] -mr-16 -mt-16 transition-all group-hover:scale-110 duration-700 pointer-events-none" />
             
             {!selectedPatient ? (
-              <div className="h-[400px] flex flex-col items-center justify-center text-center">
-                <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center text-gray-300 mb-6">
-                  <Receipt size={40} />
+              <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center">
+                <div className="w-24 h-24 bg-gray-50 dark:bg-white/5 rounded-[2rem] flex items-center justify-center text-gray-300 dark:text-gray-700 mb-8 animate-pulse">
+                  <Receipt size={48} />
                 </div>
-                <h3 className="text-xl font-black text-gray-900 mb-2">Select a Patient</h3>
-                <p className="text-gray-400 text-sm max-w-xs">Please search and select a patient from the left panel to start a transaction.</p>
+                <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-3">Await Selection</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs font-medium">Use the left panel to search and select an account for processing.</p>
               </div>
             ) : (
-              <form onSubmit={handleTransaction} className="space-y-8 max-w-2xl mx-auto">
-                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-3xl border border-gray-100">
-                  <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-teal-600 text-xl font-black">
+              <form onSubmit={handleTransaction} className="space-y-10 max-w-2xl mx-auto relative z-10">
+                <div className="flex items-center gap-5 p-5 bg-gray-50 dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/5">
+                  <div className="w-16 h-16 bg-white dark:bg-[#1A1A1A] rounded-[1.25rem] shadow-sm flex items-center justify-center text-teal-600 dark:text-teal-400 text-2xl font-black border border-gray-100 dark:border-white/10">
                     {selectedPatient.name[0].toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Transaction For</p>
-                    <p className="text-xl font-black text-gray-900">{selectedPatient.name}</p>
+                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-1">Processing For</p>
+                    <p className="text-2xl font-black text-gray-900 dark:text-white">{selectedPatient.name}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-5">
                   <button 
                     type="button"
                     onClick={() => setTxnType('income')}
                     className={cn(
-                      "flex flex-col items-center gap-3 p-6 rounded-3xl border-2 transition-all group",
+                      "flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-2 transition-all group relative active:scale-95",
                       txnType === 'income' 
-                        ? "bg-teal-50 border-teal-500 shadow-lg shadow-teal-100" 
-                        : "bg-white border-gray-50 hover:border-gray-200"
+                        ? "bg-teal-50 dark:bg-teal-500/10 border-teal-500 shadow-xl shadow-teal-500/10" 
+                        : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-teal-500/30"
                     )}
                   >
                     <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
-                      txnType === 'income' ? "bg-teal-500 text-white" : "bg-gray-100 text-gray-400 group-hover:bg-teal-400 group-hover:text-white"
+                      "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
+                      txnType === 'income' ? "bg-teal-500 text-white shadow-lg shadow-teal-500/20" : "bg-gray-100 dark:bg-white/10 text-gray-400 group-hover:bg-teal-400 group-hover:text-white"
                     )}>
-                      <TrendingUp size={24} />
+                      <TrendingUp size={28} strokeWidth={2.5} />
                     </div>
-                    <span className={cn("text-xs font-black uppercase tracking-widest", txnType === 'income' ? "text-teal-700" : "text-gray-400")}>Payment In</span>
+                    <span className={cn("text-[11px] font-black uppercase tracking-[0.2em]", txnType === 'income' ? "text-teal-700 dark:text-teal-300" : "text-gray-400 dark:text-gray-500")}>Payment In</span>
                   </button>
 
                   <button 
                     type="button"
                     onClick={() => setTxnType('expense')}
                     className={cn(
-                      "flex flex-col items-center gap-3 p-6 rounded-3xl border-2 transition-all group",
+                      "flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-2 transition-all group relative active:scale-95",
                       txnType === 'expense' 
-                        ? "bg-red-50 border-red-500 shadow-lg shadow-red-100" 
-                        : "bg-white border-gray-50 hover:border-gray-200"
+                        ? "bg-red-50 dark:bg-red-500/10 border-red-500 shadow-xl shadow-red-500/10" 
+                        : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-red-500/30"
                     )}
                   >
                     <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
-                      txnType === 'expense' ? "bg-red-500 text-white" : "bg-gray-100 text-gray-400 group-hover:bg-red-400 group-hover:text-white"
+                      "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
+                      txnType === 'expense' ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-gray-100 dark:bg-white/10 text-gray-400 group-hover:bg-red-400 group-hover:text-white"
                     )}>
-                      <TrendingDown size={24} />
+                      <TrendingDown size={28} strokeWidth={2.5} />
                     </div>
-                    <span className={cn("text-xs font-black uppercase tracking-widest", txnType === 'expense' ? "text-red-700" : "text-gray-400")}>Payment Out</span>
+                    <span className={cn("text-[11px] font-black uppercase tracking-[0.2em]", txnType === 'expense' ? "text-red-700 dark:text-red-300" : "text-gray-400 dark:text-gray-500")}>Payment Out</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Transaction Category</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Category</label>
                     <select 
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-teal-50 outline-none transition-all appearance-none"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all appearance-none"
                     >
-                      <option value="fee">Admission/Installment Fee</option>
-                      <option value="canteen">Canteen Deposit/Withdrawal</option>
-                      <option value="emergency">Emergency / Medical</option>
-                      <option value="other">Other / Miscellaneous</option>
+                      <option value="fee">Admission / Fees</option>
+                      <option value="canteen">Canteen Funds</option>
+                      <option value="emergency">Medical / Emergency</option>
+                      <option value="other">Miscellaneous</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Amount (PKR)</label>
-                    <div className="relative">
-                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-black">Rs.</span>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Amount (PKR)</label>
+                    <div className="relative group">
+                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600 font-black text-lg transition-colors group-focus-within:text-teal-600">₨</span>
                       <input 
                         type="number" 
                         step="0.01"
                         placeholder="0.00"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="w-full bg-gray-50 border-none rounded-2xl pl-12 pr-5 py-4 text-lg font-black focus:ring-4 focus:ring-teal-50 outline-none transition-all placeholder:text-gray-200"
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-12 pr-6 py-4 text-2xl font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all placeholder:text-gray-200 dark:placeholder:text-gray-800"
                         required
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Narration / Description</label>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Narration</label>
                   <textarea 
-                    placeholder="Enter details about this transaction..."
+                    placeholder="Describe this financial movement..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-gray-50 border-none rounded-3xl px-5 py-4 text-sm font-semibold focus:ring-4 focus:ring-teal-50 outline-none transition-all placeholder:text-gray-200 min-h-[100px]"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] px-6 py-5 text-sm font-semibold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all placeholder:text-gray-300 dark:placeholder:text-gray-700 min-h-[140px] resize-none"
                   />
                 </div>
 
                 {message && (
                   <div className={cn(
-                    "p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2",
-                    message.type === 'success' ? "bg-teal-50 text-teal-700 border border-teal-100" : "bg-red-50 text-red-700 border border-red-100"
+                    "p-5 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm border",
+                    message.type === 'success' ? "bg-teal-50/50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-100 dark:border-teal-500/20" : "bg-red-50/50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-100 dark:border-red-500/20"
                   )}>
-                    {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                    <p className="text-sm font-bold">{message.text}</p>
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", message.type === 'success' ? "bg-teal-500 text-white" : "bg-red-500 text-white")}>
+                      {message.type === 'success' ? <CheckCircle2 size={20} strokeWidth={3} /> : <AlertCircle size={20} strokeWidth={3} />}
+                    </div>
+                    <p className="text-sm font-black uppercase tracking-tight">{message.text}</p>
                   </div>
                 )}
 
@@ -362,16 +364,16 @@ export default function CashierStationPage() {
                   type="submit"
                   disabled={processing}
                   className={cn(
-                    "w-full py-5 rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3",
+                    "w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl transition-all flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50",
                     txnType === 'income' 
-                      ? "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-100" 
-                      : "bg-red-600 hover:bg-red-700 text-white shadow-red-100"
+                      ? "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-500/30" 
+                      : "bg-red-600 hover:bg-red-700 text-white shadow-red-500/30"
                   )}
                 >
                   {processing ? (
-                    <Loader2 className="animate-spin" size={20} />
+                    <Loader2 className="animate-spin" size={24} />
                   ) : (
-                    <>Process {txnType} <ArrowRight size={20} /></>
+                    <>Submit Transaction <ArrowRight size={24} strokeWidth={3} /></>
                   )}
                 </button>
               </form>
@@ -381,67 +383,73 @@ export default function CashierStationPage() {
       </div>
 
       {/* History Table */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
-            <div className="w-8 h-8 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-teal-600 shadow-sm">
-              <History size={18} />
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-16">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-4">
+            <div className="w-10 h-10 bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center text-teal-600 dark:text-teal-400 shadow-sm">
+              <History size={20} />
             </div>
-            Recent Hq Ledger Entries
+            Terminal History
           </h2>
-          <button className="text-xs font-black text-teal-600 uppercase tracking-widest hover:underline flex items-center gap-1">
-            View full ledger <ChevronRight size={14} />
+          <button className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-[0.2em] hover:bg-teal-50 dark:hover:bg-teal-500/10 px-5 py-2.5 rounded-xl transition-all border border-transparent hover:border-teal-100 dark:hover:border-teal-500/20 flex items-center gap-2">
+            View Operations Log <ChevronRight size={14} strokeWidth={3} />
           </button>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Entry Date</th>
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Patient / Client</th>
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</th>
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Amount</th>
-                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Cashier</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {recentTxns.map(tx => (
-                <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-8 py-5">
-                    <div className="text-sm font-black text-gray-900">{toDate(tx.date || tx.createdAt)?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase">{toDate(tx.date || tx.createdAt)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                  </td>
-                  <td className="px-8 py-5">
-                    <div className="text-sm font-black text-gray-900">{tx.patientName}</div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{tx.patientId?.slice(0, 8)}...</div>
-                  </td>
-                  <td className="px-8 py-5">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200/50">
-                      {tx.category}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 text-right">
-                    <div className={cn(
-                      "text-sm font-black flex items-center justify-end gap-1.5",
-                      tx.type === 'income' ? "text-teal-600" : "text-red-500"
-                    )}>
-                      {tx.type === 'income' ? <Plus size={12} /> : <Minus size={12} />}
-                      Rs. {tx.amount?.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-8 py-5">
-                    <div className="flex items-center justify-center gap-2">
-                       <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center text-[10px] font-black text-gray-500">
-                        {tx.createdByName?.[0]?.toUpperCase() || 'C'}
-                       </div>
-                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{tx.createdByName?.split(' ')[0]}</span>
-                    </div>
-                  </td>
+        <div className="bg-white dark:bg-[#111111] rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5">
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Timestamp</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Account Entity</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Category</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] text-right">Amount</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] text-center">Verified By</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                {recentTxns.map(tx => (
+                  <tr key={tx.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors">
+                    <td className="px-8 py-6">
+                      <div className="text-sm font-black text-gray-900 dark:text-white capitalize">
+                        {toDate(tx.date || tx.createdAt)?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                      </div>
+                      <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase">
+                        {toDate(tx.date || tx.createdAt)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="text-sm font-black text-gray-900 dark:text-white">{tx.patientName}</div>
+                      <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest">{tx.patientId?.slice(0, 10)}...</div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="inline-flex items-center px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/10 opacity-80">
+                        {tx.category}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className={cn(
+                        "text-lg font-black flex items-center justify-end gap-2",
+                        tx.type === 'income' ? "text-teal-600 dark:text-teal-400" : "text-red-500"
+                      )}>
+                        {tx.type === 'income' ? <Plus size={14} strokeWidth={3} /> : <Minus size={14} strokeWidth={3} />}
+                        ₨{tx.amount?.toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center justify-center gap-3">
+                         <div className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-500 dark:text-gray-400 border border-gray-200/50 dark:border-white/10">
+                          {tx.createdByName?.[0]?.toUpperCase() || 'C'}
+                         </div>
+                         <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-tighter">{tx.createdByName?.split(' ')[0]}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
