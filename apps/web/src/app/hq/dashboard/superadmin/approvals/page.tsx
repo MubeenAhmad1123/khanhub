@@ -148,12 +148,12 @@ export default function HqApprovalsPage() {
                 <div key={tx.id} className="bg-amber-500/5 border border-amber-500/20 rounded-3xl p-6 hover:bg-amber-500/10 transition-all group relative overflow-hidden">
                   <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${tx.type === 'income' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-rose-500/20 text-rose-500'}`}>
-                        {tx.type === 'income' ? <ArrowDownLeft size={24} /> : <ArrowUpRight size={24} />}
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${tx?.type === 'income' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-rose-500/20 text-rose-500'}`}>
+                        {tx?.type === 'income' ? <ArrowDownLeft size={24} /> : <ArrowUpRight size={24} />}
                       </div>
                       <div>
-                        <p className="text-2xl font-black text-white">Rs. {Number(tx.amount).toLocaleString()}</p>
-                        <p className="text-xs font-bold text-amber-500/70 uppercase tracking-widest">{tx.category || 'General'}</p>
+                        <p className="text-2xl font-black text-white">Rs. {Number(tx?.amount || 0).toLocaleString()}</p>
+                        <p className="text-xs font-bold text-amber-500/70 uppercase tracking-widest">{tx?.category || 'General'}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -177,11 +177,17 @@ export default function HqApprovalsPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2 text-slate-400 font-medium">
                       <User size={14} className="text-amber-500/50" />
-                      <span className="truncate">{tx.description}</span>
+                      <span className="truncate">{tx?.description || 'No description'}</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-400 font-medium justify-end">
                       <Calendar size={14} className="text-amber-500/50" />
-                      {tx.createdAt instanceof Timestamp ? tx.createdAt.toDate().toLocaleString() : new Date(tx.createdAt).toLocaleString()}
+                      {(() => {
+                        const dateInput = tx?.createdAt;
+                        if (dateInput instanceof Timestamp) return dateInput.toDate().toLocaleString();
+                        if (dateInput?.seconds) return new Date(dateInput.seconds * 1000).toLocaleString();
+                        if (dateInput) return new Date(dateInput).toLocaleString();
+                        return 'N/A';
+                      })()}
                     </div>
                   </div>
                   
@@ -255,19 +261,25 @@ export default function HqApprovalsPage() {
                             </td>
                             <td className="px-6 py-5">
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                tx.status === 'approved' 
+                                tx?.status === 'approved' 
                                   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                                   : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                               }`}>
-                                {tx.status === 'approved' ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                                {tx.status}
+                                {tx?.status === 'approved' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                                {tx?.status || 'UNKNOWN'}
                               </span>
                             </td>
                             <td className="px-6 py-5">
                               <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">{tx.approvedBy || tx.rejectedBy || 'N/A'}</p>
                             </td>
                             <td className="px-6 py-5 text-xs text-slate-500 font-bold">
-                              {tx.processedAt ? (tx.processedAt instanceof Timestamp ? tx.processedAt.toDate().toLocaleDateString() : new Date(tx.processedAt).toLocaleDateString()) : 'N/A'}
+                              {(() => {
+                                const input = tx?.processedAt;
+                                if (input instanceof Timestamp) return input.toDate().toLocaleDateString();
+                                if (input?.seconds) return new Date(input.seconds * 1000).toLocaleDateString();
+                                if (input) return new Date(input).toLocaleDateString();
+                                return 'N/A';
+                              })()}
                             </td>
                           </tr>
                         ))

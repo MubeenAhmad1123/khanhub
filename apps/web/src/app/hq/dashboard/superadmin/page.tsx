@@ -13,6 +13,14 @@ import {
   Moon, Sun, Menu, X
 } from 'lucide-react';
 
+interface Transaction {
+  id: string;
+  status: string;
+  type: string;
+  amount: number | string;
+  createdAt: any;
+}
+
 export default function HqSuperadminPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -54,17 +62,28 @@ export default function HqSuperadminPage() {
           getDocs(collection(db, 'spims_transactions')),
         ]);
 
-        const rehabTrans = rehabTransSnap.docs.map(d => d.data());
-        const spimsTrans = spimsTransSnap.docs.map(d => d.data());
+        const rehabTrans = rehabTransSnap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
+        const spimsTrans = spimsTransSnap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
 
         const pendingCount = 
-          rehabTrans.filter(t => t.status === 'pending').length + 
-          spimsTrans.filter(t => t.status === 'pending').length;
+          rehabTrans.filter(t => t?.status === 'pending').length + 
+          spimsTrans.filter(t => t?.status === 'pending').length;
 
         const revenueToday = [...rehabTrans, ...spimsTrans]
           .filter(t => {
-            if (t.status !== 'approved' || t.type !== 'income') return false;
-            const date = t.createdAt instanceof Timestamp ? t.createdAt.toDate() : new Date(t.createdAt);
+            if (!t || t.status !== 'approved' || t.type !== 'income') return false;
+            // Handle Timestamp vs Date string safely
+            let date;
+            if (t.createdAt instanceof Timestamp) {
+              date = t.createdAt.toDate();
+            } else if (t.createdAt?.seconds) {
+              // Sometimes it's a plain object with seconds (from JSON or similar)
+              date = new Date(t.createdAt.seconds * 1000);
+            } else if (t.createdAt) {
+              date = new Date(t.createdAt);
+            } else {
+              return false;
+            }
             return date >= today;
           })
           .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
