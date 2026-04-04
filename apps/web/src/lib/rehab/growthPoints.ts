@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { MonthlyGrowthPoints } from '@/types/rehab';
 
-export async function calculateGrowthPoints(
+export async function recalculateGrowthPoints(
   staffId: string,
   month: string  // "2025-04"
 ): Promise<MonthlyGrowthPoints> {

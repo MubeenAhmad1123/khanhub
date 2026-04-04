@@ -21,14 +21,14 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Overview',        href: '/departments/rehab/dashboard/admin',                icon: <LayoutDashboard size={16}/>, roles: ['admin'] },
-  { label: 'Patients',        href: '/departments/rehab/dashboard/admin/patients',       icon: <Heart size={16}/>,           roles: ['admin'] },
-  { label: 'Staff',           href: '/departments/rehab/dashboard/admin/staff',          icon: <UserCog size={16}/>,         roles: ['admin'] },
-  { label: 'Finance',         href: '/departments/rehab/dashboard/admin/finance',        icon: <Banknote size={16}/>,        roles: ['admin'] },
-  { label: 'Reports',         href: '/departments/rehab/dashboard/admin/reports',        icon: <FileBarChart size={16}/>,    roles: ['admin'] },
-  { label: 'My Attendance',   href: '/departments/rehab/dashboard/staff',               icon: <CalendarDays size={16}/>,    roles: ['staff'] },
-  { label: 'My Patient',      href: '/departments/rehab/dashboard/family',              icon: <User size={16}/>,            roles: ['family'] },
-  { label: 'My Profile',      href: '/departments/rehab/dashboard/profile',             icon: <User size={16}/>,            roles: ['admin', 'staff', 'family'] },
+  // Admin nav — patients only (admin cannot manage staff)
+  { label: 'Overview',      href: '/departments/rehab/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin'] },
+  { label: 'Patients',      href: '/departments/rehab/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin'] },
+
+  // Self-service nav (all roles)
+  { label: 'My Attendance', href: '/departments/rehab/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
+  { label: 'My Patient',    href: '/departments/rehab/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
+  { label: 'My Profile',    href: '/departments/rehab/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family'] },
 ];
 
 const ROLE_COLORS: Record<RehabRole, string> = {

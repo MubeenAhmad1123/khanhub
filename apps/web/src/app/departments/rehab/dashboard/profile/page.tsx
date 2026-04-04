@@ -1,361 +1,429 @@
+// src/app/departments/rehab/dashboard/profile/page.tsx
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+import { 
+  doc, getDoc, updateDoc, collection, query, where, getDocs, 
+  addDoc, serverTimestamp, deleteDoc, orderBy, limit 
+} from 'firebase/firestore';
 import { 
   User, Camera, Save, Loader2, Shield, UserCog, 
-  CreditCard, Heart, Users, Edit3, CheckCircle, Phone, X 
+  Heart, CheckCircle, Phone, X, Calendar, ClipboardCheck, 
+  Shirt, Award, Plus, Trash2, Clock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { toDate } from '@/lib/utils';
 
 export default function ProfilePage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // Data State
+  // Profile Data
   const [profile, setProfile] = useState<any>(null);
-  const [staffData, setStaffData] = useState<any>(null);
-  const [familyData, setFamilyData] = useState<any>(null);
+  const [staffDoc, setStaffDoc] = useState<any>(null);
+  const [patientDoc, setPatientDoc] = useState<any>(null);
+  
+  // Tabs for Admin/Staff
+  const [activeTab, setActiveTab] = useState<'attendance'|'duties'|'dress'|'contributions'>('attendance');
+  
+  // Metrics Data
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [duties, setDuties] = useState<any[]>([]);
+  const [dressLogs, setDressLogs] = useState<any[]>([]);
+  const [contributions, setContributions] = useState<any[]>([]);
+  const [growthPoints, setGrowthPoints] = useState<any>(null);
 
-  // Edit State
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ displayName: '', phone: '' });
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Contributions State
+  const [isAddingContrib, setIsAddingContrib] = useState(false);
+  const [newContrib, setNewContrib] = useState({ title: '', content: '' });
+  const [submittingContrib, setSubmittingContrib] = useState(false);
 
-  const fetchProfileData = useCallback(async () => {
+  const fetchMetrics = useCallback(async (sId: string, dept: string) => {
     try {
-      setLoading(true);
+      const prefix = dept === 'hq' ? 'hq' : 'rehab';
+      
+      const [attSnap, dutySnap, dressSnap, contribSnap, pointsSnap] = await Promise.all([
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', sId))),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', sId))),
+        getDocs(query(collection(db, `${prefix}_contributions`), where('staffId', '==', sId))),
+        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', sId), limit(1)))
+      ]);
 
-      // 1. Core User Doc
-      const userDoc = await getDoc(doc(db, 'rehab_users', session.uid));
-      if (!userDoc.exists()) {
-        toast.error('Profile not found.');
-        router.push('/departments/rehab/login');
-        return;
-      }
-      const data = userDoc.data();
-      setProfile({ id: userDoc.id, ...data });
-      setEditForm({ 
-        displayName: data.displayName || '', 
-        phone: data.phone || '' 
+      // Client-side sorting to avoid composite index requirement
+      const sortByDate = (docs: any[]) => [...docs].sort((a, b) => {
+        const dateA = a.date?.seconds || 0;
+        const dateB = b.date?.seconds || 0;
+        return dateB - dateA;
       });
 
-      // 2. Role Specific Data
-      if (session.role === 'staff') {
-        const staffQ = query(collection(db, 'rehab_staff'), where('loginUserId', '==', session.uid));
-        const staffSnap = await getDocs(staffQ);
-        if (!staffSnap.empty) {
-          setStaffData(staffSnap.docs[0].data());
-        }
-      } else if (session.role === 'family') {
-        if (data.patientId) {
-          const patDoc = await getDoc(doc(db, 'rehab_patients', data.patientId));
-          if (patDoc.exists()) {
-            setFamilyData(patDoc.data());
-          }
-        }
+      setAttendance(sortByDate(attSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      setDuties(sortByDate(dutySnap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      setDressLogs(sortByDate(dressSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      setContributions(sortByDate(contribSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      
+      if (!pointsSnap.empty) {
+        setGrowthPoints(pointsSnap.docs[0].data());
       }
-
     } catch (error) {
-      console.error("Error fetching profile:", error);
-      toast.error('Failed to load profile');
-    } finally {
-      setLoading(false);
+      console.error("Error fetching metrics:", error);
     }
-  }, [session, router]);
+  }, []);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) {
-      router.push('/departments/rehab/login');
-      return;
-    }
+    if (!sessionData) { router.push('/departments/rehab/login'); return; }
     const parsed = JSON.parse(sessionData);
     setSession(parsed);
-  }, [router]);
 
-  useEffect(() => {
-    if (!session) return;
-    fetchProfileData();
-  }, [session, fetchProfileData]);
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        // 1. User Doc
+        const userSnap = await getDoc(doc(db, 'rehab_users', parsed.uid));
+        if (!userSnap.exists()) {
+          toast.error("User not found");
+          router.push('/departments/rehab/login');
+          return;
+        }
+        const uData = userSnap.data();
+        setProfile({ id: userSnap.id, ...uData });
 
-  const handleSaveEdit = async () => {
-    if (!editForm.displayName.trim()) {
-      toast.error('Display Name cannot be empty');
-      return;
-    }
+        // 2. Role Data
+        if (parsed.role === 'admin' || parsed.role === 'staff') {
+          // Find staff dock in rehab_staff or hq_staff
+          let sSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
+          if (sSnap.empty) {
+            sSnap = await getDocs(query(collection(db, 'hq_staff'), where('loginUserId', '==', parsed.uid)));
+          }
+          
+          if (!sSnap.empty) {
+            const sd = sSnap.docs[0].data();
+            setStaffDoc({ id: sSnap.docs[0].id, ...sd });
+            fetchMetrics(sSnap.docs[0].id, sd.department || 'rehab');
+          }
+        } else if (parsed.role === 'family' && uData.patientId) {
+          const pSnap = await getDoc(doc(db, 'rehab_patients', uData.patientId));
+          if (pSnap.exists()) setPatientDoc({ id: pSnap.id, ...pSnap.data() });
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProfile();
+  }, [router, fetchMetrics]);
+
+  const handleAddContribution = async () => {
+    if (!newContrib.title || !newContrib.content) return toast.error("Fill all fields");
+    if (!staffDoc) return;
 
     try {
-      setSavingEdit(true);
-      await updateDoc(doc(db, 'rehab_users', session.uid), {
-        displayName: editForm.displayName,
-        phone: editForm.phone
+      setSubmittingContrib(true);
+      const prefix = staffDoc.department === 'hq' ? 'hq' : 'rehab';
+      await addDoc(collection(db, `${prefix}_contributions`), {
+        staffId: staffDoc.id,
+        title: newContrib.title,
+        content: newContrib.content,
+        isApproved: false,
+        createdAt: serverTimestamp(),
+        date: serverTimestamp()
       });
-
-      setProfile((prev: any) => ({ ...prev, displayName: editForm.displayName, phone: editForm.phone }));
       
-      // Update session Storage too
-      const newSession = { ...session, displayName: editForm.displayName };
-      localStorage.setItem('rehab_session', JSON.stringify(newSession));
-      setSession(newSession);
-
-      setIsEditing(false);
-      toast.success('Profile updated');
+      toast.success("Contribution submitted for approval");
+      setIsAddingContrib(false);
+      setNewContrib({ title: '', content: '' });
+      fetchMetrics(staffDoc.id, staffDoc.department || 'rehab');
     } catch (error) {
-      console.error("Save error:", error);
-      toast.error('Failed to update profile');
+      toast.error("Failed to submit");
     } finally {
-      setSavingEdit(false);
+      setSubmittingContrib(false);
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleDeleteContribution = async (cid: string) => {
+    if (!confirm("Are you sure?")) return;
     try {
-      setUploadingPhoto(true);
-      const url = await uploadToCloudinary(file, 'khanhub/rehab/profiles');
-      
-      await updateDoc(doc(db, 'rehab_users', session.uid), { photoUrl: url });
-      
-      setProfile((prev: any) => ({ ...prev, photoUrl: url }));
-      toast.success('Photo updated');
+      const prefix = staffDoc.department === 'hq' ? 'hq' : 'rehab';
+      await deleteDoc(doc(db, `${prefix}_contributions`, cid));
+      toast.success("Deleted");
+      fetchMetrics(staffDoc.id, staffDoc.department || 'rehab');
     } catch (error) {
-      console.error("Upload error", error);
-      toast.error('Failed to upload photo');
-    } finally {
-      setUploadingPhoto(false);
-      // Reset input
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      toast.error("Failed to delete");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-      </div>
-    );
-  }
-
-  if (!profile) return null;
-
-  const roleColors: Record<string, string> = {
-    superadmin: 'bg-purple-100 text-purple-700 border-purple-200',
-    admin: 'bg-blue-100 text-blue-700 border-blue-200',
-    cashier: 'bg-amber-100 text-amber-700 border-amber-200',
-    staff: 'bg-teal-100 text-teal-700 border-teal-200',
-    family: 'bg-green-100 text-green-700 border-green-200',
-  };
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-
-        {/* PROFILE HEADER & INFO CARD */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative">
-          <div className="h-32 bg-gradient-to-r from-teal-500 to-teal-700 relative">
-             <div className="absolute inset-0 bg-black/10 mix-blend-overlay"></div>
-          </div>
-          
-          <div className="px-6 md:px-10 pb-8 relative text-center md:text-left">
-            {/* Avatar block */}
-            <div className="flex flex-col md:flex-row md:items-end gap-6 md:gap-8 -mt-16 mb-6">
-              <div className="relative mx-auto md:mx-0 inline-block group">
-                {profile.photoUrl ? (
-                  <img src={profile.photoUrl} alt="Profile" className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover bg-white" />
-                ) : (
-                  <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-teal-100 text-teal-700 flex items-center justify-center text-5xl font-bold">
-                    {profile.displayName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  className="absolute bottom-1 right-1 w-10 h-10 bg-gray-900 border-2 border-white text-white rounded-full flex items-center justify-center shadow-md hover:bg-teal-600 transition-colors disabled:opacity-50 z-10"
-                >
-                  {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handlePhotoUpload}
-                  accept="image/*" 
-                  className="hidden" 
-                />
-              </div>
-              
-              <div className="flex-1 pb-2">
-                <div className="flex flex-col md:flex-row md:items-center gap-3 justify-center md:justify-start">
-                  <h1 className="text-3xl font-black text-gray-900">{profile.displayName}</h1>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${roleColors[profile.role] || 'bg-gray-100'}`}>
-                    {profile.role}
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center justify-center md:justify-start gap-4 text-sm text-gray-500">
-                  <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-xs">{profile.customId}</span>
-                  {profile.isActive ? (
-                    <span className="flex items-center gap-1 text-green-600 font-medium"><CheckCircle className="w-4 h-4" /> Active</span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-red-600 font-medium"><X className="w-4 h-4" /> Inactive</span>
-                  )}
-                </div>
-              </div>
-
-              {!isEditing && (
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  className="hidden md:flex bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors items-center gap-2"
-                >
-                  <Edit3 className="w-4 h-4" /> Edit Profile
-                </button>
-              )}
+    <div className="min-h-screen bg-gray-50/50 pb-20">
+      {/* Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-100">
+              <User size={24} />
             </div>
-
-            {/* Edit / Details Section */}
-            <div className="bg-gray-50 rounded-2xl p-5 md:p-6 border border-gray-100 mt-2">
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                 <h3 className="font-bold text-gray-900">Personal Details</h3>
-                 {isEditing && (
-                    <div className="flex gap-2">
-                      <button onClick={() => setIsEditing(false)} className="text-sm text-gray-500 hover:text-gray-900 font-medium px-3 py-1.5 rounded-lg transition-colors hidden sm:block">Cancel</button>
-                      <button onClick={handleSaveEdit} disabled={savingEdit} className="bg-teal-600 hover:bg-teal-700 text-white shadow-sm text-sm font-medium px-4 py-1.5 rounded-lg transition-colors flex items-center gap-2">
-                        {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
-                      </button>
-                    </div>
-                 )}
-              </div>
-              
-              {isEditing ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-left">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Display Name</label>
-                    <input type="text" value={editForm.displayName} onChange={e => setEditForm({...editForm, displayName: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Phone Number</label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Phone className="w-4 h-4" /></div>
-                      <input type="tel" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Optional" />
-                    </div>
-                  </div>
-                   <div className="sm:col-span-2 pt-2 sm:hidden flex gap-2">
-                      <button onClick={() => setIsEditing(false)} className="flex-1 text-sm bg-gray-200 text-gray-700 font-medium px-4 py-2.5 rounded-xl">Cancel</button>
-                      <button onClick={handleSaveEdit} disabled={savingEdit} className="flex-1 bg-teal-600 text-white shadow-sm text-sm font-medium px-4 py-2.5 rounded-xl flex items-center justify-center gap-2">
-                        {savingEdit ? 'Saving...' : 'Save Changes'}
-                      </button>
-                    </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 text-left">
-                  <div>
-                    <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1"><User className="w-3.5 h-3.5"/> Display Name</span>
-                    <span className="text-gray-900 font-medium">{profile.displayName}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Phone className="w-3.5 h-3.5"/> Phone Number</span>
-                    <span className="text-gray-900 font-medium">{profile.phone || <em className="text-gray-400 font-normal">Not provided</em>}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Shield className="w-3.5 h-3.5"/> System Role</span>
-                    <span className="text-gray-900 font-medium capitalize">{profile.role}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5"/> Joined Portal</span>
-                    <span className="text-gray-900 font-medium">{profile.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A'}</span>
-                  </div>
-                  <div className="sm:hidden pt-3 w-full">
-                     <button onClick={() => setIsEditing(true)} className="w-full bg-white border border-gray-200 text-gray-700 font-medium px-4 py-2 rounded-xl text-sm flex items-center justify-center gap-2">
-                       <Edit3 className="w-4 h-4"/> Edit Profile
-                     </button>
-                  </div>
-                </div>
-              )}
+            <div>
+              <h1 className="text-xl font-black text-gray-900 tracking-tight">My Profile</h1>
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{session?.role}</p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* ROLE SPECIFIC OVERVIEW SECTION */}
+      <div className="max-w-5xl mx-auto px-4 mt-8 space-y-8">
         
-        {session.role === 'staff' && staffData && (
-          <div className="bg-white rounded-3xl shadow-sm border border-teal-100 p-6 md:p-8 flex items-start gap-4">
-            <div className="bg-teal-50 p-3 rounded-2xl hidden sm:block"><UserCog className="w-8 h-8 text-teal-600"/></div>
-            <div className="flex-1 text-left">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex justify-between items-center w-full">
-                Staff Employment Summary
-                <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full uppercase tracking-wider border border-gray-200">Read Only</span>
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><div className="text-xs font-bold text-gray-400 uppercase mb-1">Department</div><div className="font-medium text-gray-900">{staffData.departmentRole}</div></div>
-                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><div className="text-xs font-bold text-gray-400 uppercase mb-1">Gender</div><div className="font-medium text-gray-900 capitalize">{staffData.gender}</div></div>
-                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><div className="text-xs font-bold text-gray-400 uppercase mb-1">Monthly Salary</div><div className="font-bold text-teal-700 text-lg">Rs. {staffData.salary?.toLocaleString()}</div></div>
-                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><div className="text-xs font-bold text-gray-400 uppercase mb-1">Joined Center</div><div className="font-medium text-gray-900">{staffData.joiningDate?.toDate?.()?.toLocaleDateString('en-US', { month: 'short', year: 'numeric'}) || 'N/A'}</div></div>
+        {/* Basic Info Card */}
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 items-center text-center md:text-left">
+          <div className="relative">
+            {profile?.photoUrl ? (
+              <img src={profile.photoUrl} className="w-32 h-32 rounded-[2rem] object-cover shadow-xl ring-4 ring-gray-50" />
+            ) : (
+              <div className="w-32 h-32 rounded-[2rem] bg-teal-50 text-teal-600 flex items-center justify-center text-4xl font-black shadow-inner">
+                {profile?.displayName?.[0]}
               </div>
-              {staffData.duties && staffData.duties.length > 0 && (
-                <div className="bg-gray-50 p-5 rounded-xl border border-gray-100">
-                  <h4 className="text-sm font-bold text-gray-700 mb-3 border-b border-gray-200 pb-2">Assigned Duties</h4>
-                  <ul className="list-decimal pl-5 space-y-1.5 text-sm text-gray-600">
-                    {staffData.duties.map((duty: any, i: number) => (
-                      <li key={duty.id || i}>{duty.description || duty}</li>
-                    ))}
-                  </ul>
+            )}
+          </div>
+          <div className="flex-1">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
+              <h2 className="text-3xl font-black text-gray-900">{profile?.displayName}</h2>
+              <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-200">
+                {profile?.customId}
+              </span>
+            </div>
+            <p className="text-gray-500 font-medium flex items-center justify-center md:justify-start gap-2">
+              <Phone size={14} className="text-teal-500" /> {profile?.phone || 'No phone provided'}
+            </p>
+          </div>
+        </div>
+
+        {/* Role Specific Content */}
+        {session?.role === 'family' ? (
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-green-100">
+            <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-3">
+              <Heart className="text-green-500" /> Linked Patient Information
+            </h3>
+            {patientDoc ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 bg-green-50 rounded-3xl border border-green-100/50">
+                  <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Name</p>
+                  <p className="font-bold text-gray-900">{patientDoc.name}</p>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {session.role === 'family' && familyData && (
-          <div className="bg-white rounded-3xl shadow-sm border border-green-100 p-6 md:p-8 flex items-start flex-col sm:flex-row gap-4">
-            <div className="bg-green-50 p-3 rounded-2xl hidden sm:block"><Heart className="w-8 h-8 text-green-600"/></div>
-            <div className="flex-1 text-left w-full">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex justify-between items-center w-full">
-                Linked Patient Profile
-                <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full uppercase tracking-wider border border-gray-200">Read Only</span>
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><div className="text-xs font-bold text-gray-400 uppercase mb-1">Patient Name</div><div className="font-bold text-gray-900 text-lg">{familyData.name}</div></div>
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><div className="text-xs font-bold text-gray-400 uppercase mb-1">Admitted On</div><div className="font-medium text-gray-900">{familyData.admissionDate?.toDate?.()?.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric'})}</div></div>
-                <div className="bg-green-50 p-4 rounded-xl border border-green-200"><div className="text-xs font-bold text-green-700/70 uppercase mb-1">Package / Month</div><div className="font-black text-green-800 text-lg">Rs. {familyData.packageAmount?.toLocaleString()}</div></div>
+                <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Date</p>
+                  <p className="font-bold text-gray-900">{toDate(patientDoc.admissionDate).toLocaleDateString()}</p>
+                </div>
+                <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    {patientDoc.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
               </div>
-              <p className="mt-4 text-xs text-gray-400 text-center sm:text-left bg-gray-50 p-3 rounded-lg">To update patient information, diagnosis, or package amounts, please contact the center administration directly.</p>
+            ) : (
+              <p className="text-gray-400 italic">No patient linked to this account.</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Growth Points Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                { label: 'Attendance', val: growthPoints?.attendancePoints || 0, color: 'text-blue-600', bg: 'bg-blue-50' },
+                { label: 'Duties', val: growthPoints?.dutyPoints || 0, color: 'text-teal-600', bg: 'bg-teal-50' },
+                { label: 'Dress Code', val: growthPoints?.dressCodePoints || 0, color: 'text-orange-600', bg: 'bg-orange-50' },
+                { label: 'Contribs', val: growthPoints?.contributionPoints || 0, color: 'text-purple-600', bg: 'bg-purple-50' },
+                { label: 'Total Points', val: growthPoints?.totalPoints || 0, color: 'text-gray-900', bg: 'bg-gray-100', span: 'col-span-2 md:col-span-1' },
+              ].map(stat => (
+                <div key={stat.label} className={`${stat.bg} ${stat.span} rounded-3xl p-6 border border-white shadow-sm flex flex-col items-center justify-center`}>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">{stat.label}</p>
+                  <p className={`text-2xl font-black ${stat.color}`}>{stat.val}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Metric Tabs */}
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+              <div className="flex border-b overflow-x-auto">
+                {[
+                  { id: 'attendance', label: 'Attendance', icon: <Calendar size={16}/> },
+                  { id: 'duties', label: 'Duties', icon: <ClipboardCheck size={16}/> },
+                  { id: 'dress', label: 'Dress Code', icon: <Shirt size={16}/> },
+                  { id: 'contributions', label: 'Contribs', icon: <Award size={16}/> },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-6 text-xs font-black uppercase tracking-widest transition-all ${
+                      activeTab === tab.id 
+                        ? 'bg-teal-500 text-white shadow-inner' 
+                        : 'text-gray-400 hover:bg-gray-50'
+                    }`}
+                  >
+                    {tab.icon} {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-8">
+                {activeTab === 'attendance' && (
+                  <div className="space-y-4">
+                    {attendance.length === 0 ? <p className="text-center text-gray-400 py-10">No records found</p> : (
+                      attendance.map(log => (
+                        <div key={log.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                          <div>
+                            <p className="font-bold text-gray-900">{new Date(log.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{log.day}</p>
+                          </div>
+                          <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                            log.status === 'present' ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {log.status}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'duties' && (
+                  <div className="space-y-4">
+                    {duties.length === 0 ? <p className="text-center text-gray-400 py-10">No records found</p> : (
+                      duties.map(log => (
+                        <div key={log.id} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                                {new Date(log.date).toLocaleDateString()}
+                              </span>
+                              <h4 className="font-black text-gray-900 text-sm capitalize">{log.dutyType?.replace(/_/g, ' ')}</h4>
+                            </div>
+                            <p className="text-sm text-gray-600 leading-relaxed">{log.comment || 'No comments'}</p>
+                          </div>
+                   
+                          <div className={`flex flex-col items-center gap-1 p-2 rounded-2xl ${log.status === 'completed' ? 'bg-teal-100 text-teal-600' : 'bg-red-100 text-red-600'}`}>
+                              <span className="text-xs font-black uppercase tracking-widest">{log.status}</span>
+                              <span className="text-[8px] font-bold opacity-70">+{log.points || 0} Points</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'dress' && (
+                  <div className="space-y-4">
+                    {dressLogs.length === 0 ? <p className="text-center text-gray-400 py-10">No records found</p> : (
+                      dressLogs.map(log => (
+                        <div key={log.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                          <div>
+                            <p className="font-bold text-gray-900">{new Date(log.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-gray-500">{log.comment || 'Professional attire'}</p>
+                          </div>
+                          <div className="text-right">
+                             <div className="text-sm font-black text-teal-600">+{log.points || 0}</div>
+                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Points earned</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'contributions' && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center bg-teal-50 p-6 rounded-3xl border border-teal-100">
+                      <div>
+                        <h4 className="font-black text-teal-900">Share your contribution</h4>
+                        <p className="text-xs text-teal-600 font-medium">Add records of extra work or achievements</p>
+                      </div>
+                      <button 
+                        onClick={() => setIsAddingContrib(true)}
+                        className="bg-teal-600 text-white px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-teal-700 transition-all flex items-center gap-2"
+                      >
+                        <Plus size={16} /> New Entry
+                      </button>
+                    </div>
+
+                    {isAddingContrib && (
+                      <div className="p-6 bg-white border border-teal-200 rounded-3xl shadow-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-black text-sm uppercase tracking-widest text-teal-600">New Contribution</h4>
+                          <button onClick={() => setIsAddingContrib(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+                        </div>
+                        <input 
+                           type="text" 
+                           placeholder="Title (e.g. Extra Patient Care)" 
+                           className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:ring-2 focus:ring-teal-500 outline-none font-bold"
+                           value={newContrib.title}
+                           onChange={e => setNewContrib({...newContrib, title: e.target.value})}
+                        />
+                        <textarea 
+                           placeholder="Describe your contribution in detail..." 
+                           className="w-full px-4 py-4 bg-gray-50 border border-gray-100 rounded-3xl text-sm focus:ring-2 focus:ring-teal-500 outline-none min-h-[120px] leading-relaxed"
+                           value={newContrib.content}
+                           onChange={e => setNewContrib({...newContrib, content: e.target.value})}
+                        />
+                        <button 
+                           onClick={handleAddContribution}
+                           disabled={submittingContrib}
+                           className="w-full bg-teal-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-teal-100 hover:bg-teal-700 disabled:opacity-50 transition-all"
+                        >
+                          {submittingContrib ? 'Submitting...' : 'Submit Contribution'}
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      {contributions.length === 0 ? <p className="text-center text-gray-400 py-10">No contributions yet</p> : (
+                        contributions.map(c => (
+                          <div key={c.id} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 relative group transition-all hover:border-gray-200">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="font-bold text-gray-900">{c.title}</h4>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                  {toDate(c.date || c.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                  c.isApproved ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {c.isApproved ? 'Approved' : 'Pending'}
+                                </span>
+                                {!c.isApproved && (
+                                  <button onClick={() => handleDeleteContribution(c.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-600 leading-relaxed mb-3 whitespace-pre-wrap">{c.content}</p>
+                            {c.isApproved && (
+                              <div className="flex items-center gap-2 text-teal-600 font-black text-[10px] uppercase tracking-widest">
+                                <Award size={14} /> +{c.points || 0} Points Awarded
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
-
-        {session.role === 'cashier' && (
-          <div className="bg-white rounded-3xl shadow-sm border border-amber-100 p-6 flex items-center gap-5">
-            <div className="bg-amber-50 p-4 rounded-2xl flex-shrink-0"><CreditCard className="w-8 h-8 text-amber-600"/></div>
-            <div className="text-left w-full">
-               <h3 className="text-lg font-bold text-gray-900 mb-1">Cashier Station Access</h3>
-               <p className="text-sm text-gray-500 mb-2">You have dedicated access to record all incoming and outgoing financial transactions for the rehab center.</p>
-               <button onClick={() => router.push('/departments/rehab/dashboard/cashier')} className="text-sm font-semibold text-amber-600 hover:text-amber-800">Go to Cashier Station &rarr;</button>
-            </div>
-          </div>
-        )}
-
-        {(session.role === 'admin' || session.role === 'superadmin') && (
-          <div className="bg-white rounded-3xl shadow-sm border border-purple-100 p-6 flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
-            <div className={`${session.role === 'superadmin' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'} p-4 rounded-2xl flex-shrink-0`}><Shield className="w-8 h-8"/></div>
-            <div>
-               <h3 className="text-lg font-bold text-gray-900 mb-1">{session.role === 'superadmin' ? 'Super Administrator Access' : 'Administrator Access'}</h3>
-               <p className="text-sm text-gray-600">
-                 {session.role === 'superadmin' 
-                   ? 'You have complete oversight of the system. This includes approving all cashier financial entries, deleting historical records, verifying org reports, and comprehensive management.'
-                   : 'You can manage all patients, register staff, assign duties, and view overall financial reports and daily logs.'}
-               </p>
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );
