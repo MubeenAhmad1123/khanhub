@@ -631,12 +631,17 @@ service cloud.firestore {
     } 
 
     // hq_audit — cross-system audit log 
-    // Read: superadmin only. Write: any authenticated user (immutable after creation). 
     match /hq_audit/{docId} { 
       allow read: if isHqSuperAdmin(); 
       allow create: if request.auth != null; 
-      allow update: if false; 
-      allow delete: if false; 
+    } 
+
+    // hq_growth_points — points system for HQ staff
+    match /hq_growth_points/{docId} { 
+      allow read: if isHqSuperOrManager() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create, update: if isHqSuperOrManager(); 
+      allow delete: if isHqSuperAdmin(); 
     } 
 
     // ── Cross-department transaction access for HQ roles ────── 

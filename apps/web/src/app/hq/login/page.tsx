@@ -51,10 +51,11 @@ export default function HqLoginPage() {
 
     try {
       // Step 1: Sign into Firebase Auth (authenticates the request)
-      const email = `${customId.toLowerCase().replace(/-/g, '.')}@hq.khanhub.com`;
-      await signInWithEmailAndPassword(auth, email, password);
+      // BUG 1 FIX: Use deterministic email format: {customId}@hq.khanhub.com
+      const loginEmail = `${customId.toLowerCase()}@hq.khanhub.com`;
+      await signInWithEmailAndPassword(auth, loginEmail, password);
 
-      // Step 2: Now authenticated — query Firestore
+      // Step 2: Now authenticated — query Firestore hq_users collection
       const q = query(collection(db, 'hq_users'), where('customId', '==', customId));
       const snap = await getDocs(q);
 

@@ -56,12 +56,14 @@ export default function AttendanceMarkingPage() {
           getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)))
         ]);
 
-        const hqStaff = hqStaffSnap.docs.map(d => ({ 
-          id: d.id, ...d.data(), _origin: 'hq', department: d.data().department || 'hq' 
-        }));
-        const rehabStaff = rehabStaffSnap.docs.map(d => ({ 
-          id: d.id, ...d.data(), _origin: 'rehab', department: d.data().department || 'rehab' 
-        }));
+        const hqStaff = hqStaffSnap.docs.map(d => {
+          const data = d.data() || {};
+          return { id: d.id, ...data, _origin: 'hq', department: data.department || 'hq' };
+        });
+        const rehabStaff = rehabStaffSnap.docs.map(d => {
+          const data = d.data() || {};
+          return { id: d.id, ...data, _origin: 'rehab', department: data.department || 'rehab' };
+        });
 
         const unified = [...hqStaff, ...rehabStaff].sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
         setStaffList(unified);
@@ -81,9 +83,9 @@ export default function AttendanceMarkingPage() {
 
         hqAttSnap.docs.forEach(d => {
           const data = d.data();
-          if (initialRecords[data.staffId]) {
+          if (data && data.staffId && initialRecords[data.staffId]) {
             initialRecords[data.staffId] = {
-              status: data.status,
+              status: data.status || 'not_marked',
               arrivalTime: data.arrivalTime || '',
               departureTime: data.departureTime || ''
             };
@@ -92,9 +94,9 @@ export default function AttendanceMarkingPage() {
 
         rehabAttSnap.docs.forEach(d => {
           const data = d.data();
-          if (initialRecords[data.staffId]) {
+          if (data && data.staffId && initialRecords[data.staffId]) {
             initialRecords[data.staffId] = {
-              status: data.status,
+              status: data.status || 'not_marked',
               arrivalTime: data.arrivalTime || '',
               departureTime: data.departureTime || ''
             };

@@ -13,7 +13,8 @@ import {
   limit, 
   Timestamp,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -180,8 +181,8 @@ export default function ManagerUsersPage() {
   const [uploading, setUploading] = useState<string | null>(null);
   const [employeeCount, setEmployeeCount] = useState(0);
 
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [lastCreated, setLastCreated] = useState<{ customId: string, password: string, name: string } | null>(null);
 
   useEffect(() => {
     const isDark = localStorage.getItem('hq_dark_mode') === 'true';
@@ -353,19 +354,24 @@ export default function ManagerUsersPage() {
 
     setSubmitting(true);
     setMessage(null);
+    setLastCreated(null);
 
     try {
       const empId = generateEmployeeId();
       let loginUserId = null;
+      const pass = formData.password || 'admin123';
 
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
 
       // Handle Login Account Creation if toggled ON
       if (formData.createAccount) {
-        const res = await createStaffMemberServer(
-          empId,
-          formData.password || 'admin123', // Default password if none provided
+        // BUG 3 FIX: Integrating createRehabUserServer for staff login accounts
+        const res = await createRehabUserServer(
+          empId.toLowerCase(),
+          pass,
+          'staff',
           `${formData.firstName} ${formData.lastName}`,
+          undefined,
           deptDetails.emailDomain,
           deptDetails.collection
         );
@@ -405,13 +411,21 @@ export default function ManagerUsersPage() {
         createdBy: session?.customId || 'manager',
       });
 
+      if (formData.createAccount) {
+        setLastCreated({
+          customId: empId.toLowerCase(),
+          password: pass,
+          name: `${formData.firstName} ${formData.lastName}`
+        });
+      }
+
       setMessage({ type: 'success', text: `Staff profile ${empId} created successfully.` });
       toast.success(`Staff profile initialized: ${empId}`);
       
-      // Reset Form
+      // Reset Form (except for credentials view)
       setFormData(prev => ({
         ...prev,
-        firstName: '', lastName: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
+        firstName: '', lastName: '', password: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
         designation: '', salary: '', duties: [], documents: [], patientId: ''
       }));
       
@@ -510,7 +524,7 @@ export default function ManagerUsersPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="mb-8 p-1.5 rounded-2xl flex gap-1 bg-gray-200/50 dark:bg-gray-900/50 backdrop-blur-md max-w-md">
+        <div className="mb-8 p-1.5 rounded-2xl flex gap-1 bg-gray-200/50 dark:bg-gray-900/50 backdrop-blur-md max-w-lg overflow-x-auto whitespace-nowrap">
           {[
             { id: 'admin', icon: ShieldCheck, label: 'Admin' },
             { id: 'staff', icon: UserPlus, label: 'Staff' },
@@ -519,14 +533,14 @@ export default function ManagerUsersPage() {
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id as TabType); setMessage(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 min-w-max ${
                 activeTab === tab.id
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : `hover:bg-gray-300/50 dark:hover:bg-gray-800/50 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`
               }`}
             >
               <tab.icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
@@ -586,6 +600,41 @@ export default function ManagerUsersPage() {
                   </p>
                 </div>
               </div>
+
+              {lastCreated && (
+                <div className="mb-10 p-8 rounded-[2rem] bg-indigo-600 text-white shadow-2xl shadow-indigo-500/40 relative overflow-hidden animate-in zoom-in-95 duration-500">
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                          <Unlock className="w-5 h-5" />
+                        </div>
+                        <h3 className="font-black uppercase tracking-widest">Credentials Generated</h3>
+                      </div>
+                      <button onClick={() => setLastCreated(null)} className="text-white/60 hover:text-white transition-colors">
+                        <XCircle size={24} />
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-black/20 p-6 rounded-2xl border border-white/10 backdrop-blur-xl">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Access Identity</p>
+                        <p className="text-lg font-mono font-black">{lastCreated.customId}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Secure Password</p>
+                        <p className="text-lg font-mono font-black">{lastCreated.password}</p>
+                      </div>
+                    </div>
+                    
+                    <p className="mt-6 text-[10px] font-bold uppercase tracking-widest leading-relaxed opacity-80">
+                      IMPORTANT: Please provide these credentials to {lastCreated.name}. 
+                      The system does not store passwords in plain text after this session.
+                    </p>
+                  </div>
+                  <ShieldCheck size={180} className="absolute -right-12 -bottom-12 opacity-10 rotate-12" />
+                </div>
+              )}
 
               {message && (
                 <div className={`mb-8 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${
@@ -708,8 +757,8 @@ export default function ManagerUsersPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="md:col-span-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-4 aspect-square relative hover:border-blue-500 transition-colors cursor-pointer group bg-gray-50/50 dark:bg-black/20">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="sm:col-span-2 lg:col-span-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-4 aspect-square relative hover:border-blue-500 transition-colors cursor-pointer group bg-gray-50/50 dark:bg-black/20">
                           {formData.photoUrl ? (
                             <img src={formData.photoUrl} alt="Profile" className="w-full h-full object-cover rounded-xl" />
                           ) : (
@@ -731,7 +780,7 @@ export default function ManagerUsersPage() {
                           )}
                         </div>
 
-                        <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">First Name*</label>
                             <input
@@ -805,7 +854,7 @@ export default function ManagerUsersPage() {
                         </div>
                       </div>
 
-                      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 dark:border-white/5 pt-6">
+                      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 dark:border-white/5 pt-6">
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Emergency Contact Name</label>
                           <input
@@ -841,7 +890,7 @@ export default function ManagerUsersPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                               <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Employee ID</label>
