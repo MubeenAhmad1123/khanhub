@@ -269,15 +269,22 @@ export default function StaffProfilePage() {
       const payload = {
         arrivalTime: timePopup.arrivalTime,
         departureTime: timePopup.departureTime,
-        status: 'present', // If manager sets time, it's present
         updatedAt: new Date().toISOString(),
         markedBy: session?.uid
+      };
+
+      const newRecord: HqDailyAttendanceRecord = {
+        ...(attendanceMap[timePopup.date] || {}),
+        ...payload,
+        staffId,
+        date: timePopup.date,
+        status: 'present'
       };
 
       // Update Local State
       setAttendanceMap(prev => ({
         ...prev,
-        [timePopup.date]: { ...prev[timePopup.date], ...payload, staffId, date: timePopup.date }
+        [timePopup.date]: newRecord
       }));
 
       // Single setDoc call as requested
