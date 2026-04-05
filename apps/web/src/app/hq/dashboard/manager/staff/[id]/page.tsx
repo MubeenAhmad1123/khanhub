@@ -437,7 +437,7 @@ export default function StaffProfilePage() {
     <div className={`min-h-screen transition-colors duration-300 pb-20 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
       {/* Dynamic Header */}
       <div className={`border-b sticky top-0 z-20 shadow-sm transition-colors ${isDark ? 'bg-zinc-900/90 backdrop-blur-xl border-zinc-800' : 'bg-white border-gray-100'}`}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link href="/hq/dashboard/manager/users" className={`flex items-center gap-2 group transition-colors ${isDark ? 'text-zinc-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
             <div className={`p-2 rounded-xl ${isDark ? 'group-hover:bg-zinc-800' : 'group-hover:bg-gray-100'}`}><ArrowLeft size={18} /></div>
             <span className="text-xs font-black uppercase tracking-widest leading-none">Management</span>
@@ -460,7 +460,7 @@ export default function StaffProfilePage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 mt-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Sidebar */}
@@ -610,7 +610,7 @@ export default function StaffProfilePage() {
                         <div className="space-y-4">
                            <textarea 
                               placeholder="Operational performance notes..."
-                              className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[100px] ${
+                              className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[120px] md:min-h-[100px] ${
                                 isDark ? 'bg-zinc-800 text-white placeholder:text-zinc-600' : 'bg-gray-50 text-gray-900'
                               }`}
                               value={dutyForm.comment}
@@ -659,20 +659,20 @@ export default function StaffProfilePage() {
 
             {activeTab === 'attendance' && (
               <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Monthly Attendance Grid</h3>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <input 
                       type="month" 
                       value={selectedMonth}
                       onChange={e => setSelectedMonth(e.target.value)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-black border-none outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-100 text-gray-900'}`}
+                      className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border-none outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-100 text-gray-900'}`}
                     />
                   </div>
                 </div>
 
-                <div className="overflow-x-auto no-scrollbar -mx-2 px-2">
-                  <div className="inline-block min-w-full align-middle">
+                <div className="overflow-x-auto no-scrollbar -mx-4 sm:-mx-8 px-4 sm:px-8">
+                   <div className="inline-block min-w-[800px] w-full align-middle">
                     <table className="min-w-full">
                       <thead>
                         <tr>
@@ -748,13 +748,13 @@ export default function StaffProfilePage() {
 
             {activeTab === 'dress' && (
               <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Dress Code Compliance</h3>
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Monthly Item Grids</p>
                 </div>
 
-                <div className="overflow-x-auto no-scrollbar -mx-2 px-2">
-                  <div className="inline-block min-w-full align-middle">
+                <div className="overflow-x-auto no-scrollbar -mx-4 sm:-mx-8 px-4 sm:px-8">
+                  <div className="inline-block min-w-[800px] w-full align-middle">
                     <table className="min-w-full">
                       <thead>
                         <tr>
@@ -802,13 +802,13 @@ export default function StaffProfilePage() {
 
             {activeTab === 'duties' && (
               <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Daily Duty Logs</h3>
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Performance Tracking</p>
                 </div>
 
-                <div className="overflow-x-auto no-scrollbar -mx-2 px-2">
-                  <div className="inline-block min-w-full align-middle">
+                <div className="overflow-x-auto no-scrollbar -mx-4 sm:-mx-8 px-4 sm:px-8">
+                  <div className="inline-block min-w-[800px] w-full align-middle">
                     <table className="min-w-full">
                       <thead>
                         <tr>
@@ -858,7 +858,7 @@ export default function StaffProfilePage() {
               <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${
                 isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'
               }`}>
-                <div className="flex items-center justify-between mb-10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
                   <div>
                     <h3 className="text-xl font-black uppercase tracking-tight italic">Profile Optimization</h3>
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Surgical updates to staff credentials</p>
@@ -866,7 +866,7 @@ export default function StaffProfilePage() {
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
-                    className="px-8 py-3.5 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center gap-2"
+                    className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14}/>}
                     {saving ? 'Synchronizing...' : 'Save Changes'}

@@ -576,32 +576,45 @@ service cloud.firestore {
       allow delete: if isHqSuperAdmin(); 
     } 
 
-    // hq_dress_code — daily dress code checks per staff 
-    match /hq_dress_code/{docId} { 
-      allow read: if isHqSuperOrManager() 
-        || (request.auth != null && resource.data.staffId == request.auth.uid); 
-      allow create: if isHqSuperOrManager(); 
-      allow update: if isHqSuperOrManager(); 
-      allow delete: if isHqSuperAdmin(); 
-    } 
+    // ── Departmental Staff Operational Rules (Rehab, SPIMS, etc.) ─────────────────
 
-    // hq_duties — duties assigned to each staff (set by manager) 
-    match /hq_duties/{docId} { 
-      allow read: if isHqSuperOrManager() 
-        || (request.auth != null && resource.data.staffId == request.auth.uid); 
-      allow create: if isHqSuperOrManager(); 
-      allow update: if isHqSuperOrManager(); 
-      allow delete: if isHqSuperOrManager(); 
-    } 
+    // Patterns: {dept}_dress_code, {dept}_duty_log, {dept}_staff_dress_config, {dept}_staff_duty_config
+    
+    // REHAB
+    match /rehab_dress_code/{docId} {
+      allow read: if isHqSuperOrManager() || (isRehabAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /rehab_duty_log/{docId} {
+      allow read: if isHqSuperOrManager() || (isRehabAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /rehab_staff_dress_config/{docId} {
+      allow read: if isAuth(); // Any authenticated user can read config
+      allow write: if isHqSuperOrManager();
+    }
+    match /rehab_staff_duty_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
 
-    // hq_duty_logs — daily duty performance logs 
-    match /hq_duty_logs/{docId} { 
-      allow read: if isHqSuperOrManager() 
-        || (request.auth != null && resource.data.staffId == request.auth.uid); 
-      allow create: if isHqSuperOrManager(); 
-      allow update: if isHqSuperOrManager(); 
-      allow delete: if isHqSuperAdmin(); 
-    } 
+    // SPIMS
+    match /spims_dress_code/{docId} {
+      allow read: if isHqSuperOrManager() || (isSpimsAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /spims_duty_log/{docId} {
+      allow read: if isHqSuperOrManager() || (isSpimsAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /spims_staff_dress_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+    match /spims_staff_duty_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
 
     // hq_targets — monthly targets assigned to admin/staff 
     match /hq_targets/{docId} { 

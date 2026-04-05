@@ -513,7 +513,7 @@ export default function ManagerUsersPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Header Section */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl font-black flex items-center gap-3 tracking-tight">
               <Users className="w-10 h-10 text-blue-500" />
@@ -524,7 +524,7 @@ export default function ManagerUsersPage() {
             </p>
           </div>
           
-          <div className={`flex items-center gap-4 px-5 py-2.5 rounded-2xl border ${darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className={`flex items-center gap-4 px-5 py-2.5 rounded-2xl border w-full sm:w-auto ${darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex -space-x-3">
               {[1, 2, 3].map(i => (
                 <div key={i} className={`w-8 h-8 rounded-full border-2 ${darkMode ? 'border-gray-800 bg-gray-700' : 'border-white bg-gray-100'} flex items-center justify-center`}>
@@ -595,8 +595,8 @@ export default function ManagerUsersPage() {
               darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl shadow-black/20' : 'bg-white border-gray-200 shadow-xl shadow-blue-900/5'
             }`}>
               
-              <div className="flex items-center gap-4 mb-8">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
                   activeTab === 'admin' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' :
                   activeTab === 'staff' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600' :
                   'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
@@ -745,7 +745,7 @@ export default function ManagerUsersPage() {
                       <button
                         disabled={submitting}
                         onClick={activeTab === 'admin' ? handleAdminSubmit : handleClientSubmit}
-                        className={`px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl flex items-center gap-3 disabled:opacity-50 ${
+                        className={`w-full md:w-auto px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${
                           activeTab === 'admin' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 text-white' :
                           'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-white'
                         }`}
@@ -1407,94 +1407,96 @@ export default function ManagerUsersPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className={`text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-50'}`}>
-                    <th className="px-8 py-5">Full Identity</th>
-                    <th className="px-8 py-5">Assigned Role</th>
-                    <th className="px-8 py-5">Initialization Date</th>
-                    <th className="px-8 py-5">Operational Status</th>
-                    <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest opacity-40">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${darkMode ? 'divide-gray-800/50' : 'divide-gray-50'}`}>
-                  {users.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-8 py-12 text-center text-gray-400 font-bold uppercase tracking-widest text-[11px]">
-                        No account records initialized
-                      </td>
+              <div className="overflow-x-auto pb-4">
+                <table className="w-full text-left min-w-[800px]">
+                  <thead>
+                    <tr className={`text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-50'}`}>
+                      <th className="px-8 py-5 text-[9px]">Full Identity</th>
+                      <th className="px-8 py-5 text-[9px]">Assigned Role</th>
+                      <th className="px-8 py-5 text-[9px]">Initialization Date</th>
+                      <th className="px-8 py-5 text-[9px]">Operational Status</th>
+                      <th className="px-8 py-5 text-right text-[9px] font-black uppercase tracking-widest opacity-40">Actions</th>
                     </tr>
-                  ) : (
-                    users.map(u => (
-                      <tr key={u.id} className="group hover:bg-blue-500/5 transition-all">
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
-                              u.role === 'admin' ? 'bg-blue-500 text-white' : 
-                              u.role === 'staff' ? 'bg-indigo-500 text-white' : 'bg-emerald-500 text-white'
-                            }`}>
-                              {u.displayName?.substring(0, 2).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-sm font-black">{u.displayName}</p>
-                              <p className={`text-[10px] font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 capitalize">
-                          <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                            u.role === 'manager' || u.role === 'admin' 
-                              ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' 
-                              : 'bg-green-500/10 text-green-500 border-green-500/20'
-                          }`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className={`px-8 py-5 text-xs font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {u.createdAt ? (() => {
-                            try {
-                              const date = u.createdAt.seconds ? new Date(u.createdAt.seconds * 1000) : new Date(u.createdAt);
-                              return date.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
-                            } catch {
-                              return 'Format Error';
-                            }
-                          })() : 'Pending'}
-                        </td>
-                        <td className="px-8 py-5">
-                          <button
-                            disabled={toggling === u.id}
-                            onClick={() => handleToggleStatus(u.id, u.isActive !== false)}
-                            className={`inline-flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                              u.isActive !== false
-                                ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-                                : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
-                            }`}
-                          >
-                            <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500' : 'bg-red-500'}`} />
-                            {u.isActive !== false ? 'Active' : 'Disabled'}
-                            {toggling === u.id && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
-                          </button>
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <button
-                            onClick={() => {
-                              const col = u.department === 'rehab' || u._origin === 'rehab' || !u.department
-                                ? 'rehab'
-                                : u.department;
-                              router.push(`/hq/dashboard/manager/staff/${u.id}?collection=${col}`);
-                            }}
-                            className="px-6 py-2.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
-                          >
-                            Edit
-                          </button>
+                  </thead>
+                  <tbody className={`divide-y ${darkMode ? 'divide-gray-800/50' : 'divide-gray-50'}`}>
+                    {users.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-12 text-center text-gray-400 font-bold uppercase tracking-widest text-[11px]">
+                          No account records initialized
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      users.map(u => (
+                        <tr key={u.id} className="group hover:bg-blue-500/5 transition-all">
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                                u.role === 'admin' ? 'bg-blue-500 text-white' : 
+                                u.role === 'staff' ? 'bg-indigo-500 text-white' : 'bg-emerald-500 text-white'
+                              }`}>
+                                {u.displayName?.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-black truncate">{u.displayName}</p>
+                                <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5 capitalize">
+                            <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                              u.role === 'manager' || u.role === 'admin' 
+                                ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' 
+                                : 'bg-green-500/10 text-green-500 border-green-500/20'
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className={`px-8 py-5 text-xs font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {u.createdAt ? (() => {
+                              try {
+                                const date = u.createdAt.seconds ? new Date(u.createdAt.seconds * 1000) : new Date(u.createdAt);
+                                return date.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
+                              } catch {
+                                return 'Format Error';
+                              }
+                            })() : 'Pending'}
+                          </td>
+                          <td className="px-8 py-5">
+                            <button
+                              disabled={toggling === u.id}
+                              onClick={() => handleToggleStatus(u.id, u.isActive !== false)}
+                              className={`inline-flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                u.isActive !== false
+                                  ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+                                  : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                              }`}
+                            >
+                              <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500' : 'bg-red-500'}`} />
+                              {u.isActive !== false ? 'Active' : 'Disabled'}
+                              {toggling === u.id && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
+                            </button>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <button
+                              onClick={() => {
+                                const col = u.department === 'rehab' || u._origin === 'rehab' || !u.department
+                                  ? 'rehab'
+                                  : u.department;
+                                router.push(`/hq/dashboard/manager/staff/${u.id}?collection=${col}`);
+                              }}
+                              className="px-6 py-2.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
+                            >
+                              Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
