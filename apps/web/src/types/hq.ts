@@ -108,3 +108,55 @@ export interface HqTransaction {
   date: string;
   createdAt: string;
 }
+
+// ─── Salary ───────────────────────────────────────────────────────────────────
+
+/** Per-day salary deduction amount (PKR) for each day absent without approval. */
+export const ABSENTEE_DEDUCTION_PER_DAY = 500;
+
+/** A generated monthly salary slip for a staff member. */
+export interface SalarySlip {
+  id: string;
+  staffId: string;
+  employeeId: string;
+  staffName: string;
+  department: string;
+  /** Format: 'YYYY-MM' */
+  month: string;
+  /** Basic salary amount (PKR) */
+  basicSalary: number;
+  /** Number of working days in the month */
+  workingDays: number;
+  /** Number of days staff was present */
+  presentDays: number;
+  /** Number of absent days (unauthorised) */
+  absentDays: number;
+  /** Number of approved leave days */
+  leaveDays: number;
+  /** Total deduction = absentDays * ABSENTEE_DEDUCTION_PER_DAY */
+  absentDeduction: number;
+  /** Any additional bonuses or overtime */
+  bonus: number;
+  /** Any other approved deductions */
+  otherDeductions: number;
+  /** Net payable = basicSalary – absentDeduction – otherDeductions + bonus */
+  netSalary: number;
+  /** 'draft' until approved by manager/superadmin */
+  status: 'draft' | 'approved' | 'paid';
+  approvedBy?: string;
+  approvedAt?: string;
+  paidAt?: string;
+  note?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+/** Summary view used in staff list tables */
+export interface SalarySlipSummary {
+  id: string;
+  staffId: string;
+  staffName: string;
+  month: string;
+  netSalary: number;
+  status: SalarySlip['status'];
+}

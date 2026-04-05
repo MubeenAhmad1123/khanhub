@@ -29,7 +29,9 @@ export async function createRehabUserServer(
   password: string,
   role: string,
   displayName: string,
-  patientId?: string
+  patientId?: string,
+  emailDomain: string = DOMAIN,
+  userCollection: string = 'rehab_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -38,7 +40,7 @@ export async function createRehabUserServer(
     const app = getAdminApp();
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
-    const email = `${customId.toLowerCase()}${DOMAIN}`;
+    const email = `${customId.toLowerCase()}${emailDomain}`;
 
     try {
       const existingUser = await adminAuth.getUserByEmail(email);
@@ -50,7 +52,7 @@ export async function createRehabUserServer(
     }
 
     const userRecord = await adminAuth.createUser({ email, password, displayName });
-    await getFirestore(app).collection('rehab_users').doc(userRecord.uid).set({
+    await getFirestore(app).collection(userCollection).doc(userRecord.uid).set({
       customId,
       role,
       displayName,
@@ -173,16 +175,9 @@ export async function createStaffMemberServer(
   customId: string,
   password: string,
   displayName: string,
-  staffRole: string,
-  phone?: string,
-  salary?: number,
-  gender?: string,
-  duties?: Array<{ id: string; description: string }>,
-  dutyStartTime?: string,
-  dutyEndTime?: string,
-  photoUrl?: string,
-  department?: string
-): Promise<{ success: boolean; uid?: string; staffDocId?: string; error?: string }> {
+  emailDomain: string = '@rehab.khanhub',
+  userCollection: string = 'rehab_users'
+): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
 
@@ -190,19 +185,19 @@ export async function createStaffMemberServer(
     const app = getAdminApp();
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
-    const email = `${customId.toLowerCase()}@rehab.khanhub`;
+    const email = `${customId.toLowerCase()}${emailDomain}`;
 
     try {
       const existingUser = await adminAuth.getUserByEmail(email);
       await adminAuth.deleteUser(existingUser.uid);
-      await adminDb.collection('rehab_users').doc(existingUser.uid).delete();
+      await adminDb.collection(userCollection).doc(existingUser.uid).delete();
     } catch {
       // fine
     }
 
     const userRecord = await adminAuth.createUser({ email, password, displayName });
 
-    await adminDb.collection('rehab_users').doc(userRecord.uid).set({
+    await adminDb.collection(userCollection).doc(userRecord.uid).set({
       customId,
       role: 'staff',
       displayName,
@@ -210,32 +205,16 @@ export async function createStaffMemberServer(
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    const staffRef = adminDb.collection('rehab_staff').doc();
-    await staffRef.set({
-      name: displayName,
-      gender: gender || 'male',
-      role: staffRole,
-      duties: duties || [],
-      phone: phone || null,
-      salary: salary || 0,
-      joiningDate: FieldValue.serverTimestamp(),
-      isActive: true,
-      photoUrl: photoUrl || null,
-      loginUserId: userRecord.uid,
-      dutyStartTime: dutyStartTime || '08:00',
-      dutyEndTime: dutyEndTime || '17:00',
-      department: department || 'rehab',
-    });
     // Fire-and-forget audit log
     try {
       await adminDb.collection('rehab_audit').add({
-        action: 'staff_created',
+        action: 'login_initialization',
         performedBy: 'server_action',
-        details: { customId, displayName, staffRole },
+        details: { customId, displayName },
         createdAt: new Date(),
       });
     } catch {}
-    return { success: true, uid: userRecord.uid, staffDocId: staffRef.id };
+    return { success: true, uid: userRecord.uid };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

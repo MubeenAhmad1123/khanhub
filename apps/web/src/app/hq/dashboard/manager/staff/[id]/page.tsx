@@ -4,21 +4,22 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { 
-  doc, getDoc, collection, getDocs, query, where, 
-  updateDoc, addDoc, serverTimestamp, setDoc, limit 
+  doc, getDoc, collection, getDocs, query, where, orderBy,
+  updateDoc, addDoc, serverTimestamp, limit 
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import { 
-  Target, Camera, Save, Plus, Trash2, ChevronRight,
-  User as UserIcon, Briefcase, Hash, Info, CreditCard,
+  Target, Camera,
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
-  Loader2
+  Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { recalculateGrowthPoints } from '@/lib/rehab/growthPoints';
 import { Timestamp } from 'firebase/firestore';
+import ScoreCard from '@/components/rehab/ScoreCard';
+import { SCORE_CATEGORIES, MONTHLY_REWARDS, WEEKLY_RULE } from '@/data/scoreRules';
 
 interface Staff {
   id?: string;
@@ -62,7 +63,7 @@ export default function StaffProfilePage() {
   const { session, loading: sessionLoading } = useHqSession();
   
   const [staff, setStaff] = useState<Staff | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score'>('overview');
   const [loading, setLoading] = useState(true);
   const [isDark, setIsDark] = useState(false);
 
@@ -76,6 +77,10 @@ export default function StaffProfilePage() {
   const [dutyLogs, setDutyLogs] = useState<any[]>([]);
   const [dressLogs, setDressLogs] = useState<any[]>([]);
   const [growthPoints, setGrowthPoints] = useState<any>(null);
+  const [growthHistory, setGrowthHistory] = useState<any[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [loadingScore, setLoadingScore] = useState(false);
+  const [openRule, setOpenRule] = useState<string | null>(null);
 
   // Duty Marking State
   const [markingDuty, setMarkingDuty] = useState(false);
@@ -120,6 +125,13 @@ export default function StaffProfilePage() {
       setDutyLogs(sortByDate(dutySnap.docs.map(d => ({ id: d.id, ...d.data() }))));
       setDressLogs(sortByDate(dressSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
       if (!pointsSnap.empty) setGrowthPoints(pointsSnap.docs[0].data());
+
+      // Fetch growth history (all months)
+      const prefix2 = colPrefix === 'hq' ? 'hq' : 'rehab';
+      const historySnap = await getDocs(
+        query(collection(db, `${prefix2}_growth_points`), where('staffId', '==', staffId), orderBy('month', 'desc'))
+      );
+      setGrowthHistory(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
     } catch (err) {
       console.error(err);
@@ -269,7 +281,7 @@ export default function StaffProfilePage() {
              <div className={`h-6 w-px ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`} />
              <div className="text-right hidden sm:block">
                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Growth Points</p>
-               <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{growthPoints?.totalPoints || 0}</p>
+               <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{growthPoints?.total || 0}</p>
              </div>
           </div>
         </div>
@@ -393,6 +405,21 @@ export default function StaffProfilePage() {
                   </button>
                </div>
             </div>
+
+            {/* Score Card Module */}
+            <div className="mt-6">
+              <ScoreCard 
+                staffName={staff?.name || 'Staff'} 
+                month={growthPoints?.month || new Date().toISOString().slice(0, 7)}
+                scores={growthPoints ? {
+                  attendance: (growthPoints.attendance || 0) + (growthPoints.punctuality || 0),
+                  uniform: growthPoints.dressCode || 0,
+                  working: growthPoints.duties || 0,
+                  growthPoint: (growthPoints.contributions || 0) + (growthPoints.extra || 0)
+                } : { attendance: 0, uniform: 0, working: 0, growthPoint: 0 }}
+                darkMode={isDark}
+              />
+            </div>
           </div>
 
           {/* Main Content Areas */}
@@ -407,6 +434,7 @@ export default function StaffProfilePage() {
                  { id: 'attendance', label: 'Attendance', icon: <Calendar size={14}/> },
                  { id: 'dress', label: 'Dress Logs', icon: <Shield size={14}/> },
                  { id: 'salary', label: 'Salary/Files', icon: <DollarSign size={14}/> },
+                 { id: 'score', label: 'Score', icon: <TrendingUp size={14}/> },
                ].map(tab => (
                  <button
                    key={tab.id}
@@ -505,6 +533,246 @@ export default function StaffProfilePage() {
                 isDark ? 'bg-zinc-900/50 border-zinc-800 text-zinc-600' : 'bg-white border-gray-100 text-gray-400'
               }`}>
                 <p className="font-bold uppercase tracking-widest text-[10px]">Salary records & files coming soon</p>
+              </div>
+            )}
+
+            {/* ── SCORE TAB ────────────────────────────────────────── */}
+            {activeTab === 'score' && (
+              <div className="space-y-6">
+
+                {/* Month Selector + Recalculate */}
+                <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-[2.5rem] border ${
+                  isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                }`}>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Score Month</p>
+                    <input
+                      type="month"
+                      value={selectedMonth}
+                      onChange={async e => {
+                        setSelectedMonth(e.target.value);
+                        setLoadingScore(true);
+                        const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
+                        const snap = await getDocs(
+                          query(
+                            collection(db, `${prefix}_growth_points`),
+                            where('staffId', '==', staffId),
+                            where('month', '==', e.target.value),
+                            limit(1)
+                          )
+                        );
+                        setGrowthPoints(snap.empty ? null : snap.docs[0].data());
+                        setLoadingScore(false);
+                      }}
+                      className={`h-11 px-4 rounded-2xl text-sm font-bold outline-none border ${
+                        isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                      }`}
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      toast.loading('Recalculating...', { id: 'score-recalc' });
+                      await recalculateGrowthPoints(staffId, selectedMonth);
+                      // Refresh
+                      const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
+                      const snap = await getDocs(
+                        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', staffId), where('month', '==', selectedMonth), limit(1))
+                      );
+                      setGrowthPoints(snap.empty ? null : snap.docs[0].data());
+                      const historySnap = await getDocs(
+                        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', staffId), orderBy('month', 'desc'))
+                      );
+                      setGrowthHistory(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
+                      toast.success('Score updated', { id: 'score-recalc' });
+                    }}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                      isDark ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500 hover:text-white' : 'bg-gray-900 text-white hover:bg-black'
+                    }`}
+                  >
+                    <RefreshCw size={14} /> Recalculate
+                  </button>
+                </div>
+
+                {/* ScoreCard for selected month */}
+                {loadingScore ? (
+                  <div className={`rounded-[2.5rem] p-12 border flex items-center justify-center ${
+                    isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                  }`}>
+                    <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
+                  </div>
+                ) : (
+                  <ScoreCard
+                    staffName={staff?.name || 'Staff'}
+                    month={selectedMonth}
+                    scores={growthPoints ? {
+                      attendance: (growthPoints.attendance || 0) + (growthPoints.punctuality || 0),
+                      uniform: growthPoints.dressCode || 0,
+                      working: growthPoints.duties || 0,
+                      growthPoint: (growthPoints.contributions || 0) + (growthPoints.extra || 0)
+                    } : { attendance: 0, uniform: 0, working: 0, growthPoint: 0 }}
+                    darkMode={isDark}
+                  />
+                )}
+
+                {/* Score History Table */}
+                <div className={`rounded-[2.5rem] border overflow-hidden ${
+                  isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                }`}>
+                  <div className={`px-8 py-5 border-b flex items-center justify-between ${
+                    isDark ? 'border-zinc-800' : 'border-gray-50'
+                  }`}>
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Score History</h3>
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                      isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-400' : 'bg-gray-50 border-gray-200 text-gray-400'
+                    }`}>{growthHistory.length} Months</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className={`text-[9px] font-black uppercase tracking-widest ${
+                          isDark ? 'text-zinc-600 border-zinc-800' : 'text-gray-400 border-gray-50'
+                        }`}>
+                          <th className="px-8 py-4">Month</th>
+                          <th className="px-8 py-4">Attend.</th>
+                          <th className="px-8 py-4">Uniform</th>
+                          <th className="px-8 py-4">Working</th>
+                          <th className="px-8 py-4">Growth</th>
+                          <th className="px-8 py-4">Total</th>
+                          <th className="px-8 py-4">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${ isDark ? 'divide-zinc-800/50' : 'divide-gray-50' }`}>
+                        {growthHistory.length === 0 ? (
+                          <tr><td colSpan={7} className="px-8 py-10 text-center text-[10px] font-black uppercase tracking-widest text-gray-400">No score history found</td></tr>
+                        ) : growthHistory.map(h => {
+                          const total = (h.attendance||0)+(h.punctuality||0)+(h.dressCode||0)+(h.duties||0)+(h.contributions||0)+(h.extra||0);
+                          const reward = MONTHLY_REWARDS.find(r => total >= r.minScore);
+                          return (
+                            <tr key={h.id} className={`group transition-all ${ h.month === selectedMonth ? (isDark ? 'bg-teal-500/5' : 'bg-teal-50') : '' }`}>
+                              <td className="px-8 py-4">
+                                <button
+                                  onClick={() => setSelectedMonth(h.month)}
+                                  className={`text-xs font-black ${ isDark ? 'text-white' : 'text-gray-900' } hover:text-teal-500 transition-colors`}
+                                >
+                                  {new Date(`${h.month}-01`).toLocaleDateString('en-US',{month:'short',year:'numeric'})}
+                                </button>
+                              </td>
+                              <td className={`px-8 py-4 text-xs font-bold ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{(h.attendance||0)+(h.punctuality||0)}</td>
+                              <td className={`px-8 py-4 text-xs font-bold ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{h.dressCode||0}</td>
+                              <td className={`px-8 py-4 text-xs font-bold ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{h.duties||0}</td>
+                              <td className={`px-8 py-4 text-xs font-bold ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{(h.contributions||0)+(h.extra||0)}</td>
+                              <td className={`px-8 py-4 text-sm font-black ${ isDark ? 'text-white' : 'text-gray-900' }`}>{total}</td>
+                              <td className="px-8 py-4">
+                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                  !reward ? 'bg-rose-500/10 text-rose-500' :
+                                  reward.color === 'green' ? 'bg-teal-500/10 text-teal-500' :
+                                  reward.color === 'blue'  ? 'bg-blue-500/10 text-blue-500' :
+                                  reward.color === 'amber' ? 'bg-amber-500/10 text-amber-500' :
+                                  'bg-rose-500/10 text-rose-500'
+                                }`}>
+                                  {reward?.badge} {reward?.label || 'Below Min'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Scoring Rules Accordion */}
+                <div className={`rounded-[2.5rem] border overflow-hidden ${
+                  isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                }`}>
+                  <div className={`px-8 py-5 border-b ${ isDark ? 'border-zinc-800' : 'border-gray-50' }`}>
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Scoring Rules</h3>
+                  </div>
+                  <div className={`divide-y ${ isDark ? 'divide-zinc-800' : 'divide-gray-50' }`}>
+                    {(Object.entries(SCORE_CATEGORIES) as [string, any][]).map(([key, cat]) => (
+                      <div key={key}>
+                        <button
+                          onClick={() => setOpenRule(openRule === key ? null : key)}
+                          className={`w-full flex items-center justify-between px-8 py-5 text-left transition-colors ${
+                            isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black ${
+                              cat.color === 'blue'   ? 'bg-blue-500/10 text-blue-500' :
+                              cat.color === 'purple' ? 'bg-purple-500/10 text-purple-500' :
+                              cat.color === 'teal'   ? 'bg-teal-500/10 text-teal-500' :
+                              'bg-amber-500/10 text-amber-500'
+                            }`}>{cat.maxMonthly}</div>
+                            <div>
+                              <p className={`text-xs font-black ${ isDark ? 'text-white' : 'text-gray-900' }`}>{cat.label}</p>
+                              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Max {cat.maxMonthly} pts/month · {cat.maxDaily} pt/day</p>
+                            </div>
+                          </div>
+                          {openRule === key
+                            ? <ChevronUp size={16} className="text-gray-400" />
+                            : <ChevronDown size={16} className="text-gray-400" />
+                          }
+                        </button>
+                        {openRule === key && (
+                          <div className={`px-8 pb-6 ${ isDark ? 'bg-zinc-800/20' : 'bg-gray-50/60' }`}>
+                            <p className={`text-sm font-medium leading-relaxed ${ isDark ? 'text-zinc-400' : 'text-gray-600' }`}>{cat.rule}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {/* Reward tiers */}
+                    <div>
+                      <button
+                        onClick={() => setOpenRule(openRule === 'rewards' ? null : 'rewards')}
+                        className={`w-full flex items-center justify-between px-8 py-5 text-left transition-colors ${
+                          isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-xs">🏆</div>
+                          <div>
+                            <p className={`text-xs font-black ${ isDark ? 'text-white' : 'text-gray-900' }`}>Monthly Reward Tiers</p>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">4 levels · Max score 120</p>
+                          </div>
+                        </div>
+                        {openRule === 'rewards'
+                          ? <ChevronUp size={16} className="text-gray-400" />
+                          : <ChevronDown size={16} className="text-gray-400" />
+                        }
+                      </button>
+                      {openRule === 'rewards' && (
+                        <div className={`px-8 pb-6 space-y-3 ${ isDark ? 'bg-zinc-800/20' : 'bg-gray-50/60' }`}>
+                          {MONTHLY_REWARDS.map(r => (
+                            <div key={r.label} className={`flex items-center gap-4 p-4 rounded-2xl border ${
+                              isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-white border-gray-100'
+                            }`}>
+                              <span className="text-xl">{r.badge}</span>
+                              <div className="flex-1">
+                                <p className={`text-xs font-black ${
+                                  r.color === 'green' ? 'text-teal-500' :
+                                  r.color === 'blue'  ? 'text-blue-500' :
+                                  r.color === 'amber' ? 'text-amber-500' : 'text-rose-500'
+                                }`}>{r.label} — {r.minScore}+ pts</p>
+                                <p className={`text-[10px] font-bold mt-0.5 ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{r.reward}</p>
+                              </div>
+                            </div>
+                          ))}
+                          <div className={`flex items-center gap-4 p-4 rounded-2xl border border-indigo-500/20 ${
+                            isDark ? 'bg-indigo-500/10' : 'bg-indigo-50'
+                          }`}>
+                            <span className="text-xl">🎁</span>
+                            <div>
+                              <p className="text-xs font-black text-indigo-500">Weekly Prize Draw — {WEEKLY_RULE.minScore}+ pts/week</p>
+                              <p className={`text-[10px] font-bold mt-0.5 ${ isDark ? 'text-indigo-300' : 'text-indigo-600' }`}>{WEEKLY_RULE.reward}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
