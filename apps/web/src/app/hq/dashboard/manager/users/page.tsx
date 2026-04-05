@@ -1477,25 +1477,15 @@ export default function ManagerUsersPage() {
                             {toggling === u.id && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
                           </button>
                         </td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-8 py-5 text-right">
                           <button
                             onClick={() => {
-                              setFormData({
-                                ...formData,
-                                customId: u.customId || u.id,
-                                userId: u.customId || '',
-                                employeeId: u.employeeId || '',
-                                displayName: u.displayName || u.name || '',
-                                department: u.department || formData.department,
-                                firstName: u.firstName || (u.displayName || u.name || '').split(' ')[0] || '',
-                                lastName: u.lastName || (u.displayName || u.name || '').split(' ').slice(1).join(' ') || '',
-                                phone: u.phone || '',
-                                email: u.email || u.loginEmail || '',
-                              });
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                              toast('Editing ' + (u.displayName || u.name || u.customId), { icon: '✏️' });
+                              const col = u.department === 'rehab' || u._origin === 'rehab' || !u.department
+                                ? 'rehab'
+                                : u.department;
+                              router.push(`/hq/dashboard/manager/staff/${u.id}?collection=${col}`);
                             }}
-                            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 hover:text-indigo-400 hover:border-indigo-500/30 transition-all dark:bg-white/5 dark:border-white/10 light:bg-gray-100 light:border-gray-200"
+                            className="px-6 py-2.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
                           >
                             Edit
                           </button>

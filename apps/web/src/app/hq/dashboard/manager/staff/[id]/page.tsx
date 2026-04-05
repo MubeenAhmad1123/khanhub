@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { 
   doc, getDoc, collection, getDocs, query, where, orderBy,
-  updateDoc, addDoc, serverTimestamp, limit 
+  updateDoc, addDoc, serverTimestamp, setDoc, limit 
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -13,7 +13,8 @@ import Link from 'next/link';
 import { 
   Target, Camera,
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
-  Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw
+  Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw,
+  User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { recalculateGrowthPoints } from '@/lib/rehab/growthPoints';
@@ -36,6 +37,8 @@ interface Staff {
   dutyStartTime?: string;
   dutyEndTime?: string;
   role?: string;
+  email?: string;
+  userId?: string;
 }
 
 interface AttendanceLog {
@@ -63,9 +66,22 @@ export default function StaffProfilePage() {
   const { session, loading: sessionLoading } = useHqSession();
   
   const [staff, setStaff] = useState<Staff | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit'>('overview');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  
+  const [editForm, setEditForm] = useState({
+    name: '',
+    designation: '',
+    monthlySalary: 0,
+    dutyStartTime: '',
+    dutyEndTime: '',
+    isActive: true,
+    phone: '',
+    employeeId: '',
+    userId: ''
+  });
 
   useEffect(() => {
     const saved = localStorage.getItem('hq_dark_mode') === 'true';
@@ -99,11 +115,22 @@ export default function StaffProfilePage() {
         return;
       }
       
-      const sData = { id: staffDoc.id, ...staffDoc.data() };
+      const sData = { id: staffDoc.id, ...staffDoc.data() } as Staff;
       setStaff(sData);
+      setEditForm({
+        name: sData.name || '',
+        designation: sData.designation || '',
+        monthlySalary: Number(sData.monthlySalary || 0),
+        dutyStartTime: sData.dutyStartTime || '',
+        dutyEndTime: sData.dutyEndTime || '',
+        isActive: sData.isActive !== false,
+        phone: sData.phone || '',
+        employeeId: sData.employeeId || '',
+        userId: sData.userId || ''
+      });
 
       // Fetch Metrics
-      const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
+      const prefix = colPrefix;
       const [attSnap, dutySnap, dressSnap, pointsSnap] = await Promise.all([
         getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', staffId))),
         getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', staffId))),
@@ -127,7 +154,7 @@ export default function StaffProfilePage() {
       if (!pointsSnap.empty) setGrowthPoints(pointsSnap.docs[0].data());
 
       // Fetch growth history (all months)
-      const prefix2 = colPrefix === 'hq' ? 'hq' : 'rehab';
+      const prefix2 = colPrefix;
       const historySnap = await getDocs(
         query(collection(db, `${prefix2}_growth_points`), where('staffId', '==', staffId), orderBy('month', 'desc'))
       );
@@ -175,11 +202,49 @@ export default function StaffProfilePage() {
     }
   };
 
+  const handleMarkAttendance = async (dateStr: string, status: 'present' | 'absent' | 'leave') => {
+    try {
+      const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
+      const attId = `${staffId}_${dateStr}`;
+      await setDoc(doc(db, `${prefix}_attendance`, attId), {
+        staffId,
+        date: dateStr,
+        status,
+        markedAt: serverTimestamp(),
+        markedBy: session?.uid,
+        arrivalTime: status === 'present' ? '09:00' : null,
+        departureTime: status === 'present' ? '17:00' : null
+      });
+      toast.success(`Marked as ${status}`);
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to mark attendance");
+    }
+  };
+
+  const handleMarkDress = async (dateStr: string, isCompliant: boolean) => {
+    try {
+      const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
+      const logId = `${staffId}_${dateStr}`;
+      await setDoc(doc(db, `${prefix}_dress_logs`, logId), {
+        staffId,
+        date: dateStr,
+        isCompliant,
+        markedAt: serverTimestamp(),
+        markedBy: session?.uid
+      });
+      toast.success("Dress code logged");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to log dress code");
+    }
+  };
+
   const handleRecalculate = async () => {
     try {
       toast.loading("Recalculating points...", { id: 'recalc' });
-      const month = new Date().toISOString().slice(0, 7); // YYYY-MM
-      await recalculateGrowthPoints(staffId, month);
+      const month = selectedMonth || new Date().toISOString().slice(0, 7);
+      await recalculateGrowthPoints(staffId, month, colPrefix || 'rehab');
       toast.success("Points updated", { id: 'recalc' });
       fetchData();
     } catch (error) {
@@ -193,7 +258,7 @@ export default function StaffProfilePage() {
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', 'khanhub_profiles'); // Ensure this exists in Cloudinary
+    formData.append('upload_preset', 'khanhub_profiles'); 
 
     try {
       toast.loading("Uploading photo...", { id: 'upload' });
@@ -215,6 +280,23 @@ export default function StaffProfilePage() {
     }
   };
 
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      const collectionName = colPrefix === 'hq' ? 'hq_staff' : 'rehab_staff';
+      await updateDoc(doc(db, collectionName, staffId), {
+        ...editForm,
+        updatedAt: serverTimestamp()
+      });
+      toast.success("Profile updated successfully");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading || sessionLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Loader2 className="w-8 h-8 animate-spin text-gray-800" />
@@ -223,51 +305,12 @@ export default function StaffProfilePage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 pb-20 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
-      <style>{`
-        .checkbox-wrapper-39 *,
-        .checkbox-wrapper-39 *::before,
-        .checkbox-wrapper-39 *::after {
-          box-sizing: border-box;
-        }
-
-        .checkbox-wrapper-39 label {
-          display: block;
-          width: 24px;
-          height: 24px;
-          cursor: pointer;
-        }
-
-        .checkbox-wrapper-39 input {
-          visibility: hidden;
-          display: none;
-        }
-
-        .checkbox-wrapper-39 input:checked ~ .checkbox {
-         transform: rotate(45deg);
-         width: 10px;
-         height: 18px;
-         margin-left: 8px;
-         border-color: #24c78e;
-         border-top-color: transparent;
-         border-left-color: transparent;
-         border-radius: 0;
-        }
-
-        .checkbox-wrapper-39 .checkbox {
-          display: block;
-          width: inherit;
-          height: inherit;
-          border: 2px solid #434343;
-          border-radius: 4px;
-          transition: all 0.375s;
-        }
-      `}</style>
-      {/* Premium Header */}
+      {/* Dynamic Header */}
       <div className={`border-b sticky top-0 z-20 shadow-sm transition-colors ${isDark ? 'bg-zinc-900/90 backdrop-blur-xl border-zinc-800' : 'bg-white border-gray-100'}`}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/hq/dashboard/manager/staff" className={`flex items-center gap-2 group transition-colors ${isDark ? 'text-zinc-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
+          <Link href="/hq/dashboard/manager/users" className={`flex items-center gap-2 group transition-colors ${isDark ? 'text-zinc-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
             <div className={`p-2 rounded-xl ${isDark ? 'group-hover:bg-zinc-800' : 'group-hover:bg-gray-100'}`}><ArrowLeft size={18} /></div>
-            <span className="text-xs font-black uppercase tracking-widest leading-none">Back</span>
+            <span className="text-xs font-black uppercase tracking-widest leading-none">Management</span>
           </Link>
 
           <div className="flex items-center gap-4">
@@ -290,14 +333,14 @@ export default function StaffProfilePage() {
       <div className="max-w-6xl mx-auto px-6 mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Sidebar / Identity */}
+          {/* Sidebar */}
           <div className="lg:col-span-4 space-y-6">
             <div className={`rounded-[2.5rem] p-8 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-colors ${
               isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
             }`}>
-               <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-zinc-900 to-black" />
+               <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-600 to-blue-700 opacity-20" />
                
-               <div className="relative mt-8 mb-6 group">
+               <div className="relative mt-4 mb-6 group">
                  {staff?.photoUrl ? (
                    <img src={staff.photoUrl} className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-transparent shadow-2xl" />
                  ) : (
@@ -345,84 +388,21 @@ export default function StaffProfilePage() {
                </div>
             </div>
 
-            {/* Quick Actions / Duty Marking */}
-            <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
-              isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-            }`}>
-               <h3 className={`text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                 <Award className="text-teal-500" /> Mark Today's Duty
-               </h3>
-               <div className="space-y-4">
-                  <div>
-                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Duty Type</label>
-                    <select 
-                      className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${
-                        isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
-                      }`}
-                      value={dutyForm.type}
-                      onChange={e => setDutyForm({...dutyForm, type: e.target.value})}
-                    >
-                      <option value="morning_shift">Morning Shift</option>
-                      <option value="evening_shift">Evening Shift</option>
-                      <option value="night_shift">Night Shift</option>
-                      <option value="special_duty">Special Duty</option>
-                    </select>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setDutyForm({...dutyForm, status: 'completed'})}
-                      className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                        dutyForm.status === 'completed' 
-                          ? 'bg-teal-500 border-teal-500 text-white shadow-lg' 
-                          : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
-                      }`}
-                    >Completed</button>
-                    <button 
-                      onClick={() => setDutyForm({...dutyForm, status: 'not_completed'})}
-                      className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                        dutyForm.status === 'not_completed' 
-                          ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
-                          : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
-                      }`}
-                    >Penalty</button>
-                  </div>
-                  <textarea 
-                    placeholder="Duty comments (e.g. well handled patient x)"
-                    className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none min-h-[80px] ${
-                      isDark ? 'bg-zinc-800 text-white placeholder:text-zinc-600' : 'bg-gray-50 text-gray-900'
-                    }`}
-                    value={dutyForm.comment}
-                    onChange={e => setDutyForm({...dutyForm, comment: e.target.value})}
-                  />
-                  <button 
-                    onClick={handleMarkDuty}
-                    disabled={markingDuty}
-                    className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl disabled:opacity-50 transition-all ${
-                      isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-gray-900 text-white hover:bg-black'
-                    }`}
-                  >
-                    {markingDuty ? 'Processing...' : 'Record Duty Status'}
-                  </button>
-               </div>
-            </div>
-
-            {/* Score Card Module */}
-            <div className="mt-6">
-              <ScoreCard 
-                staffName={staff?.name || 'Staff'} 
-                month={growthPoints?.month || new Date().toISOString().slice(0, 7)}
-                scores={growthPoints ? {
-                  attendance: (growthPoints.attendance || 0) + (growthPoints.punctuality || 0),
-                  uniform: growthPoints.dressCode || 0,
-                  working: growthPoints.duties || 0,
-                  growthPoint: (growthPoints.contributions || 0) + (growthPoints.extra || 0)
-                } : { attendance: 0, uniform: 0, working: 0, growthPoint: 0 }}
-                darkMode={isDark}
-              />
-            </div>
+            {/* Score Card */}
+            <ScoreCard 
+              staffName={staff?.name || 'Staff'} 
+              month={growthPoints?.month || new Date().toISOString().slice(0, 7)}
+              scores={growthPoints ? {
+                attendance: (growthPoints.attendance || 0) + (growthPoints.punctuality || 0),
+                uniform: growthPoints.dressCode || 0,
+                working: growthPoints.duties || 0,
+                growthPoint: (growthPoints.contributions || 0) + (growthPoints.extra || 0)
+              } : { attendance: 0, uniform: 0, working: 0, growthPoint: 0 }}
+              darkMode={isDark}
+            />
           </div>
 
-          {/* Main Content Areas */}
+          {/* Main Content */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             
             {/* Tabs */}
@@ -433,16 +413,16 @@ export default function StaffProfilePage() {
                  { id: 'overview', label: 'History', icon: <Clock size={14}/> },
                  { id: 'attendance', label: 'Attendance', icon: <Calendar size={14}/> },
                  { id: 'dress', label: 'Dress Logs', icon: <Shield size={14}/> },
-                 { id: 'salary', label: 'Salary/Files', icon: <DollarSign size={14}/> },
-                 { id: 'score', label: 'Score', icon: <TrendingUp size={14}/> },
+                 { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={14}/> },
+                 { id: 'edit', label: 'Edit Profile', icon: <User size={14}/> },
                ].map(tab => (
                  <button
                    key={tab.id}
                    onClick={() => setActiveTab(tab.id as any)}
                    className={`flex items-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                      activeTab === tab.id 
-                       ? (isDark ? 'bg-white text-black' : 'bg-gray-900 text-white shadow-lg') 
-                       : 'text-gray-500 hover:text-teal-500'
+                       ? (isDark ? 'bg-white text-black shadow-xl shadow-white/5' : 'bg-gray-900 text-white shadow-lg shadow-gray-900/20') 
+                       : 'text-gray-500 hover:text-indigo-500'
                    }`}
                  >
                    {tab.icon} {tab.label}
@@ -450,13 +430,78 @@ export default function StaffProfilePage() {
                ))}
             </div>
 
-            {/* Tab Panels */}
+            {/* Panels */}
             {activeTab === 'overview' && (
                <div className="space-y-4">
+                  {/* Mark Duty Module */}
+                  <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
+                    isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                  }`}>
+                     <h3 className={`text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                       <Award className="text-indigo-500" /> Assess Daily Duty
+                     </h3>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-4">
+                           <div>
+                              <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Duty Type</label>
+                              <select 
+                                className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${
+                                  isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
+                                }`}
+                                value={dutyForm.type}
+                                onChange={e => setDutyForm({...dutyForm, type: e.target.value})}
+                              >
+                                <option value="morning_shift">Morning Shift</option>
+                                <option value="evening_shift">Evening Shift</option>
+                                <option value="night_shift">Night Shift</option>
+                                <option value="special_duty">Special Duty</option>
+                              </select>
+                           </div>
+                           <div className="flex gap-2">
+                              <button 
+                                onClick={() => setDutyForm({...dutyForm, status: 'completed'})}
+                                className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                                  dutyForm.status === 'completed' 
+                                    ? 'bg-teal-500 border-teal-500 text-white shadow-lg' 
+                                    : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                                }`}
+                              >Completed</button>
+                              <button 
+                                onClick={() => setDutyForm({...dutyForm, status: 'not_completed'})}
+                                className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                                  dutyForm.status === 'not_completed' 
+                                    ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
+                                    : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                                }`}
+                              >Penalty</button>
+                           </div>
+                        </div>
+                        <div className="space-y-4">
+                           <textarea 
+                              placeholder="Operational performance notes..."
+                              className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[100px] ${
+                                isDark ? 'bg-zinc-800 text-white placeholder:text-zinc-600' : 'bg-gray-50 text-gray-900'
+                              }`}
+                              value={dutyForm.comment}
+                              onChange={e => setDutyForm({...dutyForm, comment: e.target.value})}
+                           />
+                        </div>
+                     </div>
+                     <button 
+                        onClick={handleMarkDuty}
+                        disabled={markingDuty}
+                        className={`w-full py-4 mt-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl disabled:opacity-50 transition-all ${
+                          isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-gray-900 text-white hover:bg-black'
+                        }`}
+                     >
+                        {markingDuty ? 'Recording...' : 'Finalize Assessment'}
+                     </button>
+                  </div>
+
                   {dutyLogs.length === 0 ? <div className="p-20 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
                     dutyLogs.map(log => (
                       <div key={log.id} className={`p-6 rounded-[2.5rem] shadow-sm border flex items-start gap-4 transition-all hover:scale-[1.01] ${
-                        isDark ? 'bg-zinc-900/50 border-zinc-800 hover:border-teal-500/50' : 'bg-white border-gray-100 hover:border-teal-200'
+                        isDark ? 'bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200'
                       }`}>
                         <div className={`p-3 rounded-2xl ${log.status === 'completed' ? 'bg-teal-500/10 text-teal-500' : 'bg-rose-500/10 text-rose-500'}`}>
                            <Award size={20} />
@@ -482,297 +527,243 @@ export default function StaffProfilePage() {
             )}
 
             {activeTab === 'attendance' && (
-              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
+              <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${
                 isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
               }`}>
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {attendance.map((att: AttendanceLog) => (
-                      <div key={att.id} className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${
-                        isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black uppercase tracking-tight italic">Attendance Calendar</h3>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="month" 
+                      value={selectedMonth}
+                      onChange={e => setSelectedMonth(e.target.value)}
+                      className={`px-4 py-2 rounded-xl text-xs font-black border-none outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-100 text-gray-900'}`}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-2">
+                  {['S','M','T','W','T','F','S'].map(d => (
+                    <div key={d} className="text-center py-2 text-[10px] font-black text-gray-500 uppercase tracking-widest">{d}</div>
+                  ))}
+                  {Array.from({ length: 31 }).map((_, i) => {
+                    const day = i + 1;
+                    const dateStr = `${selectedMonth}-${day.toString().padStart(2, '0')}`;
+                    const log = attendance.find(a => a.date === dateStr);
+                    
+                    return (
+                      <div key={i} className={`aspect-square rounded-2xl border p-2 flex flex-col items-center justify-between transition-all group relative ${
+                        isDark ? 'bg-zinc-800/30 border-zinc-700/50 hover:bg-zinc-800' : 'bg-gray-50 border-gray-100 hover:bg-gray-100'
                       }`}>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-2">
-                            <p className={`font-black text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatStaffDate(att.date)}</p>
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                              att.status === 'present' ? 'bg-teal-500/20 text-teal-500' : 'bg-rose-500/20 text-rose-500'
-                            }`}>{att.status}</span>
+                        <span className="text-[10px] font-black opacity-40">{day}</span>
+                        {log ? (
+                          <div className={`w-2 h-2 rounded-full ${
+                            log.status === 'present' ? 'bg-teal-500' : log.status === 'absent' ? 'bg-rose-500' : 'bg-amber-500'
+                          }`} />
+                        ) : (
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleMarkAttendance(dateStr, 'present')} className="p-1 rounded-lg bg-teal-500 text-white"><CheckCircle2 size={12}/></button>
+                            <button onClick={() => handleMarkAttendance(dateStr, 'absent')} className="p-1 rounded-lg bg-rose-500 text-white"><XCircle size={12}/></button>
                           </div>
-                          <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
-                            <span>{att.arrivalTime || '--:--'}</span>
-                            <span>{att.departureTime || '--:--'}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="checkbox-wrapper-39 ml-4">
-                          <label>
-                            <input 
-                              type="checkbox" 
-                              checked={att.status === 'present'} 
-                              readOnly
-                            />
-                            <span className="checkbox"></span>
-                          </label>
-                        </div>
+                        )}
                       </div>
-                    ))}
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'dress' && (
+              <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${
+                isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-200'
+              }`}>
+                 <div className="flex items-center justify-between mb-10">
+                   <div>
+                     <h3 className="text-xl font-black uppercase tracking-tight italic">Dress Code Protocol</h3>
+                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Compliance tracking and history</p>
+                   </div>
+                   <button 
+                     onClick={() => handleMarkDress(new Date().toISOString().slice(0, 10), true)}
+                     className="px-6 py-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:scale-[1.02] transition-all"
+                   >
+                     Mark Today Compliant
+                   </button>
+                 </div>
+
+                 <div className="space-y-4">
+                   {dressLogs.length === 0 ? (
+                     <div className="p-20 text-center text-gray-400 font-black text-[10px] uppercase tracking-[0.2em]">No compliance logs found</div>
+                   ) : (
+                     dressLogs.map(log => (
+                       <div key={log.id} className={`p-5 rounded-3xl border flex items-center justify-between transition-all ${
+                         isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'
+                       }`}>
+                         <div className="flex items-center gap-4">
+                           <div className={`p-2.5 rounded-xl ${log.isCompliant ? 'bg-teal-500/10 text-teal-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                             {log.isCompliant ? <Shield size={18}/> : <MinusCircle size={18}/>}
+                           </div>
+                           <div>
+                             <p className="text-sm font-black italic">{new Date(log.date).toLocaleDateString('en-PK', { weekday:'long', day:'numeric', month:'short' })}</p>
+                             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mt-1">
+                               {log.isCompliant ? 'Full Uniform / Identity Card' : 'Non-Compliant / Missing Items'}
+                             </p>
+                           </div>
+                         </div>
+                         <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                           log.isCompliant ? 'bg-teal-500/10 border-teal-500/20 text-teal-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+                         }`}>
+                           {log.isCompliant ? 'Passed' : 'Flagged'}
+                         </span>
+                       </div>
+                     ))
+                   )}
                  </div>
               </div>
             )}
 
-            {/* Other tabs placeholder... */}
-            {activeTab === 'dress' && (
-              <div className={`rounded-[2.5rem] p-8 shadow-sm border flex items-center justify-center min-h-[300px] ${
-                isDark ? 'bg-zinc-900/50 border-zinc-800 text-zinc-600' : 'bg-white border-gray-100 text-gray-400'
+            {activeTab === 'edit' && (
+              <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${
+                isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'
               }`}>
-                <p className="font-bold uppercase tracking-widest text-[10px]">Dress code module coming soon</p>
-              </div>
-            )}
-            
-            {activeTab === 'salary' && (
-              <div className={`rounded-[2.5rem] p-8 shadow-sm border flex items-center justify-center min-h-[300px] ${
-                isDark ? 'bg-zinc-900/50 border-zinc-800 text-zinc-600' : 'bg-white border-gray-100 text-gray-400'
-              }`}>
-                <p className="font-bold uppercase tracking-widest text-[10px]">Salary records & files coming soon</p>
-              </div>
-            )}
-
-            {/* ── SCORE TAB ────────────────────────────────────────── */}
-            {activeTab === 'score' && (
-              <div className="space-y-6">
-
-                {/* Month Selector + Recalculate */}
-                <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-[2.5rem] border ${
-                  isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-                }`}>
+                <div className="flex items-center justify-between mb-10">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Score Month</p>
-                    <input
-                      type="month"
-                      value={selectedMonth}
-                      onChange={async e => {
-                        setSelectedMonth(e.target.value);
-                        setLoadingScore(true);
-                        const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
-                        const snap = await getDocs(
-                          query(
-                            collection(db, `${prefix}_growth_points`),
-                            where('staffId', '==', staffId),
-                            where('month', '==', e.target.value),
-                            limit(1)
-                          )
-                        );
-                        setGrowthPoints(snap.empty ? null : snap.docs[0].data());
-                        setLoadingScore(false);
-                      }}
-                      className={`h-11 px-4 rounded-2xl text-sm font-bold outline-none border ${
-                        isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
-                      }`}
-                    />
+                    <h3 className="text-xl font-black uppercase tracking-tight italic">Profile Optimization</h3>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Surgical updates to staff credentials</p>
                   </div>
                   <button
-                    onClick={async () => {
-                      toast.loading('Recalculating...', { id: 'score-recalc' });
-                      await recalculateGrowthPoints(staffId, selectedMonth);
-                      // Refresh
-                      const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
-                      const snap = await getDocs(
-                        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', staffId), where('month', '==', selectedMonth), limit(1))
-                      );
-                      setGrowthPoints(snap.empty ? null : snap.docs[0].data());
-                      const historySnap = await getDocs(
-                        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', staffId), orderBy('month', 'desc'))
-                      );
-                      setGrowthHistory(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
-                      toast.success('Score updated', { id: 'score-recalc' });
-                    }}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                      isDark ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500 hover:text-white' : 'bg-gray-900 text-white hover:bg-black'
-                    }`}
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                    className="px-8 py-3.5 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center gap-2"
                   >
-                    <RefreshCw size={14} /> Recalculate
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14}/>}
+                    {saving ? 'Synchronizing...' : 'Save Changes'}
                   </button>
                 </div>
 
-                {/* ScoreCard for selected month */}
-                {loadingScore ? (
-                  <div className={`rounded-[2.5rem] p-12 border flex items-center justify-center ${
-                    isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-                  }`}>
-                    <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
-                  </div>
-                ) : (
-                  <ScoreCard
-                    staffName={staff?.name || 'Staff'}
-                    month={selectedMonth}
-                    scores={growthPoints ? {
-                      attendance: (growthPoints.attendance || 0) + (growthPoints.punctuality || 0),
-                      uniform: growthPoints.dressCode || 0,
-                      working: growthPoints.duties || 0,
-                      growthPoint: (growthPoints.contributions || 0) + (growthPoints.extra || 0)
-                    } : { attendance: 0, uniform: 0, working: 0, growthPoint: 0 }}
-                    darkMode={isDark}
-                  />
-                )}
-
-                {/* Score History Table */}
-                <div className={`rounded-[2.5rem] border overflow-hidden ${
-                  isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-                }`}>
-                  <div className={`px-8 py-5 border-b flex items-center justify-between ${
-                    isDark ? 'border-zinc-800' : 'border-gray-50'
-                  }`}>
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Score History</h3>
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                      isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-400' : 'bg-gray-50 border-gray-200 text-gray-400'
-                    }`}>{growthHistory.length} Months</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className={`text-[9px] font-black uppercase tracking-widest ${
-                          isDark ? 'text-zinc-600 border-zinc-800' : 'text-gray-400 border-gray-50'
-                        }`}>
-                          <th className="px-8 py-4">Month</th>
-                          <th className="px-8 py-4">Attend.</th>
-                          <th className="px-8 py-4">Uniform</th>
-                          <th className="px-8 py-4">Working</th>
-                          <th className="px-8 py-4">Growth</th>
-                          <th className="px-8 py-4">Total</th>
-                          <th className="px-8 py-4">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className={`divide-y ${ isDark ? 'divide-zinc-800/50' : 'divide-gray-50' }`}>
-                        {growthHistory.length === 0 ? (
-                          <tr><td colSpan={7} className="px-8 py-10 text-center text-[10px] font-black uppercase tracking-widest text-gray-400">No score history found</td></tr>
-                        ) : growthHistory.map(h => {
-                          const total = (h.attendance||0)+(h.punctuality||0)+(h.dressCode||0)+(h.duties||0)+(h.contributions||0)+(h.extra||0);
-                          const reward = MONTHLY_REWARDS.find(r => total >= r.minScore);
-                          return (
-                            <tr key={h.id} className={`group transition-all ${ h.month === selectedMonth ? (isDark ? 'bg-teal-500/5' : 'bg-teal-50') : '' }`}>
-                              <td className="px-8 py-4">
-                                <button
-                                  onClick={() => setSelectedMonth(h.month)}
-                                  className={`text-xs font-black ${ isDark ? 'text-white' : 'text-gray-900' } hover:text-teal-500 transition-colors`}
-                                >
-                                  {new Date(`${h.month}-01`).toLocaleDateString('en-US',{month:'short',year:'numeric'})}
-                                </button>
-                              </td>
-                              <td className={`px-8 py-4 text-xs font-bold ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{(h.attendance||0)+(h.punctuality||0)}</td>
-                              <td className={`px-8 py-4 text-xs font-bold ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{h.dressCode||0}</td>
-                              <td className={`px-8 py-4 text-xs font-bold ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{h.duties||0}</td>
-                              <td className={`px-8 py-4 text-xs font-bold ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{(h.contributions||0)+(h.extra||0)}</td>
-                              <td className={`px-8 py-4 text-sm font-black ${ isDark ? 'text-white' : 'text-gray-900' }`}>{total}</td>
-                              <td className="px-8 py-4">
-                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                  !reward ? 'bg-rose-500/10 text-rose-500' :
-                                  reward.color === 'green' ? 'bg-teal-500/10 text-teal-500' :
-                                  reward.color === 'blue'  ? 'bg-blue-500/10 text-blue-500' :
-                                  reward.color === 'amber' ? 'bg-amber-500/10 text-amber-500' :
-                                  'bg-rose-500/10 text-rose-500'
-                                }`}>
-                                  {reward?.badge} {reward?.label || 'Below Min'}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Scoring Rules Accordion */}
-                <div className={`rounded-[2.5rem] border overflow-hidden ${
-                  isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-                }`}>
-                  <div className={`px-8 py-5 border-b ${ isDark ? 'border-zinc-800' : 'border-gray-50' }`}>
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Scoring Rules</h3>
-                  </div>
-                  <div className={`divide-y ${ isDark ? 'divide-zinc-800' : 'divide-gray-50' }`}>
-                    {(Object.entries(SCORE_CATEGORIES) as [string, any][]).map(([key, cat]) => (
-                      <div key={key}>
-                        <button
-                          onClick={() => setOpenRule(openRule === key ? null : key)}
-                          className={`w-full flex items-center justify-between px-8 py-5 text-left transition-colors ${
-                            isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black ${
-                              cat.color === 'blue'   ? 'bg-blue-500/10 text-blue-500' :
-                              cat.color === 'purple' ? 'bg-purple-500/10 text-purple-500' :
-                              cat.color === 'teal'   ? 'bg-teal-500/10 text-teal-500' :
-                              'bg-amber-500/10 text-amber-500'
-                            }`}>{cat.maxMonthly}</div>
-                            <div>
-                              <p className={`text-xs font-black ${ isDark ? 'text-white' : 'text-gray-900' }`}>{cat.label}</p>
-                              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Max {cat.maxMonthly} pts/month · {cat.maxDaily} pt/day</p>
-                            </div>
-                          </div>
-                          {openRule === key
-                            ? <ChevronUp size={16} className="text-gray-400" />
-                            : <ChevronDown size={16} className="text-gray-400" />
-                          }
-                        </button>
-                        {openRule === key && (
-                          <div className={`px-8 pb-6 ${ isDark ? 'bg-zinc-800/20' : 'bg-gray-50/60' }`}>
-                            <p className={`text-sm font-medium leading-relaxed ${ isDark ? 'text-zinc-400' : 'text-gray-600' }`}>{cat.rule}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {/* Reward tiers */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
                     <div>
-                      <button
-                        onClick={() => setOpenRule(openRule === 'rewards' ? null : 'rewards')}
-                        className={`w-full flex items-center justify-between px-8 py-5 text-left transition-colors ${
-                          isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-gray-50'
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Full Legal Name</label>
+                      <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
+                          isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
                         }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-xs">🏆</div>
-                          <div>
-                            <p className={`text-xs font-black ${ isDark ? 'text-white' : 'text-gray-900' }`}>Monthly Reward Tiers</p>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">4 levels · Max score 120</p>
-                          </div>
-                        </div>
-                        {openRule === 'rewards'
-                          ? <ChevronUp size={16} className="text-gray-400" />
-                          : <ChevronDown size={16} className="text-gray-400" />
-                        }
-                      </button>
-                      {openRule === 'rewards' && (
-                        <div className={`px-8 pb-6 space-y-3 ${ isDark ? 'bg-zinc-800/20' : 'bg-gray-50/60' }`}>
-                          {MONTHLY_REWARDS.map(r => (
-                            <div key={r.label} className={`flex items-center gap-4 p-4 rounded-2xl border ${
-                              isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-white border-gray-100'
-                            }`}>
-                              <span className="text-xl">{r.badge}</span>
-                              <div className="flex-1">
-                                <p className={`text-xs font-black ${
-                                  r.color === 'green' ? 'text-teal-500' :
-                                  r.color === 'blue'  ? 'text-blue-500' :
-                                  r.color === 'amber' ? 'text-amber-500' : 'text-rose-500'
-                                }`}>{r.label} — {r.minScore}+ pts</p>
-                                <p className={`text-[10px] font-bold mt-0.5 ${ isDark ? 'text-zinc-400' : 'text-gray-500' }`}>{r.reward}</p>
-                              </div>
-                            </div>
-                          ))}
-                          <div className={`flex items-center gap-4 p-4 rounded-2xl border border-indigo-500/20 ${
-                            isDark ? 'bg-indigo-500/10' : 'bg-indigo-50'
-                          }`}>
-                            <span className="text-xl">🎁</span>
-                            <div>
-                              <p className="text-xs font-black text-indigo-500">Weekly Prize Draw — {WEEKLY_RULE.minScore}+ pts/week</p>
-                              <p className={`text-[10px] font-bold mt-0.5 ${ isDark ? 'text-indigo-300' : 'text-indigo-600' }`}>{WEEKLY_RULE.reward}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Official Designation</label>
+                      <input
+                        type="text"
+                        value={editForm.designation}
+                        onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
+                          isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Monthly Gross Salary (₨)</label>
+                      <input
+                        type="number"
+                        value={editForm.monthlySalary}
+                        onChange={e => setEditForm({ ...editForm, monthlySalary: Number(e.target.value) })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
+                          isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Duty Start</label>
+                        <input
+                          type="time"
+                          value={editForm.dutyStartTime}
+                          onChange={e => setEditForm({ ...editForm, dutyStartTime: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
+                            isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Duty End</label>
+                        <input
+                          type="time"
+                          value={editForm.dutyEndTime}
+                          onChange={e => setEditForm({ ...editForm, dutyEndTime: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
+                            isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Operations Status</label>
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => setEditForm({ ...editForm, isActive: true })}
+                          className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                            editForm.isActive 
+                              ? 'bg-teal-500 border-teal-500 text-white shadow-lg' 
+                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                          }`}
+                        >Active</button>
+                        <button
+                          onClick={() => setEditForm({ ...editForm, isActive: false })}
+                          className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                            !editForm.isActive 
+                              ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
+                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                          }`}
+                        >Inactive</button>
+                      </div>
+                    </div>
+                    <div className={`p-6 rounded-[2rem] border transition-colors ${isDark ? 'bg-indigo-500/5 border-indigo-500/10' : 'bg-indigo-50 border-indigo-100'}`}>
+                       <div className="flex items-center gap-3 mb-2 text-indigo-500">
+                         <Shield size={16} />
+                         <p className="text-[10px] font-black uppercase tracking-widest">Security Credentials</p>
+                       </div>
+                       <p className={`text-[10px] font-bold leading-relaxed ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
+                         User Login: <span className={isDark ? 'text-white' : 'text-gray-900'}>{editForm.userId}</span><br />
+                         Internal ID: <span className={isDark ? 'text-white' : 'text-gray-900'}>{editForm.employeeId}</span>
+                         <br /><br />
+                         Unique identifiers are permanently locked to ensure data integrity across historical logs.
+                       </p>
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
 
+            {/* Score History (Always show in Score tab) */}
+            {activeTab === 'score' && (
+              <div className="space-y-6">
+                <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Growth Point History</h3>
+                    <button onClick={handleRecalculate} className="p-2 rounded-xl bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all"><RefreshCw size={14}/></button>
+                  </div>
+                  <div className="space-y-4">
+                    {growthHistory.map((h: any) => (
+                      <div key={h.id} className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'}`}>
+                        <div>
+                          <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{new Date(h.month + '-01').toLocaleDateString('en-PK', { month:'long', year:'numeric' })}</p>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Points: {h.total || 0}</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                          (h.total || 0) >= 100 ? 'bg-teal-500/10 text-teal-500' : 'bg-orange-500/10 text-orange-500'
+                        }`}>
+                          {(h.total || 0) >= 100 ? 'Expert' : 'Developing'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
