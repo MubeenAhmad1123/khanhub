@@ -167,7 +167,7 @@ export default function AttendanceMarkingPage() {
       // Only save modified or explicitly marked records
       for (const s of staffList) {
         const rec = records[s.id];
-        if (rec.status === 'not_marked') continue;
+        if (!rec || rec.status === 'not_marked') continue;
 
         const collectionName = s._origin === 'hq' ? 'hq_attendance' : 'rehab_attendance';
         const docId = `${s.id}_${today}`;
@@ -203,7 +203,7 @@ export default function AttendanceMarkingPage() {
     );
   }
 
-  const markedCount = Object.values(records).filter(r => r.status !== 'not_marked').length;
+  const markedCount = Object.values(records).filter(r => r && r.status !== 'not_marked').length;
 
   return (
     <div className={`min-h-screen pb-24 ${darkMode ? 'bg-gray-950 text-gray-100' : 'bg-[#F8FAFC] text-gray-900'}`}>
@@ -308,6 +308,7 @@ export default function AttendanceMarkingPage() {
 
           {filteredStaff.map(s => {
             const rec = records[s.id];
+            if (!rec) return null;
             const isSelected = selectedIds.has(s.id);
 
             return (

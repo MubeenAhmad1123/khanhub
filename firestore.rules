@@ -734,6 +734,16 @@ service cloud.firestore {
       allow update: if isHqSuperAdmin(); 
     }
 
+    match /rehab_attendance/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+    }
+
+    match /spims_attendance/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+    }
+
     // ── Daily Activity Records ─────────────────────────────────────────────────
     match /rehab_daily_activities/{docId} {
       allow read: if isRehabRole('admin')
