@@ -122,6 +122,12 @@ export default function StaffProfilePage() {
   const [attendanceMap, setAttendanceMap] = useState<Record<string, HqDailyAttendanceRecord>>({});
   const [dressMap, setDressMap] = useState<Record<string, HqDailyDressCodeRecord>>({});
   const [dutyMap, setDutyMap] = useState<Record<string, HqDailyDutyRecord>>({});
+  const [timePopup, setTimePopup] = useState<{
+    isOpen: boolean;
+    date: string;
+    arrivalTime: string;
+    departureTime: string;
+  }>({ isOpen: false, date: '', arrivalTime: '', departureTime: '' });
 
   const daysInMonth = useCallback(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -227,12 +233,62 @@ export default function StaffProfilePage() {
         updatedAt: new Date().toISOString()
       };
 
-      // Optimistic Update
+      // Set default times if presenting for the first time
+      if (next === 'present') {
+        newRecord.arrivalTime = '09:00';
+        newRecord.departureTime = '17:00';
+      }
+
       setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
       await setDoc(ref, newRecord, { merge: true });
     } catch (err) {
       toast.error("Update failed");
       fetchData(); // Rollback
+    }
+  };
+
+  const handleAttendanceCell = (dateStr: string) => {
+    const existing = attendanceMap[dateStr];
+    setTimePopup({
+      isOpen: true,
+      date: dateStr,
+      arrivalTime: existing?.arrivalTime || '09:00',
+      departureTime: existing?.departureTime || '' // Per instructions: set to empty by default
+    });
+  };
+
+  const handleTimePopupSave = async () => {
+    if (!timePopup.date) return;
+    
+    try {
+      setSaving(true);
+      const prefix = colPrefix;
+      const ref = doc(db, `${prefix}_attendance`, `${staffId}_${timePopup.date}`);
+      
+      // Payloads are PURELY strings, NO date objects used to prevent double-day entries
+      const payload = {
+        arrivalTime: timePopup.arrivalTime,
+        departureTime: timePopup.departureTime,
+        status: 'present', // If manager sets time, it's present
+        updatedAt: new Date().toISOString(),
+        markedBy: session?.uid
+      };
+
+      // Update Local State
+      setAttendanceMap(prev => ({
+        ...prev,
+        [timePopup.date]: { ...prev[timePopup.date], ...payload, staffId, date: timePopup.date }
+      }));
+
+      // Single setDoc call as requested
+      await setDoc(ref, payload, { merge: true });
+      
+      toast.success("Timing updated");
+      setTimePopup({ ...timePopup, isOpen: false });
+    } catch (err) {
+      toast.error("Failed to save timing");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -700,42 +756,35 @@ export default function StaffProfilePage() {
                             </td>
                           ))}
                         </tr>
-                        <tr className="border-t border-zinc-800/10 opacity-50">
+                        <tr className="border-t border-zinc-800/10 transition-colors hover:bg-zinc-500/5">
                           <td className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left">
-                            <span className="text-[9px] font-black uppercase tracking-widest">In</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500/50">Shift In</span>
                           </td>
                           {daysInMonth().map(d => (
-                            <td key={d} className="px-1 py-4 text-center">
-                              <input 
-                                type="text" 
-                                placeholder="09"
-                                value={attendanceMap[d]?.arrivalTime || ''}
-                                onChange={e => {
-                                  const v = e.target.value;
-                                  setAttendanceMap(p => ({ ...p, [d]: { ...p[d], arrivalTime: v } }));
-                                  // Add debounce/auto-save here? Let's just do manual save or toggle logic for simplicity for now.
-                                }}
-                                className="w-10 bg-transparent text-[10px] font-black text-center outline-none"
-                              />
+                            <td 
+                              key={d} 
+                              className="px-1 py-4 text-center cursor-pointer hover:bg-indigo-500/10 rounded-lg group transition-all"
+                              onClick={() => handleAttendanceCell(d)}
+                            >
+                              <span className={`text-[10px] font-black transition-all ${attendanceMap[d]?.arrivalTime ? (isDark ? 'text-white' : 'text-gray-900') : 'text-zinc-500/30'}`}>
+                                {attendanceMap[d]?.arrivalTime || '--'}
+                              </span>
                             </td>
                           ))}
                         </tr>
-                        <tr className="opacity-50">
+                        <tr className="transition-colors hover:bg-zinc-500/5">
                           <td className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left">
-                            <span className="text-[9px] font-black uppercase tracking-widest">Out</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-rose-500/50">Shift Out</span>
                           </td>
                           {daysInMonth().map(d => (
-                            <td key={d} className="px-1 py-4 text-center">
-                              <input 
-                                type="text" 
-                                placeholder="17"
-                                value={attendanceMap[d]?.departureTime || ''}
-                                onChange={e => {
-                                  const v = e.target.value;
-                                  setAttendanceMap(p => ({ ...p, [d]: { ...p[d], departureTime: v } }));
-                                }}
-                                className="w-10 bg-transparent text-[10px] font-black text-center outline-none"
-                              />
+                            <td 
+                              key={d} 
+                              className="px-1 py-4 text-center cursor-pointer hover:bg-rose-500/10 rounded-lg group transition-all"
+                              onClick={() => handleAttendanceCell(d)}
+                            >
+                              <span className={`text-[10px] font-black transition-all ${attendanceMap[d]?.departureTime ? (isDark ? 'text-white' : 'text-gray-900') : 'text-zinc-500/30'}`}>
+                                {attendanceMap[d]?.departureTime || '--'}
+                              </span>
                             </td>
                           ))}
                         </tr>
@@ -1086,6 +1135,72 @@ export default function StaffProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Time Entry Popup */}
+      {timePopup.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setTimePopup({...timePopup, isOpen: false})} />
+          <div className={`relative w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border animate-in zoom-in-95 duration-200 ${
+            isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-gray-100 text-gray-900'
+          }`}>
+             <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-xl font-black italic tracking-tight">Shift Timing</h3>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
+                    Entry for {new Date(timePopup.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setTimePopup({...timePopup, isOpen: false})}
+                  className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-zinc-800 text-zinc-500' : 'hover:bg-gray-100 text-gray-400'}`}
+                >
+                  <RefreshCw size={18} className="rotate-45" />
+                </button>
+             </div>
+
+             <div className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Arrival Time</label>
+                  <input
+                    type="time"
+                    value={timePopup.arrivalTime}
+                    onChange={e => setTimePopup({ ...timePopup, arrivalTime: e.target.value })}
+                    className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
+                      isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Departure Time</label>
+                  <input
+                    type="time"
+                    value={timePopup.departureTime}
+                    onChange={e => setTimePopup({ ...timePopup, departureTime: e.target.value })}
+                    className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
+                      isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                    }`}
+                  />
+                </div>
+                
+                <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isDark ? 'bg-indigo-500/5 border-indigo-500/10' : 'bg-indigo-50 border-indigo-100'}`}>
+                  <AlertCircle size={16} className="text-indigo-500 mt-0.5 shrink-0" />
+                  <p className="text-[9px] font-bold leading-relaxed text-indigo-500/70 uppercase tracking-wider">
+                    Setting these times will mark the staff as present for this specific date only.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleTimePopupSave}
+                  disabled={saving}
+                  className="w-full h-14 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16}/>}
+                  {saving ? 'Synchronizing...' : 'Update Record'}
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
