@@ -183,6 +183,7 @@ export default function ManagerUsersPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [lastCreated, setLastCreated] = useState<{ customId: string, password: string, name: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
     const isDark = localStorage.getItem('hq_dark_mode') === 'true';
@@ -332,6 +333,11 @@ export default function ManagerUsersPage() {
       );
 
       if (res.success) {
+        setLastCreated({
+          customId: formData.customId,
+          password: formData.password,
+          name: formData.displayName
+        });
         setMessage({ type: 'success', text: `Admin account ${formData.customId} created successfully.` });
         setFormData({ ...formData, customId: '', displayName: '', password: '' });
         fetchUsers();
@@ -471,6 +477,11 @@ export default function ManagerUsersPage() {
       );
 
       if (res.success) {
+        setLastCreated({
+          customId: formData.customId,
+          password: formData.password,
+          name: formData.displayName
+        });
         setMessage({ type: 'success', text: `Client account ${formData.customId} linked to ${formData.patientId} successfully.` });
         setFormData({ ...formData, customId: '', displayName: '', password: '', patientId: '' });
         fetchUsers();
@@ -1373,7 +1384,9 @@ export default function ManagerUsersPage() {
                             </div>
                             <div>
                               <p className="text-sm font-black">{u.displayName}</p>
-                              <p className={`text-[10px] font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{u.customId}@rehab.khanhub</p>
+                              <p className={`text-[10px] font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
+                              </p>
                             </div>
                           </div>
                         </td>
