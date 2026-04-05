@@ -49,7 +49,7 @@ import {
   CheckCircle,
   XCircle,
   ShieldAlert,
-  CloudUpload,
+  UploadCloud,
   FileCheck,
   ArrowRightCircle,
   Fingerprint,
@@ -198,7 +198,10 @@ export default function ManagerUsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const snap = await getDocs(query(collection(db, 'hq_users'), orderBy('createdAt', 'desc'), limit(50)));
+      const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
+      const collectionName = activeTab === 'staff' ? deptDetails.staffCollection : deptDetails.collection;
+      
+      const snap = await getDocs(query(collection(db, collectionName), orderBy('createdAt', 'desc'), limit(50)));
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
       setUsers(list);
     } catch (err) {
@@ -223,7 +226,7 @@ export default function ManagerUsersPage() {
     if (!session || session.role !== 'manager') return;
     fetchUsers();
     fetchCounts();
-  }, [session, formData.department]);
+  }, [session, formData.department, activeTab]);
 
   const generateEmployeeId = () => {
     const nextIdx = employeeCount + 1;
@@ -900,7 +903,6 @@ export default function ManagerUsersPage() {
                           </div>
                         </div>
                       </div>
-                    </div>
 
                     {/* SECTION 3: DUTIES ASSIGNMENT */}
                     <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
@@ -1124,7 +1126,7 @@ export default function ManagerUsersPage() {
                         <div className="md:col-span-2 space-y-3 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
                           {formData.documents.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center opacity-20 border border-dashed border-white/5 rounded-[1.5rem]">
-                              <CloudUpload size={32} strokeWidth={1} />
+                              <UploadCloud size={32} strokeWidth={1} />
                               <p className="text-[10px] font-black uppercase mt-2">No documents staged</p>
                             </div>
                           ) : (
@@ -1336,7 +1338,14 @@ export default function ManagerUsersPage() {
                           </span>
                         </td>
                         <td className={`px-8 py-5 text-xs font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {u.createdAt ? new Date(u.createdAt.seconds * 1000).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending'}
+                          {u.createdAt ? (() => {
+                            try {
+                              const date = u.createdAt.seconds ? new Date(u.createdAt.seconds * 1000) : new Date(u.createdAt);
+                              return date.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
+                            } catch {
+                              return 'Format Error';
+                            }
+                          })() : 'Pending'}
                         </td>
                         <td className="px-8 py-5 text-right">
                           <button
