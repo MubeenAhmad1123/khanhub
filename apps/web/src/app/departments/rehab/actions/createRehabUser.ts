@@ -46,7 +46,7 @@ export async function createRehabUserServer(
       const existingUser = await adminAuth.getUserByEmail(email);
       // If user exists, delete and recreate (only safe during setup)
       await adminAuth.deleteUser(existingUser.uid);
-      await adminDb.collection('rehab_users').doc(existingUser.uid).delete();
+      await adminDb.collection(userCollection).doc(existingUser.uid).delete();
     } catch {
       // User doesn't exist — continue normally
     }

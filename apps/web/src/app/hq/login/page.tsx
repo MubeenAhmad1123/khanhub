@@ -44,60 +44,89 @@ export default function HqLoginPage() {
     }
   }, [router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Step 1: Sign into Firebase Auth (authenticates the request)
-      // BUG 1 FIX: Use deterministic email format: {customId}@hq.khanhub.com
-      const loginEmail = `${customId.toLowerCase()}@hq.khanhub.com`;
-      await signInWithEmailAndPassword(auth, loginEmail, password);
+      const loginEmail = `${customId.toLowerCase().replace(/\s+/g, '')}@hq.khanhub.com`;
 
-      // Step 2: Now authenticated — query Firestore hq_users collection
+      // Try signing in first
+      try {
+        await signInWithEmailAndPassword(auth, loginEmail, password);
+      } catch (authErr: any) {
+        if (
+          authErr.code === 'auth/user-not-found' ||
+          authErr.code === 'auth/invalid-credential' ||
+          authErr.code === 'auth/invalid-email'
+        ) {
+          // First time: create Firebase Auth account for this HQ user
+          // Validate password against Firestore first
+          const validateQ = query(
+            collection(db, 'hq_users'),
+            where('customId', '==', customId)
+          );
+          const validateSnap = await getDocs(validateQ);
+          if (validateSnap.empty) {
+            setError('Invalid credentials.');
+            setLoading(false);
+            return;
+          }
+          const userData = validateSnap.docs[0].data();
+          if (userData.password !== password) {
+            setError('Invalid ID or password.');
+            setLoading(false);
+            return;
+          }
+          // Create Firebase Auth account then sign in
+          const { createUserWithEmailAndPassword } = await import('firebase/auth');
+          await createUserWithEmailAndPassword(auth, loginEmail, password);
+          await signInWithEmailAndPassword(auth, loginEmail, password);
+        } else {
+          throw authErr;
+        }
+      }
+
+      // Firebase Auth success — now read session from Firestore
       const q = query(collection(db, 'hq_users'), where('customId', '==', customId));
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        setError('Invalid credentials. Please check your ID and try again.');
+        setError('Account not found in system.');
         setLoading(false);
         return;
       }
 
-      let found = false;
-      snap.forEach((doc) => {
-        const data = doc.data();
-        if (data.isActive !== false) {
-          const session: HqSession = {
-            uid: doc.id,
-            customId: data.customId,
-            name: data.name,
-            role: data.role as HqRole,
-            loginTime: Date.now(),
-          };
-          localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      const docSnap = snap.docs[0];
+      const data = docSnap.data();
 
-          const roleRoutes: Record<HqRole, string> = {
-            superadmin: '/hq/dashboard/superadmin',
-            manager: '/hq/dashboard/manager',
-            cashier: '/hq/dashboard/cashier',
-          };
-          router.push(roleRoutes[data.role as HqRole] || '/hq/login');
-          found = true;
-        }
-      });
-
-      if (!found) {
-        setError('Account is disabled. Contact system administrator.');
+      if (data.isActive === false) {
+        setError('Account is disabled. Contact administrator.');
+        setLoading(false);
+        return;
       }
+
+      const session: HqSession = {
+        uid: docSnap.id,
+        customId: data.customId,
+        name: data.name,
+        role: data.role as HqRole,
+        loginTime: Date.now(),
+      };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+      const routes: Record<HqRole, string> = {
+        superadmin: '/hq/dashboard/superadmin',
+        manager: '/hq/dashboard/manager',
+        cashier: '/hq/dashboard/cashier',
+      };
+      router.push(routes[data.role as HqRole] || '/hq/login');
+
     } catch (err: any) {
-      // Firebase Auth errors
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        setError('Invalid ID or password.');
-      } else {
-        setError(err.message || 'Login failed. Please try again.');
-      }
+      if (err.code === 'auth/wrong-password') setError('Incorrect password.');
+      else if (err.code === 'auth/too-many-requests') setError('Too many attempts. Try later.');
+      else setError('Login failed. Check credentials and try again.');
     } finally {
       setLoading(false);
     }
@@ -125,7 +154,7 @@ export default function HqLoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-6">User Identity</label>
             <input
@@ -149,15 +178,15 @@ export default function HqLoginPage() {
           </div>
 
           <button
-            type="submit"
+            onClick={() => handleLogin()}
             disabled={loading}
             className="mt-4 bg-gray-900 text-white rounded-[30px] py-6 font-black text-lg shadow-2xl shadow-gray-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
           >
             {loading ? 'Authenticating...' : 'Enter Dashboard'}
           </button>
-        </form>
+        </div>
 
-        <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest leading-relaxed">
+        <p className="text-center text-gray-400 text-xs font-black uppercase tracking-widest leading-relaxed">
           Authorized personnel only.<br />Contact system administrator for access.
         </p>
 
