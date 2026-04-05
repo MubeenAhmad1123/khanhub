@@ -153,6 +153,8 @@ export default function ManagerUsersPage() {
   // Form States
   const [formData, setFormData] = useState({
     customId: '',
+    userId: '',
+    employeeId: '',
     displayName: '',
     password: '',
     firstName: '',
@@ -363,7 +365,7 @@ export default function ManagerUsersPage() {
     setLastCreated(null);
 
     try {
-      const empId = generateEmployeeId();
+      const empId = formData.employeeId || generateEmployeeId();
       let loginUserId = null;
       const pass = formData.password || 'admin123';
 
@@ -373,7 +375,7 @@ export default function ManagerUsersPage() {
       if (formData.createAccount) {
         // BUG 3 FIX: Integrating createRehabUserServer for staff login accounts
         const res = await createRehabUserServer(
-          empId.toLowerCase(),
+          formData.userId || formData.customId || empId.toLowerCase(),
           pass,
           'staff',
           `${formData.firstName} ${formData.lastName}`,
@@ -392,6 +394,8 @@ export default function ManagerUsersPage() {
       
       await addDoc(staffRef, {
         employeeId: empId,
+        userId: formData.userId || formData.customId || empId.toLowerCase(),
+        loginEmail: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
         name: `${formData.firstName} ${formData.lastName}`,
@@ -419,7 +423,7 @@ export default function ManagerUsersPage() {
 
       if (formData.createAccount) {
         setLastCreated({
-          customId: empId.toLowerCase(),
+          customId: formData.userId || formData.customId || empId.toLowerCase(),
           password: pass,
           name: `${formData.firstName} ${formData.lastName}`
         });
@@ -432,7 +436,8 @@ export default function ManagerUsersPage() {
       setFormData(prev => ({
         ...prev,
         firstName: '', lastName: '', password: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
-        designation: '', salary: '', duties: [], documents: [], patientId: ''
+        designation: '', salary: '', duties: [], documents: [], patientId: '',
+        userId: '', employeeId: ''
       }));
       
       fetchUsers();
@@ -504,7 +509,7 @@ export default function ManagerUsersPage() {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 pb-20 ${darkMode ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
+    <div className={`min-h-screen transition-colors duration-300 pb-20 ${darkMode ? 'bg-[#0A0A0A] text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Header Section */}
@@ -587,7 +592,7 @@ export default function ManagerUsersPage() {
             </div>
 
             <div className={`rounded-[2.5rem] border p-8 md:p-10 transition-all duration-500 ${
-              darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl shadow-black/20' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'
+              darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl shadow-black/20' : 'bg-white border-gray-200 shadow-xl shadow-blue-900/5'
             }`}>
               
               <div className="flex items-center gap-4 mb-8">
@@ -757,7 +762,7 @@ export default function ManagerUsersPage() {
                   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     
                     {/* SECTION 1: PROFILE & IDENTITY */}
-                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
+                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
                       <div className="flex items-center gap-4 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
                           <User className="text-blue-500" size={20} />
@@ -890,7 +895,7 @@ export default function ManagerUsersPage() {
                     </div>
 
                     {/* SECTION 2: EMPLOYMENT DETAILS */}
-                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
+                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
                       <div className="flex items-center gap-4 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                           <Building2 className="text-emerald-500" size={20} />
@@ -903,11 +908,34 @@ export default function ManagerUsersPage() {
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Employee ID</label>
-                              <div className="h-14 px-5 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center">
-                                <span className="text-xs font-black text-blue-500 tracking-widest uppercase">{generateEmployeeId()}</span>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black tracking-[0.25em] opacity-60 uppercase ml-1">
+                                Employee ID *
+                              </label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  placeholder={generateEmployeeId()}
+                                  value={formData.employeeId}
+                                  onChange={e => setFormData({ ...formData, employeeId: e.target.value.toUpperCase() })}
+                                  className={`flex-1 h-14 px-5 rounded-2xl font-mono text-sm outline-none transition-all ${
+                                    darkMode 
+                                      ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20 focus:border-indigo-500/50' 
+                                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500/50'
+                                  }`}
+                                />
+                                <button
+                                  onClick={() => setFormData({ ...formData, employeeId: generateEmployeeId() })}
+                                  className={`px-4 h-14 rounded-2xl border text-xs font-black transition-all whitespace-nowrap ${
+                                    darkMode ? 'bg-white/10 border-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  Auto
+                                </button>
                               </div>
+                              <p className="text-[9px] opacity-30 font-bold ml-1 uppercase tracking-widest italic">
+                                Internal HR number shown on staff badge and profile.
+                              </p>
                             </div>
                             <div className="space-y-1.5">
                               <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Joining Date*</label>
@@ -965,7 +993,7 @@ export default function ManagerUsersPage() {
                       </div>
 
                     {/* SECTION 3: DUTIES ASSIGNMENT */}
-                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
+                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
                       <div className="flex items-center gap-4 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
                           <ClipboardList className="text-purple-500" size={20} />
@@ -1036,7 +1064,7 @@ export default function ManagerUsersPage() {
                     </div>
 
                     {/* SECTION 4: DRESS CODE */}
-                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
+                    <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
                       <div className="flex items-center gap-4 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
                           <Scissors className="text-orange-500" size={20} />
@@ -1083,7 +1111,7 @@ export default function ManagerUsersPage() {
                     </div>
 
                     {/* SECTION 5: LOGIN ACCOUNT */}
-                    <div className={`p-8 rounded-[2.5rem] border-2 transition-all duration-500 ${formData.createAccount ? 'border-indigo-500/50 bg-indigo-500/5 shadow-2xl shadow-indigo-500/10' : 'border-white/5 bg-white/5'}`}>
+                    <div className={`p-8 rounded-[2.5rem] border-2 transition-all duration-500 ${formData.createAccount ? 'border-indigo-500/50 bg-indigo-500/5 shadow-2xl shadow-indigo-500/10' : (darkMode ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-white')}`}>
                       <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                         <div className="flex items-center gap-6">
                           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${formData.createAccount ? 'bg-indigo-500 text-white rotate-6' : 'bg-white/10 opacity-40'}`}>
@@ -1113,13 +1141,37 @@ export default function ManagerUsersPage() {
 
                       {formData.createAccount && (
                         <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8 p-8 bg-black/20 rounded-[2.5rem] border border-white/5 animate-in slide-in-from-top-4 duration-500">
-                           <div className="space-y-3">
-                            <label className="text-[10px] font-black tracking-[0.25em] text-indigo-400 uppercase ml-1">SYSTEM GENERATED IDENTIFIER</label>
-                            <div className="w-full h-16 px-6 rounded-2xl bg-white/5 border border-white/5 flex items-center text-sm font-bold text-white/80 group transition-all hover:border-indigo-500/30">
-                              <Mail size={18} className="mr-4 text-indigo-500" />
-                              {formData.email || 'pending_generation@khanhub.io'}
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-black tracking-[0.25em] text-indigo-400 uppercase ml-1">
+                              User ID (Login Username) *
+                            </label>
+                            <div className="relative">
+                              <User size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-indigo-500" />
+                              <input
+                                type="text"
+                                placeholder="e.g. kamran-001 or REHAB-STF-005"
+                                value={formData.userId}
+                                onChange={e => {
+                                  const val = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+                                  const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
+                                  const domain = deptDetails ? deptDetails.emailDomain : '@rehab.khanhub';
+                                  setFormData({ 
+                                    ...formData, 
+                                    userId: val,
+                                    customId: val,
+                                    email: val ? `${val}${domain}` : ''
+                                  });
+                                }}
+                                className={`w-full h-16 pl-12 pr-6 rounded-2xl font-mono text-sm outline-none transition-all ${
+                                  darkMode 
+                                    ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20 focus:bg-white/15 focus:border-indigo-500/50' 
+                                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-indigo-500/50'
+                                }`}
+                              />
                             </div>
-                            <p className="text-[9px] opacity-30 font-bold ml-1 uppercase tracking-widest italic">Note: This will be used for all system communications.</p>
+                            <p className="text-[9px] text-indigo-400/60 font-bold ml-1 uppercase tracking-widest">
+                              Login email will be: <span className="text-indigo-300">{formData.userId || '...'}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}</span>
+                            </p>
                           </div>
                           
                           <div className="space-y-3 relative">
@@ -1146,7 +1198,7 @@ export default function ManagerUsersPage() {
                     </div>
 
                     {/* SECTION 6: DOCUMENTS */}
-                    <div className="p-8 rounded-[2.5rem] border border-white/5 bg-white/5 relative overflow-hidden group">
+                    <div className={`p-8 rounded-[2.5rem] border transition-all relative overflow-hidden group ${darkMode ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-white'}`}>
                       <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
                         <ShieldAlert size={120} />
                       </div>
@@ -1338,7 +1390,7 @@ export default function ManagerUsersPage() {
         {/* Audit Table */}
         <div className="mt-12">
           <div className={`rounded-[2.5rem] border overflow-hidden transition-all duration-500 ${
-            darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'
+            darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl' : 'bg-white border-gray-200 shadow-xl shadow-blue-900/5'
           }`}>
             <div className={`px-8 py-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${darkMode ? 'border-gray-800 bg-gray-900/60' : 'border-gray-50 bg-gray-50/50'}`}>
               <div className="flex items-center gap-3">
@@ -1361,7 +1413,8 @@ export default function ManagerUsersPage() {
                     <th className="px-8 py-5">Full Identity</th>
                     <th className="px-8 py-5">Assigned Role</th>
                     <th className="px-8 py-5">Initialization Date</th>
-                    <th className="px-8 py-5 text-right">Operational Status</th>
+                    <th className="px-8 py-5">Operational Status</th>
+                    <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-widest opacity-40">Actions</th>
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${darkMode ? 'divide-gray-800/50' : 'divide-gray-50'}`}>
@@ -1409,7 +1462,7 @@ export default function ManagerUsersPage() {
                             }
                           })() : 'Pending'}
                         </td>
-                        <td className="px-8 py-5 text-right">
+                        <td className="px-8 py-5">
                           <button
                             disabled={toggling === u.id}
                             onClick={() => handleToggleStatus(u.id, u.isActive !== false)}
@@ -1422,6 +1475,29 @@ export default function ManagerUsersPage() {
                             <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500' : 'bg-red-500'}`} />
                             {u.isActive !== false ? 'Active' : 'Disabled'}
                             {toggling === u.id && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
+                          </button>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <button
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                customId: u.customId || u.id,
+                                userId: u.customId || '',
+                                employeeId: u.employeeId || '',
+                                displayName: u.displayName || u.name || '',
+                                department: u.department || formData.department,
+                                firstName: u.firstName || (u.displayName || u.name || '').split(' ')[0] || '',
+                                lastName: u.lastName || (u.displayName || u.name || '').split(' ').slice(1).join(' ') || '',
+                                phone: u.phone || '',
+                                email: u.email || u.loginEmail || '',
+                              });
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                              toast('Editing ' + (u.displayName || u.name || u.customId), { icon: '✏️' });
+                            }}
+                            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 hover:text-indigo-400 hover:border-indigo-500/30 transition-all dark:bg-white/5 dark:border-white/10 light:bg-gray-100 light:border-gray-200"
+                          >
+                            Edit
                           </button>
                         </td>
                       </tr>
