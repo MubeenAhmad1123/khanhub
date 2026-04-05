@@ -160,3 +160,60 @@ export interface SalarySlipSummary {
   netSalary: number;
   status: SalarySlip['status'];
 }
+
+// ─── Monthly Attendance Grid ────────────────────────────────────────────────
+
+export interface HqDailyAttendanceRecord {
+  staffId: string;
+  date: string; // 'YYYY-MM-DD'
+  status: 'present' | 'absent' | 'leave' | 'unmarked';
+  arrivalTime?: string;   // 'HH:MM'
+  departureTime?: string; // 'HH:MM'
+  isLate?: boolean;
+  markedBy?: string;
+  markedByName?: string;
+  updatedAt?: string;
+}
+
+export interface HqDailyDressCodeRecord {
+  staffId: string;
+  date: string; // 'YYYY-MM-DD'
+  items: HqDressCodeItem[];
+  growthPointAwarded?: boolean;
+  markedBy?: string;
+  updatedAt?: string;
+}
+
+export interface HqDressCodeItem {
+  key: string;   // e.g. 'pant', 'shirt', 'shoes', 'id_card'
+  label: string; // e.g. 'Dress Pant'
+  status: 'yes' | 'no' | 'na';
+}
+
+export interface HqDailyDutyRecord {
+  staffId: string;
+  date: string;
+  duties: HqDutyItem[];
+  markedBy?: string;
+  updatedAt?: string;
+}
+
+export interface HqDutyItem {
+  key: string;
+  label: string;
+  status: 'done' | 'not_done' | 'na';
+}
+
+// Staff-level dress code config (set once, used every day)
+export interface HqStaffDressCodeConfig {
+  staffId: string;
+  items: { key: string; label: string }[];
+  updatedAt?: string;
+}
+
+// Staff-level duty config
+export interface HqStaffDutyConfig {
+  staffId: string;
+  duties: { key: string; label: string }[];
+  updatedAt?: string;
+}

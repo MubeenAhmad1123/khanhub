@@ -14,13 +14,23 @@ import {
   Target, Camera,
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
   Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw,
-  User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle
+  User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle,
+  ChevronLeft, ChevronRight, Star, Plus, Trash2
 } from 'lucide-react';
+import { increment } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { recalculateGrowthPoints } from '@/lib/rehab/growthPoints';
 import { Timestamp } from 'firebase/firestore';
 import ScoreCard from '@/components/rehab/ScoreCard';
 import { SCORE_CATEGORIES, MONTHLY_REWARDS, WEEKLY_RULE } from '@/data/scoreRules';
+import { HqCheckCell } from '@/components/hq/HqCheckCell';
+import { 
+  HqDailyAttendanceRecord, 
+  HqDailyDressCodeRecord, 
+  HqDailyDutyRecord,
+  HqDressCodeItem,
+  HqDutyItem
+} from '@/types/hq';
 
 interface Staff {
   id?: string;
@@ -39,6 +49,9 @@ interface Staff {
   role?: string;
   email?: string;
   userId?: string;
+  // Configuration for monthly grids
+  dressCodeConfig?: { key: string; label: string }[];
+  dutyConfig?: { key: string; label: string }[];
 }
 
 interface AttendanceLog {
@@ -80,7 +93,9 @@ export default function StaffProfilePage() {
     isActive: true,
     phone: '',
     employeeId: '',
-    userId: ''
+    userId: '',
+    dressCodeConfig: [] as { key: string; label: string }[],
+    dutyConfig: [] as { key: string; label: string }[]
   });
 
   useEffect(() => {
@@ -101,6 +116,23 @@ export default function StaffProfilePage() {
   // Duty Marking State
   const [markingDuty, setMarkingDuty] = useState(false);
   const [dutyForm, setDutyForm] = useState({ type: 'morning_shift', status: 'completed', comment: '' });
+
+  // ─── Monthly Grid Logic ───────────────────────────────────────────────────
+  
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, HqDailyAttendanceRecord>>({});
+  const [dressMap, setDressMap] = useState<Record<string, HqDailyDressCodeRecord>>({});
+  const [dutyMap, setDutyMap] = useState<Record<string, HqDailyDutyRecord>>({});
+
+  const daysInMonth = useCallback(() => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const date = new Date(year, month - 1, 1);
+    const days = [];
+    while (date.getMonth() === month - 1) {
+      days.push(new Date(date).toISOString().slice(0, 10));
+      date.setDate(date.getDate() + 1);
+    }
+    return days;
+  }, [selectedMonth]);
 
   const fetchData = useCallback(async () => {
     if (!staffId) return;
@@ -126,37 +158,51 @@ export default function StaffProfilePage() {
         isActive: sData.isActive !== false,
         phone: sData.phone || '',
         employeeId: sData.employeeId || '',
-        userId: sData.userId || ''
+        userId: sData.userId || '',
+        dressCodeConfig: sData.dressCodeConfig || [
+          { key: 'pant', label: 'Dress Pant' },
+          { key: 'shirt', label: 'Uniform Shirt' },
+          { key: 'shoes', label: 'Black Shoes' },
+          { key: 'id_card', label: 'ID Card' }
+        ],
+        dutyConfig: sData.dutyConfig || [
+          { key: 'attendance_portal', label: 'Attendance Entry' },
+          { key: 'patient_vitals', label: 'Patient Vitals' },
+          { key: 'ward_round', label: 'Ward Round' },
+          { key: 'cleanliness', label: 'Area Cleanliness' }
+        ]
       });
 
-      // Fetch Metrics
+      // ─── Fetch Monthly Logs ───────────────────────────────────────────────
       const prefix = colPrefix;
-      const [attSnap, dutySnap, dressSnap, pointsSnap] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', staffId))),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', staffId))),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', staffId))),
+      const days = daysInMonth();
+      const start = days[0];
+      const end = days[days.length - 1];
+
+      const [attSnap, dressSnap, dutySnap, pointsSnap] = await Promise.all([
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', staffId), where('date', '>=', start), where('date', '<=', end))),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', staffId), where('date', '>=', start), where('date', '<=', end))),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', staffId), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', staffId), limit(1)))
       ]);
 
-      const sortByDate = (docs: any[]) => [...docs].sort((a, b) => {
-        const getMs = (val: any) => {
-          if (val instanceof Timestamp) return val.toMillis();
-          if (val?.seconds) return val.seconds * 1000;
-          if (val) return new Date(val).getTime();
-          return 0;
-        };
-        return getMs(b.date || b.createdAt) - getMs(a.date || a.createdAt);
-      });
+      const aMap: Record<string, HqDailyAttendanceRecord> = {};
+      attSnap.docs.forEach(d => { aMap[d.data().date] = d.data() as HqDailyAttendanceRecord; });
+      setAttendanceMap(aMap);
 
-      setAttendance(sortByDate(attSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      setDutyLogs(sortByDate(dutySnap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      setDressLogs(sortByDate(dressSnap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      const drMap: Record<string, HqDailyDressCodeRecord> = {};
+      dressSnap.docs.forEach(d => { drMap[d.data().date] = d.data() as HqDailyDressCodeRecord; });
+      setDressMap(drMap);
+
+      const duMap: Record<string, HqDailyDutyRecord> = {};
+      dutySnap.docs.forEach(d => { duMap[d.data().date] = d.data() as HqDailyDutyRecord; });
+      setDutyMap(duMap);
+
       if (!pointsSnap.empty) setGrowthPoints(pointsSnap.docs[0].data());
 
       // Fetch growth history (all months)
-      const prefix2 = colPrefix;
       const historySnap = await getDocs(
-        query(collection(db, `${prefix2}_growth_points`), where('staffId', '==', staffId), orderBy('month', 'desc'))
+        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', staffId), orderBy('month', 'desc'))
       );
       setGrowthHistory(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
@@ -166,7 +212,91 @@ export default function StaffProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [staffId, colPrefix, router]);
+  }, [staffId, colPrefix, router, daysInMonth]);
+
+  const toggleAttendance = async (date: string, next: any) => {
+    try {
+      const prefix = colPrefix;
+      const ref = doc(db, `${prefix}_attendance`, `${staffId}_${date}`);
+      
+      const newRecord: HqDailyAttendanceRecord = {
+        staffId,
+        date,
+        status: next,
+        markedBy: session?.uid,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Optimistic Update
+      setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
+      await setDoc(ref, newRecord, { merge: true });
+    } catch (err) {
+      toast.error("Update failed");
+      fetchData(); // Rollback
+    }
+  };
+
+  const toggleDress = async (date: string, itemKey: string, next: any) => {
+    try {
+      const prefix = colPrefix;
+      const ref = doc(db, `${prefix}_dress_logs`, `${staffId}_${date}`);
+      const current = dressMap[date]?.items || [];
+      const exists = current.find(i => i.key === itemKey);
+      
+      let nextItems: HqDressCodeItem[] = [];
+      if (exists) {
+        nextItems = current.map(i => i.key === itemKey ? { ...i, status: next } : i);
+      } else {
+        const label = staff?.dressCodeConfig?.find(c => c.key === itemKey)?.label || itemKey;
+        nextItems = [...current, { key: itemKey, label, status: next }];
+      }
+
+      const newRecord: HqDailyDressCodeRecord = {
+        staffId,
+        date,
+        items: nextItems,
+        markedBy: session?.uid,
+        updatedAt: new Date().toISOString()
+      };
+
+      setDressMap(prev => ({ ...prev, [date]: newRecord }));
+      await setDoc(ref, newRecord, { merge: true });
+    } catch (err) {
+      toast.error("Update failed");
+      fetchData();
+    }
+  };
+
+  const toggleDuty = async (date: string, dutyKey: string, next: any) => {
+    try {
+      const prefix = colPrefix;
+      const ref = doc(db, `${prefix}_duty_logs`, `${staffId}_${date}`);
+      const current = dutyMap[date]?.duties || [];
+      const exists = current.find(d => d.key === dutyKey);
+
+      let nextDuties: HqDutyItem[] = [];
+      if (exists) {
+        nextDuties = current.map(d => d.key === dutyKey ? { ...d, status: next } : d);
+      } else {
+        const label = staff?.dutyConfig?.find(c => c.key === dutyKey)?.label || dutyKey;
+        nextDuties = [...current, { key: dutyKey, label, status: next }];
+      }
+
+      const newRecord: HqDailyDutyRecord = {
+        staffId,
+        date,
+        duties: nextDuties,
+        markedBy: session?.uid,
+        updatedAt: new Date().toISOString()
+      };
+
+      setDutyMap(prev => ({ ...prev, [date]: newRecord }));
+      await setDoc(ref, newRecord, { merge: true });
+    } catch (err) {
+      toast.error("Update failed");
+      fetchData();
+    }
+  };
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -412,7 +542,8 @@ export default function StaffProfilePage() {
                {[
                  { id: 'overview', label: 'History', icon: <Clock size={14}/> },
                  { id: 'attendance', label: 'Attendance', icon: <Calendar size={14}/> },
-                 { id: 'dress', label: 'Dress Logs', icon: <Shield size={14}/> },
+                 { id: 'dress', label: 'Dress Code', icon: <Shield size={14}/> },
+                 { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={14}/> },
                  { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={14}/> },
                  { id: 'edit', label: 'Edit Profile', icon: <User size={14}/> },
                ].map(tab => (
@@ -527,97 +658,199 @@ export default function StaffProfilePage() {
             )}
 
             {activeTab === 'attendance' && (
-              <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${
-                isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-              }`}>
+              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                 <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-black uppercase tracking-tight italic">Attendance Calendar</h3>
-                  <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Monthly Attendance Grid</h3>
+                  <div className="flex gap-2">
                     <input 
                       type="month" 
                       value={selectedMonth}
                       onChange={e => setSelectedMonth(e.target.value)}
-                      className={`px-4 py-2 rounded-xl text-xs font-black border-none outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-100 text-gray-900'}`}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-black border-none outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-100 text-gray-900'}`}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-7 gap-2">
-                  {['S','M','T','W','T','F','S'].map(d => (
-                    <div key={d} className="text-center py-2 text-[10px] font-black text-gray-500 uppercase tracking-widest">{d}</div>
-                  ))}
-                  {Array.from({ length: 31 }).map((_, i) => {
-                    const day = i + 1;
-                    const dateStr = `${selectedMonth}-${day.toString().padStart(2, '0')}`;
-                    const log = attendance.find(a => a.date === dateStr);
-                    
-                    return (
-                      <div key={i} className={`aspect-square rounded-2xl border p-2 flex flex-col items-center justify-between transition-all group relative ${
-                        isDark ? 'bg-zinc-800/30 border-zinc-700/50 hover:bg-zinc-800' : 'bg-gray-50 border-gray-100 hover:bg-gray-100'
-                      }`}>
-                        <span className="text-[10px] font-black opacity-40">{day}</span>
-                        {log ? (
-                          <div className={`w-2 h-2 rounded-full ${
-                            log.status === 'present' ? 'bg-teal-500' : log.status === 'absent' ? 'bg-rose-500' : 'bg-amber-500'
-                          }`} />
-                        ) : (
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleMarkAttendance(dateStr, 'present')} className="p-1 rounded-lg bg-teal-500 text-white"><CheckCircle2 size={12}/></button>
-                            <button onClick={() => handleMarkAttendance(dateStr, 'absent')} className="p-1 rounded-lg bg-rose-500 text-white"><XCircle size={12}/></button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="overflow-x-auto no-scrollbar -mx-2 px-2">
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr>
+                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">Day of Month</th>
+                          {daysInMonth().map(d => (
+                            <th key={d} className="px-1 py-4 text-center min-w-[40px]">
+                              <span className="text-[10px] font-black opacity-40">{d.split('-')[2]}</span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-t border-zinc-800/10">
+                          <td className="sticky left-0 z-10 bg-inherit pr-8 py-6 text-left">
+                            <span className="text-[10px] font-black uppercase tracking-widest">Status</span>
+                          </td>
+                          {daysInMonth().map(d => (
+                            <td key={d} className="px-1 py-6 text-center">
+                              <HqCheckCell 
+                                type="attendance"
+                                size="md"
+                                value={attendanceMap[d]?.status || 'unmarked'} 
+                                onToggle={(next) => toggleAttendance(d, next)}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-t border-zinc-800/10 opacity-50">
+                          <td className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left">
+                            <span className="text-[9px] font-black uppercase tracking-widest">In</span>
+                          </td>
+                          {daysInMonth().map(d => (
+                            <td key={d} className="px-1 py-4 text-center">
+                              <input 
+                                type="text" 
+                                placeholder="09"
+                                value={attendanceMap[d]?.arrivalTime || ''}
+                                onChange={e => {
+                                  const v = e.target.value;
+                                  setAttendanceMap(p => ({ ...p, [d]: { ...p[d], arrivalTime: v } }));
+                                  // Add debounce/auto-save here? Let's just do manual save or toggle logic for simplicity for now.
+                                }}
+                                className="w-10 bg-transparent text-[10px] font-black text-center outline-none"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="opacity-50">
+                          <td className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left">
+                            <span className="text-[9px] font-black uppercase tracking-widest">Out</span>
+                          </td>
+                          {daysInMonth().map(d => (
+                            <td key={d} className="px-1 py-4 text-center">
+                              <input 
+                                type="text" 
+                                placeholder="17"
+                                value={attendanceMap[d]?.departureTime || ''}
+                                onChange={e => {
+                                  const v = e.target.value;
+                                  setAttendanceMap(p => ({ ...p, [d]: { ...p[d], departureTime: v } }));
+                                }}
+                                className="w-10 bg-transparent text-[10px] font-black text-center outline-none"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeTab === 'dress' && (
-              <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${
-                isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-200'
-              }`}>
-                 <div className="flex items-center justify-between mb-10">
-                   <div>
-                     <h3 className="text-xl font-black uppercase tracking-tight italic">Dress Code Protocol</h3>
-                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Compliance tracking and history</p>
-                   </div>
-                   <button 
-                     onClick={() => handleMarkDress(new Date().toISOString().slice(0, 10), true)}
-                     className="px-6 py-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:scale-[1.02] transition-all"
-                   >
-                     Mark Today Compliant
-                   </button>
-                 </div>
+              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Dress Code Compliance</h3>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Monthly Item Grids</p>
+                </div>
 
-                 <div className="space-y-4">
-                   {dressLogs.length === 0 ? (
-                     <div className="p-20 text-center text-gray-400 font-black text-[10px] uppercase tracking-[0.2em]">No compliance logs found</div>
-                   ) : (
-                     dressLogs.map(log => (
-                       <div key={log.id} className={`p-5 rounded-3xl border flex items-center justify-between transition-all ${
-                         isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'
-                       }`}>
-                         <div className="flex items-center gap-4">
-                           <div className={`p-2.5 rounded-xl ${log.isCompliant ? 'bg-teal-500/10 text-teal-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                             {log.isCompliant ? <Shield size={18}/> : <MinusCircle size={18}/>}
-                           </div>
-                           <div>
-                             <p className="text-sm font-black italic">{new Date(log.date).toLocaleDateString('en-PK', { weekday:'long', day:'numeric', month:'short' })}</p>
-                             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mt-1">
-                               {log.isCompliant ? 'Full Uniform / Identity Card' : 'Non-Compliant / Missing Items'}
-                             </p>
-                           </div>
-                         </div>
-                         <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                           log.isCompliant ? 'bg-teal-500/10 border-teal-500/20 text-teal-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
-                         }`}>
-                           {log.isCompliant ? 'Passed' : 'Flagged'}
-                         </span>
-                       </div>
-                     ))
-                   )}
-                 </div>
+                <div className="overflow-x-auto no-scrollbar -mx-2 px-2">
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr>
+                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">Uniform Items</th>
+                          {daysInMonth().map(d => (
+                            <th key={d} className="px-1 py-4 text-center min-w-[40px]">
+                              <span className="text-[10px] font-black opacity-40">{d.split('-')[2]}</span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(staff?.dressCodeConfig || [
+                          { key: 'pant', label: 'Dress Pant' },
+                          { key: 'shirt', label: 'Uniform Shirt' },
+                          { key: 'shoes', label: 'Black Shoes' },
+                          { key: 'id_card', label: 'ID Card' }
+                        ]).map((item) => (
+                          <tr key={item.key} className="border-t border-zinc-800/10">
+                            <td className="sticky left-0 z-10 bg-inherit pr-8 py-6 text-left">
+                              <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{item.label}</span>
+                            </td>
+                            {daysInMonth().map(d => {
+                              const dayRecord = dressMap[d];
+                              const itemStatus = dayRecord?.items?.find(i => i.key === item.key)?.status || 'na';
+                              return (
+                                <td key={d} className="px-1 py-6 text-center">
+                                  <HqCheckCell 
+                                    type="dresscode"
+                                    size="md"
+                                    value={itemStatus as any} 
+                                    onToggle={(next) => toggleDress(d, item.key, next)}
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'duties' && (
+              <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Daily Duty Logs</h3>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Performance Tracking</p>
+                </div>
+
+                <div className="overflow-x-auto no-scrollbar -mx-2 px-2">
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr>
+                          <th className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">Assigned Duties</th>
+                          {daysInMonth().map(d => (
+                            <th key={d} className="px-1 py-4 text-center min-w-[40px]">
+                              <span className="text-[10px] font-black opacity-40">{d.split('-')[2]}</span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(staff?.dutyConfig || [
+                          { key: 'attendance_portal', label: 'Attendance Entry' },
+                          { key: 'patient_vitals', label: 'Patient Vitals' },
+                          { key: 'ward_round', label: 'Ward Round' },
+                          { key: 'cleanliness', label: 'Area Cleanliness' }
+                        ]).map((duty) => (
+                          <tr key={duty.key} className="border-t border-zinc-800/10">
+                            <td className="sticky left-0 z-10 bg-inherit pr-8 py-6 text-left">
+                              <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{duty.label}</span>
+                            </td>
+                            {daysInMonth().map(d => {
+                              const dayRecord = dutyMap[d];
+                              const dutyStatus = dayRecord?.duties?.find(i => i.key === duty.key)?.status || 'na';
+                              return (
+                                <td key={d} className="px-1 py-6 text-center">
+                                  <HqCheckCell 
+                                    type="duty"
+                                    size="md"
+                                    value={dutyStatus as any} 
+                                    onToggle={(next) => toggleDuty(d, duty.key, next)}
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -734,6 +967,89 @@ export default function StaffProfilePage() {
                          <br /><br />
                          Unique identifiers are permanently locked to ensure data integrity across historical logs.
                        </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Configuration Grids */}
+                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Dress Code Config */}
+                  <div className={`p-8 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-50/50 border-gray-100'}`}>
+                    <div className="flex items-center justify-between mb-6">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Dress Code Items</h4>
+                      <button 
+                        onClick={() => {
+                          const label = prompt("Enter new dress item label (e.g. White Coat):");
+                          if (label) {
+                            const key = label.toLowerCase().replace(/\s+/g, '_');
+                            setEditForm(prev => ({
+                              ...prev,
+                              dressCodeConfig: [...prev.dressCodeConfig, { key, label }]
+                            }));
+                          }
+                        }}
+                        className="p-2.5 rounded-xl bg-indigo-500 text-white hover:scale-105 transition-all shadow-lg shadow-indigo-500/20"
+                      >
+                         <Plus size={14} />
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {editForm.dressCodeConfig.map((item, idx) => (
+                        <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                          <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
+                          <button 
+                            onClick={() => {
+                              setEditForm(prev => ({
+                                ...prev,
+                                dressCodeConfig: prev.dressCodeConfig.filter((_, i) => i !== idx)
+                              }));
+                            }}
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Duty Config */}
+                  <div className={`p-8 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-50/50 border-gray-100'}`}>
+                    <div className="flex items-center justify-between mb-6">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-500">Scheduled Duties</h4>
+                      <button 
+                        onClick={() => {
+                          const label = prompt("Enter new duty label (e.g. Morning Rounds):");
+                          if (label) {
+                            const key = label.toLowerCase().replace(/\s+/g, '_');
+                            setEditForm(prev => ({
+                              ...prev,
+                              dutyConfig: [...prev.dutyConfig, { key, label }]
+                            }));
+                          }
+                        }}
+                        className="p-2.5 rounded-xl bg-teal-500 text-white hover:scale-105 transition-all shadow-lg shadow-teal-500/20"
+                      >
+                         <Plus size={14} />
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {editForm.dutyConfig.map((item, idx) => (
+                        <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                          <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
+                          <button 
+                            onClick={() => {
+                              setEditForm(prev => ({
+                                ...prev,
+                                dutyConfig: prev.dutyConfig.filter((_, i) => i !== idx)
+                              }));
+                            }}
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
