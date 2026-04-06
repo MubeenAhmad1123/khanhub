@@ -132,20 +132,20 @@ export default function HqSuperadminPage() {
   ];
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 pb-20 ${darkMode ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
+    <div className={`min-h-screen overflow-x-hidden w-full max-w-full transition-colors duration-500 pb-20 ${darkMode ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
       {/* Dynamic Header */}
-      <div className={`sticky top-0 z-30 transition-all border-b ${darkMode ? 'bg-[#0A0A0A]/80 border-white/5 backdrop-blur-xl' : 'bg-white/80 border-slate-200 backdrop-blur-xl shadow-sm'}`}>
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
+      <header className={`sticky top-0 z-10 py-4 px-4 md:px-8 transition-all border-b ${darkMode ? 'bg-[#0A0A0A]/80 border-white/5 backdrop-blur-xl' : 'bg-white/80 border-slate-200 backdrop-blur-xl shadow-sm'}`}>
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-2xl ${darkMode ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
-                <Shield className={`w-8 h-8 ${darkMode ? 'text-teal-400' : 'text-teal-600'}`} />
+              <div className={`p-2 md:p-3 rounded-2xl ${darkMode ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
+                <Shield className={`w-6 h-6 md:w-8 md:h-8 ${darkMode ? 'text-teal-400' : 'text-teal-600'}`} />
               </div>
               <div>
-                <h1 className={`text-2xl md:text-3xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                <h1 className={`text-xl md:text-3xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                   HQ <span className="text-teal-500">SUPERADMIN</span>
                 </h1>
-                <p className={`${darkMode ? 'text-slate-400' : 'text-slate-500'} text-[10px] font-black uppercase tracking-[0.2em]`}>
+                <p className={`${darkMode ? 'text-slate-400' : 'text-slate-500'} text-[10px] font-black uppercase tracking-[0.2em] opacity-50`}>
                   Command & Control Center
                 </p>
               </div>
@@ -165,58 +165,51 @@ export default function HqSuperadminPage() {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-10 space-y-12">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 gap-3 p-4">
           <StatCard 
             label="Rehab Patients" 
             value={stats.rehabPatients} 
-            icon={<Heart />} 
             trend="Live"
-            color="rose"
+            borderColor="border-teal-500"
             darkMode={darkMode}
           />
           <StatCard 
             label="SPIMS Students" 
             value={stats.spimsStudents} 
-            icon={<GraduationCap />} 
             trend="Live"
-            color="blue"
+            borderColor="border-purple-500"
             darkMode={darkMode}
           />
           <StatCard 
             label="Unified Staff" 
             value={stats.hqStaff} 
-            icon={<Briefcase />} 
             trend="Active"
-            color="indigo"
+            borderColor="border-amber-500"
             darkMode={darkMode}
           />
           <StatCard 
             label="Pending" 
             value={stats.pendingApprovals} 
-            icon={<CheckCircle />} 
             trend="Needs Action"
-            color="amber"
-            highlight={stats.pendingApprovals > 0}
+            borderColor="border-red-500"
             darkMode={darkMode}
           />
           <StatCard 
             label="Revenue Today" 
             value={`Rs. ${stats.revenueToday.toLocaleString()}`} 
-            icon={<TrendingUp />} 
             trend="Verified"
-            color="emerald"
+            borderColor="border-emerald-500"
             darkMode={darkMode}
           />
           <StatCard 
             label="HQ Users" 
             value={stats.hqUsers} 
-            icon={<Users2 />} 
             trend="System"
-            color="teal"
+            borderColor="border-slate-500"
             darkMode={darkMode}
           />
         </div>
@@ -230,45 +223,18 @@ export default function HqSuperadminPage() {
             <div className={`h-px flex-1 ${darkMode ? 'bg-white/5' : 'bg-slate-200'}`}></div>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">
             {navItems.map((item, idx) => (
               <Link 
                 key={idx} 
                 href={item.href}
-                className={`group relative overflow-hidden p-6 rounded-[2.5rem] border transition-all duration-500 ${
-                  darkMode 
-                    ? 'bg-white/[0.03] border-white/5 hover:border-teal-500/50 hover:bg-white/[0.06]' 
-                    : 'bg-white border-slate-200 hover:border-teal-400 hover:shadow-2xl hover:shadow-teal-100/50'
-                }`}
+                className={`rounded-2xl p-4 flex flex-col gap-2 ${darkMode ? 'bg-white/5 border border-white/10 hover:border-teal-500/40 hover:bg-teal-500/5' : 'bg-white border border-slate-200 shadow-sm hover:border-teal-500 hover:bg-teal-50'} active:scale-95 transition-all cursor-pointer`}
               >
-                {/* Background Glow */}
-                <div className={`absolute -right-10 -bottom-10 w-40 h-40 rounded-full blur-[80px] opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${
-                  item.color === 'rose' ? 'bg-rose-500' : 
-                  item.color === 'emerald' ? 'bg-emerald-500' :
-                  item.color === 'amber' ? 'bg-amber-500' : 'bg-teal-500'
-                }`} />
-
-                <div className={`mb-4 p-4 w-fit rounded-2xl transition-all duration-500 group-hover:scale-110 group-hover:-rotate-3 mt-1 ${
-                  darkMode ? 'bg-white/5 text-teal-400 group-hover:bg-teal-500 group-hover:text-white' : 'bg-slate-50 text-teal-600 group-hover:bg-teal-500 group-hover:text-white shadow-sm'
-                }`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-1 ${darkMode ? 'bg-white/10 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
                   {item.icon}
                 </div>
-                
-                <h3 className={`font-black text-lg mb-1 transition-colors ${darkMode ? 'text-white group-hover:text-teal-400' : 'text-slate-900 group-hover:text-teal-600'}`}>
-                  {item.label}
-                </h3>
-                <p className={`text-sm font-medium leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  {item.description}
-                </p>
-
-                <div className="mt-6 flex items-center justify-between">
-                   <span className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 ${darkMode ? 'text-teal-400' : 'text-teal-600'}`}>
-                     Open Portal
-                   </span>
-                   <div className={`p-2 rounded-xl transition-all ${darkMode ? 'bg-white/5 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
-                     <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                   </div>
-                </div>
+                <p className={`text-sm font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{item.label}</p>
+                <p className={`text-[10px] leading-tight ${darkMode ? 'opacity-50 text-slate-300' : 'text-slate-500'}`}>{item.description}</p>
               </Link>
             ))}
           </div>
@@ -278,54 +244,20 @@ export default function HqSuperadminPage() {
   );
 }
 
-function StatCard({ label, value, icon, trend, highlight, color, darkMode }: {
+function StatCard({ label, value, trend, borderColor, darkMode }: {
   label: string; 
   value: string | number; 
-  icon: React.ReactElement; 
   trend: string;
-  highlight?: boolean;
-  color: string;
+  borderColor: string;
   darkMode: boolean;
 }) {
-  const colorClasses: any = {
-    rose: darkMode ? 'text-rose-400 bg-rose-400/10' : 'text-rose-600 bg-rose-50',
-    blue: darkMode ? 'text-blue-400 bg-blue-400/10' : 'text-blue-600 bg-blue-50',
-    indigo: darkMode ? 'text-indigo-400 bg-indigo-400/10' : 'text-indigo-600 bg-indigo-50',
-    amber: darkMode ? 'text-amber-400 bg-amber-400/10 border-amber-500/20' : 'text-amber-600 bg-amber-50 border-amber-200',
-    emerald: darkMode ? 'text-emerald-400 bg-emerald-400/10' : 'text-emerald-600 bg-emerald-50',
-    teal: darkMode ? 'text-teal-400 bg-teal-400/10' : 'text-teal-600 bg-teal-50',
-  };
-
   return (
-    <div className={`relative overflow-hidden p-6 rounded-[2rem] border transition-all duration-500 group ${
-      darkMode 
-        ? `bg-white/[0.03] ${highlight ? 'border-amber-500/30' : 'border-white/5'}` 
-        : `bg-white ${highlight ? 'border-amber-500/30 shadow-xl shadow-amber-500/10' : 'border-slate-200 shadow-sm'}`
-    }`}>
-      {/* Hover Background Pattern */}
-      <div className={`absolute top-0 right-0 p-4 opacity-5 pointer-events-none transition-transform duration-500 group-hover:scale-150 group-hover:rotate-12 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-        {icon}
-      </div>
-
-      <div className="flex justify-between items-start mb-6">
-        <div className={`p-3 rounded-2xl transition-transform duration-500 group-hover:scale-110 ${colorClasses[color]}`}>
-          {icon}
-        </div>
-        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${
-          highlight 
-            ? (darkMode ? 'bg-amber-400/10 border-amber-400/20 text-amber-400' : 'bg-amber-50 border-amber-100 text-amber-600')
-            : (darkMode ? 'bg-white/5 border-white/5 text-slate-500' : 'bg-slate-50 border-slate-100 text-slate-400')
-        }`}>
-          {trend}
-        </span>
-      </div>
-      
-      <p className={`text-3xl font-black tracking-tight mb-1 transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-        {value}
-      </p>
-      <p className={`text-[10px] font-black uppercase tracking-[0.1em] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-        {label}
-      </p>
+    <div className={`relative rounded-2xl p-4 flex flex-col gap-1 border-l-4 ${borderColor} ${darkMode ? 'bg-white/5' : 'bg-white shadow-sm'}`}>
+      <span className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{value}</span>
+      <span className={`text-[10px] uppercase tracking-widest ${darkMode ? 'opacity-60 text-slate-400' : 'text-slate-500'}`}>{label}</span>
+      <span className={`absolute top-2 right-2 text-[8px] px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+        {trend}
+      </span>
     </div>
   );
 }

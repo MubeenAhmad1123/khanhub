@@ -165,7 +165,7 @@ export default function ProfilePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-20">
+    <div className="min-h-screen bg-gray-50/50 pb-20 w-full max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -184,27 +184,23 @@ export default function ProfilePage() {
       <div className="max-w-5xl mx-auto px-4 mt-8 space-y-8">
         
         {/* Basic Info Card */}
-        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 items-center text-center md:text-left">
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 w-full flex flex-col items-center p-6">
           <div className="relative">
             {profile?.photoUrl ? (
-              <img src={profile.photoUrl} className="w-32 h-32 rounded-[2rem] object-cover shadow-xl ring-4 ring-gray-50" />
+              <img src={profile.photoUrl} className="w-20 h-20 rounded-2xl mx-auto object-cover shadow-xl ring-4 ring-gray-50" />
             ) : (
-              <div className="w-32 h-32 rounded-[2rem] bg-teal-50 text-teal-600 flex items-center justify-center text-4xl font-black shadow-inner">
+              <div className="w-20 h-20 rounded-2xl mx-auto bg-teal-50 text-teal-600 flex items-center justify-center text-3xl font-black shadow-inner">
                 {profile?.displayName?.[0]}
               </div>
             )}
           </div>
-          <div className="flex-1">
-            <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
-              <h2 className="text-3xl font-black text-gray-900">{profile?.displayName}</h2>
-              <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-200">
-                {profile?.customId}
-              </span>
-            </div>
-            <p className="text-gray-500 font-medium flex items-center justify-center md:justify-start gap-2">
-              <Phone size={14} className="text-teal-500" /> {profile?.phone || 'No phone provided'}
-            </p>
-          </div>
+          <h2 className="text-center text-xl font-black mt-3 text-gray-900">{profile?.displayName}</h2>
+          <span className="mx-auto mt-2 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest bg-teal-500/10 text-teal-500">
+            {session?.role}
+          </span>
+          <p className="text-gray-500 font-medium flex items-center justify-center gap-2 mt-3">
+            <Phone size={14} className="text-teal-500" /> {profile?.phone || 'No phone provided'}
+          </p>
         </div>
 
         {/* Role Specific Content */}
@@ -237,48 +233,68 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-8">
             {/* Growth Points Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 gap-3 p-4">
               {[
                 { label: 'Attendance', val: growthPoints?.attendancePoints || 0, color: 'text-blue-600', bg: 'bg-blue-50' },
                 { label: 'Duties', val: growthPoints?.dutyPoints || 0, color: 'text-teal-600', bg: 'bg-teal-50' },
                 { label: 'Dress Code', val: growthPoints?.dressCodePoints || 0, color: 'text-orange-600', bg: 'bg-orange-50' },
                 { label: 'Contribs', val: growthPoints?.contributionPoints || 0, color: 'text-purple-600', bg: 'bg-purple-50' },
-                { label: 'Total Points', val: growthPoints?.totalPoints || 0, color: 'text-gray-900', bg: 'bg-gray-100', span: 'col-span-2 md:col-span-1' },
               ].map(stat => (
-                <div key={stat.label} className={`${stat.bg} ${stat.span} rounded-3xl p-6 border border-white shadow-sm flex flex-col items-center justify-center`}>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">{stat.label}</p>
-                  <p className={`text-2xl font-black ${stat.color}`}>{stat.val}</p>
+                <div key={stat.label} className={`rounded-2xl p-4 text-center ${stat.bg} border border-white shadow-sm`}>
+                  <span className="text-2xl font-black block">{stat.val}</span>
+                  <span className="text-[9px] uppercase tracking-widest mt-1 opacity-60 block">{stat.label}</span>
                 </div>
               ))}
+              <div className="col-span-2 rounded-2xl p-4 text-center bg-teal-500/10 border border-teal-500/20">
+                <span className="text-2xl font-black block text-teal-600">{growthPoints?.totalPoints || 0}</span>
+                <span className="text-[9px] uppercase tracking-widest mt-1 opacity-60 block">Total Points</span>
+              </div>
             </div>
 
             {/* Metric Tabs */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-              <div className="flex border-b overflow-x-auto">
-                {[
-                  { id: 'attendance', label: 'Attendance', icon: <Calendar size={16}/> },
-                  { id: 'duties', label: 'Duties', icon: <ClipboardCheck size={16}/> },
-                  { id: 'dress', label: 'Dress Code', icon: <Shirt size={16}/> },
-                  { id: 'contributions', label: 'Contribs', icon: <Award size={16}/> },
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-6 text-xs font-black uppercase tracking-widest transition-all ${
-                      activeTab === tab.id 
-                        ? 'bg-teal-500 text-white shadow-inner' 
-                        : 'text-gray-400 hover:bg-gray-50'
-                    }`}
-                  >
-                    {tab.icon} {tab.label}
-                  </button>
-                ))}
+              <div className="overflow-x-auto scrollbar-none w-full p-4">
+                <div className="flex min-w-max gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-2xl">
+                  {[
+                    { id: 'attendance', label: 'Attendance', icon: <Calendar size={16}/> },
+                    { id: 'duties', label: 'Duties', icon: <ClipboardCheck size={16}/> },
+                    { id: 'dress', label: 'Dress Code', icon: <Shirt size={16}/> },
+                    { id: 'contributions', label: 'Contribs', icon: <Award size={16}/> },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${
+                        activeTab === tab.id 
+                          ? 'bg-white shadow-sm text-teal-600 dark:bg-white/10' 
+                          : 'opacity-40'
+                      }`}
+                    >
+                      {tab.icon} {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Month Navigator */}
+              <div className="flex items-center justify-between px-4 py-2">
+                <button className="p-2 rounded-xl bg-gray-100 active:scale-95 transition-all">←</button>
+                <span className="text-[11px] font-black uppercase tracking-widest">
+                  {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
+                </span>
+                <button className="p-2 rounded-xl bg-gray-100 active:scale-95 transition-all">→</button>
               </div>
 
               <div className="p-8">
                 {activeTab === 'attendance' && (
                   <div className="space-y-4">
-                    {attendance.length === 0 ? <p className="text-center text-gray-400 py-10">No records found</p> : (
+                    {attendance.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
+                        <span className="text-4xl">📋</span>
+                        <p className="text-sm font-black">No Records Found</p>
+                        <p className="text-[10px]">Nothing logged for this period</p>
+                      </div>
+                    ) : (
                       attendance.map(log => (
                         <div key={log.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100">
                           <div>
@@ -298,7 +314,13 @@ export default function ProfilePage() {
 
                 {activeTab === 'duties' && (
                   <div className="space-y-4">
-                    {duties.length === 0 ? <p className="text-center text-gray-400 py-10">No records found</p> : (
+                    {duties.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
+                        <span className="text-4xl">📋</span>
+                        <p className="text-sm font-black">No Records Found</p>
+                        <p className="text-[10px]">Nothing logged for this period</p>
+                      </div>
+                    ) : (
                       duties.map(log => (
                         <div key={log.id} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 flex items-start justify-between gap-4">
                           <div className="flex-1">
@@ -323,7 +345,13 @@ export default function ProfilePage() {
 
                 {activeTab === 'dress' && (
                   <div className="space-y-4">
-                    {dressLogs.length === 0 ? <p className="text-center text-gray-400 py-10">No records found</p> : (
+                    {dressLogs.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
+                        <span className="text-4xl">📋</span>
+                        <p className="text-sm font-black">No Records Found</p>
+                        <p className="text-[10px]">Nothing logged for this period</p>
+                      </div>
+                    ) : (
                       dressLogs.map(log => (
                         <div key={log.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100">
                           <div>
@@ -385,7 +413,13 @@ export default function ProfilePage() {
                     )}
 
                     <div className="space-y-4">
-                      {contributions.length === 0 ? <p className="text-center text-gray-400 py-10">No contributions yet</p> : (
+                      {contributions.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-40">
+                          <span className="text-4xl">📋</span>
+                          <p className="text-sm font-black">No Records Found</p>
+                          <p className="text-[10px]">Nothing logged for this period</p>
+                        </div>
+                      ) : (
                         contributions.map(c => (
                           <div key={c.id} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 relative group transition-all hover:border-gray-200">
                             <div className="flex justify-between items-start mb-3">

@@ -135,51 +135,51 @@ export default function FamilyPatientViewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full max-w-full">
       {/* Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <Link href="/departments/rehab/dashboard/family" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold mb-4 transition-colors">
             <ArrowLeft size={16} /> Back
           </Link>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-50 to-teal-100 flex items-center justify-center text-teal-700 font-black text-3xl border border-teal-200/50 flex-shrink-0">
-              {patient.photoUrl ? (
-                <img src={patient.photoUrl} alt={patient.name} className="w-full h-full object-cover rounded-3xl" />
-              ) : (
-                patient.name.charAt(0).toUpperCase()
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-black text-gray-900">{patient.name}</h1>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${patient.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {patient.isActive ? 'Active' : 'Discharged'}
-                </span>
-              </div>
-              <p className="text-gray-500 text-sm mt-1">S/o {patient.fatherName}</p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-black uppercase tracking-widest">
-                  <Calendar size={10} /> {patient.admissionDate?.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
-                </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                  <Clock size={10} /> {patient.remainingDays} days remaining
-                </span>
-                {patient.substanceOfAddiction && (
-                  <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                    {patient.substanceOfAddiction}
-                  </span>
+          <div className="flex flex-col items-start gap-3 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 flex items-center justify-center text-teal-700 font-black text-3xl border border-teal-200/50 flex-shrink-0 overflow-hidden">
+                {patient.photoUrl ? (
+                  <img src={patient.photoUrl} alt={patient.name} className="w-full h-full object-cover rounded-2xl" />
+                ) : (
+                  patient.name.charAt(0).toUpperCase()
                 )}
               </div>
+              <div>
+                <h1 className="text-xl font-black text-gray-900">{patient.name}</h1>
+                <p className="text-gray-500 text-sm mt-0.5">S/o {patient.fatherName}</p>
+              </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${patient.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {patient.isActive ? 'Active' : 'Discharged'}
+              </span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-black uppercase tracking-widest">
+                <Calendar size={10} /> {patient.admissionDate?.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest">
+                <Clock size={10} /> {patient.remainingDays} days remaining
+              </span>
+              {patient.substanceOfAddiction && (
+                <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">
+                  {patient.substanceOfAddiction}
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2 mt-1">
               {patient.contactNumber && (
-                <a href={`tel:${patient.contactNumber}`} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 transition-all">
+                <a href={`tel:${patient.contactNumber}`} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 active:scale-95 transition-all">
                   <Phone size={14} /> Call
                 </a>
               )}
               {patient.whatsappNumber && (
-                <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 text-xs font-black hover:bg-green-100 transition-all">
+                <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 text-xs font-black hover:bg-green-100 active:scale-95 transition-all">
                   <MessageCircle size={14} /> WhatsApp
                 </a>
               )}
@@ -190,26 +190,24 @@ export default function FamilyPatientViewPage() {
 
       {/* Finance Summary */}
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-3xl p-6 text-white shadow-lg shadow-teal-900/10">
-          <p className="text-teal-100 text-[10px] font-black uppercase tracking-widest mb-4">Stay connected with your loved one's recovery journey</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-teal-100 text-[10px] font-black uppercase tracking-widest">Total Package</p>
-              <p className="text-xl font-black mt-1">₨{patient.totalDues?.toLocaleString() || '0'}</p>
+        <div className="rounded-2xl bg-teal-500/10 border border-teal-500/20 p-4">
+          <p className="text-teal-600 text-[9px] font-black uppercase tracking-widest mb-3">Financial Summary</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-lg font-black text-teal-700">₨{patient.totalDues?.toLocaleString() || '0'}</span>
+              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Total Package</span>
             </div>
-            <div>
-              <p className="text-teal-100 text-[10px] font-black uppercase tracking-widest">Received</p>
-              <p className="text-xl font-black mt-1">₨{patient.totalReceived?.toLocaleString() || '0'}</p>
+            <div className="flex flex-col gap-1">
+              <span className="text-lg font-black text-teal-700">₨{patient.totalReceived?.toLocaleString() || '0'}</span>
+              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Received</span>
             </div>
-            <div>
-              <p className="text-teal-100 text-[10px] font-black uppercase tracking-widest">Remaining</p>
-              <p className={`text-xl font-black mt-1 ${(patient.remaining || 0) > 0 ? 'text-red-200' : 'text-green-200'}`}>
-                ₨{patient.remaining?.toLocaleString() || '0'}
-              </p>
+            <div className="flex flex-col gap-1">
+              <span className={`text-lg font-black ${(patient.remaining || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{patient.remaining?.toLocaleString() || '0'}</span>
+              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Remaining</span>
             </div>
-            <div>
-              <p className="text-teal-100 text-[10px] font-black uppercase tracking-widest">Canteen Balance</p>
-              <p className="text-xl font-black mt-1">₨{patient.canteenBalance?.toLocaleString() || '0'}</p>
+            <div className="flex flex-col gap-1">
+              <span className="text-lg font-black text-teal-700">₨{patient.canteenBalance?.toLocaleString() || '0'}</span>
+              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Canteen Balance</span>
             </div>
           </div>
         </div>
@@ -217,32 +215,34 @@ export default function FamilyPatientViewPage() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-4 pb-12">
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {[
-            { key: 'overview', label: 'Overview', icon: User },
-            { key: 'daily', label: 'Daily Sheet', icon: Activity },
-            { key: 'therapy', label: 'Therapy', icon: Heart },
-            { key: 'meds', label: 'Medication', icon: Pill },
-            { key: 'progress', label: 'Progress', icon: TrendingUp },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
-              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                activeTab === tab.key ? 'bg-gray-800 text-white shadow-lg' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
-              }`}
-            >
-              <tab.icon size={14} />
-              {tab.label}
-            </button>
-          ))}
+        <div className="w-full overflow-x-auto -mx-4 px-4 scrollbar-none">
+          <div className="flex gap-1 min-w-max pb-1">
+            {[
+              { key: 'overview', label: 'Overview', icon: User },
+              { key: 'daily', label: 'Daily Sheet', icon: Activity },
+              { key: 'therapy', label: 'Therapy', icon: Heart },
+              { key: 'meds', label: 'Medication', icon: Pill },
+              { key: 'progress', label: 'Progress', icon: TrendingUp },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex items-center gap-2 px-3 py-2 text-[11px] whitespace-nowrap rounded-xl font-black transition-all active:scale-95 ${
+                  activeTab === tab.key ? 'bg-gray-900 text-white shadow-lg' : 'opacity-50 bg-white border border-gray-100'
+                }`}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="space-y-6 mt-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <h2 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2"><Shield size={18} /> Health Status</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: 'HIV', value: healthStatus.hivStatus },
                   { label: 'HBsAg', value: healthStatus.hbsagStatus },
@@ -250,8 +250,8 @@ export default function FamilyPatientViewPage() {
                   { label: 'TB', value: healthStatus.tbStatus },
                   { label: 'STI', value: healthStatus.stiStatus },
                 ].map(item => (
-                  <div key={item.label} className="bg-gray-50 rounded-xl p-3 text-center">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{item.label}</p>
+                  <div key={item.label} className="bg-gray-50 rounded-2xl p-4 text-center">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{item.label}</p>
                     <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${statusColor(item.value || 'not_known')}`}>
                       {item.value?.replace('_', ' ') || 'Not Known'}
                     </span>
@@ -260,18 +260,26 @@ export default function FamilyPatientViewPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <h2 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2"><User size={18} /> Guardian Contact</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Name</p><p className="font-bold text-gray-900">{patient.guardianName || '—'}</p></div>
-                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Relationship</p><p className="font-bold text-gray-900">{patient.guardianRelationship || '—'}</p></div>
-                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phone</p>
-                  <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline">{patient.contactNumber || '—'}</a>
+              <div className="flex flex-col gap-3">
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Name</p>
+                  <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
                 </div>
-                <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">WhatsApp</p>
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Relationship</p>
+                  <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Phone</p>
+                  <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">WhatsApp</p>
                   {patient.whatsappNumber ? (
-                    <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline">{patient.whatsappNumber}</a>
-                  ) : <p className="font-bold text-gray-400">—</p>}
+                    <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
+                  ) : <p className="font-bold text-gray-400 mt-1">—</p>}
                 </div>
               </div>
             </div>

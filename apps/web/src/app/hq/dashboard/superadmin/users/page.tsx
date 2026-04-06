@@ -7,10 +7,11 @@ import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { createHqUserServer } from '@/app/hq/actions/createHqUser';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
+import Link from 'next/link';
 import { 
   Loader2, Users, Plus, Search, Filter, Shield, 
   UserCheck, UserX, Trash2, Edit2, X, Check,
-  MoreVertical, ShieldAlert, Briefcase, CreditCard, User as UserIcon
+  MoreVertical, ShieldAlert, Briefcase, CreditCard, User as UserIcon, UserPlus
 } from 'lucide-react';
 
 type TabType = 'hq' | 'rehab' | 'spims';
@@ -128,16 +129,27 @@ export default function HqUserManagementPage() {
   if (sessionLoading) return <div className="min-h-screen bg-[#0f172a] flex items-center justify-center"><Loader2 className="animate-spin text-teal-500" /></div>;
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 md:p-8">
+    <div className="min-h-screen overflow-x-hidden w-full max-w-full bg-[#0f172a] text-slate-200 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-3xl font-black text-white flex items-center gap-3">
-              <Users className="text-teal-500" size={32} />
-              User Management
-            </h1>
-            <p className="text-slate-400 mt-1 font-medium text-sm">Control access across HQ, Rehab, and SPIMS</p>
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <h1 className="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
+                <Users className="text-teal-500" size={32} />
+                User Management
+              </h1>
+              <Link 
+                href="/hq/dashboard/manager/users/create"
+                className="flex w-max items-center gap-2 px-5 py-3 rounded-2xl bg-teal-500 text-white 
+                           text-[11px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 
+                           hover:bg-teal-600 active:scale-95 transition-all"
+              >
+                <UserPlus size={14} />
+                Create User
+              </Link>
+            </div>
+            <p className="text-slate-400 mt-2 font-medium text-sm">Control access across HQ, Rehab, and SPIMS</p>
           </div>
           {activeTab === 'hq' && (
             <button 
@@ -195,15 +207,16 @@ export default function HqUserManagementPage() {
 
         {/* Users Table */}
         <div className="bg-slate-800/40 border border-slate-700/50 rounded-3xl overflow-hidden backdrop-blur-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto w-full scrollbar-none">
+            <table className="min-w-[500px] w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-900/50 border-b border-slate-700/50">
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">User Info</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hidden sm:table-cell">User Info</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] sm:hidden">User Info</th>
                   <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">System ID</th>
                   <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Role</th>
                   <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Joined</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hidden md:table-cell">Joined</th>
                   <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Actions</th>
                 </tr>
               </thead>
@@ -254,7 +267,7 @@ export default function HqUserManagementPage() {
                           {user.isActive !== false ? 'Active' : 'Disabled'}
                         </span>
                       </td>
-                      <td className="px-6 py-5">
+                      <td className="px-6 py-5 hidden md:table-cell">
                         <p className="text-xs text-slate-500 font-bold">
                           {user.createdAt ? (user.createdAt instanceof Timestamp ? user.createdAt.toDate().toLocaleDateString() : new Date(user.createdAt).toLocaleDateString()) : 'N/A'}
                         </p>

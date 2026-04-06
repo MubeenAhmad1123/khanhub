@@ -36,6 +36,7 @@ export default function StaffSelfPage() {
   const [contribLoading, setContribLoading] = useState(false);
   const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [submitted, setSubmitted] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -216,7 +217,8 @@ export default function StaffSelfPage() {
       });
       setContributionText('');
       fetchData();
-      showMsg('success', 'Your contribution has been recorded. Thank you!');
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 2000);
     } catch {
       showMsg('error', 'Failed to save. Try again.');
     }
@@ -238,179 +240,189 @@ export default function StaffSelfPage() {
   }
 
   return (
-    <div className="space-y-6 pb-20 max-w-2xl mx-auto">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-3xl font-black text-gray-900">
-          {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}, {user?.displayName?.split(' ')[0]} 👋
-        </h1>
-        <p className="text-gray-400 text-sm font-medium mt-1">
-          {new Date().toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </p>
-      </div>
-
-      {/* Message */}
-      {message.text && (
-        <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm ${
-          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
-        }`}>
-          <CheckCircle size={16} />
-          {message.text}
-        </div>
-      )}
-
-      {/* Check In / Out Card */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <Clock size={18} className="text-teal-500" />
-            <h2 className="font-black text-gray-900">Today's Attendance</h2>
-          </div>
-          {staffProfile && (
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">
-               Duty: {staffProfile.dutyStartTime} — {staffProfile.dutyEndTime}
-            </p>
-          )}
+    <div className="min-h-screen bg-[#0A0A0A] overflow-x-hidden w-full max-w-full pb-24">
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {/* Greeting */}
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-white">
+            {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}, {user?.displayName?.split(' ')[0]}
+          </h1>
+          <p className="text-slate-400 text-sm font-medium mt-1">
+            {new Date().toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
         </div>
 
-        {isOverridden && (
-          <div className="mb-4 px-4 py-3 bg-orange-50 rounded-2xl text-xs text-orange-600 font-bold">
-            ⚠️ Your attendance was marked by admin today.
+        {/* Message */}
+        {message.text && (
+          <div className={`flex items-center gap-3 p-4 rounded-2xl font-semibold text-sm ${
+            message.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+          }`}>
+            <CheckCircle size={16} />
+            {message.text}
           </div>
         )}
 
-        {/* Time display */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className={`p-4 rounded-2xl text-center ${checkedIn ? 'bg-green-50' : 'bg-gray-50'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Check In</p>
-            <p className={`font-black text-xl ${checkedIn ? 'text-green-600' : 'text-gray-300'}`}>
-              {todayRecord?.checkInTime
-                ? toDate(todayRecord.checkInTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
-                : '--:--'
-              }
-            </p>
-            {todayRecord?.isLate && (
-              <p className="text-[10px] text-orange-500 font-bold mt-1">
-                ⚠️ Late by {todayRecord.lateByMinutes} mins — PKR 200 fine applied
+        {/* Check In / Out Card */}
+        <div className={`rounded-2xl p-4 border-l-4 ${checkedIn || checkedOut ? 'border-teal-500 bg-white/5' : 'border-amber-500 bg-white/5'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-teal-400" />
+              <h2 className="font-black text-white">Today's Attendance</h2>
+            </div>
+            {staffProfile && (
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">
+                 Duty: {staffProfile.dutyStartTime} — {staffProfile.dutyEndTime}
               </p>
             )}
           </div>
-          <div className={`p-4 rounded-2xl text-center ${checkedOut ? 'bg-blue-50' : 'bg-gray-50'}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Check Out</p>
-            <p className={`font-black text-xl ${checkedOut ? 'text-blue-600' : 'text-gray-300'}`}>
-              {todayRecord?.checkOutTime
-                ? toDate(todayRecord.checkOutTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
-                : '--:--'
-              }
-            </p>
+
+          {isOverridden && (
+            <div className="mb-4 px-4 py-3 bg-amber-500/10 rounded-2xl text-xs text-amber-400 font-bold border border-amber-500/20">
+              ⚠️ Your attendance was marked by admin today.
+            </div>
+          )}
+
+          {/* Time display */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className={`p-4 rounded-2xl text-center ${checkedIn ? 'bg-teal-500/10' : 'bg-white/5'}`}>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Check In</p>
+              <p className={`font-mono text-2xl font-black ${checkedIn ? 'text-teal-400' : 'opacity-30'}`}>
+                {todayRecord?.checkInTime
+                  ? toDate(todayRecord.checkInTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
+                  : '--:--'
+                }
+              </p>
+              {todayRecord?.isLate && (
+                <p className="text-[10px] text-amber-400 font-bold mt-1">
+                  ⚠️ Late by {todayRecord.lateByMinutes} mins — PKR 200 fine
+                </p>
+              )}
+            </div>
+            <div className={`p-4 rounded-2xl text-center ${checkedOut ? 'bg-blue-500/10' : 'bg-white/5'}`}>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Check Out</p>
+              <p className={`font-mono text-2xl font-black ${checkedOut ? 'text-blue-400' : 'opacity-30'}`}>
+                {todayRecord?.checkOutTime
+                  ? toDate(todayRecord.checkOutTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
+                  : '--:--'
+                }
+              </p>
+            </div>
           </div>
+
+          {/* Action Button OR Badge */}
+          {checkedOut || isOverridden ? (
+            <div className="w-full py-4 bg-white/5 rounded-2xl text-center text-slate-400 font-black text-sm uppercase tracking-wide">
+              {isOverridden ? 'Attendance marked by admin' : 'Shift complete for today ✓'}
+            </div>
+          ) : checkedIn ? (
+            <div className="w-full py-4 rounded-2xl bg-emerald-500/10 text-emerald-400 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border border-emerald-500/20">
+              <CheckCircle size={14} /> Checked In
+            </div>
+          ) : (
+            <button
+              onClick={handleCheckIn}
+              disabled={checkLoading}
+              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-wide flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-teal-500 text-white animate-pulse"
+            >
+              {checkLoading
+                ? <Loader2 size={18} className="animate-spin" />
+                : <LogIn size={18} />
+              }
+              {checkLoading ? 'Processing...' : 'Check In Now'}
+            </button>
+          )}
         </div>
 
-        {/* Action Button */}
-        {checkedOut || isOverridden ? (
-          <div className="w-full py-4 bg-gray-100 rounded-2xl text-center text-gray-400 font-black text-sm uppercase tracking-wide">
-            {isOverridden ? 'Attendance marked by admin' : 'Shift complete for today ✓'}
+        {/* Monthly Summary Card */}
+        <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar size={18} className="text-teal-400" />
+            <h2 className="font-black text-white">Monthly Summary</h2>
           </div>
-        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-emerald-500/10 rounded-2xl p-4 text-center">
+              <p className="text-2xl font-black text-emerald-400">{monthlySummary.present}</p>
+              <p className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-wide mt-1">Present</p>
+            </div>
+            <div className="bg-red-500/10 rounded-2xl p-4 text-center">
+              <p className="text-2xl font-black text-red-400">{monthlySummary.absent}</p>
+              <p className="text-[9px] font-bold text-red-400/60 uppercase tracking-wide mt-1">Absent</p>
+            </div>
+            <div className="bg-blue-500/10 rounded-2xl p-4 text-center">
+              <p className="text-2xl font-black text-blue-400">{monthlySummary.leave}</p>
+              <p className="text-[9px] font-bold text-blue-400/60 uppercase tracking-wide mt-1">Leave</p>
+            </div>
+          </div>
+          {/* Progress bar */}
+          {((monthlySummary.present + monthlySummary.absent + monthlySummary.leave) > 0) && (
+            <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+              <div 
+                className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                style={{ width: `${(monthlySummary.present / (monthlySummary.present + monthlySummary.absent + monthlySummary.leave)) * 100}%` }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Duties */}
+        {(staffProfile?.duties?.length ?? 0) > 0 && (
+          <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <List size={18} className="text-teal-400" />
+              <h2 className="font-black text-white">Your Duties</h2>
+            </div>
+            <ol className="space-y-2">
+              {staffProfile?.duties?.map((d: any, i: number) => (
+                <li key={d.id || i} className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+                  <span className="w-5 h-5 rounded-lg bg-teal-500/10 text-teal-400 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                  <span className="text-slate-300 text-sm leading-snug">{d.description || String(d)}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {/* Daily Contribution */}
+        <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Lightbulb size={18} className="text-amber-400" />
+            <h2 className="font-black text-white">Your Contribution Today</h2>
+          </div>
+          <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the rehab center.</p>
+          <textarea
+            rows={3}
+            placeholder="e.g. Completed morning rounds, cleaned all patient rooms, suggested new shift handover system..."
+            className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
+            value={contributionText}
+            onChange={e => setContributionText(e.target.value)}
+          />
           <button
-            onClick={handleCheckIn}
-            disabled={checkLoading}
-            className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-wide flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-              !checkedIn
-                ? 'bg-teal-500 text-white shadow-teal-200 hover:bg-teal-600'
-                : 'bg-blue-500 text-white shadow-blue-200 hover:bg-blue-600'
-            }`}
+            onClick={handleContribution}
+            disabled={contribLoading || !contributionText.trim()}
+            className="w-full py-3 mt-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
           >
-            {checkLoading
-              ? <Loader2 size={18} className="animate-spin" />
-              : !checkedIn ? <LogIn size={18} /> : <LogOut size={18} />
-            }
-            {checkLoading ? 'Processing...' : !checkedIn ? 'Check In Now' : 'Check Out Now'}
+            {submitted ? '✓ Submitted' : contribLoading ? 'Submitting...' : 'Submit'}
           </button>
+        </div>
+
+        {/* Past Contributions */}
+        {contributions.length > 0 && (
+          <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Star size={18} className="text-amber-300" />
+              <h2 className="font-black text-white">Recent Contributions</h2>
+            </div>
+            <div className="space-y-3">
+                {contributions.map(c => (
+                  <div key={c.id} className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                    <p className="text-slate-300 text-sm leading-relaxed">{c.content || c.contributionDescription || ''}</p>
+                    <p className="text-[10px] text-slate-500 font-mono mt-2">{c.date} — {toDate(c.createdAt)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                ))}
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Monthly Summary Card */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-5">
-          <Calendar size={18} className="text-teal-500" />
-          <h2 className="font-black text-gray-900">Monthly Summary</h2>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-green-50 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-black text-green-600">{monthlySummary.present}</p>
-            <p className="text-[10px] font-bold text-green-500 uppercase tracking-wide mt-1">Present</p>
-          </div>
-          <div className="bg-red-50 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-black text-red-500">{monthlySummary.absent}</p>
-            <p className="text-[10px] font-bold text-red-400 uppercase tracking-wide mt-1">Absent</p>
-          </div>
-          <div className="bg-blue-50 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-black text-blue-600">{monthlySummary.leave}</p>
-            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wide mt-1">Leave</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Duties */}
-      {(staffProfile?.duties?.length ?? 0) > 0 && (
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <List size={18} className="text-teal-500" />
-            <h2 className="font-black text-gray-900">Your Duties</h2>
-          </div>
-          <ol className="space-y-2">
-            {staffProfile?.duties?.map((d: any, i: number) => (
-              <li key={d.id || i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-                <span className="w-5 h-5 rounded-lg bg-teal-100 text-teal-600 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                <span className="text-gray-700 text-sm leading-snug">{d.description || String(d)}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {/* Daily Contribution */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-2">
-          <Lightbulb size={18} className="text-amber-400" />
-          <h2 className="font-black text-gray-900">Your Contribution Today</h2>
-        </div>
-        <p className="text-gray-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the rehab center.</p>
-        <textarea
-          rows={3}
-          placeholder="e.g. Completed morning rounds, cleaned all patient rooms, suggested new shift handover system..."
-          className="w-full bg-gray-50 rounded-2xl px-4 py-3 font-medium text-gray-700 outline-none focus:ring-2 focus:ring-amber-200 text-sm border-none resize-none"
-          value={contributionText}
-          onChange={e => setContributionText(e.target.value)}
-        />
-        <button
-          onClick={handleContribution}
-          disabled={contribLoading || !contributionText.trim()}
-          className="mt-3 flex items-center gap-2 bg-amber-400 text-white px-5 py-3 rounded-2xl font-black text-sm hover:bg-amber-500 transition-all disabled:opacity-40"
-        >
-          {contribLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-          Submit
-        </button>
-      </div>
-
-      {/* Past Contributions */}
-      {contributions.length > 0 && (
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Star size={18} className="text-amber-300" />
-            <h2 className="font-black text-gray-900">Recent Contributions</h2>
-          </div>
-          <div className="space-y-3">
-              {contributions.map(c => (
-                <div key={c.id} className="p-4 bg-gray-50 rounded-2xl">
-                  <p className="text-gray-700 text-sm leading-relaxed">{c.content || c.contributionDescription || ''}</p>
-                  <p className="text-[10px] text-gray-400 font-mono mt-2">{c.date} — {toDate(c.createdAt)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
