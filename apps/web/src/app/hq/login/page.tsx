@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { db } from '@/lib/firebase';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { HqSession, HqRole } from '@/types/hq';
 
@@ -50,58 +49,27 @@ export default function HqLoginPage() {
     setError('');
 
     try {
-      // FIX: if user accidentally types full email, use it as-is, otherwise append domain
-      const rawId = customId.toLowerCase().replace(/\s+/g, '');
-      const loginEmail = rawId.includes('@') ? rawId : `${rawId}@hq.khanhub.com`;
-
-      // Try signing in first
-      try {
-        await signInWithEmailAndPassword(auth, loginEmail, password);
-      } catch (authErr: any) {
-        if (
-          authErr.code === 'auth/user-not-found' ||
-          authErr.code === 'auth/invalid-credential' ||
-          authErr.code === 'auth/invalid-email'
-        ) {
-          // First time: create Firebase Auth account for this HQ user
-          // Validate password against Firestore first
-          const validateQ = query(
-            collection(db, 'hq_users'),
-            where('customId', '==', customId)
-          );
-          const validateSnap = await getDocs(validateQ);
-          if (validateSnap.empty) {
-            setError('Invalid credentials.');
-            setLoading(false);
-            return;
-          }
-          const userData = validateSnap.docs[0].data();
-          if (userData.password !== password) {
-            setError('Invalid ID or password.');
-            setLoading(false);
-            return;
-          }
-          // Create Firebase Auth account then sign in
-          const { createUserWithEmailAndPassword } = await import('firebase/auth');
-          await createUserWithEmailAndPassword(auth, loginEmail, password);
-          await signInWithEmailAndPassword(auth, loginEmail, password);
-        } else {
-          throw authErr;
-        }
-      }
-
-      // Firebase Auth success — now read session from Firestore
-      const q = query(collection(db, 'hq_users'), where('customId', '==', customId));
+      // Direct Firestore check — no Firebase Auth needed
+      const q = query(
+        collection(db, 'hq_users'),
+        where('customId', '==', customId.trim())
+      );
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        setError('Account not found in system.');
+        setError('Invalid ID or password.');
         setLoading(false);
         return;
       }
 
       const docSnap = snap.docs[0];
       const data = docSnap.data();
+
+      if (data.password !== password) {
+        setError('Invalid ID or password.');
+        setLoading(false);
+        return;
+      }
 
       if (data.isActive === false) {
         setError('Account is disabled. Contact administrator.');
@@ -126,9 +94,8 @@ export default function HqLoginPage() {
       router.push(routes[data.role as HqRole] || '/hq/login');
 
     } catch (err: any) {
-      if (err.code === 'auth/wrong-password') setError('Incorrect password.');
-      else if (err.code === 'auth/too-many-requests') setError('Too many attempts. Try later.');
-      else setError('Login failed. Check credentials and try again.');
+      console.error('[HQ Login] Error:', err);
+      setError('Something went wrong. Try again.');
     } finally {
       setLoading(false);
     }
