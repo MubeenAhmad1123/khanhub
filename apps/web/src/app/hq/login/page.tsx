@@ -50,7 +50,9 @@ export default function HqLoginPage() {
     setError('');
 
     try {
-      const loginEmail = `${customId.toLowerCase().replace(/\s+/g, '')}@hq.khanhub.com`;
+      // FIX: if user accidentally types full email, use it as-is, otherwise append domain
+      const rawId = customId.toLowerCase().replace(/\s+/g, '');
+      const loginEmail = rawId.includes('@') ? rawId : `${rawId}@hq.khanhub.com`;
 
       // Try signing in first
       try {
@@ -156,10 +158,10 @@ export default function HqLoginPage() {
 
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-6">User Identity</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-6">User ID</label>
             <input
               type="text"
-              placeholder="e.g. KHAN-SA-001"
+              placeholder="e.g. M-Khan"
               required
               className="bg-gray-50 border-none rounded-[30px] px-8 py-6 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300"
               value={customId}
@@ -168,7 +170,7 @@ export default function HqLoginPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-6">Secret Password</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-6">Password</label>
             <EyePasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
