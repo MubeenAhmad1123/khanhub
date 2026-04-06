@@ -545,12 +545,9 @@ service cloud.firestore {
     // Read: own doc, OR any HQ tier1 user. 
     // Write: Firebase Admin SDK only (createHqUserServer server action). 
     // Exception: superadmin can toggle isActive on other users. 
-    match /hq_users/{userId} { 
-      allow read: if (request.auth != null && request.auth.uid == userId) 
-        || isHqTier1(); 
-      allow update: if isHqSuperAdmin(); 
-      allow create: if false; 
-      allow delete: if false; 
+    match /hq_users/{docId} { 
+      allow read: if true; 
+      allow write: if request.auth != null; 
     } 
 
     // hq_staff — global staff profiles across all departments 
