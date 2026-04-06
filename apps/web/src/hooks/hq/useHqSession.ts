@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { HqSession } from '@/types/hq';
 
@@ -35,10 +35,21 @@ export function useHqSession() {
     } finally {
       // Keep loading true until Firebase Auth confirms state.
     }
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      const raw = localStorage.getItem(SESSION_KEY);
+      const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
+
+      // Session is valid only when Firebase Auth exists and UID matches HQ session UID.
+      if (!user || !parsed || user.uid !== parsed.uid) {
         localStorage.removeItem(SESSION_KEY);
         setSession(null);
+        if (user) {
+          try {
+            await signOut(auth);
+          } catch {
+            // Ignore sign-out failure; session is already cleared locally.
+          }
+        }
       }
       setLoading(false);
     });

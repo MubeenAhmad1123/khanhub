@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
@@ -31,6 +31,13 @@ export default function HqLoginPage() {
         }
 
         const parsed: HqSession = JSON.parse(raw);
+        if (user.uid !== parsed.uid) {
+          localStorage.removeItem(SESSION_KEY);
+          void signOut(auth);
+          setChecking(false);
+          return;
+        }
+
         const elapsed = Date.now() - parsed.loginTime;
         if (elapsed < SESSION_TIMEOUT) {
           const roleRoutes: Record<HqRole, string> = {
