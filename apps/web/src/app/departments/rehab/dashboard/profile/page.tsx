@@ -181,10 +181,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 mt-6 md:mt-8 space-y-6 md:space-y-8 w-full">
+      <div className="w-full mt-0 md:mt-8 md:max-w-5xl md:mx-auto md:px-4 space-y-3 md:space-y-8">
         
         {/* Basic Info Card */}
-        <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-gray-100 w-full flex flex-col items-center">
+        <div className="bg-white rounded-none md:rounded-[2.5rem] p-6 md:p-8 shadow-sm border-y border-gray-100 w-full flex flex-col items-center">
           <div className="relative">
             {profile?.photoUrl ? (
               <img src={profile.photoUrl} className="w-20 h-20 rounded-2xl mx-auto object-cover shadow-xl ring-4 ring-gray-50" />
@@ -233,7 +233,7 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-6 md:space-y-8 w-full">
             {/* Growth Points Summary */}
-            <div className="grid grid-cols-2 gap-3 w-full">
+            <div className="grid grid-cols-2 gap-3 w-full px-3 md:px-0">
               {[
                 { label: 'Attendance', val: growthPoints?.attendancePoints || 0, color: 'text-blue-600', bg: 'bg-blue-50' },
                 { label: 'Duties', val: growthPoints?.dutyPoints || 0, color: 'text-teal-600', bg: 'bg-teal-50' },
@@ -252,7 +252,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Metric Tabs */}
-            <div className="bg-white rounded-2xl md:rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden w-full">
+            <div className="bg-white rounded-none md:rounded-[2.5rem] shadow-sm border-y border-gray-100 overflow-hidden w-full">
               <div className="w-full overflow-x-auto scrollbar-none border-b border-gray-50">
                 <div className="flex min-w-max gap-1 p-2 bg-gray-100 rounded-xl mx-4 my-3">
                   {[
