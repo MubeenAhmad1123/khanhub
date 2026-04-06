@@ -146,26 +146,26 @@ export default function ManagerOverviewPage() {
   }
 
   return (
-    <div className={`space-y-8 pb-12 p-4 md:p-8 min-h-screen transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-gray-50 text-gray-900'}`}>
-      <div className="flex justify-between items-start">
+    <div className={`space-y-6 md:space-y-8 pb-12 p-4 md:p-8 min-h-screen transition-colors duration-300 w-full overflow-x-hidden ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
+      <div className="flex justify-between items-start gap-3">
         <div>
-          <h1 className={`text-2xl lg:text-3xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Manager Overview</h1>
-          <p className="text-gray-400 text-sm mt-1">Daily operations and staff management</p>
+          <h1 className={`text-xl md:text-3xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Manager Overview</h1>
+          <p className="text-gray-400 text-sm font-medium mt-1">Daily operations and staff management</p>
         </div>
-        <div className={`px-4 py-2 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Live Status</p>
+        <div className={`px-3 py-2 rounded-xl border flex-shrink-0 ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Live Status</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard isDark={isDark} label="Total Staff" value={stats.totalStaff} icon={<Users size={18} />} color="bg-blue-500/10 text-blue-500" />
-        <StatCard isDark={isDark} label="Present Today" value={stats.presentToday} icon={<CheckCircle size={18} />} color="bg-emerald-500/10 text-emerald-500" />
-        <StatCard isDark={isDark} label="Absent Today" value={stats.absentToday} icon={<XCircle size={18} />} color="bg-rose-500/10 text-rose-500" />
-        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-amber-500/10 text-amber-500" />
-        <StatCard isDark={isDark} label="Pending" value={stats.pendingApprovals} icon={<FileText size={18} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+        <StatCard isDark={isDark} label="Total Staff" value={stats.totalStaff} icon={<Users size={16} />} color="bg-blue-500/10 text-blue-500" />
+        <StatCard isDark={isDark} label="Present" value={stats.presentToday} icon={<CheckCircle size={16} />} color="bg-emerald-500/10 text-emerald-500" />
+        <StatCard isDark={isDark} label="Absent" value={stats.absentToday} icon={<XCircle size={16} />} color="bg-rose-500/10 text-rose-500" />
+        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={16} />} color="bg-amber-500/10 text-amber-500" />
+        <StatCard isDark={isDark} label="Pending" value={stats.pendingApprovals} icon={<FileText size={16} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[
           { href: '/hq/dashboard/manager/staff/attendance', label: 'Mark Attendance', sub: "Today's check-in" },
           { href: '/hq/dashboard/manager/approvals', label: 'View Approvals', sub: 'Pending tasks' },
@@ -173,45 +173,45 @@ export default function ManagerOverviewPage() {
           { href: '/hq/dashboard/manager/users', label: 'Create Users', sub: 'Add staff accounts' }
         ].map((link, idx) => (
           <Link key={idx} href={link.href}
-            className={`flex items-center justify-between px-6 py-5 rounded-[2rem] border transition-all group hover:scale-[1.02] ${
+            className={`flex items-center justify-between px-4 md:px-6 py-4 md:py-5 rounded-2xl border transition-all group hover:scale-[1.02] active:scale-[0.98] ${
               isDark ? 'bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800' : 'bg-white border-gray-100 hover:shadow-xl'
             }`}>
             <div>
               <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{link.label}</p>
-              <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">{link.sub}</p>
+              <p className="text-gray-500 text-[9px] font-black uppercase tracking-widest mt-0.5">{link.sub}</p>
             </div>
-            <ArrowRight className={`w-5 h-5 transition-all ${isDark ? 'text-zinc-600 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-900'} group-hover:translate-x-1`} />
+            <ArrowRight className={`w-4 h-4 transition-all flex-shrink-0 ${isDark ? 'text-zinc-600 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-900'} group-hover:translate-x-1`} />
           </Link>
         ))}
       </div>
 
       {pendingList.length > 0 && (
         <div>
-          <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <h2 className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <AlertTriangle size={12} className="text-amber-500" /> Recent Pending Approvals
           </h2>
           <div className="space-y-3">
             {pendingList.map(p => (
-                <div key={p.id} className={`px-6 py-4 rounded-3xl border flex items-center justify-between transition-all ${
+                <div key={p.id} className={`px-4 md:px-6 py-4 rounded-2xl border flex items-center justify-between gap-4 transition-all ${
                   isDark ? 'bg-zinc-900/30 border-zinc-800/50' : 'bg-white border-gray-100'
                 }`}>
-                  <div className="flex items-center gap-4">
-                    <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border whitespace-nowrap flex-shrink-0 ${
                       p?.type === 'income' 
                         ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                         : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                     }`}>
                       {p?.type || 'N/A'}
                     </span>
-                    <div>
-                      <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{p?.category || 'General'}</p>
-                      <p className="text-gray-500 text-[10px] font-bold">{p?.patientName || p?.studentName || 'N/A'}</p>
+                    <div className="min-w-0">
+                      <p className={`font-black text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{p?.category || 'General'}</p>
+                      <p className="text-gray-500 text-[9px] font-black truncate">{p?.patientName || p?.studentName || 'N/A'}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-right">
-                      <p className={`font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{p?.amount?.toLocaleString() || 0}</p>
-                      <p className="text-gray-500 text-[10px] font-bold">{timeAgo(p?.createdAt)}</p>
+                      <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{p?.amount?.toLocaleString() || 0}</p>
+                      <p className="text-gray-500 text-[9px] font-black">{timeAgo(p?.createdAt)}</p>
                     </div>
                     {p.createdAt && (Date.now() - (p.createdAt instanceof Timestamp ? p.createdAt.toMillis() : new Date(p.createdAt).getTime())) > 48 * 60 * 60 * 1000 && (
                       <span className="px-2 py-1 rounded-lg bg-rose-500 text-white text-[9px] font-black uppercase tracking-widest animate-pulse">
@@ -232,14 +232,14 @@ function StatCard({ label, value, icon, color, urgent, isDark }: {
   label: string; value: number; icon: React.ReactNode; color: string; urgent?: boolean; isDark?: boolean;
 }) {
   return (
-    <div className={`rounded-[2rem] p-5 border transition-all duration-300 shadow-sm ${
+    <div className={`rounded-2xl p-4 border transition-all duration-300 shadow-sm ${
       isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
     } ${urgent ? 'ring-2 ring-rose-300 shadow-lg shadow-rose-100' : ''}`}>
       <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${color}`}>
         {icon}
       </div>
       <p className={`text-2xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
-      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1 opacity-70">{label}</p>
+      <p className="text-gray-500 text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">{label}</p>
     </div>
   );
 }
