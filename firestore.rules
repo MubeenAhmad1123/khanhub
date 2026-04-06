@@ -199,6 +199,22 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════
+    //  HQ PORTAL HELPERS
+    //  HQ is the master dashboard — separate from rehab portal
+    //  Roles: superadmin, manager, superintendent
+    // ═══════════════════════════════════════════════════════════
+
+    function isHQAuth() {
+      return isHqAuth();
+    }
+    function isHQManagerOrAbove() {
+      return isHqSuperOrManager();
+    }
+    function isHQSuperAdmin() {
+      return isHqSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════
     //  REHAB PORTAL COLLECTIONS
     // ═══════════════════════════════════════════════════════════
 
@@ -274,7 +290,8 @@ service cloud.firestore {
     match /rehab_staff/{staffId} {
       allow read: if isRehabAdminOrAbove()
         || isRehabRole('cashier')
-        || (isRehabRole('staff') && rehabStaffId() == staffId);
+        || (isRehabRole('staff') && rehabStaffId() == staffId)
+        || isHQManagerOrAbove();
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -285,7 +302,8 @@ service cloud.firestore {
     match /rehab_attendance/{docId} {
       allow read: if isRehabAdminOrAbove()
         || isRehabRole('cashier')
-        || isRehabRole('staff');
+        || isRehabRole('staff')
+        || isHQManagerOrAbove();
       allow create: if isRehabRole('staff') || isRehabAdminOrAbove();
       allow update: if isRehabRole('staff') || isRehabAdminOrAbove();
       allow delete: if false;
@@ -554,9 +572,7 @@ service cloud.firestore {
     // Read: any HQ tier1 OR rehab/spims admin 
     // Write: superadmin or manager only 
     match /hq_staff/{staffId} { 
-      allow read: if isHqTier1() 
-        || (request.auth != null && exists(/databases/$(database)/documents/rehab_users/$(request.auth.uid))) 
-        || (request.auth != null && exists(/databases/$(database)/documents/spims_users/$(request.auth.uid))); 
+      allow read: if isHqSuperOrManager(); 
       allow create: if isHqSuperOrManager(); 
       allow update: if isHqSuperOrManager(); 
       allow delete: if isHqSuperAdmin(); 
@@ -566,8 +582,7 @@ service cloud.firestore {
     // Staff CANNOT mark own attendance — manager does it. 
     // Staff can read their own record. Manager/superadmin read+write all. 
     match /hq_attendance/{docId} { 
-      allow read: if isHqSuperOrManager() 
-        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow read: if isHqSuperOrManager(); 
       allow create: if isHqSuperOrManager(); 
       allow update: if isHqSuperOrManager(); 
       allow delete: if isHqSuperAdmin(); 
@@ -685,7 +700,7 @@ service cloud.firestore {
     } 
 
     match /rehab_staff/{staffId} { 
-      allow read: if isHqTier1(); 
+      allow read: if isHqSuperOrManager(); 
       allow create: if isHqSuperOrManager(); 
       allow update: if isHqSuperOrManager(); 
     } 
@@ -721,7 +736,7 @@ service cloud.firestore {
     } 
 
     match /spims_staff/{staffId} { 
-      allow read: if isHqTier1(); 
+      allow read: if isHqSuperOrManager(); 
       allow create: if isHqSuperOrManager(); 
       allow update: if isHqSuperOrManager(); 
     } 
@@ -732,12 +747,12 @@ service cloud.firestore {
     }
 
     match /rehab_attendance/{docId} {
-      allow read: if isHqTier1();
+      allow read: if isHqSuperOrManager();
       allow create, update: if isHqSuperOrManager();
     }
 
     match /spims_attendance/{docId} {
-      allow read: if isHqTier1();
+      allow read: if isHqSuperOrManager();
       allow create, update: if isHqSuperOrManager();
     }
 
@@ -775,6 +790,59 @@ service cloud.firestore {
         || (isRehabRole('family') && resource.data.patientId == rehabPatientId());
       allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
       allow delete: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  HQ PORTAL COLLECTIONS
+    // ═══════════════════════════════════════════════════════════
+
+    // ── HQ Staff profiles ──────────────────────────────
+    // Manager and superadmin can read and edit all staff.
+    // Staff can read their own profile only.
+    match /hq_staff/{staffId} {
+      allow read: if isHQManagerOrAbove();
+      allow create, update: if isHQManagerOrAbove();
+      allow delete: if isHQSuperAdmin();
+    }
+
+    // ── HQ Attendance ──────────────────────────────────
+    // Manager and superadmin can read all attendance.
+    // Nobody deletes attendance — full audit trail.
+    match /hq_attendance/{docId} {
+      allow read: if isHQManagerOrAbove();
+      allow create, update: if isHQManagerOrAbove();
+      allow delete: if false;
+    }
+
+    // ── Rehab Duty Logs ────────────────────────────────
+    // Manager and superadmin can read all. Rehab admin can also read.
+    match /rehab_duty_logs/{docId} {
+      allow read: if isRehabAdminOrAbove() || isHQManagerOrAbove();
+      allow create, update: if isRehabAdminOrAbove() || isHQManagerOrAbove();
+      allow delete: if false;
+    }
+
+    // ── HQ Duty Logs ───────────────────────────────────
+    // Manager and superadmin can read and write all.
+    match /hq_duty_logs/{docId} {
+      allow read: if isHQManagerOrAbove();
+      allow create, update: if isHQManagerOrAbove();
+      allow delete: if false;
+    }
+
+    // ── Future departments staff-management (manager/superadmin only) ────────
+    // Any new department that follows naming:
+    //   {dept}_staff, {dept}_attendance, {dept}_duty_logs
+    // is automatically manageable from HQ by manager/superadmin.
+    match /{collectionId}/{docId} {
+      allow read, create, update: if isHqSuperOrManager()
+        && (
+          collectionId.matches('^[a-z0-9]+_staff$')
+          || collectionId.matches('^[a-z0-9]+_attendance$')
+          || collectionId.matches('^[a-z0-9]+_duty_logs$')
+        );
+      allow delete: if isHqSuperAdmin()
+        && collectionId.matches('^[a-z0-9]+_staff$');
     }
 
   }

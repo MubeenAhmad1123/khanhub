@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { HqSession, HqRole } from '@/types/hq';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 43200000;
+const HQ_DOMAIN = '@hq.khanhub.com';
 
 export default function HqLoginPage() {
   const [customId, setCustomId] = useState('');
@@ -19,9 +21,15 @@ export default function HqLoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (raw) {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw || !user) {
+          localStorage.removeItem(SESSION_KEY);
+          setChecking(false);
+          return;
+        }
+
         const parsed: HqSession = JSON.parse(raw);
         const elapsed = Date.now() - parsed.loginTime;
         if (elapsed < SESSION_TIMEOUT) {
@@ -32,15 +40,16 @@ export default function HqLoginPage() {
           };
           router.push(roleRoutes[parsed.role] || '/hq/login');
           return;
-        } else {
-          localStorage.removeItem(SESSION_KEY);
         }
+
+        localStorage.removeItem(SESSION_KEY);
+      } catch {
+        localStorage.removeItem(SESSION_KEY);
+      } finally {
+        setChecking(false);
       }
-    } catch {
-      localStorage.removeItem(SESSION_KEY);
-    } finally {
-      setChecking(false);
-    }
+    });
+    return () => unsub();
   }, [router]);
 
   const handleLogin = async (e?: React.FormEvent) => {
@@ -49,28 +58,19 @@ export default function HqLoginPage() {
     setError('');
 
     try {
-      // Direct Firestore check — no Firebase Auth needed
-      const q = query(
-        collection(db, 'hq_users'),
-        where('customId', '==', customId.trim())
-      );
-      const snap = await getDocs(q);
+      const normalizedCustomId = customId.trim();
+      const email = `${normalizedCustomId.toLowerCase().replace(/-/g, '.')}${HQ_DOMAIN}`;
 
-      if (snap.empty) {
-        setError('Invalid ID or password.');
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const userDoc = await getDoc(doc(db, 'hq_users', cred.user.uid));
+
+      if (!userDoc.exists()) {
+        setError('User profile not found.');
         setLoading(false);
         return;
       }
 
-      const docSnap = snap.docs[0];
-      const data = docSnap.data();
-
-      if (data.password !== password) {
-        setError('Invalid ID or password.');
-        setLoading(false);
-        return;
-      }
-
+      const data = userDoc.data();
       if (data.isActive === false) {
         setError('Account is disabled. Contact administrator.');
         setLoading(false);
@@ -78,7 +78,7 @@ export default function HqLoginPage() {
       }
 
       const session: HqSession = {
-        uid: docSnap.id,
+        uid: cred.user.uid,
         customId: data.customId,
         name: data.name,
         role: data.role as HqRole,

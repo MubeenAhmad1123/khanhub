@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import type { HqSession } from '@/types/hq';
 
 const SESSION_KEY = 'hq_session';
@@ -31,8 +33,17 @@ export function useHqSession() {
     } catch {
       setSession(null);
     } finally {
-      setLoading(false);
+      // Keep loading true until Firebase Auth confirms state.
     }
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        localStorage.removeItem(SESSION_KEY);
+        setSession(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsub();
   }, []);
 
   return { session, loading, clearSession };
