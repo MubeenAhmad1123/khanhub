@@ -94,8 +94,8 @@ export default function ManagerStaffPage() {
 
         // 3. Find Unmarked Duties
         const [rehabDutyLogs, hqDutyLogs] = await Promise.all([
-          getDocs(query(collection(db, 'rehab_duty_logs'), where('date', '>=', new Date(todayStr)))),
-          getDocs(query(collection(db, 'hq_duty_logs'), where('date', '>=', new Date(todayStr))))
+          getDocs(query(collection(db, 'rehab_duty_logs'), where('date', '>=', todayStr))),
+          getDocs(query(collection(db, 'hq_duty_logs'), where('date', '>=', todayStr)))
         ]);
 
         const markedIds = new Set([
