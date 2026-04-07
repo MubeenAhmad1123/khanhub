@@ -56,6 +56,7 @@ export async function createRehabUserServer(
       customId,
       role,
       displayName,
+      password,
       patientId: patientId || null,
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
@@ -108,6 +109,9 @@ export async function resetRehabPassword(
   try {
     const app = getAdminApp();
     await getAuth(app).updateUser(uid, { password: newPassword });
+    await getFirestore(app).collection('rehab_users').doc(uid).update({
+      password: newPassword,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -201,6 +205,7 @@ export async function createStaffMemberServer(
       customId,
       role: 'staff',
       displayName,
+      password,
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
     });

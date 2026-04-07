@@ -215,8 +215,8 @@ export default function FamilyPatientViewPage() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-4 pb-12">
-        <div className="w-full overflow-x-auto -mx-4 px-4 scrollbar-none">
-          <div className="flex gap-1 min-w-max pb-1">
+        <div className="w-full -mx-4 px-4">
+          <div className="flex flex-wrap gap-1 pb-1">
             {[
               { key: 'overview', label: 'Overview', icon: User },
               { key: 'daily', label: 'Daily Sheet', icon: Activity },
