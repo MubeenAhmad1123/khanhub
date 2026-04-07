@@ -24,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   // Admin nav — patients only (admin cannot manage staff)
   { label: 'Overview',      href: '/departments/rehab/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin'] },
   { label: 'Patients',      href: '/departments/rehab/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin'] },
+  { label: 'Credentials',   href: '/departments/rehab/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin'] },
 
   // Self-service nav (all roles)
   { label: 'My Attendance', href: '/departments/rehab/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },

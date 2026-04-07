@@ -1,21 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, Eye, EyeOff, Copy, Check, Shield, Filter, ArrowLeft, Key, Lock, Search } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Copy, Check, Shield, ArrowLeft, Key, Lock, Search } from 'lucide-react';
 import Link from 'next/link';
 
-type FilterType = 'all' | 'superadmin' | 'manager' | 'cashier';
+type CredentialUser = {
+  id: string;
+  name: string;
+  customId: string;
+  password: string;
+  role: string;
+  portal: 'hq' | 'rehab' | 'spims';
+};
+
+const PORTAL_LABELS = {
+  hq: 'HQ',
+  rehab: 'Rehab',
+  spims: 'SPIMS',
+} as const;
 
 export default function HqPasswordsPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<CredentialUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [activeRole, setActiveRole] = useState<string>('all');
+  const [activePortal, setActivePortal] = useState<'all' | 'hq' | 'rehab' | 'spims'>('all');
   const [search, setSearch] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -39,14 +53,51 @@ export default function HqPasswordsPage() {
 
     const fetchUsers = async () => {
       try {
-        const snap = await getDocs(collection(db, 'hq_users'));
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        list.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA;
+        const [hqSnap, rehabSnap, spimsSnap] = await Promise.all([
+          getDocs(collection(db, 'hq_users')),
+          getDocs(collection(db, 'rehab_users')),
+          getDocs(collection(db, 'spims_users')),
+        ]);
+
+        const hqUsers = hqSnap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: `hq_${d.id}`,
+            name: data.name || data.displayName || 'Unknown',
+            customId: data.customId || '-',
+            password: data.password || '',
+            role: data.role || 'unknown',
+            portal: 'hq' as const,
+          };
         });
-        setUsers(list);
+
+        const rehabUsers = rehabSnap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: `rehab_${d.id}`,
+            name: data.displayName || data.name || 'Unknown',
+            customId: data.customId || '-',
+            password: data.password || '',
+            role: data.role || 'unknown',
+            portal: 'rehab' as const,
+          };
+        });
+
+        const spimsUsers = spimsSnap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: `spims_${d.id}`,
+            name: data.displayName || data.name || 'Unknown',
+            customId: data.customId || '-',
+            password: data.password || '',
+            role: data.role || 'unknown',
+            portal: 'spims' as const,
+          };
+        });
+
+        const merged = [...hqUsers, ...rehabUsers, ...spimsUsers];
+        merged.sort((a, b) => a.name.localeCompare(b.name));
+        setUsers(merged);
       } catch (err) {
         console.error(err);
       } finally {
@@ -54,26 +105,36 @@ export default function HqPasswordsPage() {
       }
     };
 
-    fetchUsers();
+    void fetchUsers();
   }, [session]);
 
+  const roleOptions = useMemo(() => {
+    const roles = Array.from(new Set(users.map((u) => u.role))).sort();
+    return ['all', ...roles];
+  }, [users]);
+
   const togglePassword = (id: string) => {
-    setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
+    setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const copyToClipboard = (id: string, customId: string, password: string) => {
-    const text = `ID: ${customId} | Pass: ${password}`;
-    navigator.clipboard.writeText(text);
+    const text = `ID: ${customId} | Pass: ${password || '-'}`;
+    void navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const filtered = users.filter(u => {
-    const matchesFilter = filter === 'all' || u.role === filter;
-    const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) || 
-                          u.customId.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const filtered = useMemo(() => {
+    const searchValue = search.trim().toLowerCase();
+    return users.filter((u) => {
+      const matchesRole = activeRole === 'all' || u.role === activeRole;
+      const matchesPortal = activePortal === 'all' || u.portal === activePortal;
+      const matchesSearch =
+        !searchValue ||
+        `${u.name} ${u.customId} ${u.role} ${u.portal}`.toLowerCase().includes(searchValue);
+      return matchesRole && matchesPortal && matchesSearch;
+    });
+  }, [users, activeRole, activePortal, search]);
 
   if (sessionLoading || loading) {
     return (
@@ -139,12 +200,12 @@ export default function HqPasswordsPage() {
             
             <div className="overflow-x-auto scrollbar-none w-full -mx-4 px-4 sm:mx-0 sm:px-0">
               <div className="flex min-w-max gap-1 p-1.5 rounded-2xl bg-slate-500/5 border border-slate-500/10">
-                {(['all', 'superadmin', 'manager', 'cashier'] as FilterType[]).map(f => (
+                {roleOptions.map((f) => (
                   <button
                     key={f}
-                    onClick={() => setFilter(f)}
+                    onClick={() => setActiveRole(f)}
                     className={`px-3 py-2 rounded-xl text-[9px] whitespace-nowrap font-black uppercase tracking-widest active:scale-95 transition-all ${
-                      filter === f
+                      activeRole === f
                         ? 'bg-teal-600 text-white shadow-lg'
                         : `${darkMode ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'}`
                     }`}
@@ -153,6 +214,24 @@ export default function HqPasswordsPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto scrollbar-none w-full">
+            <div className="flex min-w-max gap-1 p-1.5 rounded-2xl bg-slate-500/5 border border-slate-500/10">
+              {(['all', 'hq', 'rehab', 'spims'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setActivePortal(p)}
+                  className={`px-3 py-2 rounded-xl text-[9px] whitespace-nowrap font-black uppercase tracking-widest active:scale-95 transition-all ${
+                    activePortal === p
+                      ? 'bg-indigo-600 text-white shadow-lg'
+                      : `${darkMode ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'}`
+                  }`}
+                >
+                  {p === 'all' ? 'All Portals' : PORTAL_LABELS[p]}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -188,6 +267,9 @@ export default function HqPasswordsPage() {
                   'bg-teal-500/10 text-teal-500 border-teal-500/20'
                 }`}>{u.role}</span>
               </div>
+              <p className={`text-[9px] uppercase tracking-wider font-black mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                {PORTAL_LABELS[u.portal]}
+              </p>
 
               {/* Row 2: Password field */}
               <div className={`flex items-center justify-between p-3 rounded-xl mb-3 ${darkMode ? 'bg-white/5' : 'bg-slate-50'}`}>
@@ -230,6 +312,7 @@ export default function HqPasswordsPage() {
               <thead>
                 <tr className={`text-[10px] font-black uppercase tracking-widest border-b ${darkMode ? 'border-white/5 text-slate-500' : 'border-slate-50 text-slate-400'}`}>
                   <th className="px-8 py-6">Operator Node</th>
+                  <th className="px-8 py-6">Portal</th>
                   <th className="px-8 py-6">Role Rank</th>
                   <th className="px-8 py-6">Access ID</th>
                   <th className="px-8 py-6">Encryption Key</th>
@@ -250,6 +333,11 @@ export default function HqPasswordsPage() {
                         </div>
                         <span className={`text-sm font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{u.name}</span>
                       </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={`text-[10px] uppercase tracking-widest font-black ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {PORTAL_LABELS[u.portal]}
+                      </span>
                     </td>
                     <td className="px-8 py-5">
                       <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${
