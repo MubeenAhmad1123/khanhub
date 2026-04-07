@@ -77,12 +77,12 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
+    <div className="space-y-6 animate-in fade-in duration-500 overflow-x-hidden w-full max-w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-gray-100 pb-4">
         <h2 className="text-xl font-black text-gray-900">Medication Assisted Therapy</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
+          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
         >
           <Plus size={16} /> Add Record
         </button>
@@ -94,7 +94,47 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
           <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No medication records found</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-[2rem] border border-gray-100 shadow-sm bg-white">
+        <>
+        <div className="md:hidden space-y-3">
+          {records.map(r => (
+            <div key={r.id} className="rounded-2xl border border-gray-100 shadow-sm bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-bold text-gray-900 text-sm">
+                  <Calendar size={14} className="text-teal-500" />
+                  <span>{r.date}</span>
+                </div>
+                <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
+                  {r.timing}
+                </span>
+              </div>
+              <div className="text-sm text-gray-800 break-words">{r.medications}</div>
+              {r.notes && (
+                <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded-lg border border-gray-100 break-words">
+                  {r.notes}
+                </p>
+              )}
+              <div className="grid grid-cols-1 gap-1 text-xs">
+                {r.medicalOfficerSig && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">MO:</span>
+                    <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded break-all">{r.medicalOfficerSig}</span>
+                  </div>
+                )}
+                {r.dispenserSig && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">Disp:</span>
+                    <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded break-all">{r.dispenserSig}</span>
+                  </div>
+                )}
+                {!r.medicalOfficerSig && !r.dispenserSig && (
+                  <span className="text-gray-300 italic">No signatures</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto rounded-[2rem] border border-gray-100 shadow-sm bg-white">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-gray-50/80 text-gray-500 font-black uppercase tracking-widest text-[10px]">
               <tr>
@@ -149,6 +189,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Add Record Modal */}

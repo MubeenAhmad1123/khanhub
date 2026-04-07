@@ -88,12 +88,12 @@ export default function TherapyTab({ patientId, session }: { patientId: string, 
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
+    <div className="space-y-6 animate-in fade-in duration-500 overflow-x-hidden w-full max-w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-gray-100 pb-4">
         <h2 className="text-xl font-black text-gray-900">Individual Therapy Sessions</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
+          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
         >
           <Plus size={16} /> Add Session
         </button>
@@ -125,7 +125,7 @@ export default function TherapyTab({ patientId, session }: { patientId: string, 
                   </div>
                 </div>
                 {s.patientMood && (
-                  <div className="bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider">
+                  <div className="bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider break-words">
                     Mood: {s.patientMood}
                   </div>
                 )}

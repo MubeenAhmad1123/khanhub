@@ -89,12 +89,12 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
+    <div className="space-y-6 animate-in fade-in duration-500 overflow-x-hidden w-full max-w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-gray-100 pb-4">
         <h2 className="text-xl font-black text-gray-900">Weekly Progress Tracking</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
+          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
         >
           <Plus size={16} /> Add Progress
         </button>
@@ -134,9 +134,9 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {progress.map(p => (
               <div key={p.id} className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:border-teal-200 transition-colors">
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
                   <h3 className="font-black text-gray-900">Week {p.weekNumber}</h3>
-                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest break-words ${
                     p.score === 4 ? 'bg-green-100 text-green-700' :
                     p.score === 3 ? 'bg-teal-100 text-teal-700' :
                     p.score === 2 ? 'bg-yellow-100 text-yellow-700' :
