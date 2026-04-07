@@ -212,6 +212,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
       {loading ? (
         <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>
       ) : (
+        <>
         <div className="md:hidden space-y-4">
           <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-gray-200/60 shadow-sm">
             <button
@@ -345,6 +346,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
             </table>
           </div>
         </div>
+        </>
       )}
 
       {/* Note Modal */}
