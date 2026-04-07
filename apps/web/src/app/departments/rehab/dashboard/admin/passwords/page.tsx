@@ -131,7 +131,48 @@ export default function RehabAdminPasswordsPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="md:hidden divide-y divide-gray-100">
+          {filtered.map((u) => (
+            <div key={u.id} className="p-4 space-y-3">
+              <div>
+                <p className="text-sm font-bold text-gray-900">{u.displayName || '-'}</p>
+                <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black mt-1">Patient</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Login ID</p>
+                  <p className="text-xs font-mono font-black text-gray-700 mt-1 break-all">{u.customId || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Patient ID</p>
+                  <p className="text-xs font-mono font-black text-gray-500 mt-1 break-all">{u.patientId || '-'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Password</p>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <span className="font-mono text-sm font-bold text-gray-800 break-all">
+                      {visiblePasswords[u.id] ? (u.password || '-') : '••••••••••'}
+                    </span>
+                    <button onClick={() => togglePassword(u.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0">
+                      {visiblePasswords[u.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => copyCredentials(u)}
+                className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                  copiedId === u.id ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {copiedId === u.id ? <Check size={12} /> : <Copy size={12} />}
+                {copiedId === u.id ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-[760px] w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
