@@ -142,8 +142,8 @@ export default function CashierStationPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0A0A0A] pb-24">
       {/* Header */}
-      <div className="bg-white dark:bg-[#111111] border-b border-gray-100 dark:border-white/5 px-4 md:px-8 py-6 sticky top-0 z-30 backdrop-blur-xl bg-white/80 dark:bg-[#111111]/80">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#111111] border-b border-gray-100 dark:border-white/5 px-4 md:px-8 py-4 md:py-6 sticky top-0 z-30 backdrop-blur-xl bg-white/80 dark:bg-[#111111]/80">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-start md:justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
               <CreditCard size={24} />
@@ -165,11 +165,11 @@ export default function CashierStationPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 sm:mt-8 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
         
         {/* Left Column: Search & Patient Info */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white dark:bg-[#111111] rounded-[2.5rem] p-7 shadow-sm border border-gray-100 dark:border-white/5">
+          <div className="bg-white dark:bg-[#111111] rounded-[1.5rem] sm:rounded-[2.5rem] p-7 shadow-sm border border-gray-100 dark:border-white/5">
             <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <Search size={14} /> Search Account
             </h2>
@@ -223,7 +223,7 @@ export default function CashierStationPage() {
           </div>
 
           {selectedPatient && (
-            <div className="bg-white dark:bg-[#111111] rounded-[2.5rem] p-7 shadow-sm border border-gray-100 dark:border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white dark:bg-[#111111] rounded-[1.5rem] sm:rounded-[2.5rem] p-7 shadow-sm border border-gray-100 dark:border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
                 <Wallet size={14} /> Ledger Summary
               </h2>
@@ -243,7 +243,7 @@ export default function CashierStationPage() {
 
         {/* Middle Column: Transaction Form */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white dark:bg-[#111111] rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-gray-100 dark:border-white/5 min-h-[600px] relative overflow-hidden group">
+          <div className="bg-white dark:bg-[#111111] rounded-[1.5rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 shadow-sm border border-gray-100 dark:border-white/5 min-h-[600px] relative overflow-hidden group">
             {/* Decorative background */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-bl-[8rem] -mr-16 -mt-16 transition-all group-hover:scale-110 duration-700 pointer-events-none" />
             
@@ -267,19 +267,19 @@ export default function CashierStationPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <button 
                     type="button"
                     onClick={() => setTxnType('income')}
                     className={cn(
-                      "flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-2 transition-all group relative active:scale-95",
+                      "flex flex-col items-center gap-4 p-5 sm:p-8 rounded-[2.5rem] border-2 transition-all group relative active:scale-95",
                       txnType === 'income' 
                         ? "bg-teal-50 dark:bg-teal-500/10 border-teal-500 shadow-xl shadow-teal-500/10" 
                         : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-teal-500/30"
                     )}
                   >
                     <div className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
+                      "w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
                       txnType === 'income' ? "bg-teal-500 text-white shadow-lg shadow-teal-500/20" : "bg-gray-100 dark:bg-white/10 text-gray-400 group-hover:bg-teal-400 group-hover:text-white"
                     )}>
                       <TrendingUp size={28} strokeWidth={2.5} />
@@ -291,14 +291,14 @@ export default function CashierStationPage() {
                     type="button"
                     onClick={() => setTxnType('expense')}
                     className={cn(
-                      "flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-2 transition-all group relative active:scale-95",
+                      "flex flex-col items-center gap-4 p-5 sm:p-8 rounded-[2.5rem] border-2 transition-all group relative active:scale-95",
                       txnType === 'expense' 
                         ? "bg-red-50 dark:bg-red-500/10 border-red-500 shadow-xl shadow-red-500/10" 
                         : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-red-500/30"
                     )}
                   >
                     <div className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
+                      "w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
                       txnType === 'expense' ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-gray-100 dark:bg-white/10 text-gray-400 group-hover:bg-red-400 group-hover:text-white"
                     )}>
                       <TrendingDown size={28} strokeWidth={2.5} />
@@ -324,14 +324,14 @@ export default function CashierStationPage() {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Amount (PKR)</label>
                     <div className="relative group">
-                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600 font-black text-lg transition-colors group-focus-within:text-teal-600">₨</span>
+                      <span className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600 font-black text-lg transition-colors group-focus-within:text-teal-600">₨</span>
                       <input 
                         type="number" 
                         step="0.01"
                         placeholder="0.00"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-12 pr-6 py-4 text-2xl font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all placeholder:text-gray-200 dark:placeholder:text-gray-800"
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-10 pr-4 sm:pl-12 sm:pr-6 py-4 text-2xl font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all placeholder:text-gray-200 dark:placeholder:text-gray-800"
                         required
                       />
                     </div>
@@ -383,7 +383,7 @@ export default function CashierStationPage() {
       </div>
 
       {/* History Table */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-16">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 sm:mt-16">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-4">
             <div className="w-10 h-10 bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center text-teal-600 dark:text-teal-400 shadow-sm">
@@ -396,22 +396,22 @@ export default function CashierStationPage() {
           </button>
         </div>
 
-        <div className="bg-white dark:bg-[#111111] rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
+        <div className="bg-white dark:bg-[#111111] rounded-2xl sm:rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5">
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Timestamp</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Account Entity</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Category</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] text-right">Amount</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] text-center">Verified By</th>
+                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Timestamp</th>
+                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Account Entity</th>
+                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Category</th>
+                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] text-right">Amount</th>
+                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] text-center">Verified By</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                 {recentTxns.map(tx => (
                   <tr key={tx.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors">
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-4 sm:px-8 sm:py-6">
                       <div className="text-sm font-black text-gray-900 dark:text-white capitalize">
                         {toDate(tx.date || tx.createdAt)?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                       </div>
@@ -419,16 +419,16 @@ export default function CashierStationPage() {
                         {toDate(tx.date || tx.createdAt)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-4 sm:px-8 sm:py-6">
                       <div className="text-sm font-black text-gray-900 dark:text-white">{tx.patientName}</div>
                       <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest">{tx.patientId?.slice(0, 10)}...</div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-4 sm:px-8 sm:py-6">
                       <span className="inline-flex items-center px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/10 opacity-80">
                         {tx.category}
                       </span>
                     </td>
-                    <td className="px-8 py-6 text-right">
+                    <td className="px-4 py-4 sm:px-8 sm:py-6 text-right">
                       <div className={cn(
                         "text-lg font-black flex items-center justify-end gap-2",
                         tx.type === 'income' ? "text-teal-600 dark:text-teal-400" : "text-red-500"
@@ -437,7 +437,7 @@ export default function CashierStationPage() {
                         ₨{tx.amount?.toLocaleString()}
                       </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-4 sm:px-8 sm:py-6">
                       <div className="flex items-center justify-center gap-3">
                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-500 dark:text-gray-400 border border-gray-200/50 dark:border-white/10">
                           {tx.createdByName?.[0]?.toUpperCase() || 'C'}
