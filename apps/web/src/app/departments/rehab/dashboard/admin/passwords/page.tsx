@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2, Search, Eye, EyeOff, Copy, Check, ArrowLeft, Shield } from 'lucide-react';
+import { resetRehabPassword } from '@/app/departments/rehab/actions/createRehabUser';
 
 type RehabPatientCredential = {
   id: string;
@@ -25,6 +26,7 @@ export default function RehabAdminPasswordsPage() {
   const [search, setSearch] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -87,6 +89,31 @@ export default function RehabAdminPasswordsPage() {
     void navigator.clipboard.writeText(text);
     setCopiedId(u.id);
     setTimeout(() => setCopiedId(null), 1500);
+  };
+
+  const handleResetPassword = async (u: RehabPatientCredential) => {
+    const next = window.prompt(`Enter new password for ${u.customId || u.displayName || 'user'} (min 6 chars):`);
+    if (!next) return;
+    if (next.length < 6) {
+      window.alert('Password must be at least 6 characters.');
+      return;
+    }
+
+    try {
+      setResettingId(u.id);
+      const res = await resetRehabPassword(u.id, next);
+      if (!res.success) {
+        window.alert(res.error || 'Failed to reset password.');
+        return;
+      }
+      setUsers((prev) => prev.map((row) => (row.id === u.id ? { ...row, password: next } : row)));
+      setVisiblePasswords((prev) => ({ ...prev, [u.id]: true }));
+      window.alert('Password reset successful.');
+    } catch {
+      window.alert('Failed to reset password.');
+    } finally {
+      setResettingId(null);
+    }
   };
 
   if (loading) {
@@ -168,6 +195,14 @@ export default function RehabAdminPasswordsPage() {
                 {copiedId === u.id ? <Check size={12} /> : <Copy size={12} />}
                 {copiedId === u.id ? 'Copied' : 'Copy'}
               </button>
+              <button
+                onClick={() => handleResetPassword(u)}
+                disabled={resettingId === u.id}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+              >
+                {resettingId === u.id ? <Loader2 size={12} className="animate-spin" /> : null}
+                {resettingId === u.id ? 'Resetting...' : 'Reset Password'}
+              </button>
             </div>
           ))}
         </div>
@@ -208,6 +243,14 @@ export default function RehabAdminPasswordsPage() {
                     >
                       {copiedId === u.id ? <Check size={12} /> : <Copy size={12} />}
                       {copiedId === u.id ? 'Copied' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={() => handleResetPassword(u)}
+                      disabled={resettingId === u.id}
+                      className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                    >
+                      {resettingId === u.id ? <Loader2 size={12} className="animate-spin" /> : null}
+                      {resettingId === u.id ? 'Resetting...' : 'Reset'}
                     </button>
                   </td>
                 </tr>

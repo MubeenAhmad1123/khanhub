@@ -5,11 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
+import { canAccessHqPortal } from '@/lib/hqPortalAccess';
 
 export default function UserMenu() {
     const { user, loading, signOut } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const showHqButton = canAccessHqPortal(user?.email);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -117,6 +119,14 @@ export default function UserMenu() {
                             </svg>
                             <span className="text-sm font-medium text-neutral-700 group-hover:text-neutral-900">Dashboard</span>
                         </Link>
+                        {showHqButton && (
+                            <Link href="/hq/login" className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors group" onClick={() => setIsOpen(false)}>
+                                <svg className="w-5 h-5 text-neutral-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3v5h6v-5c0-1.657-1.343-3-3-3zm0 0V6a3 3 0 116 0v2m-6 0h6M5 11h2m10 0h2M7 19h10a2 2 0 002-2v-6a2 2 0 00-2-2H7a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-sm font-medium text-neutral-700 group-hover:text-blue-700">Login to HQ</span>
+                            </Link>
+                        )}
                     </div>
 
                     {/* Sign Out */}

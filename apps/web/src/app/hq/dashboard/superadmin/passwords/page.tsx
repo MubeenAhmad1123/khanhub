@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { Loader2, Eye, EyeOff, Copy, Check, Shield, ArrowLeft, Key, Lock, Search } from 'lucide-react';
 import Link from 'next/link';
+import { resetPortalUserPassword } from '@/app/hq/actions/resetPortalUserPassword';
 
 type CredentialUser = {
   id: string;
@@ -34,6 +35,7 @@ export default function HqPasswordsPage() {
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [resettingId, setResettingId] = useState<string | null>(null);
 
   useEffect(() => {
     const isDark = localStorage.getItem('hq_dark_mode') === 'true';
@@ -122,6 +124,32 @@ export default function HqPasswordsPage() {
     void navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleResetPassword = async (u: CredentialUser) => {
+    const uid = u.id.includes('_') ? u.id.split('_').slice(1).join('_') : u.id;
+    const next = window.prompt(`Enter new password for ${u.customId} (${u.portal.toUpperCase()})`);
+    if (!next) return;
+    if (next.length < 6) {
+      window.alert('Password must be at least 6 characters.');
+      return;
+    }
+
+    try {
+      setResettingId(u.id);
+      const res = await resetPortalUserPassword(uid, u.portal, next);
+      if (!res.success) {
+        window.alert(res.error || 'Failed to reset password.');
+        return;
+      }
+      setUsers((prev) => prev.map((row) => (row.id === u.id ? { ...row, password: next } : row)));
+      setVisiblePasswords((prev) => ({ ...prev, [u.id]: true }));
+      window.alert('Password reset successful.');
+    } catch {
+      window.alert('Failed to reset password.');
+    } finally {
+      setResettingId(null);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -295,6 +323,18 @@ export default function HqPasswordsPage() {
                 {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
                 {copiedId === u.id ? 'Secured' : 'Extract Credentials'}
               </button>
+              <button
+                onClick={() => handleResetPassword(u)}
+                disabled={resettingId === u.id}
+                className={`w-full mt-2 py-3 rounded-2xl active:scale-95 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                  darkMode
+                    ? 'bg-blue-500/10 text-blue-300 border border-blue-500/30'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                } disabled:opacity-60`}
+              >
+                {resettingId === u.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                {resettingId === u.id ? 'Resetting...' : 'Reset Password'}
+              </button>
             </div>
           ))}
 
@@ -381,6 +421,18 @@ export default function HqPasswordsPage() {
                       >
                         {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
                         {copiedId === u.id ? 'Secured' : 'Extract'}
+                      </button>
+                      <button
+                        onClick={() => handleResetPassword(u)}
+                        disabled={resettingId === u.id}
+                        className={`ml-2 inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all ${
+                          darkMode
+                            ? 'bg-blue-500/10 text-blue-300 border border-blue-500/30'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                        } disabled:opacity-60`}
+                      >
+                        {resettingId === u.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                        {resettingId === u.id ? 'Resetting...' : 'Reset'}
                       </button>
                     </td>
                   </tr>
