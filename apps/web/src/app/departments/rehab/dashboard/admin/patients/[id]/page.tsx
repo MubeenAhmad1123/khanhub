@@ -548,7 +548,7 @@ export default function PatientDetailPage() {
   if (!patient) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 overflow-x-hidden w-full max-w-full">
       <div className="max-w-5xl mx-auto space-y-6">
         
         {/* Top Link */}
@@ -561,7 +561,7 @@ export default function PatientDetailPage() {
         </Link>
         
         {/* Header Profile Summary */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6 relative overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-4 md:p-8 flex flex-col items-center gap-4 sm:gap-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 -z-0"></div>
           
           <div className="relative z-10">
@@ -574,18 +574,17 @@ export default function PatientDetailPage() {
             )}
           </div>
           
-          <div className="relative z-10 flex-1 text-center md:text-left">
+          <div className="relative z-10 flex-1 text-center">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{patient.name}</h1>
-            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm text-gray-500 mb-4 justify-center md:justify-start">
-              <span className="flex items-center justify-center md:justify-start gap-1">
+            <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
+              <span className="flex items-center justify-center gap-1">
                 <Calendar className="w-4 h-4" /> 
                 Admitted: {patient.admissionDate?.toDate?.()?.toLocaleDateString()}
               </span>
-              <span className="hidden md:inline">•</span>
-              <span className="flex items-center justify-center md:justify-start gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
+              <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
                 PKR {patient.packageAmount?.toLocaleString()} / m
               </span>
-              <span className="flex items-center justify-center md:justify-start gap-1 text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full animate-pulse shadow-sm border border-orange-100">
+              <span className="flex items-center justify-center gap-1 text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full animate-pulse shadow-sm border border-orange-100">
                 ⏳ {patient.remainingDays} Days Left
               </span>
             </div>
@@ -599,10 +598,11 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex overflow-x-auto border-b border-gray-200 hide-scrollbar bg-white rounded-t-2xl px-1 sm:px-2">
+        <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4">
+          <div className="flex min-w-max gap-1 border-b border-gray-100 bg-white rounded-t-2xl">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`whitespace-nowrap py-3 sm:py-4 px-3 sm:px-6 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'profile' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -610,7 +610,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('admission')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'admission' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -618,7 +618,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('daily')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'daily' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -626,7 +626,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('progress')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'progress' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -634,7 +634,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('therapy')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'therapy' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -642,7 +642,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('meds')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'meds' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -650,7 +650,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('fees')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'fees' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -658,7 +658,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('canteen')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'canteen' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -666,7 +666,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('videos')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'videos' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -674,21 +674,22 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('visits')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
               activeTab === 'visits' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <Users className="w-4 h-4" /> Family Visits
           </button>
+          </div>
         </div>
 
         {/* Tab Content Areas */}
-        <div className="bg-white rounded-b-2xl shadow-sm border border-gray-100 border-t-0 p-3 sm:p-6 md:p-8 min-h-[400px]">
+        <div className="bg-white rounded-b-2xl shadow-sm border border-gray-100 border-t-0 w-full p-4 md:p-6 min-h-[400px]">
           
           {/* TAB: PROFILE */}
           {activeTab === 'profile' && (
-            <div className="space-y-8 max-w-2xl">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="space-y-8 w-full">
+              <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                 <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
                 {!isEditing ? (
                   <button onClick={() => setIsEditing(true)} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
@@ -707,7 +708,7 @@ export default function PatientDetailPage() {
               </div>
 
               {isEditing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                     <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
@@ -785,8 +786,8 @@ export default function PatientDetailPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
-                  <div className="bg-orange-50 border border-orange-100 p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
+                  <div className="bg-orange-50 border border-orange-100 w-full p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
                     <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Discharge Countdown</p>
                     <p className="text-4xl font-black text-orange-700">{patient.remainingDays}</p>
                     <p className="text-xs font-bold text-orange-500 mt-1">Days remaining in 100-day program</p>
@@ -797,34 +798,34 @@ export default function PatientDetailPage() {
                       ></div>
                     </div>
                   </div>
-                  <div>
+                  <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Package</span>
                     <span className="font-black text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
                       PKR {patient.packageAmount?.toLocaleString()}
                     </span>
                   </div>
-                  <div>
+                  <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
                     <span className="font-mono font-bold text-gray-900 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100">
                       {patient.assignedStaffId || 'None'}
                     </span>
                   </div>
-                  <div className="sm:col-span-2 pt-2">
+                  <div className="sm:col-span-2 pt-2 w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
-                    <span className="font-mono text-[10px] text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg inline-block border border-gray-100 w-full truncate">
+                    <span className="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg inline-block border border-gray-100 w-full break-all">
                       {patient.id}
                     </span>
                   </div>
                 </div>
               )}
 
-              <div className="pt-8 border-t border-red-50">
+              <div className="pt-8 border-t border-red-50 w-full">
                 <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
                 <p className="text-sm text-gray-500 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
                 <button 
                   onClick={handleDeactivate} 
                   disabled={deactivating}
-                  className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                  className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
                 >
                   {deactivating ? 'Deactivating...' : 'Deactivate Patient'}
                 </button>
@@ -912,16 +913,16 @@ export default function PatientDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-8 animate-in fade-in duration-500">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="bg-white border border-gray-100 p-4 md:p-6 rounded-2xl shadow-sm">
                       <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Monthly Package</div>
                       <div className="text-2xl font-black text-gray-900">PKR {feeRecord.packageAmount.toLocaleString()}</div>
                     </div>
-                    <div className="bg-green-50 border border-green-100 p-5 rounded-2xl shadow-sm">
+                    <div className="bg-green-50 border border-green-100 p-4 md:p-6 rounded-2xl shadow-sm">
                       <div className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">Total Paid</div>
                       <div className="text-2xl font-black text-green-700">PKR {feeRecord.amountPaid.toLocaleString()}</div>
                     </div>
-                    <div className="bg-red-50 border border-red-100 p-5 rounded-2xl shadow-sm">
+                    <div className="bg-red-50 border border-red-100 p-4 md:p-6 rounded-2xl shadow-sm">
                       <div className="text-[10px] text-red-500 font-black uppercase tracking-widest mb-1">Remaining</div>
                       <div className="text-2xl font-black text-red-700">PKR {feeRecord.amountRemaining.toLocaleString()}</div>
                     </div>
@@ -1116,7 +1117,7 @@ export default function PatientDetailPage() {
                   <p className="text-gray-500">No files uploaded yet</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {videos.map(vid => {
                     const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
                     const isImage = vid.fileType?.startsWith('image/');
@@ -1438,7 +1439,7 @@ export default function PatientDetailPage() {
                   <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Father" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
                   <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="+92..." />
