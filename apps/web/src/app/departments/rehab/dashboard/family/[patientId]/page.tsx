@@ -142,7 +142,7 @@ export default function FamilyPatientViewPage() {
           <Link href="/departments/rehab/dashboard/family" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold mb-4 transition-colors">
             <ArrowLeft size={16} /> Back
           </Link>
-          <div className="flex flex-col items-start gap-3 p-4">
+          <div className="flex flex-col items-start gap-3 p-2 sm:p-4">
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 flex items-center justify-center text-teal-700 font-black text-3xl border border-teal-200/50 flex-shrink-0 overflow-hidden">
                 {patient.photoUrl ? (
@@ -172,14 +172,14 @@ export default function FamilyPatientViewPage() {
                 </span>
               )}
             </div>
-            <div className="flex gap-2 mt-1">
+            <div className="flex flex-wrap gap-2 mt-1 w-full sm:w-auto">
               {patient.contactNumber && (
-                <a href={`tel:${patient.contactNumber}`} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 active:scale-95 transition-all">
+                <a href={`tel:${patient.contactNumber}`} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 active:scale-95 transition-all w-full sm:w-auto">
                   <Phone size={14} /> Call
                 </a>
               )}
               {patient.whatsappNumber && (
-                <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 text-xs font-black hover:bg-green-100 active:scale-95 transition-all">
+                <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 text-xs font-black hover:bg-green-100 active:scale-95 transition-all w-full sm:w-auto">
                   <MessageCircle size={14} /> WhatsApp
                 </a>
               )}
@@ -242,7 +242,7 @@ export default function FamilyPatientViewPage() {
           <div className="space-y-6 mt-6">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <h2 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2"><Shield size={18} /> Health Status</h2>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
                   { label: 'HIV', value: healthStatus.hivStatus },
                   { label: 'HBsAg', value: healthStatus.hbsagStatus },
@@ -262,7 +262,7 @@ export default function FamilyPatientViewPage() {
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <h2 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2"><User size={18} /> Guardian Contact</h2>
-              <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Name</p>
                   <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>

@@ -197,6 +197,10 @@ service cloud.firestore {
     function rehabStaffId() {
       return get(/databases/$(database)/documents/rehab_users/$(request.auth.uid)).data.staffId;
     }
+    function isOwnStaffRecord(staffId) {
+      return isRehabRole('staff')
+        && (staffId == request.auth.uid || staffId == rehabStaffId());
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  HQ PORTAL HELPERS
@@ -344,10 +348,10 @@ service cloud.firestore {
     match /rehab_contributions/{docId} {
       allow read: if isRehabRole('admin')
         || isHqSuperOrManager()
-        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid);
+        || isOwnStaffRecord(resource.data.staffId);
       allow create: if isRehabRole('staff') || isRehabRole('admin');
       allow update: if isRehabRole('admin') || isHqSuperOrManager()
-        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid
+        || (isOwnStaffRecord(resource.data.staffId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']));
       allow delete: if false;
     }
@@ -376,7 +380,7 @@ service cloud.firestore {
     match /rehab_duty_logs/{docId} {
       allow read: if isRehabRole('admin')
         || isHqSuperOrManager()
-        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid);
+        || isOwnStaffRecord(resource.data.staffId);
       allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
       allow delete: if false;
     }
@@ -385,7 +389,7 @@ service cloud.firestore {
     match /rehab_dress_logs/{docId} {
       allow read: if isRehabRole('admin')
         || isHqSuperOrManager()
-        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid);
+        || isOwnStaffRecord(resource.data.staffId);
       allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
       allow delete: if false;
     }
@@ -394,7 +398,7 @@ service cloud.firestore {
     match /rehab_growth_points/{docId} {
       allow read: if isRehabRole('admin')
         || isHqSuperOrManager()
-        || (isRehabRole('staff') && resource.data.staffId == request.auth.uid);
+        || isOwnStaffRecord(resource.data.staffId);
       allow create, update: if isRehabRole('admin') || isHqSuperOrManager();
       allow delete: if false;
     }
@@ -559,14 +563,24 @@ service cloud.firestore {
       allow write: if false; 
     } 
 
-    // hq_users — superadmin / manager / cashier profiles 
-    // Read: own doc, OR any HQ tier1 user. 
-    // Write: Firebase Admin SDK only (createHqUserServer server action). 
-    // Exception: superadmin can toggle isActive on other users. 
-    match /hq_users/{docId} { 
-      allow read: if true; 
-      allow write: if request.auth != null; 
-    } 
+    // hq_users — superadmin / manager / cashier profiles
+    // Read: own doc OR any HQ tier1 user.
+    // Create/Delete: server-side (Admin SDK) only.
+    // Update:
+    //  - superadmin/manager can update users (e.g. isActive)
+    //  - owner can update limited profile fields only
+    match /hq_users/{docId} {
+      allow read: if isHqAuth() && (request.auth.uid == docId || isHqTier1());
+      allow create, delete: if false;
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqAuth()
+          && request.auth.uid == docId
+          && request.resource.data.diff(resource.data)
+              .affectedKeys()
+              .hasOnly(['photoUrl', 'name', 'phone'])
+        );
+    }
 
     // hq_staff — global staff profiles across all departments 
     // Read: any HQ tier1 OR rehab/spims admin 
@@ -645,6 +659,15 @@ service cloud.firestore {
       allow update: if isHqSuperOrManager(); 
       allow delete: if isHqSuperAdmin(); 
     } 
+
+    // hq_cashier_categories — reusable custom income/expense fields
+    // Cashier/manager/superadmin can read and create.
+    // Manager/superadmin can edit/delete for governance.
+    match /hq_cashier_categories/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqTier1();
+      allow update, delete: if isHqSuperOrManager();
+    }
 
     // hq_fines — late/discipline fines auto-created on attendance 
     match /hq_fines/{docId} { 

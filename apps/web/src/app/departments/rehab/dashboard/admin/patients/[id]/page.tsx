@@ -548,7 +548,7 @@ export default function PatientDetailPage() {
   if (!patient) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
         
         {/* Top Link */}
@@ -561,7 +561,7 @@ export default function PatientDetailPage() {
         </Link>
         
         {/* Header Profile Summary */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 -z-0"></div>
           
           <div className="relative z-10">
@@ -599,10 +599,10 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex overflow-x-auto border-b border-gray-200 hide-scrollbar bg-white rounded-t-2xl px-2">
+        <div className="flex overflow-x-auto border-b border-gray-200 hide-scrollbar bg-white rounded-t-2xl px-1 sm:px-2">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`whitespace-nowrap py-4 px-6 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 ${
+            className={`whitespace-nowrap py-3 sm:py-4 px-3 sm:px-6 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors border-b-2 ${
               activeTab === 'profile' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -683,7 +683,7 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tab Content Areas */}
-        <div className="bg-white rounded-b-2xl shadow-sm border border-gray-100 border-t-0 p-6 md:p-8 min-h-[400px]">
+        <div className="bg-white rounded-b-2xl shadow-sm border border-gray-100 border-t-0 p-3 sm:p-6 md:p-8 min-h-[400px]">
           
           {/* TAB: PROFILE */}
           {activeTab === 'profile' && (
@@ -1006,13 +1006,13 @@ export default function PatientDetailPage() {
                     <ChevronRight size={20} className="text-gray-400" />
                   </button>
                 </div>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto">
                   <button onClick={() => setCanteenModal('deposit')}
-                    className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-green-600 transition shadow-sm active:scale-95">
+                    className="flex items-center justify-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-green-600 transition shadow-sm active:scale-95">
                     <Plus size={14} /> Deposit
                   </button>
                   <button onClick={() => setCanteenModal('expense')}
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition shadow-sm active:scale-95">
+                    className="flex items-center justify-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition shadow-sm active:scale-95">
                     <Minus size={14} /> Expense
                   </button>
                 </div>
@@ -1173,7 +1173,7 @@ export default function PatientDetailPage() {
           {/* TAB: VISITS */}
           {activeTab === 'visits' && (
             <div className="space-y-6 animate-in fade-in duration-500">
-              <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
                     <Users size={20} />
@@ -1182,7 +1182,7 @@ export default function PatientDetailPage() {
                 </div>
                 <button
                   onClick={() => setShowAddVisitModal(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95"
+                  className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 w-full sm:w-auto"
                 >
                   <Plus size={16} /> Log New Visit
                 </button>
@@ -1317,7 +1317,7 @@ export default function PatientDetailPage() {
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Package Amount (PKR) *</label>
                 <input required type="number" value={packageAmt} onChange={e => setPackageAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. 50000" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Initial Payment</label>
                   <input type="number" value={initialPayment} onChange={e => setInitialPayment(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="0" />
@@ -1350,7 +1350,7 @@ export default function PatientDetailPage() {
               </button>
             </div>
             <form onSubmit={handleAddPayment} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
                   <input required type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
@@ -1428,7 +1428,7 @@ export default function PatientDetailPage() {
               </button>
             </div>
             <form onSubmit={handleAddVisit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
                   <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Full Name" />

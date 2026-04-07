@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2, Search, Eye, EyeOff, Copy, Check, ArrowLeft, Shield } from 'lucide-react';
 
@@ -46,10 +46,13 @@ export default function RehabAdminPasswordsPage() {
     const fetchPatientCredentials = async () => {
       try {
         setLoading(true);
-        const snap = await getDocs(collection(db, 'rehab_users'));
-        const list = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() } as RehabPatientCredential))
-          .filter((u) => u.role === 'family');
+        const q = query(
+          collection(db, 'rehab_users'),
+          where('role', '==', 'family'),
+          orderBy('displayName', 'asc'),
+        );
+        const snap = await getDocs(q);
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RehabPatientCredential));
 
         list.sort((a, b) => {
           const aName = (a.displayName || '').toLowerCase();
