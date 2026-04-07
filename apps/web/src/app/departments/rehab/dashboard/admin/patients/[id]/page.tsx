@@ -598,11 +598,11 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tabs Navigation */}
-        <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4">
-          <div className="flex min-w-max gap-1 border-b border-gray-100 bg-white rounded-t-2xl">
+        <div className="w-full -mx-4 px-4">
+          <div className="flex flex-wrap gap-1 border-b border-gray-100 bg-white rounded-t-2xl p-1">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'profile' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -610,7 +610,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('admission')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'admission' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -618,7 +618,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('daily')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'daily' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -626,7 +626,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('progress')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'progress' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -634,7 +634,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('therapy')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'therapy' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -642,7 +642,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('meds')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'meds' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -650,7 +650,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('fees')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'fees' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -658,7 +658,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('canteen')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'canteen' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -666,7 +666,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('videos')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'videos' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -674,7 +674,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setActiveTab('visits')}
-            className={`px-3 py-3 text-xs whitespace-nowrap shrink-0 font-medium flex items-center gap-1.5 transition-colors border-b-2 ${
+            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
               activeTab === 'visits' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
