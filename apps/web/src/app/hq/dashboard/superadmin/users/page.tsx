@@ -177,7 +177,7 @@ export default function HqUserManagementPage() {
 
         {/* Tabs & Search */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-          <div className="flex p-1 bg-slate-800/50 rounded-2xl border border-slate-700/50 w-fit">
+          <div className="flex flex-wrap p-1 bg-slate-800/50 rounded-2xl border border-slate-700/50 w-full lg:w-fit">
             {(['hq', 'rehab', 'spims'] as TabType[]).map(tab => (
               <button
                 key={tab}
@@ -193,7 +193,7 @@ export default function HqUserManagementPage() {
             ))}
           </div>
 
-          <div className="relative group min-w-[300px]">
+          <div className="relative group w-full lg:max-w-sm">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-teal-500 transition-colors" size={18} />
             <input 
               type="text"
@@ -205,8 +205,62 @@ export default function HqUserManagementPage() {
           </div>
         </div>
 
+        {/* Mobile Users List */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            <div className="px-6 py-16 text-center">
+              <Loader2 className="animate-spin text-teal-500 mx-auto mb-3" size={28} />
+              <p className="text-slate-500 font-bold text-sm">Synchronizing User Data...</p>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="px-6 py-16 text-center opacity-40">
+              <Users size={40} className="mx-auto mb-3" />
+              <p className="font-bold">No users found in this system</p>
+            </div>
+          ) : (
+            filteredUsers.map((user) => (
+              <div key={user.id} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-teal-500 font-black border border-slate-700/50 shrink-0">
+                    {(user.name || user.displayName || 'U').charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-white truncate">{user.name || user.displayName}</p>
+                    <p className="text-xs text-slate-500 truncate">{user.email || 'No email provided'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <span className="font-mono text-xs font-bold bg-slate-900/80 px-2 py-2 rounded border border-slate-700/50 text-slate-400 truncate">
+                    {user.customId}
+                  </span>
+                  <span className={`flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-wider rounded ${
+                    user.isActive !== false ? 'text-emerald-500 bg-emerald-500/10' : 'text-slate-500 bg-slate-700/40'
+                  }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${user.isActive !== false ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+                    {user.isActive !== false ? 'Active' : 'Disabled'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  {getRoleBadge(user.role)}
+                  <button
+                    onClick={() => toggleUserStatus(user)}
+                    className={`p-2 rounded-xl transition-all ${
+                      user.isActive !== false
+                        ? 'bg-rose-500/10 text-rose-500'
+                        : 'bg-emerald-500/10 text-emerald-500'
+                    }`}
+                    title={user.isActive !== false ? 'Disable User' : 'Enable User'}
+                  >
+                    {user.isActive !== false ? <UserX size={18} /> : <UserCheck size={18} />}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Users Table */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-3xl overflow-hidden backdrop-blur-sm">
+        <div className="hidden md:block bg-slate-800/40 border border-slate-700/50 rounded-3xl overflow-hidden backdrop-blur-sm">
           <div className="overflow-x-auto w-full scrollbar-none">
             <table className="min-w-[500px] w-full text-left border-collapse">
               <thead>

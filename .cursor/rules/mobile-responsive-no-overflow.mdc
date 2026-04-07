@@ -1,0 +1,17 @@
+---
+description: Prevent horizontal overflow on mobile in web pages
+globs: apps/web/**/*.tsx
+alwaysApply: false
+---
+
+# Mobile Responsiveness Guardrail
+
+When creating or editing UI in `apps/web/**/*.tsx`, keep mobile first and avoid horizontal scrolling.
+
+- Add `overflow-x-hidden w-full max-w-full` on top-level page wrappers when layout is complex.
+- Replace mobile table layouts with stacked cards (`md:hidden`) and keep table only for desktop (`hidden md:block`).
+- Avoid fixed/min widths on mobile containers (`min-w-[...]`, `min-w-max`) unless hidden on mobile.
+- Tabs/chip filters must wrap on mobile (`flex-wrap`) instead of horizontal scrolling strips.
+- Long values (IDs/passwords/JSON/text) must use wrapping (`break-all` or `break-words`) on mobile.
+- For pre/code blocks, prefer wrapped content on mobile; avoid forced horizontal scroll.
+- New/updated pages must be checked at small viewport widths before finalizing.

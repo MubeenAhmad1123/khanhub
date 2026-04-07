@@ -132,7 +132,7 @@ export default function ManagerApprovalsPage() {
   }
 
   return (
-    <div className="space-y-8 pb-32 p-4 md:p-8 bg-gray-50 dark:bg-[#0A0A0A] min-h-screen">
+    <div className="space-y-8 pb-32 p-4 md:p-8 bg-gray-50 dark:bg-[#0A0A0A] min-h-screen overflow-x-hidden w-full max-w-full">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">Approvals</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Review and approve pending transactions</p>
@@ -148,7 +148,7 @@ export default function ManagerApprovalsPage() {
         </div>
       )}
 
-      <div className="flex gap-2 p-1 bg-white/50 dark:bg-white/5 rounded-2xl w-fit overflow-x-auto no-scrollbar max-w-full">
+      <div className="flex flex-wrap gap-2 p-1 bg-white/50 dark:bg-white/5 rounded-2xl w-full">
         {(['all', 'rehab', 'spims', 'urgent'] as FilterType[]).map(f => (
           <button
             key={f}

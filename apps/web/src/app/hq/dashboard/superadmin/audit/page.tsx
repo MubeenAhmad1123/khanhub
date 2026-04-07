@@ -96,7 +96,7 @@ export default function HqAuditLogPage() {
   );
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 pb-20 ${darkMode ? 'bg-[#0A0A0A] text-slate-200' : 'bg-[#F8FAFC] text-slate-600'}`}>
+    <div className={`min-h-screen transition-colors duration-500 pb-20 overflow-x-hidden w-full max-w-full ${darkMode ? 'bg-[#0A0A0A] text-slate-200' : 'bg-[#F8FAFC] text-slate-600'}`}>
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-10">
         {/* Back Navigation */}
         <Link 
@@ -121,7 +121,7 @@ export default function HqAuditLogPage() {
             </p>
           </div>
           
-          <div className={`flex p-1.5 rounded-[1.5rem] border backdrop-blur-xl ${darkMode ? 'bg-white/5 border-white/5' : 'bg-slate-200/50 border-slate-200'}`}>
+          <div className={`flex flex-wrap p-1.5 rounded-[1.5rem] border backdrop-blur-xl ${darkMode ? 'bg-white/5 border-white/5' : 'bg-slate-200/50 border-slate-200'}`}>
             {(['hq', 'rehab', 'spims'] as TabType[]).map(tab => (
               <button
                 key={tab}
@@ -231,9 +231,9 @@ export default function HqAuditLogPage() {
                             </div>
                           </div>
                           
-                          <div className={`relative rounded-xl p-4 font-mono text-[11px] leading-relaxed overflow-x-auto ${darkMode ? 'bg-black/40 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>
+                          <div className={`relative rounded-xl p-4 font-mono text-[11px] leading-relaxed ${darkMode ? 'bg-black/40 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>
                             <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-full ${darkMode ? 'bg-teal-500/20 group-hover:bg-teal-500/50' : 'bg-teal-500/10 group-hover:bg-teal-500/30'} transition-colors`} />
-                            <pre className="whitespace-pre-wrap">{JSON.stringify(log.details, null, 2)}</pre>
+                            <pre className="whitespace-pre-wrap break-words">{JSON.stringify(log.details, null, 2)}</pre>
                           </div>
                         </div>
                       </div>

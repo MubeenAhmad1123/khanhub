@@ -198,8 +198,8 @@ export default function HqPasswordsPage() {
               />
             </div>
             
-            <div className="overflow-x-auto scrollbar-none w-full -mx-4 px-4 sm:mx-0 sm:px-0">
-              <div className="flex min-w-max gap-1 p-1.5 rounded-2xl bg-slate-500/5 border border-slate-500/10">
+            <div className="w-full">
+              <div className="flex flex-wrap gap-1 p-1.5 rounded-2xl bg-slate-500/5 border border-slate-500/10">
                 {roleOptions.map((f) => (
                   <button
                     key={f}
@@ -217,8 +217,8 @@ export default function HqPasswordsPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto scrollbar-none w-full">
-            <div className="flex min-w-max gap-1 p-1.5 rounded-2xl bg-slate-500/5 border border-slate-500/10">
+          <div className="w-full">
+            <div className="flex flex-wrap gap-1 p-1.5 rounded-2xl bg-slate-500/5 border border-slate-500/10">
               {(['all', 'hq', 'rehab', 'spims'] as const).map((p) => (
                 <button
                   key={p}

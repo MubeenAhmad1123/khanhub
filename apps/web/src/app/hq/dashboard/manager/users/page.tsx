@@ -509,7 +509,7 @@ export default function ManagerUsersPage() {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 pb-20 ${darkMode ? 'bg-[#0A0A0A] text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`min-h-screen transition-colors duration-300 pb-20 overflow-x-hidden w-full max-w-full ${darkMode ? 'bg-[#0A0A0A] text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Header Section */}
@@ -540,7 +540,7 @@ export default function ManagerUsersPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="mb-8 p-1.5 rounded-2xl flex gap-1 bg-gray-200/50 dark:bg-gray-900/50 backdrop-blur-md max-w-lg overflow-x-auto whitespace-nowrap">
+        <div className="mb-8 p-1.5 rounded-2xl flex flex-wrap gap-1 bg-gray-200/50 dark:bg-gray-900/50 backdrop-blur-md max-w-lg">
           {[
             { id: 'admin', icon: ShieldCheck, label: 'Admin' },
             { id: 'staff', icon: UserPlus, label: 'Staff' },
@@ -549,7 +549,7 @@ export default function ManagerUsersPage() {
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id as TabType); setMessage(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 min-w-max ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${
                 activeTab === tab.id
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : `hover:bg-gray-300/50 dark:hover:bg-gray-800/50 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`
@@ -567,13 +567,13 @@ export default function ManagerUsersPage() {
           <div className="lg:col-span-2 space-y-6">
 
             {/* Department Horizontal Selector */}
-            <div className="mb-6 overflow-x-auto pb-4 scrollbar-hide">
-              <div className="flex gap-4 min-w-max">
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-3">
                 {DEPARTMENTS.map(dept => (
                   <button
                     key={dept.id}
                     onClick={() => { setFormData({ ...formData, department: dept.id }); fetchCounts(); }}
-                    className={`flex items-center gap-3 px-6 py-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                    className={`flex items-center gap-3 px-5 py-4 rounded-2xl border-2 transition-all cursor-pointer ${
                       formData.department === dept.id 
                         ? 'border-blue-500 bg-blue-500/10' 
                         : `border-transparent ${darkMode ? 'bg-zinc-900/60 hover:bg-zinc-800' : 'bg-white hover:bg-gray-50'} shadow-sm`
@@ -1123,16 +1123,16 @@ export default function ManagerUsersPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center bg-black/20 p-2 rounded-[1.5rem] border border-white/5 backdrop-blur-xl">
+                        <div className="flex flex-wrap items-center bg-black/20 p-2 rounded-[1.5rem] border border-white/5 backdrop-blur-xl">
                           <button 
                             onClick={() => setFormData({ ...formData, createAccount: true })}
-                            className={`px-10 py-4 rounded-xl text-[11px] font-black tracking-[0.2em] transition-all duration-300 ${formData.createAccount ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/40' : 'opacity-30 hover:opacity-100'}`}
+                            className={`px-6 py-4 rounded-xl text-[11px] font-black tracking-[0.2em] transition-all duration-300 ${formData.createAccount ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/40' : 'opacity-30 hover:opacity-100'}`}
                           >
                             AUTHORIZED
                           </button>
                           <button 
                             onClick={() => setFormData({ ...formData, createAccount: false })}
-                            className={`px-10 py-4 rounded-xl text-[11px] font-black tracking-[0.2em] transition-all duration-300 ${!formData.createAccount ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'opacity-30 hover:opacity-100'}`}
+                            className={`px-6 py-4 rounded-xl text-[11px] font-black tracking-[0.2em] transition-all duration-300 ${!formData.createAccount ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'opacity-30 hover:opacity-100'}`}
                           >
                             RESTRICTED
                           </button>
@@ -1406,7 +1406,64 @@ export default function ManagerUsersPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800/50">
+              {users.length === 0 ? (
+                <div className="px-6 py-12 text-center text-gray-400 font-bold uppercase tracking-widest text-[11px]">
+                  No account records initialized
+                </div>
+              ) : (
+                users.map((u) => (
+                  <div key={u.id} className="p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                        u.role === 'admin' ? 'bg-blue-500 text-white' :
+                        u.role === 'staff' ? 'bg-indigo-500 text-white' : 'bg-emerald-500 text-white'
+                      }`}>
+                        {u.displayName?.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black truncate">{u.displayName}</p>
+                        <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <span className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border text-center ${
+                        u.role === 'manager' || u.role === 'admin'
+                          ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                          : 'bg-green-500/10 text-green-500 border-green-500/20'
+                      }`}>
+                        {u.role}
+                      </span>
+                      <button
+                        disabled={toggling === u.id}
+                        onClick={() => handleToggleStatus(u.id, u.isActive !== false)}
+                        className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                          u.isActive !== false
+                            ? 'bg-green-500/10 text-green-500'
+                            : 'bg-red-500/10 text-red-500'
+                        }`}
+                      >
+                        <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500' : 'bg-red-500'}`} />
+                        {u.isActive !== false ? 'Active' : 'Disabled'}
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const col = u.department === 'rehab' || u._origin === 'rehab' || !u.department ? 'rehab' : u.department;
+                        router.push(`/hq/dashboard/manager/staff/${u.id}?collection=${col}`);
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
               <div className="overflow-x-auto pb-4">
                 <table className="w-full text-left min-w-[800px]">
                   <thead>
