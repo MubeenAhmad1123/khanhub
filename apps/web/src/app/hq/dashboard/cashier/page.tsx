@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  collection, getDocs, query, where, doc, addDoc, Timestamp, orderBy, limit, getDoc, updateDoc, increment
+  collection, getDocs, query, where, doc, addDoc, Timestamp, orderBy, limit, getDoc, updateDoc, increment, startAfter
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -29,7 +29,12 @@ export default function CashierStationPage() {
   const [txnType, setTxnType] = useState<'income' | 'expense'>('income');
   const [category, setCategory] = useState('fee');
   
-  const [recentTxns, setRecentTxns] = useState<any[]>([]);
+  const [historyTxns, setHistoryTxns] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyDateMode, setHistoryDateMode] = useState<'today' | 'all' | 'range'>('today');
+  const [historyFrom, setHistoryFrom] = useState('');
+  const [historyTo, setHistoryTo] = useState('');
+  const [historyStatus, setHistoryStatus] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -39,20 +44,48 @@ export default function CashierStationPage() {
       router.push('/hq/login');
       return;
     }
-    fetchRecentTransactions();
+    fetchHistoryTransactions();
   }, [session, sessionLoading, router]);
 
-  const fetchRecentTransactions = async () => {
+  const fetchHistoryTransactions = async () => {
     try {
-      const q = query(
-        collection(db, 'rehab_transactions'), 
-        orderBy('createdAt', 'desc'), 
-        limit(10)
-      );
-      const snap = await getDocs(q);
-      setRecentTxns(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setHistoryLoading(true);
+      setHistoryTxns([]);
+
+      // Fetch in pages so "All history" stays complete.
+      const pageSize = 100;
+      let lastDoc: any = null;
+      const all: any[] = [];
+
+      while (true) {
+        const q = lastDoc
+          ? query(
+              collection(db, 'rehab_transactions'),
+              orderBy('createdAt', 'desc'),
+              limit(pageSize),
+              startAfter(lastDoc)
+            )
+          : query(
+              collection(db, 'rehab_transactions'),
+              orderBy('createdAt', 'desc'),
+              limit(pageSize)
+            );
+
+        const snap = await getDocs(q);
+        if (snap.empty) break;
+
+        all.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        lastDoc = snap.docs[snap.docs.length - 1];
+
+        if (snap.docs.length < pageSize) break;
+      }
+
+      setHistoryTxns(all);
     } catch (err) {
-      console.error('Error fetching txns:', err);
+      console.error('Error fetching history:', err);
+    }
+    finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -117,7 +150,7 @@ export default function CashierStationPage() {
       setMessage({ type: 'success', text: `Transaction of Rs. ${numAmount} recorded successfully!` });
       setAmount('');
       setDescription('');
-      fetchRecentTransactions();
+      fetchHistoryTransactions();
       
       // Refresh patient data
       const updatedPatient = await getDoc(patientRef);
@@ -138,6 +171,50 @@ export default function CashierStationPage() {
       </div>
     );
   }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const fromDate = historyFrom ? new Date(`${historyFrom}T00:00:00`) : null;
+  const toDateValue = historyTo ? new Date(`${historyTo}T23:59:59.999`) : null;
+  const historySearchTerm = searchQuery.trim().toLowerCase();
+
+  const filteredHistoryTxns = historyTxns.filter((tx: any) => {
+    const businessDate = toDate(tx.date || tx.createdAt);
+    if (!businessDate) return false;
+
+    if (historyDateMode === 'today') {
+      const txDay = businessDate.toISOString().split('T')[0];
+      if (txDay !== todayStr) return false;
+    }
+
+    if (historyDateMode === 'range') {
+      if (!fromDate || !toDateValue) return true; // wait for user to complete range
+      if (businessDate < fromDate || businessDate > toDateValue) return false;
+    }
+
+    if (historyStatus !== 'all' && tx.status !== historyStatus) return false;
+
+    if (!historySearchTerm) return true;
+
+    const amountTerm = Number(historySearchTerm);
+    const amountStr = String(tx.amount ?? '');
+
+    const fields = [
+      tx.patientName,
+      tx.patientId,
+      tx.staffName,
+      tx.staffId,
+      tx.category,
+      tx.description,
+      tx.type,
+      tx.status,
+      tx.createdByName,
+    ].filter(Boolean).map((v: any) => String(v).toLowerCase());
+
+    const matchesTextField = fields.some((f: string) => f.includes(historySearchTerm));
+    const matchesAmount = (!Number.isNaN(amountTerm) && Number(tx.amount ?? 0) === amountTerm) || amountStr.toLowerCase().includes(historySearchTerm);
+
+    return matchesTextField || matchesAmount;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0A0A0A] pb-24">
@@ -396,6 +473,67 @@ export default function CashierStationPage() {
           </button>
         </div>
 
+        <div className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/5 rounded-[1.5rem] p-5 sm:p-7 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Date</label>
+              <select
+                value={historyDateMode}
+                onChange={(e) => setHistoryDateMode(e.target.value as any)}
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
+              >
+                <option value="today">Today</option>
+                <option value="all">All History</option>
+                <option value="range">Date Range</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Status</label>
+              <select
+                value={historyStatus}
+                onChange={(e) => setHistoryStatus(e.target.value as any)}
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
+              >
+                <option value="all">All</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Search</label>
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 leading-relaxed pt-2 md:pt-4">
+                Uses the left panel search (patient/student/staff name or ID).
+              </div>
+            </div>
+          </div>
+
+          {historyDateMode === 'range' && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">From</label>
+                <input
+                  type="date"
+                  value={historyFrom}
+                  onChange={(e) => setHistoryFrom(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">To</label>
+                <input
+                  type="date"
+                  value={historyTo}
+                  onChange={(e) => setHistoryTo(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="bg-white dark:bg-[#111111] rounded-2xl sm:rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
@@ -409,44 +547,69 @@ export default function CashierStationPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                {recentTxns.map(tx => (
-                  <tr key={tx.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors">
-                    <td className="px-4 py-4 sm:px-8 sm:py-6">
-                      <div className="text-sm font-black text-gray-900 dark:text-white capitalize">
-                        {toDate(tx.date || tx.createdAt)?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                      </div>
-                      <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase">
-                        {toDate(tx.date || tx.createdAt)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 sm:px-8 sm:py-6">
-                      <div className="text-sm font-black text-gray-900 dark:text-white">{tx.patientName}</div>
-                      <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest">{tx.patientId?.slice(0, 10)}...</div>
-                    </td>
-                    <td className="px-4 py-4 sm:px-8 sm:py-6">
-                      <span className="inline-flex items-center px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/10 opacity-80">
-                        {tx.category}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 sm:px-8 sm:py-6 text-right">
-                      <div className={cn(
-                        "text-lg font-black flex items-center justify-end gap-2",
-                        tx.type === 'income' ? "text-teal-600 dark:text-teal-400" : "text-red-500"
-                      )}>
-                        {tx.type === 'income' ? <Plus size={14} strokeWidth={3} /> : <Minus size={14} strokeWidth={3} />}
-                        ₨{tx.amount?.toLocaleString()}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 sm:px-8 sm:py-6">
-                      <div className="flex items-center justify-center gap-3">
-                         <div className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-500 dark:text-gray-400 border border-gray-200/50 dark:border-white/10">
-                          {tx.createdByName?.[0]?.toUpperCase() || 'C'}
-                         </div>
-                         <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-tighter">{tx.createdByName?.split(' ')[0]}</span>
+                {historyLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 sm:px-8 sm:py-14 text-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-teal-600 dark:text-teal-400 mx-auto" />
+                      <div className="mt-3 text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+                        Loading transaction history...
                       </div>
                     </td>
                   </tr>
-                ))}
+                ) : filteredHistoryTxns.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 sm:px-8 sm:py-14 text-center">
+                      <div className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                        No transactions match your filters.
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredHistoryTxns.map((tx: any) => (
+                    <tr key={tx.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors">
+                      <td className="px-4 py-4 sm:px-8 sm:py-6">
+                        <div className="text-sm font-black text-gray-900 dark:text-white capitalize">
+                          {toDate(tx.date || tx.createdAt)?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                        </div>
+                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase">
+                          {toDate(tx.date || tx.createdAt)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 sm:px-8 sm:py-6">
+                        <div className="text-sm font-black text-gray-900 dark:text-white">
+                          {tx.patientName || tx.staffName}
+                        </div>
+                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest">
+                          {(tx.patientId || tx.staffId)?.slice(0, 10)}...
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 sm:px-8 sm:py-6">
+                        <span className="inline-flex items-center px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/10 opacity-80">
+                          {tx.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 sm:px-8 sm:py-6 text-right">
+                        <div className={cn(
+                          "text-lg font-black flex items-center justify-end gap-2",
+                          tx.type === 'income' ? "text-teal-600 dark:text-teal-400" : "text-red-500"
+                        )}>
+                          {tx.type === 'income' ? <Plus size={14} strokeWidth={3} /> : <Minus size={14} strokeWidth={3} />}
+                          ₨{tx.amount?.toLocaleString()}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 sm:px-8 sm:py-6">
+                        <div className="flex items-center justify-center gap-3">
+                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-500 dark:text-gray-400 border border-gray-200/50 dark:border-white/10">
+                            {tx.createdByName?.[0]?.toUpperCase() || 'C'}
+                          </div>
+                          <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-tighter">
+                            {tx.createdByName?.split(' ')[0]}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
