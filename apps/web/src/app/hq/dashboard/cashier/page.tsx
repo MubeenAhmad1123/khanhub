@@ -110,13 +110,18 @@ export default function CashierStationPage() {
 
   const handleTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatient || !amount || processing) return;
+    if (!amount || processing) return;
     
     setProcessing(true);
     setMessage(null);
     const numAmount = parseFloat(amount);
 
     try {
+      if (!selectedPatient) {
+        setMessage({ type: 'error', text: 'Please search and select an account before submitting a transaction.' });
+        return;
+      }
+
       const txnData = {
         patientId: selectedPatient.id,
         patientName: selectedPatient.name,
@@ -124,7 +129,7 @@ export default function CashierStationPage() {
         type: txnType,
         category,
         description,
-        status: 'approved', // HQ Cashier txns are auto-approved
+        status: 'pending',
         createdBy: session?.uid,
         createdByName: session?.displayName || session?.name || 'HQ Cashier',
         createdAt: Timestamp.now(),
@@ -324,25 +329,26 @@ export default function CashierStationPage() {
             {/* Decorative background */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-bl-[8rem] -mr-16 -mt-16 transition-all group-hover:scale-110 duration-700 pointer-events-none" />
             
-            {!selectedPatient ? (
-              <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center">
-                <div className="w-24 h-24 bg-gray-50 dark:bg-white/5 rounded-[2rem] flex items-center justify-center text-gray-300 dark:text-gray-700 mb-8 animate-pulse">
-                  <Receipt size={48} />
+            <form onSubmit={handleTransaction} className="space-y-10 max-w-2xl mx-auto relative z-10">
+              <div className="flex items-center gap-5 p-5 bg-gray-50 dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/5">
+                <div className={cn(
+                  "w-16 h-16 bg-white dark:bg-[#1A1A1A] rounded-[1.25rem] shadow-sm flex items-center justify-center text-2xl font-black border border-gray-100 dark:border-white/10",
+                  selectedPatient ? "text-teal-600 dark:text-teal-400" : "text-gray-300 dark:text-gray-700"
+                )}>
+                  {selectedPatient ? selectedPatient.name[0].toUpperCase() : <Receipt size={28} />}
                 </div>
-                <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-3">Await Selection</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs font-medium">Use the left panel to search and select an account for processing.</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-1">
+                    {selectedPatient ? 'Processing For' : 'Select Account'}
+                  </p>
+                  <p className={cn(
+                    "text-2xl font-black tracking-tight truncate",
+                    selectedPatient ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-600"
+                  )}>
+                    {selectedPatient ? selectedPatient.name : 'Search and pick an account from the left panel'}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <form onSubmit={handleTransaction} className="space-y-10 max-w-2xl mx-auto relative z-10">
-                <div className="flex items-center gap-5 p-5 bg-gray-50 dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/5">
-                  <div className="w-16 h-16 bg-white dark:bg-[#1A1A1A] rounded-[1.25rem] shadow-sm flex items-center justify-center text-teal-600 dark:text-teal-400 text-2xl font-black border border-gray-100 dark:border-white/10">
-                    {selectedPatient.name[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-1">Processing For</p>
-                    <p className="text-2xl font-black text-gray-900 dark:text-white">{selectedPatient.name}</p>
-                  </div>
-                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <button 
@@ -453,8 +459,7 @@ export default function CashierStationPage() {
                     <>Submit Transaction <ArrowRight size={24} strokeWidth={3} /></>
                   )}
                 </button>
-              </form>
-            )}
+            </form>
           </div>
         </div>
       </div>
