@@ -16,6 +16,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
   const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set());
   const [noteModal, setNoteModal] = useState<{ type: 'counselling' | 'vital'; date: string; value: string } | null>(null);
   const [noteSaving, setNoteSaving] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
 
   const { year, monthIndex, daysInMonth } = useMemo(() => {
     const [y, m] = currentMonth.split('-').map(Number);
@@ -23,6 +24,10 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
   }, [currentMonth]);
 
   const daysArray = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth]);
+
+  useEffect(() => {
+    setSelectedDay((prev) => Math.min(Math.max(prev, 1), daysInMonth));
+  }, [daysInMonth, currentMonth]);
 
   const fetchRecords = useCallback(async () => {
     try {
@@ -176,6 +181,10 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
     return 'text-red-600 bg-red-50';
   };
 
+  const selectedDateStr = `${currentMonth}-${String(selectedDay).padStart(2, '0')}`;
+  const selectedDayActivities = records[selectedDateStr]?.activities || [];
+  const selectedDayPct = getDayCompletion(selectedDay);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-4">
@@ -203,7 +212,63 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
       {loading ? (
         <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>
       ) : (
-        <div className="relative rounded-[2rem] border border-gray-200 bg-white overflow-hidden shadow-sm">
+        <div className="md:hidden space-y-4">
+          <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-gray-200/60 shadow-sm">
+            <button
+              onClick={() => setSelectedDay((d) => Math.max(1, d - 1))}
+              className="p-2 rounded-xl hover:bg-gray-100 transition active:scale-95"
+            >
+              <ChevronLeft size={16} className="text-gray-600" />
+            </button>
+            <div className="flex-1 text-center">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black">Selected Date</p>
+              <p className="text-sm font-black text-gray-900">
+                {new Date(`${selectedDateStr}T00:00:00`).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+            <button
+              onClick={() => setSelectedDay((d) => Math.min(daysInMonth, d + 1))}
+              className="p-2 rounded-xl hover:bg-gray-100 transition active:scale-95"
+            >
+              <ChevronRight size={16} className="text-gray-600" />
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
+            {DAILY_ACTIVITIES.map((activity) => {
+              const existing = selectedDayActivities.find((a) => a.activityId === activity.id);
+              const key = `${selectedDateStr}-${activity.id}`;
+              const isSaving = pendingSaves.has(key);
+              return (
+                <div key={activity.id} className="p-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      <span className="text-teal-600 font-black mr-1">{activity.id}.</span>{activity.name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleCellClick(selectedDay, activity.id)}
+                    disabled={isSaving || readOnly}
+                    className={`shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center ${
+                      readOnly ? 'cursor-default' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    {isSaving ? <Loader2 className="w-4 h-4 text-teal-600 animate-spin" /> : getCellIcon(existing?.status, activity.id, selectedDateStr)}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 text-center">
+            <p className="text-[10px] uppercase tracking-widest text-gray-500 font-black">Daily Completion</p>
+            <p className={`text-lg font-black mt-1 ${selectedDayPct !== null ? completionColor(selectedDayPct).split(' ')[0] : 'text-gray-400'}`}>
+              {selectedDayPct !== null ? `${selectedDayPct}%` : 'N/A'}
+            </p>
+          </div>
+        </div>
+
+        <div className="relative rounded-[2rem] border border-gray-200 bg-white overflow-hidden shadow-sm hidden md:block">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1200px]">
               <thead className="bg-gray-50 uppercase text-[9px] font-black text-gray-500 tracking-widest sticky top-0 z-10 shadow-sm">
