@@ -1,42 +1,75 @@
 // src/app/hq/dashboard/cashier/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  collection, getDocs, query, where, doc, addDoc, Timestamp, orderBy, limit, getDoc, updateDoc, increment, startAfter
-} from 'firebase/firestore';
+import { addDoc, collection, getDocs, limit, orderBy, query, startAfter, Timestamp, where } from 'firebase/firestore';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, History, Loader2, Minus, Plus, Search, TrendingDown, TrendingUp } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { 
-  Loader2, CreditCard, Search, Plus, Minus, ArrowRight, 
-  History, Wallet, User as UserIcon, CheckCircle2, AlertCircle,
-  TrendingUp, TrendingDown, LayoutGrid, Receipt, ChevronRight
-} from 'lucide-react';
-import { toDate, cn } from '@/lib/utils';
+import { cn, toDate } from '@/lib/utils';
+
+type TxnType = 'income' | 'expense';
+type DateMode = 'today' | 'all' | 'range';
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type PaymentMethod = 'cash' | 'bank_transfer' | 'jazzcash' | 'easypaisa' | 'other';
+
+const DEPARTMENTS = [
+  { code: 'rehab', label: 'Rehab Center', txCollection: 'rehab_transactions', entityCollection: 'rehab_patients' },
+  { code: 'spims', label: 'Spims', txCollection: 'spims_transactions', entityCollection: 'spims_students' },
+];
+
+const BASE_CATEGORIES = [
+  { id: 'fee', name: 'Admission / Fees', appliesTo: 'income' },
+  { id: 'canteen', name: 'Canteen Funds', appliesTo: 'both' },
+  { id: 'staff_salary', name: 'Staff Salary', appliesTo: 'expense' },
+  { id: 'utilities', name: 'Utilities', appliesTo: 'expense' },
+  { id: 'maintenance', name: 'Maintenance', appliesTo: 'expense' },
+  { id: 'other_income', name: 'Other Income', appliesTo: 'income' },
+  { id: 'other_expense', name: 'Other Expense', appliesTo: 'expense' },
+] as const;
+
+function slugify(v: string) {
+  return v.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
 
 export default function CashierStationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
-  
-  const [loading, setLoading] = useState(false);
+
+  const [departmentCode, setDepartmentCode] = useState('rehab');
   const [searchQuery, setSearchQuery] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
-  
+  const [entityResults, setEntityResults] = useState<any[]>([]);
+  const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const [txnType, setTxnType] = useState<TxnType>('income');
+  const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [txnType, setTxnType] = useState<'income' | 'expense'>('income');
-  const [category, setCategory] = useState('fee');
-  
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [referenceNo, setReferenceNo] = useState('');
+
+  const [customCategories, setCustomCategories] = useState<{ id: string; name: string; appliesTo: 'income' | 'expense' | 'both' }[]>([]);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('fee');
+
   const [historyTxns, setHistoryTxns] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyDateMode, setHistoryDateMode] = useState<'today' | 'all' | 'range'>('today');
+  const [historyDateMode, setHistoryDateMode] = useState<DateMode>('today');
   const [historyFrom, setHistoryFrom] = useState('');
   const [historyTo, setHistoryTo] = useState('');
-  const [historyStatus, setHistoryStatus] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
+  const [historyStatus, setHistoryStatus] = useState<StatusFilter>('all');
+  const [historyType, setHistoryType] = useState<'all' | TxnType>('all');
+  const [historyDepartment, setHistoryDepartment] = useState<'all' | string>('all');
+
   const [processing, setProcessing] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const activeDepartment = DEPARTMENTS.find((d) => d.code === departmentCode) || DEPARTMENTS[0];
+  const allCategories = useMemo(() => [...BASE_CATEGORIES, ...customCategories], [customCategories]);
+  const selectedCategory = allCategories.find((c) => c.id === selectedCategoryId);
+  const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -44,581 +77,183 @@ export default function CashierStationPage() {
       router.push('/hq/login');
       return;
     }
-    fetchHistoryTransactions();
-  }, [session, sessionLoading, router]);
+    void loadCustomCategories();
+    void fetchHistory();
+  }, [sessionLoading, session, router]);
 
-  const fetchHistoryTransactions = async () => {
+  useEffect(() => {
+    setSelectedEntity(null);
+    setEntityResults([]);
+    setSearchQuery('');
+  }, [departmentCode]);
+
+  async function loadCustomCategories() {
+    try {
+      const snap = await getDocs(collection(db, 'hq_cashier_categories'));
+      const list = snap.docs.map((d) => ({ id: d.data().slug || d.id, name: d.data().name || 'Custom', appliesTo: d.data().appliesTo || 'both' }));
+      setCustomCategories(list as any);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function fetchHistory() {
     try {
       setHistoryLoading(true);
-      setHistoryTxns([]);
-
-      // Fetch in pages so "All history" stays complete.
-      const pageSize = 100;
-      let lastDoc: any = null;
       const all: any[] = [];
-
-      while (true) {
-        const q = lastDoc
-          ? query(
-              collection(db, 'rehab_transactions'),
-              orderBy('createdAt', 'desc'),
-              limit(pageSize),
-              startAfter(lastDoc)
-            )
-          : query(
-              collection(db, 'rehab_transactions'),
-              orderBy('createdAt', 'desc'),
-              limit(pageSize)
-            );
-
-        const snap = await getDocs(q);
-        if (snap.empty) break;
-
-        all.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        lastDoc = snap.docs[snap.docs.length - 1];
-
-        if (snap.docs.length < pageSize) break;
+      for (const dept of DEPARTMENTS) {
+        let cursor: any = null;
+        while (true) {
+          const q = cursor
+            ? query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(100), startAfter(cursor))
+            : query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(100));
+          const snap = await getDocs(q);
+          if (snap.empty) break;
+          all.push(...snap.docs.map((d) => ({ id: d.id, departmentCode: dept.code, departmentName: dept.label, ...d.data() })));
+          cursor = snap.docs[snap.docs.length - 1];
+          if (snap.docs.length < 100) break;
+        }
       }
-
+      all.sort((a, b) => (toDate(b.createdAt || b.date)?.getTime() || 0) - (toDate(a.createdAt || a.date)?.getTime() || 0));
       setHistoryTxns(all);
-    } catch (err) {
-      console.error('Error fetching history:', err);
-    }
-    finally {
+    } finally {
       setHistoryLoading(false);
     }
-  };
+  }
 
-  const handleSearch = async () => {
+  async function searchEntities() {
     if (!searchQuery.trim()) return;
-    setLoading(true);
+    setSearchLoading(true);
     try {
-      // Search in rehab_patients
-      const q = query(
-        collection(db, 'rehab_patients'),
-        where('name', '>=', searchQuery),
-        where('name', '<=', searchQuery + '\uf8ff')
-      );
+      const q = query(collection(db, activeDepartment.entityCollection), where('name', '>=', searchQuery), where('name', '<=', `${searchQuery}\uf8ff`), limit(20));
       const snap = await getDocs(q);
-      setPatients(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (err) {
-      console.error('Search error:', err);
+      setEntityResults(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
     }
-  };
+  }
 
-  const handleTransaction = async (e: React.FormEvent) => {
+  async function createCategory() {
+    const name = categorySearch.trim();
+    if (!name) return;
+    const slug = slugify(name);
+    if (allCategories.some((c) => c.id === slug)) {
+      setSelectedCategoryId(slug);
+      return;
+    }
+    await addDoc(collection(db, 'hq_cashier_categories'), { name, slug, appliesTo: txnType, isCustom: true, createdBy: session?.uid, createdAt: Timestamp.now() });
+    setCustomCategories((p) => [...p, { id: slug, name, appliesTo: txnType } as any]);
+    setSelectedCategoryId(slug);
+    setCategorySearch('');
+  }
+
+  async function submitTx(e: React.FormEvent) {
     e.preventDefault();
-    if (!amount || processing) return;
-    
-    setProcessing(true);
+    if (processing) return;
     setMessage(null);
-    const numAmount = parseFloat(amount);
+    if (!selectedEntity) return setMessage({ type: 'error', text: 'Select account first.' });
+    if (!selectedCategory) return setMessage({ type: 'error', text: 'Select category field.' });
+    if (!amount || Number(amount) <= 0) return setMessage({ type: 'error', text: 'Enter valid amount.' });
 
+    setProcessing(true);
     try {
-      if (!selectedPatient) {
-        setMessage({ type: 'error', text: 'Please search and select an account before submitting a transaction.' });
-        return;
-      }
-
-      const txnData = {
-        patientId: selectedPatient.id,
-        patientName: selectedPatient.name,
-        amount: numAmount,
+      await addDoc(collection(db, activeDepartment.txCollection), {
         type: txnType,
-        category,
+        amount: Number(amount),
+        category: selectedCategory.id,
+        categoryName: selectedCategory.name,
+        departmentCode: activeDepartment.code,
+        departmentName: activeDepartment.label,
+        patientId: selectedEntity.id,
+        patientName: selectedEntity.name || selectedEntity.fullName || 'Unknown',
         description,
+        paymentMethod,
+        referenceNo,
         status: 'pending',
+        date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
+        transactionDate: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
         createdBy: session?.uid,
         createdByName: session?.displayName || session?.name || 'HQ Cashier',
         createdAt: Timestamp.now(),
-        date: Timestamp.now()
-      };
-
-      // 1. Create transaction record
-      await addDoc(collection(db, 'rehab_transactions'), txnData);
-
-      // 2. Update patient balance (if canteen or fee)
-      const patientRef = doc(db, 'rehab_patients', selectedPatient.id);
-      if (category === 'canteen') {
-        const adjustment = txnType === 'income' ? numAmount : -numAmount;
-        await updateDoc(patientRef, {
-          canteenBalance: increment(adjustment)
-        });
-      } else if (category === 'fee' && txnType === 'income') {
-        await updateDoc(patientRef, {
-          totalPaid: increment(numAmount)
-        });
-      }
-
-      setMessage({ type: 'success', text: `Transaction of Rs. ${numAmount} recorded successfully!` });
+      });
+      setMessage({ type: 'success', text: 'Transaction sent for superadmin approval.' });
       setAmount('');
       setDescription('');
-      fetchHistoryTransactions();
-      
-      // Refresh patient data
-      const updatedPatient = await getDoc(patientRef);
-      setSelectedPatient({ id: updatedPatient.id, ...updatedPatient.data() });
-
-    } catch (err) {
-      console.error('Transaction error:', err);
-      setMessage({ type: 'error', text: 'Failed to process transaction. Please try again.' });
+      setReferenceNo('');
+      await fetchHistory();
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to submit transaction.' });
     } finally {
       setProcessing(false);
     }
-  };
-
-  if (sessionLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0A0A0A]">
-        <Loader2 className="w-10 h-10 animate-spin text-teal-600 dark:text-teal-400" />
-      </div>
-    );
   }
 
   const todayStr = new Date().toISOString().split('T')[0];
   const fromDate = historyFrom ? new Date(`${historyFrom}T00:00:00`) : null;
   const toDateValue = historyTo ? new Date(`${historyTo}T23:59:59.999`) : null;
-  const historySearchTerm = searchQuery.trim().toLowerCase();
-
-  const filteredHistoryTxns = historyTxns.filter((tx: any) => {
-    const businessDate = toDate(tx.date || tx.createdAt);
-    if (!businessDate) return false;
-
-    if (historyDateMode === 'today') {
-      const txDay = businessDate.toISOString().split('T')[0];
-      if (txDay !== todayStr) return false;
-    }
-
-    if (historyDateMode === 'range') {
-      if (!fromDate || !toDateValue) return true; // wait for user to complete range
-      if (businessDate < fromDate || businessDate > toDateValue) return false;
-    }
-
+  const historyFiltered = historyTxns.filter((tx) => {
+    const d = toDate(tx.transactionDate || tx.date || tx.createdAt);
+    if (!d) return false;
+    if (historyDateMode === 'today' && d.toISOString().split('T')[0] !== todayStr) return false;
+    if (historyDateMode === 'range' && fromDate && toDateValue && (d < fromDate || d > toDateValue)) return false;
     if (historyStatus !== 'all' && tx.status !== historyStatus) return false;
-
-    if (!historySearchTerm) return true;
-
-    const amountTerm = Number(historySearchTerm);
-    const amountStr = String(tx.amount ?? '');
-
-    const fields = [
-      tx.patientName,
-      tx.patientId,
-      tx.staffName,
-      tx.staffId,
-      tx.category,
-      tx.description,
-      tx.type,
-      tx.status,
-      tx.createdByName,
-    ].filter(Boolean).map((v: any) => String(v).toLowerCase());
-
-    const matchesTextField = fields.some((f: string) => f.includes(historySearchTerm));
-    const matchesAmount = (!Number.isNaN(amountTerm) && Number(tx.amount ?? 0) === amountTerm) || amountStr.toLowerCase().includes(historySearchTerm);
-
-    return matchesTextField || matchesAmount;
+    if (historyType !== 'all' && tx.type !== historyType) return false;
+    if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
+    return !searchQuery.trim() || `${tx.patientName || ''} ${tx.patientId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  const totals = useMemo(() => {
+    const income = historyFiltered.filter((x) => x.type === 'income').reduce((s, x) => s + Number(x.amount || 0), 0);
+    const expense = historyFiltered.filter((x) => x.type === 'expense').reduce((s, x) => s + Number(x.amount || 0), 0);
+    return { income, expense, net: income - expense };
+  }, [historyFiltered]);
+
+  if (sessionLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0A0A0A]"><Loader2 className="w-10 h-10 animate-spin text-teal-600 dark:text-teal-400" /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0A0A0A] pb-24">
-      {/* Header */}
-      <div className="bg-white dark:bg-[#111111] border-b border-gray-100 dark:border-white/5 px-4 md:px-8 py-4 md:py-6 sticky top-0 z-30 backdrop-blur-xl bg-white/80 dark:bg-[#111111]/80">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-start md:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
-              <CreditCard size={24} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Cashier Station</h1>
-              <p className="text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Terminal ID: {session?.customId || 'HQ-001'}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="bg-teal-50 dark:bg-teal-500/10 px-4 py-2 rounded-xl border border-teal-100 dark:border-teal-500/20">
-              <div className="text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest">Operator</div>
-              <div className="text-xs font-black text-teal-700 dark:text-teal-300 flex items-center gap-1.5 capitalized">
-                {session?.displayName || session?.name || 'Authorized Cashier'}
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="bg-white dark:bg-[#111111] border-b border-gray-100 dark:border-white/5 px-4 md:px-8 py-4 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto flex items-center gap-3"><div className="w-11 h-11 bg-teal-600 rounded-2xl flex items-center justify-center text-white"><CreditCard size={22} /></div><div><h1 className="text-2xl font-black text-gray-900 dark:text-white">Cashier Station</h1><p className="text-[10px] font-black uppercase text-gray-500">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p></div></div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 sm:mt-8 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
-        
-        {/* Left Column: Search & Patient Info */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white dark:bg-[#111111] rounded-[1.5rem] sm:rounded-[2.5rem] p-7 shadow-sm border border-gray-100 dark:border-white/5">
-            <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Search size={14} /> Search Account
-            </h2>
-            <div className="relative mb-6">
-              <input 
-                type="text" 
-                placeholder="Name or Patient ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl pl-5 pr-12 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 transition-all placeholder:text-gray-400"
-              />
-              <button 
-                onClick={handleSearch}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-teal-600 text-white rounded-xl shadow-md hover:bg-teal-700 transition-colors"
-                disabled={loading}
-              >
-                {loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-              </button>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-4 space-y-4">
+          <div className="bg-white dark:bg-[#111111] rounded-[1.5rem] p-5 border border-gray-100 dark:border-white/5">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2"><Search size={14} /> Search Account</h2>
+            <div className="space-y-3">
+              <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-gray-50 dark:bg-white/5 rounded-2xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10">{DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}</select>
+              <div className="relative"><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Name or ID..." className="w-full bg-gray-50 dark:bg-white/5 rounded-2xl pl-4 pr-12 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10" /><button type="button" onClick={searchEntities} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-teal-600 text-white">{searchLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}</button></div>
             </div>
-
-            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-              {patients.map(p => (
-                <button 
-                  key={p.id}
-                  onClick={() => setSelectedPatient(p)}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-4 rounded-2xl transition-all border text-left active:scale-[0.98]",
-                    selectedPatient?.id === p.id 
-                      ? "bg-teal-50 dark:bg-teal-500/10 border-teal-200 dark:border-teal-500/30" 
-                      : "bg-white dark:bg-white/5 border-transparent hover:bg-gray-50 dark:hover:bg-white/[0.07] hover:border-gray-100 dark:hover:border-white/10"
-                  )}
-                >
-                  <div className="w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 font-black text-sm">
-                    {p.name[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-black text-gray-900 dark:text-white truncate">{p.name}</div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{p.patientId || 'New/Unknown'}</div>
-                  </div>
-                  {selectedPatient?.id === p.id && <CheckCircle2 className="text-teal-600 dark:text-teal-400" size={16} />}
-                </button>
-              ))}
-              {patients.length === 0 && !loading && searchQuery && (
-                <div className="py-12 text-center bg-gray-50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
-                  <UserIcon className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={32} />
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No matching records</p>
-                </div>
-              )}
-            </div>
+            <div className="mt-3 space-y-2 max-h-[320px] overflow-y-auto">{entityResults.map((e) => <button key={e.id} type="button" onClick={() => setSelectedEntity(e)} className="w-full text-left p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-transparent hover:border-teal-300 dark:hover:border-teal-500/30"><div className="text-sm font-black text-gray-900 dark:text-white">{e.name || e.fullName || 'Unknown'}</div><div className="text-[10px] font-bold text-gray-400">{e.customId || e.rollNumber || e.id?.slice(0, 10)}</div></button>)}</div>
           </div>
-
-          {selectedPatient && (
-            <div className="bg-white dark:bg-[#111111] rounded-[1.5rem] sm:rounded-[2.5rem] p-7 shadow-sm border border-gray-100 dark:border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Wallet size={14} /> Ledger Summary
-              </h2>
-              <div className="space-y-4">
-                <div className="bg-teal-50 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20 rounded-3xl p-5">
-                  <p className="text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-[0.2em] mb-1">Canteen Credits</p>
-                  <p className="text-2xl font-black text-teal-700 dark:text-teal-300">₨{(selectedPatient.canteenBalance || 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-3xl p-5">
-                  <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mb-1">Tuition Total</p>
-                  <p className="text-2xl font-black text-blue-700 dark:text-blue-300">₨{(selectedPatient.totalPaid || 0).toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Middle Column: Transaction Form */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white dark:bg-[#111111] rounded-[1.5rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 shadow-sm border border-gray-100 dark:border-white/5 min-h-[600px] relative overflow-hidden group">
-            {/* Decorative background */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-bl-[8rem] -mr-16 -mt-16 transition-all group-hover:scale-110 duration-700 pointer-events-none" />
-            
-            <form onSubmit={handleTransaction} className="space-y-10 max-w-2xl mx-auto relative z-10">
-              <div className="flex items-center gap-5 p-5 bg-gray-50 dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/5">
-                <div className={cn(
-                  "w-16 h-16 bg-white dark:bg-[#1A1A1A] rounded-[1.25rem] shadow-sm flex items-center justify-center text-2xl font-black border border-gray-100 dark:border-white/10",
-                  selectedPatient ? "text-teal-600 dark:text-teal-400" : "text-gray-300 dark:text-gray-700"
-                )}>
-                  {selectedPatient ? selectedPatient.name[0].toUpperCase() : <Receipt size={28} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-1">
-                    {selectedPatient ? 'Processing For' : 'Select Account'}
-                  </p>
-                  <p className={cn(
-                    "text-2xl font-black tracking-tight truncate",
-                    selectedPatient ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-600"
-                  )}>
-                    {selectedPatient ? selectedPatient.name : 'Search and pick an account from the left panel'}
-                  </p>
-                </div>
+        <div className="lg:col-span-8">
+          <div className="bg-white dark:bg-[#111111] rounded-[1.5rem] p-5 sm:p-8 border border-gray-100 dark:border-white/5">
+            <form onSubmit={submitTx} className="space-y-5">
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{selectedEntity ? 'Account Selected' : 'Select Account'}</p><p className="text-lg font-black text-gray-900 dark:text-white truncate">{selectedEntity ? selectedEntity.name : 'Search and select account from left panel'}</p></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button type="button" onClick={() => setTxnType('income')} className={cn('p-5 rounded-2xl border-2 flex flex-col items-center gap-2', txnType === 'income' ? 'border-teal-500 bg-teal-50 dark:bg-teal-500/10' : 'border-gray-100 dark:border-white/10')}><div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', txnType === 'income' ? 'bg-teal-500 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-400')}><TrendingUp size={20} /></div><span className="text-[11px] font-black uppercase tracking-[0.2em]">Payment In</span></button>
+                <button type="button" onClick={() => setTxnType('expense')} className={cn('p-5 rounded-2xl border-2 flex flex-col items-center gap-2', txnType === 'expense' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : 'border-gray-100 dark:border-white/10')}><div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', txnType === 'expense' ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-400')}><TrendingDown size={20} /></div><span className="text-[11px] font-black uppercase tracking-[0.2em]">Payment Out</span></button>
               </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <button 
-                    type="button"
-                    onClick={() => setTxnType('income')}
-                    className={cn(
-                      "flex flex-col items-center gap-4 p-5 sm:p-8 rounded-[2.5rem] border-2 transition-all group relative active:scale-95",
-                      txnType === 'income' 
-                        ? "bg-teal-50 dark:bg-teal-500/10 border-teal-500 shadow-xl shadow-teal-500/10" 
-                        : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-teal-500/30"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
-                      txnType === 'income' ? "bg-teal-500 text-white shadow-lg shadow-teal-500/20" : "bg-gray-100 dark:bg-white/10 text-gray-400 group-hover:bg-teal-400 group-hover:text-white"
-                    )}>
-                      <TrendingUp size={28} strokeWidth={2.5} />
-                    </div>
-                    <span className={cn("text-[11px] font-black uppercase tracking-[0.2em]", txnType === 'income' ? "text-teal-700 dark:text-teal-300" : "text-gray-400 dark:text-gray-500")}>Payment In</span>
-                  </button>
-
-                  <button 
-                    type="button"
-                    onClick={() => setTxnType('expense')}
-                    className={cn(
-                      "flex flex-col items-center gap-4 p-5 sm:p-8 rounded-[2.5rem] border-2 transition-all group relative active:scale-95",
-                      txnType === 'expense' 
-                        ? "bg-red-50 dark:bg-red-500/10 border-red-500 shadow-xl shadow-red-500/10" 
-                        : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-red-500/30"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
-                      txnType === 'expense' ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-gray-100 dark:bg-white/10 text-gray-400 group-hover:bg-red-400 group-hover:text-white"
-                    )}>
-                      <TrendingDown size={28} strokeWidth={2.5} />
-                    </div>
-                    <span className={cn("text-[11px] font-black uppercase tracking-[0.2em]", txnType === 'expense' ? "text-red-700 dark:text-red-300" : "text-gray-400 dark:text-gray-500")}>Payment Out</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Category</label>
-                    <select 
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all appearance-none"
-                    >
-                      <option value="fee">Admission / Fees</option>
-                      <option value="canteen">Canteen Funds</option>
-                      <option value="emergency">Medical / Emergency</option>
-                      <option value="other">Miscellaneous</option>
-                    </select>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Amount (PKR)</label>
-                    <div className="relative group">
-                      <span className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600 font-black text-lg transition-colors group-focus-within:text-teal-600">₨</span>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        placeholder="0.00"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl pl-10 pr-4 sm:pl-12 sm:pr-6 py-4 text-2xl font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all placeholder:text-gray-200 dark:placeholder:text-gray-800"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">Narration</label>
-                  <textarea 
-                    placeholder="Describe this financial movement..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] px-6 py-5 text-sm font-semibold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all placeholder:text-gray-300 dark:placeholder:text-gray-700 min-h-[140px] resize-none"
-                  />
-                </div>
-
-                {message && (
-                  <div className={cn(
-                    "p-5 rounded-3xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm border",
-                    message.type === 'success' ? "bg-teal-50/50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-100 dark:border-teal-500/20" : "bg-red-50/50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-100 dark:border-red-500/20"
-                  )}>
-                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", message.type === 'success' ? "bg-teal-500 text-white" : "bg-red-500 text-white")}>
-                      {message.type === 'success' ? <CheckCircle2 size={20} strokeWidth={3} /> : <AlertCircle size={20} strokeWidth={3} />}
-                    </div>
-                    <p className="text-sm font-black uppercase tracking-tight">{message.text}</p>
-                  </div>
-                )}
-
-                <button 
-                  type="submit"
-                  disabled={processing}
-                  className={cn(
-                    "w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl transition-all flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50",
-                    txnType === 'income' 
-                      ? "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-500/30" 
-                      : "bg-red-600 hover:bg-red-700 text-white shadow-red-500/30"
-                  )}
-                >
-                  {processing ? (
-                    <Loader2 className="animate-spin" size={24} />
-                  ) : (
-                    <>Submit Transaction <ArrowRight size={24} strokeWidth={3} /></>
-                  )}
-                </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Field / Category</label><input value={categorySearch} onChange={(e) => setCategorySearch(e.target.value)} placeholder="Search or create custom field..." className="mt-2 w-full bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10" /><div className="mt-2 border border-gray-100 dark:border-white/10 rounded-xl overflow-hidden max-h-36 overflow-y-auto">{visibleCategories.map((c) => <button key={c.id} type="button" onClick={() => setSelectedCategoryId(c.id)} className={cn('w-full text-left px-3 py-2 text-sm font-semibold border-b border-gray-100 dark:border-white/10 last:border-0', selectedCategoryId === c.id ? 'text-teal-600 dark:text-teal-400' : 'text-gray-700 dark:text-gray-200')}>{c.name}</button>)}{visibleCategories.length === 0 && categorySearch.trim() && <button type="button" onClick={createCategory} className="w-full text-left px-3 py-3 text-sm font-bold text-teal-600 dark:text-teal-400">Create "{categorySearch.trim()}"</button>}</div></div>
+                <div className="space-y-3"><div><label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</label><input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} className="mt-2 w-full bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10" /></div><div><label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Payment Method</label><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)} className="mt-2 w-full bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10"><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="jazzcash">JazzCash</option><option value="easypaisa">EasyPaisa</option><option value="other">Other</option></select></div></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Amount (PKR)</label><input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="mt-2 w-full bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 text-xl font-black text-gray-900 dark:text-white border border-gray-100 dark:border-white/10" /></div><div><label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Reference No</label><input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="Optional reference..." className="mt-2 w-full bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10" /></div></div>
+              <div><label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Purpose / Note</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Purpose of this transaction..." className="mt-2 w-full bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10 min-h-[110px] resize-none" /></div>
+              {message && <div className={cn('p-3 rounded-xl border flex items-center gap-2', message.type === 'success' ? 'bg-teal-50 dark:bg-teal-500/10 border-teal-100 dark:border-teal-500/20 text-teal-700 dark:text-teal-300' : 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-300')}>{message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}<p className="text-sm font-bold">{message.text}</p></div>}
+              <button type="submit" disabled={processing} className={cn('w-full py-4 rounded-xl font-black uppercase tracking-[0.2em] text-white flex items-center justify-center gap-2 disabled:opacity-50', txnType === 'income' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-red-600 hover:bg-red-700')}>{processing ? <Loader2 size={18} className="animate-spin" /> : <>Submit Transaction <ArrowRight size={18} /></>}</button>
             </form>
           </div>
         </div>
       </div>
 
-      {/* History Table */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 sm:mt-16">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-4">
-            <div className="w-10 h-10 bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center text-teal-600 dark:text-teal-400 shadow-sm">
-              <History size={20} />
-            </div>
-            Terminal History
-          </h2>
-          <button className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-[0.2em] hover:bg-teal-50 dark:hover:bg-teal-500/10 px-5 py-2.5 rounded-xl transition-all border border-transparent hover:border-teal-100 dark:hover:border-teal-500/20 flex items-center gap-2">
-            View Operations Log <ChevronRight size={14} strokeWidth={3} />
-          </button>
-        </div>
-
-        <div className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/5 rounded-[1.5rem] p-5 sm:p-7 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Date</label>
-              <select
-                value={historyDateMode}
-                onChange={(e) => setHistoryDateMode(e.target.value as any)}
-                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
-              >
-                <option value="today">Today</option>
-                <option value="all">All History</option>
-                <option value="range">Date Range</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Status</label>
-              <select
-                value={historyStatus}
-                onChange={(e) => setHistoryStatus(e.target.value as any)}
-                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
-              >
-                <option value="all">All</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Search</label>
-              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 leading-relaxed pt-2 md:pt-4">
-                Uses the left panel search (patient/student/staff name or ID).
-              </div>
-            </div>
-          </div>
-
-          {historyDateMode === 'range' && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">From</label>
-                <input
-                  type="date"
-                  value={historyFrom}
-                  onChange={(e) => setHistoryFrom(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">To</label>
-                <input
-                  type="date"
-                  value={historyTo}
-                  onChange={(e) => setHistoryTo(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-gray-900 dark:text-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white dark:bg-[#111111] rounded-2xl sm:rounded-[3rem] shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5">
-                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Timestamp</th>
-                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Account Entity</th>
-                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Category</th>
-                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] text-right">Amount</th>
-                  <th className="px-4 py-4 sm:px-8 sm:py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] text-center">Verified By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                {historyLoading ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-10 sm:px-8 sm:py-14 text-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-teal-600 dark:text-teal-400 mx-auto" />
-                      <div className="mt-3 text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-                        Loading transaction history...
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredHistoryTxns.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-10 sm:px-8 sm:py-14 text-center">
-                      <div className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                        No transactions match your filters.
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredHistoryTxns.map((tx: any) => (
-                    <tr key={tx.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.03] transition-colors">
-                      <td className="px-4 py-4 sm:px-8 sm:py-6">
-                        <div className="text-sm font-black text-gray-900 dark:text-white capitalize">
-                          {toDate(tx.date || tx.createdAt)?.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                        </div>
-                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase">
-                          {toDate(tx.date || tx.createdAt)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 sm:px-8 sm:py-6">
-                        <div className="text-sm font-black text-gray-900 dark:text-white">
-                          {tx.patientName || tx.staffName}
-                        </div>
-                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest">
-                          {(tx.patientId || tx.staffId)?.slice(0, 10)}...
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 sm:px-8 sm:py-6">
-                        <span className="inline-flex items-center px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-white/10 opacity-80">
-                          {tx.category}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 sm:px-8 sm:py-6 text-right">
-                        <div className={cn(
-                          "text-lg font-black flex items-center justify-end gap-2",
-                          tx.type === 'income' ? "text-teal-600 dark:text-teal-400" : "text-red-500"
-                        )}>
-                          {tx.type === 'income' ? <Plus size={14} strokeWidth={3} /> : <Minus size={14} strokeWidth={3} />}
-                          ₨{tx.amount?.toLocaleString()}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 sm:px-8 sm:py-6">
-                        <div className="flex items-center justify-center gap-3">
-                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-500 dark:text-gray-400 border border-gray-200/50 dark:border-white/10">
-                            {tx.createdByName?.[0]?.toUpperCase() || 'C'}
-                          </div>
-                          <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-tighter">
-                            {tx.createdByName?.split(' ')[0]}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
+        <div className="flex items-center gap-2 mb-4"><History size={18} className="text-teal-600 dark:text-teal-400" /><h2 className="text-2xl font-black text-gray-900 dark:text-white">Terminal History</h2></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4"><select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="bg-white dark:bg-[#111111] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10"><option value="today">Today</option><option value="all">All History</option><option value="range">Date Range</option></select><select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="bg-white dark:bg-[#111111] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10"><option value="all">All Status</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select><select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="bg-white dark:bg-[#111111] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10"><option value="all">All Types</option><option value="income">Income</option><option value="expense">Expense</option></select><select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="bg-white dark:bg-[#111111] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10"><option value="all">All Departments</option>{DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}</select>{historyDateMode === 'range' && (<><input type="date" value={historyFrom} onChange={(e) => setHistoryFrom(e.target.value)} className="bg-white dark:bg-[#111111] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10" /><input type="date" value={historyTo} onChange={(e) => setHistoryTo(e.target.value)} className="bg-white dark:bg-[#111111] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-white/10" /></>)}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4"><div className="bg-teal-50 dark:bg-teal-500/10 rounded-xl p-3 border border-teal-100 dark:border-teal-500/20"><p className="text-xs font-black uppercase tracking-widest text-teal-600 dark:text-teal-400">Income</p><p className="text-lg font-black text-teal-700 dark:text-teal-300">?{totals.income.toLocaleString()}</p></div><div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-3 border border-red-100 dark:border-red-500/20"><p className="text-xs font-black uppercase tracking-widest text-red-600 dark:text-red-400">Expense</p><p className="text-lg font-black text-red-700 dark:text-red-300">?{totals.expense.toLocaleString()}</p></div><div className="bg-gray-100 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10"><p className="text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-400">Net</p><p className="text-lg font-black text-gray-800 dark:text-white">?{totals.net.toLocaleString()}</p></div></div>
+        <div className="bg-white dark:bg-[#111111] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden"><div className="overflow-x-auto"><table className="w-full min-w-[860px] text-left"><thead><tr className="bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5"><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Department</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Entity</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Category</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Status</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Amount</th></tr></thead><tbody>{historyLoading ? <tr><td colSpan={6} className="px-4 py-8 text-center"><Loader2 className="w-7 h-7 animate-spin text-teal-600 dark:text-teal-400 mx-auto" /></td></tr> : historyFiltered.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm font-bold text-gray-400">No transactions match your filters.</td></tr> : historyFiltered.map((tx) => (<tr key={tx.id} className="border-b border-gray-50 dark:border-white/5"><td className="px-4 py-3 text-sm font-black text-gray-900 dark:text-white">{toDate(tx.transactionDate || tx.date || tx.createdAt)?.toLocaleDateString('en-GB')}</td><td className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200">{tx.departmentName || tx.departmentCode}</td><td className="px-4 py-3"><div className="text-sm font-black text-gray-900 dark:text-white">{tx.patientName || '-'}</div><div className="text-[10px] font-bold text-gray-400">{tx.patientId || '-'}</div></td><td className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200">{tx.categoryName || tx.category}</td><td className="px-4 py-3"><span className={cn('px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider', tx.status === 'approved' ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300' : tx.status === 'rejected' ? 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300')}>{tx.status || 'pending'}</span></td><td className="px-4 py-3 text-right"><div className={cn('text-sm font-black flex items-center justify-end gap-2', tx.type === 'income' ? 'text-teal-600 dark:text-teal-400' : 'text-red-500')}>{tx.type === 'income' ? <Plus size={12} /> : <Minus size={12} />}?{Number(tx.amount || 0).toLocaleString()}</div></td></tr>))}</tbody></table></div></div>
       </div>
     </div>
   );
