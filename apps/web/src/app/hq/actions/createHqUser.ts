@@ -52,7 +52,7 @@ export async function createHqUserServer(data: {
     const app = getAdminApp();
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
-    const email = `${data.customId.toLowerCase().replace(/-/g, '.')}@hq.khanhub.com`;
+    const email = `${data.customId.toLowerCase()}@hq.khanhub.com`;
 
     try {
       const existingUser = await adminAuth.getUserByEmail(email);

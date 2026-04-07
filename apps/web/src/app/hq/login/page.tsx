@@ -66,7 +66,7 @@ export default function HqLoginPage() {
 
     try {
       const normalizedCustomId = customId.trim();
-      const email = `${normalizedCustomId.toLowerCase().replace(/-/g, '.')}${HQ_DOMAIN}`;
+      const email = `${normalizedCustomId.toLowerCase()}${HQ_DOMAIN}`;
 
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const userDoc = await getDoc(doc(db, 'hq_users', cred.user.uid));
