@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, getDocs, limit, orderBy, query, startAfter, Timestamp, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where } from 'firebase/firestore';
 import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, History, Loader2, Minus, Plus, Search, TrendingDown, TrendingUp } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -36,6 +36,10 @@ function slugify(v: string) {
 export default function CashierStationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
+
+  const [incomingFeeReqs, setIncomingFeeReqs] = useState<any[]>([]);
+  const [incomingLoading, setIncomingLoading] = useState(false);
+  const [incomingActionId, setIncomingActionId] = useState<string | null>(null);
 
   const [departmentCode, setDepartmentCode] = useState('rehab');
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,7 +83,53 @@ export default function CashierStationPage() {
     }
     void loadCustomCategories();
     void fetchHistory();
+    const unsub = subscribeIncoming();
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
   }, [sessionLoading, session, router]);
+
+  function subscribeIncoming() {
+    if (!session?.customId) return;
+    setIncomingLoading(true);
+    try {
+      const q = query(
+        collection(db, 'rehab_transactions'),
+        where('status', '==', 'pending_cashier'),
+        where('cashierId', '==', session.customId),
+        orderBy('createdAt', 'desc')
+      );
+      return onSnapshot(
+        q,
+        (snap) => {
+          setIncomingFeeReqs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          setIncomingLoading(false);
+        },
+        () => setIncomingLoading(false)
+      );
+    } catch {
+      setIncomingLoading(false);
+    }
+  }
+
+  async function forwardToSuperadmin(txId: string) {
+    if (incomingActionId) return;
+    setIncomingActionId(txId);
+    try {
+      await updateDoc(doc(db, 'rehab_transactions', txId), {
+        status: 'pending',
+        cashierForwardedAt: Timestamp.now(),
+        cashierForwardedBy: session?.uid,
+        cashierForwardedByName: session?.name || session?.displayName || 'HQ Cashier',
+      });
+      await fetchHistory();
+      setMessage({ type: 'success', text: 'Sent to superadmin approvals.' });
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to forward request.' });
+    } finally {
+      setIncomingActionId(null);
+    }
+  }
 
   useEffect(() => {
     setSelectedEntity(null);
@@ -232,6 +282,47 @@ export default function CashierStationPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-4 space-y-4 min-w-0">
+          <div className="bg-[#11151d] rounded-2xl p-4 border border-white/10">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
+              <Plus size={14} /> Admin Fee Requests
+            </h2>
+            {incomingLoading ? (
+              <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 flex items-center justify-center">
+                <Loader2 size={18} className="animate-spin text-teal-400" />
+              </div>
+            ) : incomingFeeReqs.length === 0 ? (
+              <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 text-xs font-bold text-gray-400">
+                No incoming fee requests.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[320px] overflow-y-auto">
+                {incomingFeeReqs.map((tx) => (
+                  <div key={tx.id} className="p-3 rounded-xl bg-[#1a1f2a] border border-white/10">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-black text-white truncate">{tx.patientName || 'Patient'}</div>
+                        <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.id}</div>
+                        <div className="text-xs font-bold text-teal-300 mt-1">Rs {Number(tx.amount || 0).toLocaleString()}</div>
+                        <div className="text-[10px] font-semibold text-gray-300 mt-1 line-clamp-2">{tx.description || tx.note || ''}</div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={incomingActionId === tx.id}
+                        onClick={() => forwardToSuperadmin(tx.id)}
+                        className="shrink-0 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
+                      >
+                        {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-3 text-[10px] font-bold text-gray-500">
+              Clicking <span className="text-gray-200 font-black">Add</span> sends request to superadmin approvals.
+            </p>
+          </div>
+
           <div className="bg-[#11151d] rounded-2xl p-4 border border-white/10">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
               <Search size={14} /> Search Account

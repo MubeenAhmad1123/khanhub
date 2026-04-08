@@ -23,6 +23,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/hq/dashboard/superadmin', icon: <LayoutDashboard size={16} />, roles: ['superadmin'] },
   { label: 'Create Users', href: '/hq/dashboard/superadmin/users', icon: <Users size={16} />, roles: ['superadmin'] },
+  { label: 'Fee Requests', href: '/hq/dashboard/superadmin/fee-requests', icon: <CreditCard size={16} />, roles: ['superadmin'] },
   { label: 'All Passwords', href: '/hq/dashboard/superadmin/passwords', icon: <Eye size={16} />, roles: ['superadmin'] },
   { label: 'Audit Log', href: '/hq/dashboard/superadmin/audit', icon: <FileText size={16} />, roles: ['superadmin'] },
   { label: 'Overview', href: '/hq/dashboard/manager', icon: <LayoutDashboard size={16} />, roles: ['manager'] },

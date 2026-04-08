@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
@@ -179,7 +179,13 @@ export default function AdmitPatientPage() {
       );
 
       if (!result.success) {
-        setError(`Patient added but login creation failed: ${result.error}. You can create the login manually from User Management.`);
+        // Roll back the patient doc if the login account could not be created.
+        // This prevents "half-created" records from confusing future logins.
+        try {
+          await deleteDoc(doc(db, 'rehab_patients', patientRef.id));
+        } catch {}
+
+        setError(`Patient admission failed: ${result.error}. Please choose a different Patient Login ID.`);
         toast.error('Login account creation failed');
         setSubmitting(false);
         return;

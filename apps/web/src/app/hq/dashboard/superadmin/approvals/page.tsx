@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, onSnapshot, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { 
@@ -70,15 +70,101 @@ export default function HqApprovalsPage() {
     const collectionName = activeTab === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
     
     try {
+      // Load tx first (needed for profile sync on rehab approvals)
+      const txSnap = await getDoc(doc(db, collectionName, id));
+      const tx = txSnap.exists() ? ({ id: txSnap.id, ...txSnap.data() } as any) : null;
+
       await updateDoc(doc(db, collectionName, id), {
         status,
         approvedBy: status === 'approved' ? session?.customId : undefined,
         rejectedBy: status === 'rejected' ? session?.customId : undefined,
-        approvedAt: status === 'approved' ? new Date() : undefined,
-        rejectedAt: status === 'rejected' ? new Date() : undefined,
-        processedAt: new Date(),
+        approvedAt: status === 'approved' ? Timestamp.now() : undefined,
+        rejectedAt: status === 'rejected' ? Timestamp.now() : undefined,
+        processedAt: Timestamp.now(),
         processedBy: session?.customId
       });
+
+      // Apply to rehab profiles only when APPROVED (patient_fee / canteen)
+      if (status === 'approved' && activeTab === 'rehab' && tx?.patientId && tx?.category) {
+        try {
+          const txDate: Date =
+            tx?.date instanceof Timestamp
+              ? tx.date.toDate()
+              : tx?.date?.seconds
+                ? new Date(tx.date.seconds * 1000)
+                : tx?.transactionDate instanceof Timestamp
+                  ? tx.transactionDate.toDate()
+                  : new Date();
+
+          const month = txDate.toISOString().slice(0, 7);
+
+          if (tx.category === 'patient_fee') {
+            const feesQ = query(
+              collection(db, 'rehab_fees'),
+              where('patientId', '==', tx.patientId),
+              where('month', '==', month)
+            );
+            const feesSnap = await getDocs(feesQ);
+
+            if (feesSnap.empty) {
+              const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
+              const packageAmount = patientSnap.exists() ? (patientSnap.data().packageAmount || 60000) : 60000;
+              const amountPaid = Number(tx.amount) || 0;
+              const amountRemaining = Math.max(0, packageAmount - amountPaid);
+
+              await addDoc(collection(db, 'rehab_fees'), {
+                patientId: tx.patientId,
+                patientName: tx.patientName || '',
+                month,
+                packageAmount,
+                amountPaid,
+                amountRemaining,
+                payments: [
+                  {
+                    id,
+                    amount: amountPaid,
+                    date: Timestamp.fromDate(txDate),
+                    cashierId: tx.cashierId || 'HQ',
+                    approvedBy: session?.customId,
+                    status: 'approved',
+                    note: tx.description || '',
+                  },
+                ],
+                lastPaymentDate: serverTimestamp(),
+                lastPaymentAmount: amountPaid,
+                createdAt: serverTimestamp(),
+              });
+            } else {
+              const feeDoc = feesSnap.docs[0];
+              const current = feeDoc.data() as any;
+              const newPaid = (current.amountPaid || 0) + (Number(tx.amount) || 0);
+              const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
+              const existingPayments = current.payments || [];
+
+              await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+                amountPaid: newPaid,
+                amountRemaining: newRemaining,
+                lastPaymentDate: serverTimestamp(),
+                lastPaymentAmount: Number(tx.amount) || 0,
+                payments: [
+                  ...existingPayments,
+                  {
+                    id,
+                    amount: Number(tx.amount) || 0,
+                    date: Timestamp.fromDate(txDate),
+                    cashierId: tx.cashierId || 'HQ',
+                    approvedBy: session?.customId,
+                    status: 'approved',
+                    note: tx.description || '',
+                  },
+                ],
+              });
+            }
+          }
+        } catch (syncErr) {
+          console.error('Rehab profile sync failed:', syncErr);
+        }
+      }
     } catch (err) {
       console.error(`Error ${status} transaction:`, err);
       alert(`Failed to ${status} transaction`);

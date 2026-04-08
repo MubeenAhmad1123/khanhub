@@ -25,7 +25,7 @@ export interface Transaction {
   type: 'income' | 'expense';
   category: string;
   txnDescription?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending_cashier' | 'pending' | 'approved' | 'rejected';
   createdBy?: string;
   createdByName?: string;
   cashierId?: string;
