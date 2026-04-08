@@ -23,8 +23,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/hq/dashboard/superadmin', icon: <LayoutDashboard size={16} />, roles: ['superadmin'] },
+  { label: 'Approvals', href: '/hq/dashboard/superadmin/approvals', icon: <CheckCircle size={16} />, roles: ['superadmin'] },
   { label: 'Create Users', href: '/hq/dashboard/superadmin/users', icon: <Users size={16} />, roles: ['superadmin'] },
-  { label: 'Fee Requests', href: '/hq/dashboard/superadmin/fee-requests', icon: <CreditCard size={16} />, roles: ['superadmin'] },
   { label: 'Reconciliation', href: '/hq/dashboard/superadmin/reconciliation', icon: <Calculator size={16} />, roles: ['superadmin'] },
   { label: 'Categories', href: '/hq/dashboard/superadmin/categories', icon: <Tag size={16} />, roles: ['superadmin'] },
   { label: 'Finance Tower', href: '/hq/dashboard/superadmin/finance', icon: <TrendingUp size={16} />, roles: ['superadmin'] },
