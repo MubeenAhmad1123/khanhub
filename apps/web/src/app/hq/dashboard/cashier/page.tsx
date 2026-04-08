@@ -42,6 +42,7 @@ export default function CashierStationPage() {
   const [incomingFeeReqs, setIncomingFeeReqs] = useState<any[]>([]);
   const [incomingLoading, setIncomingLoading] = useState(false);
   const [incomingActionId, setIncomingActionId] = useState<string | null>(null);
+  const [incomingError, setIncomingError] = useState<string | null>(null);
   const [forwardModalTx, setForwardModalTx] = useState<any | null>(null);
   const [forwardProofFile, setForwardProofFile] = useState<File | null>(null);
   const [forwardProofReason, setForwardProofReason] = useState('');
@@ -105,23 +106,37 @@ export default function CashierStationPage() {
   function subscribeIncoming() {
     if (!session?.customId) return;
     setIncomingLoading(true);
+    setIncomingError(null);
     try {
       const cashierCustomId = String(session.customId || '').trim().toUpperCase();
       const q = query(
         collection(db, 'rehab_transactions'),
         where('status', '==', 'pending_cashier'),
-        where('cashierId', '==', cashierCustomId),
         orderBy('createdAt', 'desc')
       );
       return onSnapshot(
         q,
         (snap) => {
-          setIncomingFeeReqs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          // Some older writes may have missing/mismatched cashierId. We still show them,
+          // but if cashierId exists we filter to this cashier.
+          const visible = all.filter((tx: any) => {
+            const txCashier = String(tx.cashierId || '').trim();
+            if (!txCashier) return true;
+            return txCashier.toUpperCase() === cashierCustomId;
+          });
+          setIncomingFeeReqs(visible);
           setIncomingLoading(false);
         },
-        () => setIncomingLoading(false)
+        (err) => {
+          console.error('[HQ Cashier] subscribeIncoming error:', err);
+          setIncomingError(`${(err as any)?.code || 'error'}: ${(err as any)?.message || 'Failed to load incoming requests.'}`);
+          setIncomingLoading(false);
+        }
       );
-    } catch {
+    } catch (err) {
+      console.error('[HQ Cashier] subscribeIncoming setup error:', err);
+      setIncomingError('Failed to load incoming requests.');
       setIncomingLoading(false);
     }
   }
@@ -180,8 +195,9 @@ export default function CashierStationPage() {
       setForwardProofFile(null);
       setForwardProofReason('');
       await fetchHistory();
-    } catch {
-      setMessage({ type: 'error', text: 'Failed to forward request.' });
+    } catch (err: any) {
+      console.error('[HQ Cashier] forward error:', err);
+      setMessage({ type: 'error', text: `${err?.code || 'error'}: ${err?.message || 'Failed to forward request.'}` });
     } finally {
       setIncomingActionId(null);
       setForwardProofUploading(false);
@@ -339,8 +355,9 @@ export default function CashierStationPage() {
       setProofReason('');
       setProofUploading(false);
       await fetchHistory();
-    } catch {
-      setMessage({ type: 'error', text: 'Failed to submit transaction.' });
+    } catch (err: any) {
+      console.error('[HQ Cashier] submitTx error:', err);
+      setMessage({ type: 'error', text: `${err?.code || 'error'}: ${err?.message || 'Failed to submit transaction.'}` });
     } finally {
       setProcessing(false);
       setProofUploading(false);
@@ -397,6 +414,11 @@ export default function CashierStationPage() {
               <Plus size={14} /> Admin Fee Requests
             </h2>
             </div>
+            {incomingError ? (
+              <div className="mb-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs font-bold">
+                {incomingError}
+              </div>
+            ) : null}
             {incomingLoading ? (
               <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 flex items-center justify-center">
                 <Loader2 size={18} className="animate-spin text-teal-400" />
