@@ -444,8 +444,6 @@ export default function HqApprovalsPage() {
                             {entity.href ? (
                               <a
                                 href={entity.href}
-                                target="_blank"
-                                rel="noreferrer"
                                 className="inline-block mt-2 text-[10px] font-black uppercase tracking-widest text-teal-400 hover:text-teal-300"
                               >
                                 View Profile
