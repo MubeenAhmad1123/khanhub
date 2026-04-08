@@ -256,29 +256,39 @@ export default function HqApprovalsPage() {
     }
   };
 
-  if (sessionLoading) return <div className="min-h-screen bg-[#0f172a] flex items-center justify-center"><Loader2 className="animate-spin text-teal-500" /></div>;
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen bg-[#0f172a]">
+        <div className="max-w-5xl mx-auto px-4 py-10 space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-36 rounded-3xl bg-white/5 border border-white/8 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen md:pl-0 bg-[#0f172a] text-slate-200">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-3xl font-black text-white flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight flex items-center gap-3">
               <CheckCircle className="text-teal-500" size={32} />
               Cross-System Approvals
             </h1>
             <p className="text-slate-400 mt-1 font-medium text-sm">Review and authorize department transactions</p>
           </div>
-          <div className="flex p-1 bg-slate-800/50 rounded-2xl border border-slate-700/50 w-fit">
+          <div className="inline-flex bg-white/5 rounded-2xl p-1 border border-white/8 w-fit">
             {(['rehab', 'spims'] as TabType[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                className={`min-h-[44px] px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-200 ${
                   activeTab === tab 
-                    ? 'bg-teal-600 text-white shadow-lg' 
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-amber-500 text-black' 
+                    : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
                 {tab === 'rehab' ? 'Rehab Center' : 'SPIMS College'}
@@ -300,21 +310,22 @@ export default function HqApprovalsPage() {
           </div>
 
           {loading ? (
-            <div className="py-20 flex flex-col items-center gap-4">
-              <Loader2 className="animate-spin text-teal-500" size={32} />
-              <p className="text-slate-500 font-bold">Fetching pending requests...</p>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-36 rounded-3xl bg-white/5 border border-white/8 animate-pulse" />
+              ))}
             </div>
           ) : pendingTransactions.length === 0 ? (
-            <div className="bg-slate-800/20 border border-dashed border-slate-700 rounded-3xl py-20 text-center">
-              <div className="flex flex-col items-center gap-4 opacity-30">
-                <CheckCircle size={48} />
-                <p className="text-lg font-bold">All caught up! No pending approvals.</p>
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <CheckCircle className="text-emerald-500" size={28} />
               </div>
+              <p className="text-emerald-500/60 font-black uppercase tracking-widest text-xs">All clear — no pending approvals</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {pendingTransactions.map((tx) => (
-                <div key={tx.id} className="bg-amber-500/5 border border-amber-500/20 rounded-3xl p-6 hover:bg-amber-500/10 transition-all group relative overflow-hidden">
+            <div className="space-y-4">
+              {pendingTransactions.map((tx, index) => (
+                <div key={tx.id} style={{ animationDelay: `${index * 80}ms` }} className="animate-in fade-in slide-in-from-bottom-3 duration-400 bg-amber-500/5 border border-amber-500/20 rounded-3xl p-6 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-xl hover:shadow-amber-500/5 transition-all duration-300 group relative overflow-hidden">
                   <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${tx?.type === 'income' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-rose-500/20 text-rose-500'}`}>
@@ -329,7 +340,7 @@ export default function HqApprovalsPage() {
                       <button
                         disabled={!!actionLoading}
                         onClick={() => handleAction(tx.id, 'approved')}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-emerald-900/20"
+                        className="min-h-[44px] bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-emerald-900/20 active:scale-90 transition-transform duration-100"
                       >
                         {actionLoading === tx.id ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
                       </button>
@@ -339,7 +350,7 @@ export default function HqApprovalsPage() {
                           setRejectTarget({ id: tx.id });
                           setRejectionReason('');
                         }}
-                        className="bg-rose-600 hover:bg-rose-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-rose-900/20"
+                        className="min-h-[44px] bg-rose-600 hover:bg-rose-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-rose-900/20 active:scale-90 transition-transform duration-100"
                       >
                         {actionLoading === tx.id ? <Loader2 className="animate-spin" size={20} /> : <XCircle size={20} />}
                       </button>
@@ -408,14 +419,21 @@ export default function HqApprovalsPage() {
         <div className="mt-20">
           <button 
             onClick={() => setShowHistory(!showHistory)}
-            className="flex items-center justify-between w-full p-6 bg-slate-800/30 border border-slate-700/50 rounded-3xl hover:bg-slate-800/50 transition-all group"
+            className="min-h-[44px] flex items-center justify-between w-full p-6 bg-slate-800/30 border border-slate-700/50 rounded-3xl hover:bg-slate-800/50 transition-all group"
           >
             <div className="flex items-center gap-4">
               <div className="p-2 bg-teal-500/10 rounded-xl group-hover:scale-110 transition-transform">
                 <History className="text-teal-500" size={24} />
               </div>
               <div className="text-left">
-                <h2 className="text-xl font-black text-white uppercase tracking-wider">Approval History</h2>
+                <h2 className="text-xl font-black text-white uppercase tracking-wider flex items-center">
+                  Approval History
+                  {historyTransactions.length > 0 && (
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/20 text-teal-400 text-[9px] font-black ml-2">
+                      {historyTransactions.length > 99 ? '99+' : historyTransactions.length}
+                    </span>
+                  )}
+                </h2>
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Review past authorizations ({historyTransactions.length})</p>
               </div>
             </div>
@@ -425,7 +443,7 @@ export default function HqApprovalsPage() {
           {showHistory && (
             <div className="mt-6 animate-in slide-in-from-top-4 duration-300">
               <div className="bg-slate-800/40 border border-slate-700/50 rounded-3xl overflow-hidden backdrop-blur-sm">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto -mx-4 md:mx-0">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-900/50 border-b border-slate-700/50">
@@ -442,8 +460,8 @@ export default function HqApprovalsPage() {
                           <td colSpan={5} className="px-6 py-10 text-center text-slate-500 font-bold">No history records yet</td>
                         </tr>
                       ) : (
-                        historyTransactions.map((tx) => (
-                          <tr key={tx.id} className="hover:bg-slate-700/30 transition-colors">
+                        historyTransactions.map((tx, index) => (
+                          <tr key={tx.id} style={{ animationDelay: `${index * 30}ms` }} className="animate-in fade-in duration-300 hover:bg-slate-700/40 transition-colors duration-150">
                             <td className="px-6 py-5">
                               <div>
                                 <p className="font-bold text-white">{tx.description}</p>
@@ -483,8 +501,8 @@ export default function HqApprovalsPage() {
         </div>
       </div>
       {rejectTarget && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
             <h3 className="text-white font-black text-xl uppercase tracking-widest mb-2">Rejection Reason</h3>
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">
               This reason will be visible to the cashier.
@@ -500,7 +518,7 @@ export default function HqApprovalsPage() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setRejectTarget(null)}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition-all"
+                className="min-h-[44px] flex-1 bg-slate-700 hover:bg-slate-600 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition-all"
               >
                 Cancel
               </button>
@@ -511,7 +529,7 @@ export default function HqApprovalsPage() {
                   await handleAction(rejectTarget.id, 'rejected', rejectionReason.trim());
                   setRejectTarget(null);
                 }}
-                className="flex-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition-all"
+                className="min-h-[44px] flex-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition-all"
               >
                 {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
               </button>
