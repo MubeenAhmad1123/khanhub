@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { Patient } from '@/types/rehab';
+import { formatDateDMY } from '@/lib/utils';
 
 export default function PatientCard({ patient }: { patient: Patient }) {
   return (
@@ -21,7 +22,7 @@ export default function PatientCard({ patient }: { patient: Patient }) {
         <div className="flex gap-4 text-xs font-medium uppercase tracking-wider">
           <div className="flex flex-col">
             <span className="text-gray-400">Admitted</span>
-            <span className="text-gray-700">{(patient.admissionDate as Date).toLocaleDateString()}</span>
+            <span className="text-gray-700">{formatDateDMY(patient.admissionDate)}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-gray-400">Package</span>

@@ -13,7 +13,7 @@ import {
   Users, Calendar, ChevronRight, Activity, Loader2,
   BarChart3, Plus, AlertCircle
 } from 'lucide-react';
-import { toDate } from '@/lib/utils';
+import { formatDateDMY, toDate } from '@/lib/utils';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -84,7 +84,7 @@ export default function AdminDashboardPage() {
             {getGreeting()}, {session?.displayName?.split(' ')[0]} 👋
           </h1>
           <p className="text-sm text-gray-500 font-medium mt-1">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {formatDateDMY(new Date())}
           </p>
         </div>
         <div className="flex items-center gap-3">

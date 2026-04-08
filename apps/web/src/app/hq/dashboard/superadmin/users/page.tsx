@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, updateDoc, doc, Timestamp, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
+import { formatDateDMY } from '@/lib/utils';
 import { createHqUserServer } from '@/app/hq/actions/createHqUser';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import Link from 'next/link';
@@ -323,7 +324,7 @@ export default function HqUserManagementPage() {
                       </td>
                       <td className="px-6 py-5 hidden md:table-cell">
                         <p className="text-xs text-slate-500 font-bold">
-                          {user.createdAt ? (user.createdAt instanceof Timestamp ? user.createdAt.toDate().toLocaleDateString() : new Date(user.createdAt).toLocaleDateString()) : 'N/A'}
+                          {user.createdAt ? formatDateDMY(user.createdAt instanceof Timestamp ? user.createdAt.toDate() : user.createdAt) : 'N/A'}
                         </p>
                       </td>
                       <td className="px-6 py-5">

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
+import { formatDateDMY } from '@/lib/utils';
 import { 
   Loader2, CheckCircle2, XCircle, Clock, 
   Save, Calendar, Users, Search, 
@@ -219,7 +220,7 @@ export default function AttendanceMarkingPage() {
                 <h1 className="text-2xl font-black tracking-tight">Staff Attendance</h1>
               </div>
               <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] ml-11">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                {formatDateDMY(new Date())}
               </p>
             </div>
 

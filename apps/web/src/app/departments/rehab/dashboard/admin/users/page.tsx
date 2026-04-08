@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { formatDateDMY } from '@/lib/utils';
 import { 
   Users, UserPlus, User, Heart, UserCog, 
   Shield, CreditCard, Eye, EyeOff, Loader2, 
@@ -250,7 +251,7 @@ export default function UserManagementPage() {
                       {getRoleBadge(user.role)}
                     </div>
                     <div className="text-[9px] font-black text-gray-300 uppercase tracking-widest whitespace-nowrap">
-                      {user.createdAt?.toDate?.()?.toLocaleDateString()}
+                      {formatDateDMY(user.createdAt?.toDate?.() ? user.createdAt.toDate() : user.createdAt)}
                     </div>
                   </div>
                 </div>

@@ -8,6 +8,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Filter, 
   Search, Calendar, Loader2, BarChart3, AlertCircle, CheckCircle
 } from 'lucide-react';
+import { formatDateDMY } from '@/lib/utils';
 
 export default function FinanceLogPage() {
   const router = useRouter();
@@ -300,7 +301,7 @@ export default function FinanceLogPage() {
                       </td>
                       <td className="px-6 py-4 truncate max-w-xs">{tx.description || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                        {tx.date?.toDate?.() ? tx.date.toDate().toLocaleDateString('en-PK') : new Date(tx.date).toLocaleDateString('en-PK')}
+                        {formatDateDMY(tx.date?.toDate?.() ? tx.date.toDate() : tx.date)}
                       </td>
                       <td className="px-6 py-4 text-xs font-mono text-gray-400 truncate max-w-[100px]">{tx.cashierId}</td>
                       <td className="px-6 py-4 text-right font-black text-gray-900">

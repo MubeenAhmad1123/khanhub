@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { formatDateDMY } from '@/lib/utils';
 import { 
   Heart, Plus, Search, ChevronRight, User, Calendar, Loader2, 
   Phone, DollarSign, CheckCircle, AlertCircle
@@ -274,7 +275,7 @@ export default function PatientsListPage() {
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400">
                             <Calendar size={11} className="text-teal-400" />
                             {patient.admissionDate instanceof Date 
-                                ? patient.admissionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) 
+                                ? formatDateDMY(patient.admissionDate)
                                 : 'No date'
                             }
                         </div>

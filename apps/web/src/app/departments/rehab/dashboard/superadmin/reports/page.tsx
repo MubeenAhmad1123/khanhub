@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { formatDateDMY } from '@/lib/utils';
 import {
   FileBarChart, Printer, Calendar,
   TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3,
@@ -331,7 +332,7 @@ export default function SuperAdminReportsPage() {
                       <tbody>
                         {reportData.txns.map((t: any) => (
                           <tr key={t.id} className="hover:bg-gray-50">
-                            <td className="border border-gray-200 px-3 py-2 text-gray-600">{t.date?.toDate?.()?.toLocaleDateString()}</td>
+                            <td className="border border-gray-200 px-3 py-2 text-gray-600">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
                             <td className="border border-gray-200 px-3 py-2">
                               <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>

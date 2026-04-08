@@ -14,6 +14,7 @@ import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
+import { formatDateDMY } from '@/lib/utils';
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -162,7 +163,7 @@ export default function FamilyPatientViewPage() {
                 {patient.isActive ? 'Active' : 'Discharged'}
               </span>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-black uppercase tracking-widest">
-                <Calendar size={10} /> {patient.admissionDate?.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                <Calendar size={10} /> {formatDateDMY(patient.admissionDate)}
               </span>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest">
                 <Clock size={10} /> {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)} {(patient.remainingDays || 0) > 0 ? 'days remaining' : 'days admitted'}

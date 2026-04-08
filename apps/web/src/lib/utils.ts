@@ -17,6 +17,19 @@ export function toDate(val: any): Date {
   return new Date(val);
 }
 
+/**
+ * Format a date-like value as "DD MM YYYY" (e.g. "25 12 2026").
+ * Accepts Firestore Timestamp, Date, ISO string, or epoch-like values.
+ */
+export function formatDateDMY(val: any): string {
+  const d = toDate(val);
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '—';
+  // en-GB yields 2-digit day/month and 4-digit year (DD/MM/YYYY)
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    .format(d)
+    .replace(/\//g, ' ');
+}
+
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

@@ -14,7 +14,7 @@ import {
   Shirt, Award, Plus, Trash2, Clock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { toDate } from '@/lib/utils';
+import { formatDateDMY, toDate } from '@/lib/utils';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -217,7 +217,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Date</p>
-                  <p className="text-sm font-bold text-gray-900">{toDate(patientDoc.admissionDate).toLocaleDateString()}</p>
+                  <p className="text-sm font-bold text-gray-900">{formatDateDMY(patientDoc.admissionDate)}</p>
                 </div>
                 <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-start gap-1">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
@@ -281,7 +281,7 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between px-4 py-3 bg-gray-50/50 border-b border-gray-50 w-full">
                 <button className="p-2 rounded-xl bg-white shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-gray-500">←</button>
                 <span className="text-[11px] font-black uppercase tracking-widest text-gray-600">
-                  {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
+                  {formatDateDMY(new Date())}
                 </span>
                 <button className="p-2 rounded-xl bg-white shadow-sm border border-gray-100 hover:bg-gray-50 active:scale-95 transition-all text-gray-500">→</button>
               </div>
@@ -299,7 +299,7 @@ export default function ProfilePage() {
                       attendance.map(log => (
                         <div key={log.id} className="flex flex-row items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 w-full">
                           <div className="flex flex-col gap-1 w-full">
-                            <p className="font-bold text-gray-900 text-sm">{new Date(log.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            <p className="font-bold text-gray-900 text-sm">{formatDateDMY(log.date)}</p>
                             <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{log.day}</p>
                           </div>
                           <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${
@@ -327,7 +327,7 @@ export default function ProfilePage() {
                           <div className="flex-1 w-full">
                             <div className="flex items-center gap-3 mb-2 flex-wrap">
                               <span className="text-[9px] font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded-xl uppercase tracking-widest">
-                                {new Date(log.date).toLocaleDateString()}
+                                {formatDateDMY(log.date)}
                               </span>
                               <h4 className="font-black text-gray-900 text-sm capitalize">{log.dutyType?.replace(/_/g, ' ')}</h4>
                             </div>
@@ -356,7 +356,7 @@ export default function ProfilePage() {
                       dressLogs.map(log => (
                         <div key={log.id} className="flex flex-row items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 w-full">
                           <div className="flex flex-col gap-1">
-                            <p className="font-bold text-gray-900 text-sm">{new Date(log.date).toLocaleDateString()}</p>
+                            <p className="font-bold text-gray-900 text-sm">{formatDateDMY(log.date)}</p>
                             <p className="text-[11px] font-medium text-gray-500">{log.comment || 'Professional attire'}</p>
                           </div>
                           <div className="flex flex-col items-end">
@@ -426,7 +426,7 @@ export default function ProfilePage() {
                               <div className="flex flex-col gap-1 w-full">
                                 <h4 className="font-bold text-gray-900 text-sm">{c.title}</h4>
                                 <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">
-                                  {toDate(c.date || c.createdAt).toLocaleDateString()}
+                                  {formatDateDMY(c.date || c.createdAt)}
                                 </p>
                               </div>
                               <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">

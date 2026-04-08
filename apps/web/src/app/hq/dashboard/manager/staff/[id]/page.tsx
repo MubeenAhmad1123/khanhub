@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
+import { formatDateDMY } from '@/lib/utils';
 import Link from 'next/link';
 import { 
   Target, Camera,
@@ -64,10 +65,7 @@ interface AttendanceLog {
 
 function formatStaffDate(input: any): string {
   if (!input) return 'N/A';
-  if (input instanceof Timestamp) return input.toDate().toLocaleDateString('en-GB');
-  if (input?.seconds) return new Date(input.seconds * 1000).toLocaleDateString('en-GB');
-  const d = new Date(input);
-  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('en-GB');
+  return formatDateDMY(input);
 }
 
 export default function StaffProfilePage() {
@@ -1124,7 +1122,7 @@ export default function StaffProfilePage() {
                     {growthHistory.map((h: any) => (
                       <div key={h.id} className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'}`}>
                         <div>
-                          <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{new Date(h.month + '-01').toLocaleDateString('en-PK', { month:'long', year:'numeric' })}</p>
+                          <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatDateDMY(new Date(h.month + '-01'))}</p>
                           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Points: {h.total || 0}</p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
@@ -1154,7 +1152,7 @@ export default function StaffProfilePage() {
                 <div>
                   <h3 className="text-xl font-black italic tracking-tight">Shift Timing</h3>
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
-                    Entry for {new Date(timePopup.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    Entry for {formatDateDMY(new Date(timePopup.date))}
                   </p>
                 </div>
                 <button 

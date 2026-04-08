@@ -8,6 +8,7 @@ import {
   updateDoc, doc, getDoc, Timestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { formatDateDMY } from '@/lib/utils';
 import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/rehab';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
@@ -248,7 +249,7 @@ export default function StaffSelfPage() {
             {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}, {user?.displayName?.split(' ')[0]}
           </h1>
           <p className="text-slate-400 text-sm font-medium mt-1">
-            {new Date().toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {formatDateDMY(new Date())}
           </p>
         </div>
 

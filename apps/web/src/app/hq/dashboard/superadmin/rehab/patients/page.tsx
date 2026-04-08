@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
+import { formatDateDMY } from '@/lib/utils';
 import { 
   Loader2, Search, Filter, User, Calendar, 
   Heart, ChevronDown, ChevronUp, Activity,
@@ -182,7 +183,7 @@ export default function HqRehabPatientsPage() {
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
                             <Calendar size={14} className="text-teal-500/50" />
-                            {patient.admissionDate instanceof Timestamp ? patient.admissionDate.toDate().toLocaleDateString() : new Date(patient.admissionDate).toLocaleDateString()}
+                            {formatDateDMY(patient.admissionDate instanceof Timestamp ? patient.admissionDate.toDate() : patient.admissionDate)}
                           </div>
                         </td>
                         <td className="px-6 py-5">

@@ -2,6 +2,7 @@
 import React from 'react';
 import { MONTHLY_REWARDS, WEEKLY_RULE, TOTAL_MAX_SCORE, SCORE_CATEGORIES } from '@/data/scoreRules';
 import { CalendarCheck, Shirt, CheckSquare, TrendingUp, Award, Gift } from 'lucide-react';
+import { formatDateDMY } from '@/lib/utils';
 
 interface ScoreCardProps {
   staffName: string;
@@ -43,8 +44,8 @@ export default function ScoreCard({ staffName, month, scores, darkMode = false }
   const reward = MONTHLY_REWARDS.find(r => total >= r.minScore) || MONTHLY_REWARDS[MONTHLY_REWARDS.length - 1];
   const weeklyEligible = total >= WEEKLY_RULE.minScore;
 
-  // Format month (e.g. "2026-04" -> "April 2026")
-  const formattedMonth = new Date(`${month}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  // Format month as DD MM YYYY ("01 MM YYYY")
+  const formattedMonth = formatDateDMY(new Date(`${month}-01`));
 
   // Circle progress calculation
   const radius = 45;

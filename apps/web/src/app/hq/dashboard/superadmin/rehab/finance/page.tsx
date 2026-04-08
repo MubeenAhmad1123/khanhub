@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, query, getDocs, where, Timestamp, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
+import { formatDateDMY } from '@/lib/utils';
 import { 
   Loader2, TrendingUp, TrendingDown, Wallet, Clock, 
   Search, Filter, Calendar, ArrowUpRight, ArrowDownLeft,
@@ -316,7 +317,7 @@ export default function HqRehabFinancePage() {
                       </td>
                       <td className="px-6 py-5">
                         <p className="text-xs font-bold text-slate-500">
-                          {tx.createdAt instanceof Timestamp ? tx.createdAt.toDate().toLocaleDateString() : new Date(tx.createdAt).toLocaleDateString()}
+                          {formatDateDMY(tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : tx.createdAt)}
                         </p>
                       </td>
                     </tr>

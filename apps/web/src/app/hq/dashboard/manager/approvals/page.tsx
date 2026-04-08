@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
+import { formatDateDMY } from '@/lib/utils';
 import { Loader2, CheckCircle, XCircle, AlertTriangle, Filter } from 'lucide-react';
 
 type FilterType = 'all' | 'rehab' | 'spims' | 'urgent';
@@ -233,7 +234,7 @@ export default function ManagerApprovalsPage() {
                     </div>
                     <div>
                       <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Date</p>
-                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{t.date ? new Date(t.date).toLocaleDateString('en-PK') : '—'}</p>
+                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{t.date ? formatDateDMY(t.date) : '—'}</p>
                     </div>
                   </div>
 

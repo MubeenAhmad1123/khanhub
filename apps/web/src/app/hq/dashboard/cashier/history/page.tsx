@@ -6,6 +6,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { Loader2, Printer, Filter } from 'lucide-react';
+import { formatDateDMY } from '@/lib/utils';
 
 type DeptFilter = 'all' | 'rehab' | 'spims';
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
@@ -161,7 +162,7 @@ export default function CashierHistoryPage() {
                 <tbody className="divide-y divide-gray-50">
                   {filtered.map(t => (
                     <tr key={t.id} className="hover:bg-gray-50/50 transition-all">
-                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{t.date ? new Date(t.date).toLocaleDateString('en-PK') : '—'}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{t.date ? formatDateDMY(t.date) : '—'}</td>
                       <td className="px-4 py-3 text-xs whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${
                           t.dept === 'rehab' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600'

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { FeeRecord } from '@/types/rehab';
+import { formatDateDMY } from '@/lib/utils';
 
 export default function FeeTracker({ feeRecord }: { feeRecord: FeeRecord | null }) {
   if (!feeRecord) return (
@@ -42,7 +43,7 @@ export default function FeeTracker({ feeRecord }: { feeRecord: FeeRecord | null 
             <div key={idx} className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-xl">
               <div>
                 <p className="font-semibold text-gray-700">{payment.amount.toLocaleString()} PKR</p>
-                <p className="text-xs text-gray-400">{(payment.date as Date).toLocaleDateString()}</p>
+                <p className="text-xs text-gray-400">{formatDateDMY(payment.date)}</p>
               </div>
               <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${
                 payment.status === 'approved' ? 'bg-green-100 text-green-600' : 

@@ -12,6 +12,7 @@ import {
 } from 'firebase/auth';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
+import { formatDateDMY } from '@/lib/utils';
 import { 
   Loader2, User, Shield, Mail, Calendar, 
   CheckCircle, Edit2, Key, LogOut, AlertTriangle,
@@ -172,7 +173,7 @@ export default function HqProfilePage() {
                 </div>
                 <div className="flex items-center gap-3 text-slate-400 text-sm">
                   <Calendar size={16} className="text-teal-500/50" />
-                  <span>Joined {userData?.createdAt ? (userData.createdAt instanceof Timestamp ? userData.createdAt.toDate().toLocaleDateString() : new Date(userData.createdAt).toLocaleDateString()) : 'N/A'}</span>
+                  <span>Joined {userData?.createdAt ? formatDateDMY(userData.createdAt instanceof Timestamp ? userData.createdAt.toDate() : userData.createdAt) : 'N/A'}</span>
                 </div>
               </div>
             </div>

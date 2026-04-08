@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
+import { formatDateDMY } from '@/lib/utils';
 import { 
   Loader2, 
   Users, 
@@ -1337,7 +1338,7 @@ export default function ManagerUsersPage() {
                   },
                   { 
                     label: 'Onboarding Date', 
-                    value: formData.joiningDate || new Date().toLocaleDateString(), 
+                    value: formData.joiningDate || formatDateDMY(new Date()), 
                     icon: Calendar,
                     color: 'text-pink-500',
                     bg: 'bg-pink-500/10'
@@ -1514,7 +1515,7 @@ export default function ManagerUsersPage() {
                             {u.createdAt ? (() => {
                               try {
                                 const date = u.createdAt.seconds ? new Date(u.createdAt.seconds * 1000) : new Date(u.createdAt);
-                                return date.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
+                                return formatDateDMY(date);
                               } catch {
                                 return 'Format Error';
                               }

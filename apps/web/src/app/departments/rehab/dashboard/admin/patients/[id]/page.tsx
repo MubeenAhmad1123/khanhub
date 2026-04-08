@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY } from '@/lib/utils';
 
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
 import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
@@ -684,7 +685,7 @@ export default function PatientDetailPage() {
             <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
               <span className="flex items-center justify-center gap-1">
                 <Calendar className="w-4 h-4" /> 
-                Admitted: {patient.admissionDate?.toDate?.()?.toLocaleDateString()}
+                Admitted: {formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate)}
               </span>
               <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
                 PKR {patient.packageAmount?.toLocaleString()} / m
@@ -987,7 +988,7 @@ export default function PatientDetailPage() {
                     <ChevronLeft size={20} className="text-gray-400" />
                   </button>
                   <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
-                    {new Date(feeMonth + '-01').toLocaleDateString('en-PK', { month: 'long', year: 'numeric' })}
+                    {formatDateDMY(new Date(feeMonth + '-01'))}
                   </span>
                   <button onClick={() => changeMonth(1)}
                     className="p-2 rounded-xl hover:bg-gray-100 transition">
@@ -1091,9 +1092,7 @@ export default function PatientDetailPage() {
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-gray-700 font-bold">
-                                {p.date?.toDate?.() 
-                                  ? p.date.toDate().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
-                                  : new Date(p.date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                {formatDateDMY(p.date?.toDate?.() ? p.date.toDate() : p.date)}
                               </p>
                               <span className="inline-block mt-1 text-[9px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-widest">
                                 APPROVED
@@ -1119,7 +1118,7 @@ export default function PatientDetailPage() {
                     <ChevronLeft size={20} className="text-gray-400" />
                   </button>
                   <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
-                    {new Date(canteenMonth + '-01').toLocaleDateString('en-PK', { month: 'long', year: 'numeric' })}
+                    {formatDateDMY(new Date(canteenMonth + '-01'))}
                   </span>
                   <button onClick={() => changeCanteenMonth(1)}
                     className="p-2 rounded-xl hover:bg-gray-100 transition">
@@ -1194,9 +1193,7 @@ export default function PatientDetailPage() {
                               <div>
                                 <p className="text-sm font-black text-gray-900">{t.description}</p>
                                 <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-                                  {t.date?.toDate?.() 
-                                    ? t.date.toDate().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
-                                    : new Date(t.date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  {formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}
                                   <span className="mx-2">•</span>
                                   Verifier: {t.cashierId}
                                 </p>
@@ -1272,7 +1269,7 @@ export default function PatientDetailPage() {
                           <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
                           <div className="flex items-center justify-between mt-2">
                              <p className="text-xs text-gray-500">
-                              {vid.createdAt?.toDate?.()?.toLocaleDateString()}
+                              {formatDateDMY(vid.createdAt)}
                             </p>
                             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
                               isVideo ? 'bg-purple-50 text-purple-600' : isPdf ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
@@ -1319,12 +1316,7 @@ export default function PatientDetailPage() {
                     <div key={visit.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 transition-all group relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4">
                          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
-                            <span>{visit.date?.toDate?.() 
-                              ? visit.date.toDate().toLocaleDateString('en-PK', { day: '2-digit' })
-                              : new Date(visit.date).toLocaleDateString('en-PK', { day: '2-digit' })}</span>
-                            <span className="opacity-60">{visit.date?.toDate?.() 
-                              ? visit.date.toDate().toLocaleDateString('en-PK', { month: 'short' })
-                              : new Date(visit.date).toLocaleDateString('en-PK', { month: 'short' })}</span>
+                            <span>{formatDateDMY(visit.date?.toDate?.() ? visit.date.toDate() : visit.date)}</span>
                          </div>
                       </div>
 

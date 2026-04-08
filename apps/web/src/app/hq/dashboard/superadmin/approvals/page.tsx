@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
+import { formatDateDMY } from '@/lib/utils';
 import { 
   Loader2, CheckCircle, XCircle, Clock, History, 
   ChevronDown, ChevronUp, DollarSign, ArrowUpRight, 
@@ -448,13 +449,7 @@ export default function HqApprovalsPage() {
                               <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">{tx.approvedBy || tx.rejectedBy || 'N/A'}</p>
                             </td>
                             <td className="px-6 py-5 text-xs text-slate-500 font-bold">
-                              {(() => {
-                                const input = tx?.processedAt;
-                                if (input instanceof Timestamp) return input.toDate().toLocaleDateString();
-                                if (input?.seconds) return new Date(input.seconds * 1000).toLocaleDateString();
-                                if (input) return new Date(input).toLocaleDateString();
-                                return 'N/A';
-                              })()}
+                              {formatDateDMY(tx?.processedAt)}
                             </td>
                           </tr>
                         ))

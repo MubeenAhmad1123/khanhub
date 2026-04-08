@@ -9,6 +9,7 @@ import {
   Filter, Loader2, Receipt, AlertCircle, User
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDateDMY } from '@/lib/utils';
 
 export default function ApprovalsPage() {
   const router = useRouter();
@@ -417,7 +418,7 @@ export default function ApprovalsPage() {
             <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-lg">
                 <Clock size={12} className="text-gray-300" />
-                Original Date: {tx.date?.toDate?.() ? tx.date.toDate().toLocaleDateString('en-PK') : new Date(tx.date).toLocaleDateString('en-PK')}
+                Original Date: {formatDateDMY(tx.date?.toDate?.() ? tx.date.toDate() : tx.date)}
               </div>
               <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-lg">
                 <User size={12} className="text-gray-300" />
