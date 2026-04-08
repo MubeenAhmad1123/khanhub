@@ -27,6 +27,55 @@ export default function HqApprovalsPage() {
   const [rejectTarget, setRejectTarget] = useState<{ id: string } | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
+  const buildTxUpdate = (status: 'approved' | 'rejected', reason?: string) => {
+    const payload: Record<string, any> = {
+      status,
+      processedAt: Timestamp.now(),
+      processedBy: session?.customId,
+    };
+    if (status === 'approved') {
+      if (session?.customId) payload.approvedBy = session.customId;
+      payload.approvedAt = Timestamp.now();
+    }
+    if (status === 'rejected') {
+      if (session?.customId) payload.rejectedBy = session.customId;
+      payload.rejectedAt = Timestamp.now();
+      payload.rejectionReason = (reason || '').trim();
+    }
+    return payload;
+  };
+
+  const getEntity = (tx: any) => {
+    if (tx?.patientId || tx?.patientName) {
+      return {
+        kind: 'patient' as const,
+        id: tx.patientId,
+        name: tx.patientName,
+        href:
+          tx.patientId
+            ? `/departments/rehab/dashboard/admin/patients/${tx.patientId}`
+            : null,
+      };
+    }
+    if (tx?.staffId || tx?.staffName) {
+      return {
+        kind: 'staff' as const,
+        id: tx.staffId,
+        name: tx.staffName,
+        href: null,
+      };
+    }
+    if (tx?.studentId || tx?.studentName) {
+      return {
+        kind: 'student' as const,
+        id: tx.studentId,
+        name: tx.studentName,
+        href: null,
+      };
+    }
+    return { kind: 'unknown' as const, id: null, name: null, href: null };
+  };
+
   useEffect(() => {
     if (sessionLoading) return;
     if (!session || session.role !== 'superadmin') {
@@ -102,16 +151,7 @@ export default function HqApprovalsPage() {
         }
       }
 
-      await updateDoc(doc(db, collectionName, id), {
-        status,
-        approvedBy: status === 'approved' ? session?.customId : undefined,
-        rejectedBy: status === 'rejected' ? session?.customId : undefined,
-        approvedAt: status === 'approved' ? Timestamp.now() : undefined,
-        rejectedAt: status === 'rejected' ? Timestamp.now() : undefined,
-        rejectionReason: status === 'rejected' ? (reason || '') : undefined,
-        processedAt: Timestamp.now(),
-        processedBy: session?.customId
-      });
+      await updateDoc(doc(db, collectionName, id), buildTxUpdate(status, reason));
 
       if (tx?.cashierId) {
         await sendHqNotification({
@@ -347,7 +387,10 @@ export default function HqApprovalsPage() {
                       </div>
                       <div>
                         <p className="text-2xl font-black text-white">Rs. {Number(tx?.amount || 0).toLocaleString()}</p>
-                        <p className="text-xs font-bold text-amber-500/70 uppercase tracking-widest">{tx?.category || 'General'}</p>
+                        <p className="text-xs font-bold text-amber-500/70 uppercase tracking-widest">{tx?.categoryName || tx?.category || 'General'}</p>
+                        <p className="mt-1 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                          TX ID: {String(tx?.id || '').slice(-10).toUpperCase()}
+                        </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -371,22 +414,111 @@ export default function HqApprovalsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center gap-2 text-slate-400 font-medium">
-                      <User size={14} className="text-amber-500/50" />
-                      <span className="truncate">{tx?.description || 'No description'}</span>
+                  {(() => {
+                    const entity = getEntity(tx);
+                    const dateInput = tx?.createdAt || tx?.transactionDate || tx?.date;
+                    const createdAtStr =
+                      dateInput instanceof Timestamp
+                        ? dateInput.toDate().toLocaleString()
+                        : dateInput?.seconds
+                          ? new Date(dateInput.seconds * 1000).toLocaleString()
+                          : dateInput
+                            ? new Date(dateInput).toLocaleString()
+                            : 'N/A';
+
+                    const requestedByName =
+                      tx?.cashierForwardedByName ||
+                      tx?.createdByName ||
+                      tx?.createdBy ||
+                      tx?.cashierId ||
+                      'System';
+
+                    const requestedById =
+                      tx?.cashierId ||
+                      tx?.cashierForwardedBy ||
+                      tx?.createdBy ||
+                      null;
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2 text-slate-300 font-medium min-w-0">
+                          <User size={14} className="text-amber-500/50 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              {entity.kind === 'patient' ? 'Patient' : entity.kind === 'staff' ? 'Staff' : entity.kind === 'student' ? 'Student' : 'Account'}
+                            </p>
+                            <p className="font-black text-white truncate">
+                              {entity.name || '—'}
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-400 truncate">
+                              {entity.id ? `ID: ${entity.id}` : 'ID: —'}
+                            </p>
+                            {entity.href ? (
+                              <a
+                                href={entity.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-block mt-2 text-[10px] font-black uppercase tracking-widest text-teal-400 hover:text-teal-300"
+                              >
+                                View Profile
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2 text-slate-400 font-medium">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                              <Calendar size={14} className="text-amber-500/50" /> Date
+                            </span>
+                            <span className="text-xs font-bold text-slate-300 text-right">{createdAtStr}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 text-slate-400 font-medium">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                              <Tag size={14} className="text-amber-500/50" /> Requested by
+                            </span>
+                            <span className="text-xs font-bold text-slate-200 text-right truncate max-w-[220px]">
+                              {requestedByName}
+                            </span>
+                          </div>
+
+                          {requestedById ? (
+                            <div className="flex items-center justify-between gap-2 text-slate-400 font-medium">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                Cashier ID
+                              </span>
+                              <span className="text-xs font-mono font-bold text-slate-300">{requestedById}</span>
+                            </div>
+                          ) : null}
+
+                          {tx?.paymentMethod ? (
+                            <div className="flex items-center justify-between gap-2 text-slate-400 font-medium">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                Method
+                              </span>
+                              <span className="text-xs font-bold text-slate-300">{String(tx.paymentMethod).replace(/_/g, ' ')}</span>
+                            </div>
+                          ) : null}
+
+                          {tx?.referenceNo ? (
+                            <div className="flex items-center justify-between gap-2 text-slate-400 font-medium">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                Ref
+                              </span>
+                              <span className="text-xs font-mono font-bold text-slate-300">{tx.referenceNo}</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {tx?.description ? (
+                    <div className="mt-4 text-xs font-bold text-slate-300 bg-slate-900/30 border border-slate-700/40 rounded-2xl px-4 py-3">
+                      {tx.description}
                     </div>
-                    <div className="flex items-center gap-2 text-slate-400 font-medium justify-end">
-                      <Calendar size={14} className="text-amber-500/50" />
-                      {(() => {
-                        const dateInput = tx?.createdAt;
-                        if (dateInput instanceof Timestamp) return dateInput.toDate().toLocaleString();
-                        if (dateInput?.seconds) return new Date(dateInput.seconds * 1000).toLocaleString();
-                        if (dateInput) return new Date(dateInput).toLocaleString();
-                        return 'N/A';
-                      })()}
-                    </div>
-                  </div>
+                  ) : null}
 
                   {(tx?.proofUrl || tx?.proofMissingReason) && (
                     <div className="mt-3">
@@ -416,7 +548,7 @@ export default function HqApprovalsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Requested By:</span>
                       <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                        {tx.createdBy || tx.cashierId || 'System'}
+                        {tx?.cashierForwardedByName || tx?.createdByName || tx.createdBy || tx.cashierId || 'System'}
                       </span>
                     </div>
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
