@@ -965,6 +965,726 @@ service cloud.firestore {
         && collectionId.matches('^[a-z0-9]+_staff$');
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  HOSPITAL PORTAL HELPERS
+    // ═══════════════════════════════════════════════════════════
+
+    function isHospitalAuth() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/hospital_users/$(request.auth.uid));
+    }
+    function hospitalRole() {
+      return get(/databases/$(database)/documents/hospital_users/$(request.auth.uid)).data.role;
+    }
+    function isHospitalRole(role) {
+      return isHospitalAuth() && hospitalRole() == role;
+    }
+    function isHospitalAdminOrAbove() {
+      return isHospitalAuth()
+        && (hospitalRole() == 'admin' || hospitalRole() == 'superadmin');
+    }
+    function isHospitalSuperAdmin() {
+      return isHospitalRole('superadmin');
+    }
+    function hospitalPatientId() {
+      return get(/databases/$(database)/documents/hospital_users/$(request.auth.uid)).data.patientId;
+    }
+    function hospitalStaffId() {
+      return get(/databases/$(database)/documents/hospital_users/$(request.auth.uid)).data.staffId;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  HOSPITAL PORTAL COLLECTIONS
+    // ═══════════════════════════════════════════════════════════
+
+    match /hospital_meta/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /hospital_users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isHospitalAdminOrAbove());
+      allow create: if false;
+      allow delete: if false;
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly(['photoUrl', 'displayName', 'phone']);
+    }
+
+    match /hospital_patients/{patientId} {
+      allow read: if isHospitalAdminOrAbove()
+        || isHospitalRole('cashier')
+        || (isHospitalRole('patient') && hospitalPatientId() == patientId);
+      allow create, update: if isHospitalAdminOrAbove();
+      allow delete: if isHospitalSuperAdmin();
+    }
+
+    match /hospital_fees/{docId} {
+      allow read: if isHospitalAdminOrAbove()
+        || (isHospitalRole('cashier'))
+        || (isHospitalRole('patient') && hospitalPatientId() == resource.data.patientId);
+      allow write: if isHospitalRole('cashier') || isHospitalSuperAdmin();
+    }
+
+    match /hospital_transactions/{docId} {
+      allow read: if isHospitalAdminOrAbove() || isHospitalRole('cashier');
+      allow create: if isHospitalRole('cashier')
+        || isHospitalSuperAdmin()
+        || (isHospitalAdminOrAbove() && request.resource.data.status == 'pending_cashier');
+      allow update: if isHospitalSuperAdmin()
+        || (
+          isHospitalRole('cashier')
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+      allow delete: if false;
+    }
+
+    match /hospital_staff/{staffId} {
+      allow read: if isHospitalAdminOrAbove()
+        || isHospitalRole('cashier')
+        || (isHospitalRole('staff') && hospitalStaffId() == staffId)
+        || isHQManagerOrAbove();
+      allow create, update: if isHospitalAdminOrAbove();
+      allow delete: if isHospitalSuperAdmin();
+    }
+
+    match /hospital_attendance/{docId} {
+      allow read: if isHospitalAdminOrAbove()
+        || isHospitalRole('cashier')
+        || isHospitalRole('staff')
+        || isHQManagerOrAbove();
+      allow create: if isHospitalRole('staff') || isHospitalAdminOrAbove();
+      allow update: if isHospitalRole('staff') || isHospitalAdminOrAbove();
+      allow delete: if false;
+    }
+
+    match /hospital_audit/{docId} {
+      allow read: if isHospitalSuperAdmin();
+      allow create: if isHospitalAuth();
+      allow update, delete: if false;
+    }
+
+    match /hospital_salary_records/{docId} {
+      allow read: if isHospitalAdminOrAbove();
+      allow write: if isHospitalAdminOrAbove();
+      allow delete: if isHospitalSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SUKOON PORTAL HELPERS
+    // ═══════════════════════════════════════════════════════════
+
+    function isSukoonAuth() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/sukoon_users/$(request.auth.uid));
+    }
+    function sukoonRole() {
+      return get(/databases/$(database)/documents/sukoon_users/$(request.auth.uid)).data.role;
+    }
+    function isSukoonRole(role) {
+      return isSukoonAuth() && sukoonRole() == role;
+    }
+    function isSukoonAdminOrAbove() {
+      return isSukoonAuth()
+        && (sukoonRole() == 'admin' || sukoonRole() == 'superadmin');
+    }
+    function isSukoonSuperAdmin() {
+      return isSukoonRole('superadmin');
+    }
+    function sukoonClientId() {
+      return get(/databases/$(database)/documents/sukoon_users/$(request.auth.uid)).data.clientId;
+    }
+    function sukoonStaffId() {
+      return get(/databases/$(database)/documents/sukoon_users/$(request.auth.uid)).data.staffId;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SUKOON PORTAL COLLECTIONS
+    // ═══════════════════════════════════════════════════════════
+
+    match /sukoon_meta/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /sukoon_users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isSukoonAdminOrAbove());
+      allow create: if false;
+      allow delete: if false;
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly(['photoUrl', 'displayName', 'phone']);
+    }
+
+    match /sukoon_clients/{clientId} {
+      allow read: if isSukoonAdminOrAbove()
+        || isSukoonRole('cashier')
+        || (isSukoonRole('client') && sukoonClientId() == clientId);
+      allow create, update: if isSukoonAdminOrAbove();
+      allow delete: if isSukoonSuperAdmin();
+    }
+
+    match /sukoon_fees/{docId} {
+      allow read: if isSukoonAdminOrAbove()
+        || (isSukoonRole('cashier'))
+        || (isSukoonRole('client') && sukoonClientId() == resource.data.clientId);
+      allow write: if isSukoonRole('cashier') || isSukoonSuperAdmin();
+    }
+
+    match /sukoon_transactions/{docId} {
+      allow read: if isSukoonAdminOrAbove() || isSukoonRole('cashier');
+      allow create: if isSukoonRole('cashier')
+        || isSukoonSuperAdmin()
+        || (isSukoonAdminOrAbove() && request.resource.data.status == 'pending_cashier');
+      allow update: if isSukoonSuperAdmin()
+        || (
+          isSukoonRole('cashier')
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+      allow delete: if false;
+    }
+
+    match /sukoon_staff/{staffId} {
+      allow read: if isSukoonAdminOrAbove()
+        || isSukoonRole('cashier')
+        || (isSukoonRole('staff') && sukoonStaffId() == staffId)
+        || isHQManagerOrAbove();
+      allow create, update: if isSukoonAdminOrAbove();
+      allow delete: if isSukoonSuperAdmin();
+    }
+
+    match /sukoon_attendance/{docId} {
+      allow read: if isSukoonAdminOrAbove()
+        || isSukoonRole('cashier')
+        || isSukoonRole('staff')
+        || isHQManagerOrAbove();
+      allow create: if isSukoonRole('staff') || isSukoonAdminOrAbove();
+      allow update: if isSukoonRole('staff') || isSukoonAdminOrAbove();
+      allow delete: if false;
+    }
+
+    match /sukoon_audit/{docId} {
+      allow read: if isSukoonSuperAdmin();
+      allow create: if isSukoonAuth();
+      allow update, delete: if false;
+    }
+
+    match /sukoon_salary_records/{docId} {
+      allow read: if isSukoonAdminOrAbove();
+      allow write: if isSukoonAdminOrAbove();
+      allow delete: if isSukoonSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  WELFARE PORTAL HELPERS
+    // ═══════════════════════════════════════════════════════════
+
+    function isWelfareAuth() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/welfare_users/$(request.auth.uid));
+    }
+    function welfareRole() {
+      return get(/databases/$(database)/documents/welfare_users/$(request.auth.uid)).data.role;
+    }
+    function isWelfareRole(role) {
+      return isWelfareAuth() && welfareRole() == role;
+    }
+    function isWelfareAdminOrAbove() {
+      return isWelfareAuth()
+        && (welfareRole() == 'admin' || welfareRole() == 'superadmin');
+    }
+    function isWelfareSuperAdmin() {
+      return isWelfareRole('superadmin');
+    }
+    function welfareChildId() {
+      return get(/databases/$(database)/documents/welfare_users/$(request.auth.uid)).data.childId;
+    }
+    function welfareStaffId() {
+      return get(/databases/$(database)/documents/welfare_users/$(request.auth.uid)).data.staffId;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  WELFARE PORTAL COLLECTIONS
+    // ═══════════════════════════════════════════════════════════
+
+    match /welfare_meta/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /welfare_users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isWelfareAdminOrAbove());
+      allow create: if false;
+      allow delete: if false;
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly(['photoUrl', 'displayName', 'phone']);
+    }
+
+    match /welfare_children/{childId} {
+      allow read: if isWelfareAdminOrAbove()
+        || isWelfareRole('cashier')
+        || (isWelfareRole('child') && welfareChildId() == childId);
+      allow create, update: if isWelfareAdminOrAbove();
+      allow delete: if isWelfareSuperAdmin();
+    }
+
+    match /welfare_fees/{docId} {
+      allow read: if isWelfareAdminOrAbove()
+        || (isWelfareRole('cashier'))
+        || (isWelfareRole('child') && welfareChildId() == resource.data.childId);
+      allow write: if isWelfareRole('cashier') || isWelfareSuperAdmin();
+    }
+
+    match /welfare_transactions/{docId} {
+      allow read: if isWelfareAdminOrAbove() || isWelfareRole('cashier');
+      allow create: if isWelfareRole('cashier')
+        || isWelfareSuperAdmin()
+        || (isWelfareAdminOrAbove() && request.resource.data.status == 'pending_cashier');
+      allow update: if isWelfareSuperAdmin()
+        || (
+          isWelfareRole('cashier')
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+      allow delete: if false;
+    }
+
+    match /welfare_staff/{staffId} {
+      allow read: if isWelfareAdminOrAbove()
+        || isWelfareRole('cashier')
+        || (isWelfareRole('staff') && welfareStaffId() == staffId)
+        || isHQManagerOrAbove();
+      allow create, update: if isWelfareAdminOrAbove();
+      allow delete: if isWelfareSuperAdmin();
+    }
+
+    match /welfare_attendance/{docId} {
+      allow read: if isWelfareAdminOrAbove()
+        || isWelfareRole('cashier')
+        || isWelfareRole('staff')
+        || isHQManagerOrAbove();
+      allow create: if isWelfareRole('staff') || isWelfareAdminOrAbove();
+      allow update: if isWelfareRole('staff') || isWelfareAdminOrAbove();
+      allow delete: if false;
+    }
+
+    match /welfare_audit/{docId} {
+      allow read: if isWelfareSuperAdmin();
+      allow create: if isWelfareAuth();
+      allow update, delete: if false;
+    }
+
+    match /welfare_salary_records/{docId} {
+      allow read: if isWelfareAdminOrAbove();
+      allow write: if isWelfareAdminOrAbove();
+      allow delete: if isWelfareSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JOB CENTER PORTAL HELPERS
+    // ═══════════════════════════════════════════════════════════
+
+    function isJobCenterAuth() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/job_center_users/$(request.auth.uid));
+    }
+    function jobCenterRole() {
+      return get(/databases/$(database)/documents/job_center_users/$(request.auth.uid)).data.role;
+    }
+    function isJobCenterRole(role) {
+      return isJobCenterAuth() && jobCenterRole() == role;
+    }
+    function isJobCenterAdminOrAbove() {
+      return isJobCenterAuth()
+        && (jobCenterRole() == 'admin' || jobCenterRole() == 'superadmin');
+    }
+    function isJobCenterSuperAdmin() {
+      return isJobCenterRole('superadmin');
+    }
+    function jobCenterSeekerId() {
+      return get(/databases/$(database)/documents/job_center_users/$(request.auth.uid)).data.seekerId;
+    }
+    function jobCenterStaffId() {
+      return get(/databases/$(database)/documents/job_center_users/$(request.auth.uid)).data.staffId;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JOB CENTER PORTAL COLLECTIONS
+    // ═══════════════════════════════════════════════════════════
+
+    match /job_center_meta/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /job_center_users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isJobCenterAdminOrAbove());
+      allow create: if false;
+      allow delete: if false;
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly(['photoUrl', 'displayName', 'phone']);
+    }
+
+    match /job_center_seekers/{seekerId} {
+      allow read: if isJobCenterAdminOrAbove()
+        || isJobCenterRole('cashier')
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId);
+      allow create, update: if isJobCenterAdminOrAbove();
+      allow delete: if isJobCenterSuperAdmin();
+    }
+
+    match /job_center_fees/{docId} {
+      allow read: if isJobCenterAdminOrAbove()
+        || (isJobCenterRole('cashier'))
+        || (isJobCenterRole('seeker') && jobCenterSeekerId() == resource.data.seekerId);
+      allow write: if isJobCenterRole('cashier') || isJobCenterSuperAdmin();
+    }
+
+    match /job_center_transactions/{docId} {
+      allow read: if isJobCenterAdminOrAbove() || isJobCenterRole('cashier');
+      allow create: if isJobCenterRole('cashier')
+        || isJobCenterSuperAdmin()
+        || (isJobCenterAdminOrAbove() && request.resource.data.status == 'pending_cashier');
+      allow update: if isJobCenterSuperAdmin()
+        || (
+          isJobCenterRole('cashier')
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+      allow delete: if false;
+    }
+
+    match /job_center_staff/{staffId} {
+      allow read: if isJobCenterAdminOrAbove()
+        || isJobCenterRole('cashier')
+        || (isJobCenterRole('staff') && jobCenterStaffId() == staffId)
+        || isHQManagerOrAbove();
+      allow create, update: if isJobCenterAdminOrAbove();
+      allow delete: if isJobCenterSuperAdmin();
+    }
+
+    match /job_center_attendance/{docId} {
+      allow read: if isJobCenterAdminOrAbove()
+        || isJobCenterRole('cashier')
+        || isJobCenterRole('staff')
+        || isHQManagerOrAbove();
+      allow create: if isJobCenterRole('staff') || isJobCenterAdminOrAbove();
+      allow update: if isJobCenterRole('staff') || isJobCenterAdminOrAbove();
+      allow delete: if false;
+    }
+
+    match /job_center_audit/{docId} {
+      allow read: if isJobCenterSuperAdmin();
+      allow create: if isJobCenterAuth();
+      allow update, delete: if false;
+    }
+
+    match /job_center_salary_records/{docId} {
+      allow read: if isJobCenterAdminOrAbove();
+      allow write: if isJobCenterAdminOrAbove();
+      allow delete: if isJobCenterSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  HQ OVERLAY RULES — HOSPITAL / SUKOON / WELFARE / JOB CENTER
+    // ═══════════════════════════════════════════════════════════
+
+    match /hospital_transactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+    }
+    match /hospital_fees/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /hospital_patients/{patientId} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /hospital_staff/{staffId} {
+      allow read: if isHqSuperOrManager();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /hospital_users/{uid} {
+      allow read: if isHqTier1();
+      allow update: if isHqSuperAdmin();
+    }
+    match /hospital_attendance/{docId} {
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
+    }
+
+    match /sukoon_transactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+    }
+    match /sukoon_fees/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /sukoon_clients/{clientId} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /sukoon_staff/{staffId} {
+      allow read: if isHqSuperOrManager();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /sukoon_users/{uid} {
+      allow read: if isHqTier1();
+      allow update: if isHqSuperAdmin();
+    }
+    match /sukoon_attendance/{docId} {
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
+    }
+
+    match /welfare_transactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+    }
+    match /welfare_fees/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /welfare_children/{childId} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /welfare_staff/{staffId} {
+      allow read: if isHqSuperOrManager();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /welfare_users/{uid} {
+      allow read: if isHqTier1();
+      allow update: if isHqSuperAdmin();
+    }
+    match /welfare_attendance/{docId} {
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
+    }
+
+    match /job_center_transactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+    }
+    match /job_center_fees/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /job_center_seekers/{seekerId} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /job_center_staff/{staffId} {
+      allow read: if isHqSuperOrManager();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /job_center_users/{uid} {
+      allow read: if isHqTier1();
+      allow update: if isHqSuperAdmin();
+    }
+    match /job_center_attendance/{docId} {
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  DEPARTMENTAL STAFF OPERATIONAL RULES — NEW DEPARTMENTS
+    // ═══════════════════════════════════════════════════════════
+
+    match /hospital_dress_code/{docId} {
+      allow read: if isHqSuperOrManager() || (isHospitalAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /hospital_duty_log/{docId} {
+      allow read: if isHqSuperOrManager() || (isHospitalAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /hospital_staff_dress_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+    match /hospital_staff_duty_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+
+    match /sukoon_dress_code/{docId} {
+      allow read: if isHqSuperOrManager() || (isSukoonAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /sukoon_duty_log/{docId} {
+      allow read: if isHqSuperOrManager() || (isSukoonAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /sukoon_staff_dress_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+    match /sukoon_staff_duty_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+
+    match /welfare_dress_code/{docId} {
+      allow read: if isHqSuperOrManager() || (isWelfareAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /welfare_duty_log/{docId} {
+      allow read: if isHqSuperOrManager() || (isWelfareAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /welfare_staff_dress_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+    match /welfare_staff_duty_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+
+    match /job_center_dress_code/{docId} {
+      allow read: if isHqSuperOrManager() || (isJobCenterAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /job_center_duty_log/{docId} {
+      allow read: if isHqSuperOrManager() || (isJobCenterAuth() && resource.data.staffId == request.auth.uid);
+      allow write: if isHqSuperOrManager();
+    }
+    match /job_center_staff_dress_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+    match /job_center_staff_duty_config/{docId} {
+      allow read: if isAuth();
+      allow write: if isHqSuperOrManager();
+    }
+
   }
 }
 

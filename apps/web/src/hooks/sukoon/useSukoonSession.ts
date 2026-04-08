@@ -1,0 +1,30 @@
+'use client';
+import { useEffect, useState } from 'react';
+
+export interface SukoonSession {
+  uid: string;
+  customId: string;
+  role: string;
+  displayName: string;
+  patientId?: string | null;
+}
+
+export function useSukoonSession() {
+  const [session, setSession] = useState<SukoonSession | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('sukoon_session');
+      if (raw) {
+        setSession(JSON.parse(raw));
+      }
+    } catch {
+      setSession(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { session, loading };
+}

@@ -1,19 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export interface SpimsSession {
   uid: string;
   customId: string;
   role: string;
   displayName: string;
-  studentId?: string | null;
+  patientId?: string | null;
 }
 
 export function useSpimsSession() {
   const [session, setSession] = useState<SpimsSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     try {
@@ -28,11 +26,5 @@ export function useSpimsSession() {
     }
   }, []);
 
-  const signOut = () => {
-    localStorage.removeItem('spims_session');
-    setSession(null);
-    router.push('/departments/spims/login');
-  };
-
-  return { session, loading, signOut };
+  return { session, loading };
 }
