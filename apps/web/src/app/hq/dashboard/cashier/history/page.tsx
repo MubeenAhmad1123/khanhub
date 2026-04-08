@@ -2,20 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, limit, query, startAfter, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { Loader2, Printer, Filter } from 'lucide-react';
 import { formatDateDMY } from '@/lib/utils';
 
 type DeptFilter = 'all' | 'rehab' | 'spims';
-type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type StatusFilter = 'all' | 'pending_cashier' | 'pending' | 'approved' | 'rejected';
+
+function normDate(val: any): string {
+  if (!val) return '';
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) return val.slice(0, 10);
+  if (val?.seconds) return new Date(val.seconds * 1000).toISOString().slice(0, 10);
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+}
 
 export default function CashierHistoryPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [rehabCursor, setRehabCursor] = useState<any>(null);
+  const [spimsCursor, setSpimsCursor] = useState<any>(null);
   const [deptFilter, setDeptFilter] = useState<DeptFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -34,22 +46,34 @@ export default function CashierHistoryPage() {
 
     const fetchData = async () => {
       try {
+        const rehabQ = query(
+          collection(db, 'rehab_transactions'),
+          where('cashierId', '==', session.customId),
+          limit(60)
+        );
+        const spimsQ = query(
+          collection(db, 'spims_transactions'),
+          where('cashierId', '==', session.customId),
+          limit(60)
+        );
         const [rehabSnap, spimsSnap] = await Promise.all([
-          getDocs(collection(db, 'rehab_transactions')),
-          getDocs(collection(db, 'spims_transactions')).catch(() => ({ docs: [] })),
+          getDocs(rehabQ),
+          getDocs(spimsQ).catch(() => ({ docs: [] } as any)),
         ]);
 
-        const rehab = rehabSnap.docs.map(d => ({ id: d.id, ...d.data(), dept: 'rehab' } as any));
-        const spims = spimsSnap.docs.map(d => ({ id: d.id, ...d.data(), dept: 'spims' } as any));
-        const all = [...rehab, ...spims]
-          .filter(t => t.cashierId === session.customId)
-          .sort((a, b) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return dateB - dateA;
-          });
+        const rehab = rehabSnap.docs.map((d: any) => ({ id: d.id, ...d.data(), dept: 'rehab' } as any));
+        const spims = spimsSnap.docs.map((d: any) => ({ id: d.id, ...d.data(), dept: 'spims' } as any));
+        const all = [...rehab, ...spims].sort((a, b) => {
+          const dateA = normDate(a.createdAt || a.date);
+          const dateB = normDate(b.createdAt || b.date);
+          if (dateA === dateB) return 0;
+          return dateA > dateB ? -1 : 1;
+        });
 
         setTransactions(all);
+        setRehabCursor(rehabSnap.docs.length ? rehabSnap.docs[rehabSnap.docs.length - 1] : null);
+        setSpimsCursor(spimsSnap.docs.length ? spimsSnap.docs[spimsSnap.docs.length - 1] : null);
+        setHasMore(rehabSnap.docs.length === 60 || spimsSnap.docs.length === 60);
       } catch (err) {
         console.error(err);
       } finally {
@@ -60,11 +84,60 @@ export default function CashierHistoryPage() {
     fetchData();
   }, [session]);
 
+  const loadMore = async () => {
+    if (!session || session.role !== 'cashier' || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const rehabQ = rehabCursor
+        ? query(
+            collection(db, 'rehab_transactions'),
+            where('cashierId', '==', session.customId),
+            startAfter(rehabCursor),
+            limit(60)
+          )
+        : null;
+      const spimsQ = spimsCursor
+        ? query(
+            collection(db, 'spims_transactions'),
+            where('cashierId', '==', session.customId),
+            startAfter(spimsCursor),
+            limit(60)
+          )
+        : null;
+
+      const [rehabSnap, spimsSnap] = await Promise.all([
+        rehabQ ? getDocs(rehabQ) : Promise.resolve({ docs: [] } as any),
+        spimsQ ? getDocs(spimsQ).catch(() => ({ docs: [] } as any)) : Promise.resolve({ docs: [] } as any),
+      ]);
+
+      const rehab = rehabSnap.docs.map((d: any) => ({ id: d.id, ...d.data(), dept: 'rehab' } as any));
+      const spims = spimsSnap.docs.map((d: any) => ({ id: d.id, ...d.data(), dept: 'spims' } as any));
+      const combined = [...transactions, ...rehab, ...spims].sort((a, b) => {
+        const dateA = normDate(a.createdAt || a.date);
+        const dateB = normDate(b.createdAt || b.date);
+        if (dateA === dateB) return 0;
+        return dateA > dateB ? -1 : 1;
+      });
+      setTransactions(combined);
+
+      const nextRehabCursor = rehabSnap.docs.length ? rehabSnap.docs[rehabSnap.docs.length - 1] : null;
+      const nextSpimsCursor = spimsSnap.docs.length ? spimsSnap.docs[spimsSnap.docs.length - 1] : null;
+      setRehabCursor(nextRehabCursor || rehabCursor);
+      setSpimsCursor(nextSpimsCursor || spimsCursor);
+      setHasMore(rehabSnap.docs.length === 60 || spimsSnap.docs.length === 60);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const filtered = transactions.filter(t => {
     if (deptFilter !== 'all' && t.dept !== deptFilter) return false;
     if (statusFilter !== 'all' && t.status !== statusFilter) return false;
-    if (dateFrom && t.date < dateFrom) return false;
-    if (dateTo && t.date > dateTo) return false;
+    const txDate = normDate(t.date || t.createdAt);
+    if (dateFrom && txDate < dateFrom) return false;
+    if (dateTo && txDate > dateTo) return false;
     return true;
   });
 
@@ -110,7 +183,7 @@ export default function CashierHistoryPage() {
           ))}
         </div>
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'pending', 'approved', 'rejected'] as StatusFilter[]).map(f => (
+          {(['all', 'pending_cashier', 'pending', 'approved', 'rejected'] as StatusFilter[]).map(f => (
             <button
               key={f}
               onClick={() => setStatusFilter(f)}
@@ -203,6 +276,18 @@ export default function CashierHistoryPage() {
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">
             Showing {filtered.length} transactions
           </p>
+          {hasMore && (
+            <div className="flex justify-center">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-2 bg-gray-800 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-700 transition-all disabled:opacity-60"
+              >
+                {loadingMore ? <Loader2 size={14} className="animate-spin" /> : null}
+                Load More
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

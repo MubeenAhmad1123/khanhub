@@ -96,17 +96,49 @@ export interface HqTransaction {
   type: 'income' | 'expense';
   category: string;
   amount: number;
+  description?: string;
   patientId?: string;
   patientName?: string;
+  studentId?: string;
+  studentName?: string;
   note?: string;
   cashierId: string;
   cashierName: string;
-  status: 'pending' | 'approved' | 'rejected';
-  rejectionReason?: string;
+
+  // Workflow
+  workflowStage: 'pending_cashier' | 'pending' | 'approved' | 'rejected';
+  status: 'pending_cashier' | 'pending' | 'approved' | 'rejected';
+
+  // Proof
+  proofRequired?: boolean;
+  proofUrl?: string;
+  proofMissingReason?: string;
+  proofMeta?: {
+    fileType: string;
+    size: number;
+    uploadedAt: string;
+    uploadedBy: string;
+  };
+
+  // Cashier forwarding
+  cashierForwardedAt?: string;
+  cashierForwardedBy?: string;
+  cashierForwardedByName?: string;
+
+  // Approval / rejection
   approvedBy?: string;
   approvedAt?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+
+  // Idempotency guard
+  processedAt?: string;
+  processedBy?: string;
+
   date: string;
   createdAt: string;
+  createdBy?: string;
 }
 
 // ─── Salary ───────────────────────────────────────────────────────────────────
@@ -216,4 +248,53 @@ export interface HqStaffDutyConfig {
   staffId: string;
   duties: { key: string; label: string }[];
   updatedAt?: string;
+}
+
+// ─── Canonical Ledger ────────────────────────────────────────────────────────
+
+/**
+ * Immutable ledger entry written on every superadmin approval.
+ * Source of truth for all financial reports.
+ * Never updated or deleted from client side.
+ */
+export interface HqLedgerEntry {
+  id: string;
+  sourceCollection: 'rehab_transactions' | 'spims_transactions';
+  sourceTxId: string;
+  departmentCode: 'rehab' | 'spims';
+  entityType: 'patient' | 'student' | 'staff' | 'general';
+  entityId?: string;
+  entityName?: string;
+  type: 'income' | 'expense';
+  category: string;
+  amount: number;
+  description?: string;
+  cashierId: string;
+  cashierName: string;
+  approvedBy: string;
+  approvedAt: string;
+  proofUrl?: string;
+  proofMissingReason?: string;
+  date: string; // 'YYYY-MM-DD'
+  createdAt: string;
+}
+
+// ─── Reconciliation ──────────────────────────────────────────────────────────
+
+export interface HqReconciliation {
+  id: string;
+  date: string; // 'YYYY-MM-DD'
+  cashierId: string;
+  cashierName: string;
+  openingBalance: number;
+  totalInflow: number;
+  totalOutflow: number;
+  expectedClosing: number;
+  actualClosing: number;
+  variance: number;
+  varianceNote?: string;
+  status: 'submitted' | 'verified' | 'flagged';
+  verifiedBy?: string;
+  verifiedAt?: string;
+  createdAt: string;
 }

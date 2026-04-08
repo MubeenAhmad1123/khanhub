@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, limit, onSnapshot, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
@@ -23,6 +23,8 @@ export default function HqApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ id: string } | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -40,8 +42,7 @@ export default function HqApprovalsPage() {
     // Listen for pending
     const qPending = query(
       collection(db, collectionName), 
-      where('status', '==', 'pending'),
-      orderBy('createdAt', 'desc')
+      where('status', '==', 'pending')
     );
     
     const unsubscribePending = onSnapshot(qPending, (snapshot) => {
@@ -53,11 +54,19 @@ export default function HqApprovalsPage() {
     const qHistory = query(
       collection(db, collectionName), 
       where('status', 'in', ['approved', 'rejected']),
-      orderBy('createdAt', 'desc')
+      limit(50)
     );
     
     const unsubscribeHistory = onSnapshot(qHistory, (snapshot) => {
-      setHistoryTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+      const rows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      rows.sort((a, b) => {
+        const aVal = a?.processedAt;
+        const bVal = b?.processedAt;
+        const aMs = aVal instanceof Timestamp ? aVal.toMillis() : aVal?.seconds ? aVal.seconds * 1000 : (aVal ? new Date(aVal).getTime() : 0);
+        const bMs = bVal instanceof Timestamp ? bVal.toMillis() : bVal?.seconds ? bVal.seconds * 1000 : (bVal ? new Date(bVal).getTime() : 0);
+        return bMs - aMs;
+      });
+      setHistoryTransactions(rows);
     });
 
     return () => {
@@ -66,7 +75,7 @@ export default function HqApprovalsPage() {
     };
   }, [activeTab, session]);
 
-  const handleAction = async (id: string, status: 'approved' | 'rejected') => {
+  const handleAction = async (id: string, status: 'approved' | 'rejected', reason?: string) => {
     setActionLoading(id);
     const collectionName = activeTab === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
     
@@ -74,6 +83,13 @@ export default function HqApprovalsPage() {
       // Load tx first (needed for profile sync on rehab approvals)
       const txSnap = await getDoc(doc(db, collectionName, id));
       const tx = txSnap.exists() ? ({ id: txSnap.id, ...txSnap.data() } as any) : null;
+
+      // Idempotency guard — prevent double processing
+      if (tx?.processedAt) {
+        alert('This transaction has already been processed. Refresh the page.');
+        setActionLoading(null);
+        return;
+      }
 
       if (status === 'approved' && tx?.proofRequired) {
         // New rule: proof OR missing-proof reason must be present before approval.
@@ -91,6 +107,7 @@ export default function HqApprovalsPage() {
         rejectedBy: status === 'rejected' ? session?.customId : undefined,
         approvedAt: status === 'approved' ? Timestamp.now() : undefined,
         rejectedAt: status === 'rejected' ? Timestamp.now() : undefined,
+        rejectionReason: status === 'rejected' ? (reason || '') : undefined,
         processedAt: Timestamp.now(),
         processedBy: session?.customId
       });
@@ -318,7 +335,10 @@ export default function HqApprovalsPage() {
                       </button>
                       <button
                         disabled={!!actionLoading}
-                        onClick={() => handleAction(tx.id, 'rejected')}
+                        onClick={() => {
+                          setRejectTarget({ id: tx.id });
+                          setRejectionReason('');
+                        }}
                         className="bg-rose-600 hover:bg-rose-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-rose-900/20"
                       >
                         {actionLoading === tx.id ? <Loader2 className="animate-spin" size={20} /> : <XCircle size={20} />}
@@ -462,6 +482,43 @@ export default function HqApprovalsPage() {
           )}
         </div>
       </div>
+      {rejectTarget && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h3 className="text-white font-black text-xl uppercase tracking-widest mb-2">Rejection Reason</h3>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">
+              This reason will be visible to the cashier.
+            </p>
+            <textarea
+              className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none resize-none focus:border-amber-500/50 transition-colors"
+              rows={4}
+              placeholder="Enter reason for rejection..."
+              value={rejectionReason}
+              onChange={e => setRejectionReason(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setRejectTarget(null)}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!rejectionReason.trim() || !!actionLoading}
+                onClick={async () => {
+                  if (!rejectionReason.trim()) return;
+                  await handleAction(rejectTarget.id, 'rejected', rejectionReason.trim());
+                  setRejectTarget(null);
+                }}
+                className="flex-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition-all"
+              >
+                {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

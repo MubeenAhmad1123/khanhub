@@ -714,6 +714,24 @@ service cloud.firestore {
       allow create: if request.auth != null; 
     } 
 
+    // hq_ledger_entries — immutable canonical ledger
+    // Written by server action (Admin SDK) on every superadmin approval.
+    // HQ tier1 can read. Nobody deletes or updates from client.
+    match /hq_ledger_entries/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperAdmin();
+      allow update, delete: if false;
+    }
+
+    // hq_reconciliation — daily cashier close records
+    // Cashier creates. Superadmin/manager reads and verifies.
+    // Nobody edits or deletes.
+    match /hq_reconciliation/{docId} {
+      allow read: if isHqSuperOrManager();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update, delete: if false;
+    }
+
     // hq_growth_points — points system for HQ staff
     match /hq_growth_points/{docId} { 
       allow read: if isHqSuperOrManager() 
