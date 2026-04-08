@@ -76,6 +76,7 @@ export default function FamilyPatientViewPage() {
         ...data, 
         admissionDate, 
         remainingDays, 
+        daysAdmitted: daysSince,
         totalDays,
         daysSince,
         totalDues,
@@ -164,7 +165,7 @@ export default function FamilyPatientViewPage() {
                 <Calendar size={10} /> {patient.admissionDate?.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
               </span>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                <Clock size={10} /> {patient.remainingDays} days remaining
+                <Clock size={10} /> {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)} {(patient.remainingDays || 0) > 0 ? 'days remaining' : 'days admitted'}
               </span>
               {patient.substanceOfAddiction && (
                 <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">

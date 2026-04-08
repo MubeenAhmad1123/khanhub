@@ -135,7 +135,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
   };
 
   const getCellIcon = (status?: ActivityStatus, activityId?: number, dateStr?: string) => {
-    if (!status || status === 'na') return <MinusCircle className="w-4 h-4 text-gray-200" />;
+    if (!status || status === 'na') return <MinusCircle className="w-4 h-4 text-gray-500" />;
     if (status === 'done') {
       const hasNote = dateStr && records[dateStr] && (
         (activityId === 8 && records[dateStr]?.counsellingSessionNotes) ||

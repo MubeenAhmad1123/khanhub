@@ -41,6 +41,8 @@ export default function PatientDetailPage() {
   const [visits, setVisits] = useState<any[]>([]);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [isSavingVisit, setIsSavingVisit] = useState(false);
+  const [editVisitModal, setEditVisitModal] = useState<any | null>(null);
+  const [isUpdatingVisit, setIsUpdatingVisit] = useState(false);
 
   // Visit Form State
   const [vName, setVName] = useState('');
@@ -129,14 +131,16 @@ export default function PatientDetailPage() {
       
       // Calculate Remaining Days
       let remainingDays = 0;
+      let daysAdmitted = 0;
       if (data.admissionDate) {
         const admission = data.admissionDate.toDate();
-        const diffTime = Math.abs(new Date().getTime() - admission.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        remainingDays = Math.max(0, 100 - diffDays);
+        const diffTimeMs = new Date().getTime() - admission.getTime();
+        // Days admitted should count from admission date until "today"
+        daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+        remainingDays = Math.max(0, 100 - daysAdmitted);
       }
 
-      setPatient({ id: pDoc.id, ...data, remainingDays });
+      setPatient({ id: pDoc.id, ...data, remainingDays, daysAdmitted });
       setEditForm({
         name: data.name || '',
         diagnosis: data.diagnosis || '',
@@ -248,26 +252,43 @@ export default function PatientDetailPage() {
   const handleInitializeFee = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const docRef = await addDoc(collection(db, 'rehab_fees'), {
+      const amount = Number(initialPayment) || 0;
+
+      if (amount <= 0) {
+        toast.error('Initial payment amount is required to send fee request to cashier.');
+        return;
+      }
+
+      const setupSnap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+      const setupData = setupSnap.data() as any;
+      const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
+
+      if (!cashierCustomId) {
+        toast.error('Cashier is not configured (missing rehab_meta/setup.cashierCustomId).');
+        return;
+      }
+
+      await addDoc(collection(db, 'rehab_transactions'), {
+        type: 'income',
+        amount,
+        category: 'fee',
+        categoryName: 'Admission / Fees',
+        departmentCode: 'rehab',
+        departmentName: 'Rehab Center',
         patientId: patientId,
-        month: feeMonth,
-        packageAmount: Number(packageAmt),
-        amountPaid: Number(initialPayment) || 0,
-        amountRemaining: Number(packageAmt) - (Number(initialPayment) || 0),
-        payments: initialPayment ? [{
-          id: Date.now().toString(),
-          amount: Number(initialPayment),
-          date: Timestamp.fromDate(new Date(paymentDate)),
-          cashierId: session.uid,
-          note: paymentNote || null,
-          status: 'approved'
-        }] : [],
-        createdAt: Timestamp.now(),
-        createdBy: session.uid
+        patientName: patient?.name || '',
+        status: 'pending_cashier',
+        cashierId: cashierCustomId,
+        proofRequired: true,
+        description: paymentNote || '',
+        date: Timestamp.fromDate(new Date(paymentDate)),
+        transactionDate: Timestamp.fromDate(new Date(paymentDate)),
+        createdBy: session.uid,
+        createdByName: session?.displayName || session?.name || 'Rehab Admin',
+        createdAt: Timestamp.now()
       });
       setShowAddFeeModal(false);
-      fetchFeeRecord();
-      toast.success('Fee record created ✓');
+      toast.success('Fee request sent to cashier for approval ✓');
     } catch (error) {
       console.error("Initialize Fee error", error);
       toast.error('Failed to create fee record');
@@ -278,28 +299,45 @@ export default function PatientDetailPage() {
     e.preventDefault();
     if (!feeRecord) return;
     try {
-      const payment = {
-        id: Date.now().toString(),
-        amount: Number(payAmt),
+      const amount = Number(payAmt) || 0;
+      if (amount <= 0) {
+        toast.error('Enter a valid payment amount.');
+        return;
+      }
+
+      const setupSnap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+      const setupData = setupSnap.data() as any;
+      const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
+
+      if (!cashierCustomId) {
+        toast.error('Cashier is not configured (missing rehab_meta/setup.cashierCustomId).');
+        return;
+      }
+
+      await addDoc(collection(db, 'rehab_transactions'), {
+        type: 'income',
+        amount,
+        category: 'fee',
+        categoryName: 'Admission / Fees',
+        departmentCode: 'rehab',
+        departmentName: 'Rehab Center',
+        patientId: patientId,
+        patientName: patient?.name || '',
+        status: 'pending_cashier',
+        cashierId: cashierCustomId,
+        proofRequired: true,
+        description: payNote || '',
         date: Timestamp.fromDate(new Date(payDate)),
-        cashierId: session.uid,
-        note: payNote || null,
-        status: 'approved'
-      };
-      
-      const newPaid = Number(feeRecord.amountPaid) + Number(payAmt);
-      const newRemaining = Number(feeRecord.packageAmount) - newPaid;
-      
-      await updateDoc(doc(db, 'rehab_fees', feeRecord.id), {
-        amountPaid: newPaid,
-        amountRemaining: Math.max(0, newRemaining),
-        payments: [...(feeRecord.payments || []), payment]
+        transactionDate: Timestamp.fromDate(new Date(payDate)),
+        createdBy: session.uid,
+        createdByName: session?.displayName || session?.name || 'Rehab Admin',
+        createdAt: Timestamp.now()
       });
       setShowAddPaymentModal(false);
       setPayAmt('');
       setPayNote('');
-      fetchFeeRecord();
-      toast.success('Payment recorded ✓');
+      toast.success('Payment request sent to cashier for approval ✓');
+      // Important: do not update rehab_fees here; it syncs only after superadmin approval.
     } catch (error) {
       console.error("Add Payment error", error);
       toast.error('Failed to record payment');
@@ -441,6 +479,24 @@ export default function PatientDetailPage() {
     }
   };
 
+  const handleDischarge = async () => {
+    if (!window.confirm("Are you sure you want to discharge this patient?")) return;
+    try {
+      setDeactivating(true);
+      await updateDoc(doc(db, 'rehab_patients', patientId), {
+        isActive: false,
+        dischargeDate: Timestamp.now(),
+        dischargeReason: null
+      });
+      toast.success('Patient discharged');
+      router.push('/departments/rehab/dashboard/admin/patients');
+    } catch (error) {
+      console.error("Discharge error", error);
+      toast.error('Discharge failed');
+      setDeactivating(false);
+    }
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!videoTitle || !selectedFile) {
@@ -506,7 +562,8 @@ export default function PatientDetailPage() {
         phone: vPhone,
         cnic: vCnic || null,
         notes: vNotes || null,
-        date: Timestamp.fromDate(new Date(vDate)),
+        // Use explicit local midnight to avoid date shifting issues
+        date: Timestamp.fromDate(new Date(`${vDate}T00:00:00`)),
         loggedBy: session.uid,
         createdAt: Timestamp.now()
       };
@@ -534,6 +591,54 @@ export default function PatientDetailPage() {
       toast.error('Failed to log visit');
     } finally {
       setIsSavingVisit(false);
+    }
+  };
+
+  const openEditVisit = (visit: any) => {
+    setEditVisitModal(visit);
+    setVName(visit.visitorName || '');
+    setVRelation(visit.relation || '');
+    setVPhone(visit.phone || '');
+    setVCnic(visit.cnic || '');
+    setVNotes(visit.notes || '');
+    try {
+      const d = visit.date?.toDate?.() ? visit.date.toDate() : new Date(visit.date);
+      setVDate(d.toISOString().slice(0, 10));
+    } catch {
+      setVDate(new Date().toISOString().slice(0, 10));
+    }
+  };
+
+  const handleUpdateVisit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editVisitModal?.id) return;
+    if (!vName || !vRelation || !vPhone) {
+      toast.error('Name, Relation and Phone are required');
+      return;
+    }
+    try {
+      setIsUpdatingVisit(true);
+      await updateDoc(doc(db, 'rehab_visits', editVisitModal.id), {
+        visitorName: vName,
+        relation: vRelation,
+        phone: vPhone,
+        cnic: vCnic || null,
+        notes: vNotes || null,
+        date: Timestamp.fromDate(new Date(`${vDate}T00:00:00`)),
+        updatedAt: Timestamp.now(),
+        updatedBy: session.uid
+      });
+
+      toast.success('Visit updated ✓');
+      setEditVisitModal(null);
+      const visitsQ = query(collection(db, 'rehab_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitSnap = await getDocs(visitsQ);
+      setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+    } catch (error) {
+      console.error("Update visit error", error);
+      toast.error('Failed to update visit');
+    } finally {
+      setIsUpdatingVisit(false);
     }
   };
 
@@ -789,14 +894,28 @@ export default function PatientDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
                   <div className="bg-orange-50 border border-orange-100 w-full p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
                     <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Discharge Countdown</p>
-                    <p className="text-4xl font-black text-orange-700">{patient.remainingDays}</p>
-                    <p className="text-xs font-bold text-orange-500 mt-1">Days remaining in 100-day program</p>
+                    <p className="text-4xl font-black text-orange-700">
+                      {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)}
+                    </p>
+                    <p className="text-xs font-bold text-orange-500 mt-1">
+                      {(patient.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in rehab center'}
+                    </p>
                     <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
                       <div 
                         className="bg-orange-500 h-full transition-all duration-1000" 
                         style={{ width: `${Math.min(100, (100 - (patient.remainingDays || 0)))}%` }}
                       ></div>
                     </div>
+                    {patient.isActive && (
+                      <button
+                        type="button"
+                        onClick={handleDischarge}
+                        disabled={deactivating}
+                        className="mt-4 bg-white border border-orange-200 text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-60"
+                      >
+                        {deactivating ? 'Discharging...' : 'Discharge Patient'}
+                      </button>
+                    )}
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Package</span>
@@ -1230,7 +1349,16 @@ export default function PatientDetailPage() {
                         
                         <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Admin: {visit.loggedBy}</p>
-                            <User size={14} className="text-gray-200" />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditVisit(visit)}
+                                className="text-[10px] font-black uppercase tracking-widest text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-2 rounded-xl transition"
+                              >
+                                Edit
+                              </button>
+                              <User size={14} className="text-gray-200" />
+                            </div>
                         </div>
                       </div>
                     </div>
@@ -1460,6 +1588,56 @@ export default function PatientDetailPage() {
               <button type="submit" disabled={isSavingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">
                 {isSavingVisit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
                 {isSavingVisit ? 'Saving...' : 'Log Visit'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Visit Modal */}
+      {editVisitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <Users className="w-6 h-6 text-teal-600" /> Edit Visit
+              </h2>
+              <button onClick={() => setEditVisitModal(null)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateVisit} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
+                  <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Full Name" />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation *</label>
+                  <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Father" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
+                  <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="+92..." />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">CNIC (Optional)</label>
+                  <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
+                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
+                <textarea rows={2} value={vNotes} onChange={e => setVNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="What was discussed? items brought?"></textarea>
+              </div>
+              <button type="submit" disabled={isUpdatingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">
+                {isUpdatingVisit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
+                {isUpdatingVisit ? 'Saving...' : 'Save Changes'}
               </button>
             </form>
           </div>

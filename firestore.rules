@@ -287,12 +287,29 @@ service cloud.firestore {
 
     // ── Transactions ───────────────────────────────────
     // Cashier creates. Superadmin approves/rejects (update).
-    // Admin and superadmin can read all. Cashier reads own entries.
+    // Admin can create pending requests (admin enters amount).
+    // Superadmin approves/rejects (update). Cashier forwards requests (update).
     // Nobody deletes transactions — full audit trail.
     match /rehab_transactions/{docId} {
       allow read: if isRehabAdminOrAbove() || isRehabRole('cashier');
-      allow create: if isRehabRole('cashier') || isRehabSuperAdmin();
-      allow update: if isRehabSuperAdmin();
+      allow create: if isRehabRole('cashier')
+        || isRehabSuperAdmin()
+        || (isRehabAdminOrAbove() && request.resource.data.status == 'pending_cashier');
+      allow update: if isRehabSuperAdmin()
+        || (
+          isRehabRole('cashier')
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
       allow delete: if false;
     }
 
@@ -709,7 +726,21 @@ service cloud.firestore {
     match /rehab_transactions/{docId} { 
       allow read: if isHqTier1(); 
       allow create: if isHqCashier() || isHqSuperOrManager(); 
-      allow update: if isHqSuperOrManager(); 
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
     } 
 
     match /rehab_fees/{docId} { 

@@ -64,12 +64,13 @@ export default function AdmissionTab({
   );
 
   const Field = ({ label, value, type = "text", fieldKey, options }: any) => {
+    const isEmpty = value === null || value === undefined || value === '';
     if (!isEditing) {
       return (
         <div className="space-y-1">
           <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</span>
-          <span className="text-sm font-semibold text-gray-900 block {value ? '' : 'text-gray-300 italic'}">
-            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : (value || '—')}
+          <span className={`text-sm font-semibold text-gray-900 block ${isEmpty ? 'text-gray-300 italic' : ''}`}>
+            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : (isEmpty ? '—' : value)}
           </span>
         </div>
       );
@@ -96,7 +97,7 @@ export default function AdmissionTab({
         <div className="space-y-1">
           <label className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</label>
           <select 
-            value={value || ''} 
+            value={value ?? ''} 
             onChange={e => handleChange(fieldKey, e.target.value)}
             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
           >
@@ -114,7 +115,7 @@ export default function AdmissionTab({
         <label className="block text-[10px] text-gray-400 font-black uppercase tracking-widest leading-tight">{label}</label>
         {type === 'textarea' ? (
           <textarea
-            value={value || ''}
+            value={value ?? ''}
             onChange={e => handleChange(fieldKey, e.target.value)}
             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none"
             rows={2}
@@ -122,8 +123,9 @@ export default function AdmissionTab({
         ) : (
           <input
             type={type}
-            value={value || ''}
+            value={value ?? ''}
             onChange={e => handleChange(fieldKey, type === 'number' ? Number(e.target.value) : e.target.value)}
+            inputMode={type === 'tel' ? 'numeric' : undefined}
             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
           />
         )}
@@ -182,8 +184,8 @@ export default function AdmissionTab({
         <SectionCard title="2. Guardian & Contact Info" icon={Phone}>
           <Field label="Guardian Name" value={form.guardianName} fieldKey="guardianName" />
           <Field label="Relationship (e.g. Father, Brother)" value={form.guardianRelationship} fieldKey="guardianRelationship" />
-          <Field label="Contact Number" value={form.contactNumber} fieldKey="contactNumber" />
-          <Field label="WhatsApp Number" value={form.whatsappNumber} fieldKey="whatsappNumber" />
+          <Field label="Contact Number" value={form.contactNumber} type="tel" fieldKey="contactNumber" />
+          <Field label="WhatsApp Number" value={form.whatsappNumber} type="tel" fieldKey="whatsappNumber" />
           <Field label="Expected Names of Visitors" value={form.nameOfVisitors} type="textarea" fieldKey="nameOfVisitors" />
           <Field label="Detailed Address" value={form.address} type="textarea" fieldKey="address" />
           <Field label="Town / Police Station" value={form.townPoliceStation} fieldKey="townPoliceStation" />

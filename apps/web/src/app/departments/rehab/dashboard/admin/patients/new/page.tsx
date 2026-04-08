@@ -34,6 +34,7 @@ export default function AdmitPatientPage() {
   const [name, setName] = useState('');
   const [fatherName, setFatherName] = useState('');
   const [age, setAge] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('');
   const [education, setEducation] = useState('');
   const [maritalStatus, setMaritalStatus] = useState('');
@@ -51,7 +52,6 @@ export default function AdmitPatientPage() {
 
   // SECTION 4: Admission Details
   const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [expectedDischargeDate, setExpectedDischargeDate] = useState('');
   const [treatmentDuration, setTreatmentDuration] = useState('3 Months');
   const [customDuration, setCustomDuration] = useState('');
   const [reasonsForAdmission, setReasonsForAdmission] = useState<string[]>([]);
@@ -81,23 +81,6 @@ export default function AdmitPatientPage() {
     setLoading(false);
   }, [router]);
 
-  useEffect(() => {
-    if (!admissionDate) return;
-    const date = new Date(admissionDate);
-    let months = 0;
-    
-    if (treatmentDuration === '1 Month') months = 1;
-    else if (treatmentDuration === '2 Months') months = 2;
-    else if (treatmentDuration === '3 Months') months = 3;
-    else if (treatmentDuration === '6 Months') months = 6;
-    else if (treatmentDuration === 'Custom' && customDuration) months = parseInt(customDuration);
-
-    if (months > 0) {
-      date.setMonth(date.getMonth() + months);
-      setExpectedDischargeDate(date.toISOString().split('T')[0]);
-    }
-  }, [admissionDate, treatmentDuration, customDuration]);
-
   const toggleReason = (reason: string) => {
     setReasonsForAdmission(prev => 
       prev.includes(reason) 
@@ -111,7 +94,7 @@ export default function AdmitPatientPage() {
     
     // Validate required fields
     if (!loginId || !loginPassword || !name || !fatherName || 
-        !age || !gender || !maritalStatus || !address || 
+        !age || !dateOfBirth || !gender || !maritalStatus || !address || 
         !guardianName || !guardianPhone || !guardianRelation || 
         !admissionDate || reasonsForAdmission.length === 0) {
       setError('Please fill all required fields');
@@ -140,6 +123,7 @@ export default function AdmitPatientPage() {
         name,
         fatherName,
         age: Number(age),
+        dateOfBirth,
         gender,
         education: education || null,
         maritalStatus,
@@ -150,11 +134,9 @@ export default function AdmitPatientPage() {
         guardianFatherName: guardianFatherName || null,
         guardianRelation,
         guardianPhone,
+        contactNumber: guardianPhone, // used by AdmissionTab profile editor
         guardianCnic: guardianCnic || null,
         admissionDate: Timestamp.fromDate(new Date(admissionDate)),
-        expectedDischargeDate: expectedDischargeDate 
-          ? Timestamp.fromDate(new Date(expectedDischargeDate)) 
-          : null,
         treatmentDuration: treatmentDuration === 'Custom' 
           ? Number(customDuration) 
           : parseInt(treatmentDuration),
@@ -319,6 +301,11 @@ export default function AdmitPatientPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5 mt-2">
+                <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
+                <input required type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+              </div>
+
               {maritalStatus === 'Married' && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Number of Children</label>
@@ -412,10 +399,6 @@ export default function AdmitPatientPage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Admission Date *</label>
                   <input required type="date" className={inputStyle} value={admissionDate} onChange={e => setAdmissionDate(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Discharge (Target)</label>
-                  <input type="date" className={inputStyle} value={expectedDischargeDate} onChange={e => setExpectedDischargeDate(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Planned Duration</label>
