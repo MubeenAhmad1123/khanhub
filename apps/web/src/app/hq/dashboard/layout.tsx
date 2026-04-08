@@ -65,6 +65,12 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
+  const normalizeRole = (role: unknown): HqRole | null => {
+    const r = String(role || '').trim().toLowerCase();
+    if (r === 'superadmin' || r === 'manager' || r === 'cashier') return r as HqRole;
+    return null;
+  };
+
   useEffect(() => {
     const session = localStorage.getItem(SESSION_KEY);
     if (!session) { router.push('/hq/login'); return; }
@@ -108,7 +114,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     );
   }
 
-  const role = user?.role as HqRole;
+  const role = normalizeRole(user?.role) || 'cashier';
   const navItems = NAV_ITEMS.filter(item => user && item.roles.includes(role));
 
   const handleSignOut = () => {

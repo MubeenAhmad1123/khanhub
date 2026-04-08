@@ -20,6 +20,12 @@ export default function HqLoginPage() {
   const [checking, setChecking] = useState(true);
   const router = useRouter();
 
+  const normalizeRole = (role: unknown): HqRole | null => {
+    const r = String(role || '').trim().toLowerCase();
+    if (r === 'superadmin' || r === 'manager' || r === 'cashier') return r as HqRole;
+    return null;
+  };
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       try {
@@ -45,7 +51,8 @@ export default function HqLoginPage() {
             manager: '/hq/dashboard/manager',
             cashier: '/hq/dashboard/cashier',
           };
-          router.push(roleRoutes[parsed.role] || '/hq/login');
+          const normalized = normalizeRole(parsed.role) || 'cashier';
+          router.push(roleRoutes[normalized] || '/hq/login');
           return;
         }
 
@@ -84,11 +91,20 @@ export default function HqLoginPage() {
         return;
       }
 
+      const normalizedRole = normalizeRole(data.role);
+      if (!normalizedRole) {
+        setError('Invalid role on account. Contact administrator.');
+        setLoading(false);
+        return;
+      }
+
+      const normalizedSessionCustomId = String(data.customId || normalizedCustomId).trim().toUpperCase();
+
       const session: HqSession = {
         uid: cred.user.uid,
-        customId: data.customId,
+        customId: normalizedSessionCustomId,
         name: data.name,
-        role: data.role as HqRole,
+        role: normalizedRole,
         loginTime: Date.now(),
       };
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -98,7 +114,7 @@ export default function HqLoginPage() {
         manager: '/hq/dashboard/manager',
         cashier: '/hq/dashboard/cashier',
       };
-      router.push(routes[data.role as HqRole] || '/hq/login');
+      router.push(routes[normalizedRole] || '/hq/login');
 
     } catch (err: any) {
       console.error('[HQ Login] Error:', err);

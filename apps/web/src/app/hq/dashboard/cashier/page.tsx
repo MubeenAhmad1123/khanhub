@@ -106,10 +106,11 @@ export default function CashierStationPage() {
     if (!session?.customId) return;
     setIncomingLoading(true);
     try {
+      const cashierCustomId = String(session.customId || '').trim().toUpperCase();
       const q = query(
         collection(db, 'rehab_transactions'),
         where('status', '==', 'pending_cashier'),
-        where('cashierId', '==', session.customId),
+        where('cashierId', '==', cashierCustomId),
         orderBy('createdAt', 'desc')
       );
       return onSnapshot(
