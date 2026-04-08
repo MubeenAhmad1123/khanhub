@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where } from 'firebase/firestore';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, History, Loader2, Minus, Plus, Search, TrendingDown, TrendingUp } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, History, Loader2, Minus, Plus, Search, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, toDate } from '@/lib/utils';
@@ -49,8 +49,10 @@ export default function CashierStationPage() {
   const [departmentCode, setDepartmentCode] = useState('rehab');
   const [searchQuery, setSearchQuery] = useState('');
   const [entityResults, setEntityResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [allPatients, setAllPatients] = useState<any[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
 
   const [txnType, setTxnType] = useState<TxnType>('income');
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
@@ -177,8 +179,39 @@ export default function CashierStationPage() {
   useEffect(() => {
     setSelectedEntity(null);
     setEntityResults([]);
+    setSearchResults([]);
+    setSearchOpen(false);
     setSearchQuery('');
   }, [departmentCode]);
+
+  useEffect(() => {
+    if (!session) return;
+    const run = async () => {
+      try {
+        const entityCollection = isStaffMode ? 'rehab_staff' : activeDepartment.entityCollection;
+        const snap = await getDocs(collection(db, entityCollection));
+        setAllPatients(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch {
+        setAllPatients([]);
+      }
+    };
+    void run();
+  }, [session, departmentCode, isStaffMode, activeDepartment.entityCollection]);
+
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+    const matches = allPatients.filter((p) =>
+      (p.name || p.fullName || '').toLowerCase().includes(q) ||
+      (p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id || '').toLowerCase().includes(q)
+    );
+    setSearchResults(matches.slice(0, 10));
+    setSearchOpen(true);
+  }, [searchQuery, allPatients]);
 
   async function loadCustomCategories() {
     try {
@@ -211,24 +244,6 @@ export default function CashierStationPage() {
       setHistoryTxns(all);
     } finally {
       setHistoryLoading(false);
-    }
-  }
-
-  async function searchEntities() {
-    if (!searchQuery.trim()) return;
-    setSearchLoading(true);
-    try {
-      const entityCollection = isStaffMode ? 'rehab_staff' : activeDepartment.entityCollection;
-      const q = query(
-        collection(db, entityCollection),
-        where('name', '>=', searchQuery),
-        where('name', '<=', `${searchQuery}\uf8ff`),
-        limit(20)
-      );
-      const snap = await getDocs(q);
-      setEntityResults(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    } finally {
-      setSearchLoading(false);
     }
   }
 
@@ -402,11 +417,59 @@ export default function CashierStationPage() {
               <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600">
                 {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
               </select>
-              <div className="relative">
-                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Name or ID..." className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />
-                <button type="button" onClick={searchEntities} className="min-h-[44px] absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-teal-600 text-white">
-                  {searchLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                </button>
+              <div className="relative w-full">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onFocus={() => searchQuery && setSearchOpen(true)}
+                    placeholder="Search by name or ID..."
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/50 transition-all duration-200 placeholder-gray-600"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {searchOpen && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                    {searchResults.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedEntity(p);
+                          setEntityResults([p]);
+                          setSearchQuery(p.name || p.fullName || p.patientId || p.studentId || p.id);
+                          setSearchOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-black text-xs flex-shrink-0">
+                          {String(p.name || p.fullName || '?')[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-white text-sm font-bold">{p.name || p.fullName || 'Unknown'}</p>
+                          <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                            {p.patientId || p.studentId || p.customId || p.employeeId || p.rollNumber || p.id}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {searchOpen && (
+                  <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />
+                )}
               </div>
             </div>
             <div className="mt-3 space-y-2 max-h-[300px] overflow-y-auto">

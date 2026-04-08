@@ -562,6 +562,9 @@ service cloud.firestore {
     function hqRole() { 
       return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.role; 
     } 
+    function hqCustomId() {
+      return get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId;
+    }
     function isHqRole(role) { 
       return isHqAuth() && hqRole() == role; 
     } 
@@ -727,9 +730,11 @@ service cloud.firestore {
     // Cashier creates. Superadmin/manager reads and verifies.
     // Nobody edits or deletes.
     match /hq_reconciliation/{docId} {
-      allow read: if isHqSuperOrManager();
+      allow read: if isHqSuperOrManager()
+        || (isHqCashier() && resource.data.cashierId == hqCustomId());
       allow create: if isHqCashier() || isHqSuperOrManager();
-      allow update, delete: if false;
+      allow update: if isHqSuperOrManager();
+      allow delete: if false;
     }
 
     // hq_growth_points — points system for HQ staff

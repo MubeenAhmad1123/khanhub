@@ -10,13 +10,16 @@ import {
   Loader2, Search, Filter, User, Calendar, 
   Heart, ChevronDown, ChevronUp, Activity,
   Stethoscope, ShieldCheck, Wallet, History,
-  FileText, ArrowRight, UserPlus, Info
+  FileText, ArrowRight, UserPlus, Info, X
 } from 'lucide-react';
 
 export default function HqRehabPatientsPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
   const [patients, setPatients] = useState<any[]>([]);
+  const [allPatients, setAllPatients] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [staffMap, setStaffMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,6 +52,7 @@ export default function HqRehabPatientsPage() {
         const { getAllPatientsWithFinanceSummary } = await import('@/lib/rehab/patients');
         const data = await getAllPatientsWithFinanceSummary();
         setPatients(data);
+        setAllPatients(data);
       } catch (err) {
         console.error("Error fetching rehab data:", err);
       } finally {
@@ -68,12 +72,30 @@ export default function HqRehabPatientsPage() {
   };
 
   const filteredPatients = patients.filter(p => {
-    const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'active' && p.isActive !== false) ||
                          (statusFilter === 'discharged' && p.isActive === false);
     return matchesSearch && matchesStatus;
   });
+
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+    const matches = allPatients.filter((p) =>
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q)
+    );
+    setSearchResults(matches.slice(0, 10));
+    setSearchOpen(true);
+  }, [searchQuery, allPatients]);
 
   if (sessionLoading) return <div className="min-h-screen bg-[#0f172a] flex items-center justify-center"><Loader2 className="animate-spin text-teal-500" /></div>;
 
@@ -100,15 +122,57 @@ export default function HqRehabPatientsPage() {
         {/* Filters */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-            <div className="relative group w-full sm:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-teal-500 transition-colors" size={18} />
-              <input 
-                type="text"
-                placeholder="Search patient name..."
-                className="w-full bg-slate-800/50 border border-slate-700/50 focus:border-teal-500/50 rounded-2xl pl-12 pr-6 py-3 outline-none font-medium text-white transition-all"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="relative w-full sm:w-80">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery && setSearchOpen(true)}
+                  placeholder="Search by name or ID..."
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/50 transition-all duration-200 placeholder-gray-600"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {searchOpen && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                  {searchResults.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(p.name || p.inpatientNumber || p.id);
+                        setSearchOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-black text-xs flex-shrink-0">
+                        {String(p.name || '?')[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-bold">{p.name}</p>
+                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                          {p.inpatientNumber || p.patientId || p.id}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {searchOpen && (
+                <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />
+              )}
             </div>
             <div className="relative group w-full sm:w-48">
               <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-teal-500 transition-colors" size={18} />
