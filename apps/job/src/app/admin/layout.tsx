@@ -21,6 +21,10 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const { user, loading, logout, isAdmin } = useAuth();
+    const role = ((user as any)?.role || '') as string;
+    const isCashier = role === 'cashier';
+    const canAccessPayments = isAdmin || isCashier;
+    const cashierRouteAllowed = pathname?.startsWith('/admin/payments');
     const router = useRouter();
     const pathname = usePathname();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -40,19 +44,25 @@ export default function AdminLayout({
                 return;
             }
 
+            // Cashier can only access payment queue
+            if (isCashier && !cashierRouteAllowed) {
+                router.push('/admin/payments');
+                return;
+            }
+
             // Case 2: Logged in but not admin
             const isWhitelisted = user?.email && ADMIN_WHITELIST.includes(user.email.toLowerCase());
 
-            if (!isAdmin && !isWhitelisted) {
+            if (!canAccessPayments && !isWhitelisted) {
                 // Not authorized and not even whitelisted -> Show error and redirect
-                toast('Access denied. Admin only.', 'error');
+                toast('Access denied. Admin/Cashier only.', 'error');
                 router.push('/admin/login');
-            } else if (!isAdmin && isWhitelisted) {
+            } else if (!canAccessPayments && isWhitelisted) {
                 // Whitelisted but role not synced yet -> Silent redirect to handle promotion
                 router.push('/admin/login');
             }
         }
-    }, [isAdmin, user, loading, router, toast, pathname]);
+    }, [isAdmin, isCashier, canAccessPayments, cashierRouteAllowed, user, loading, router, toast, pathname]);
 
     const handleLogout = async () => {
         try {
@@ -68,12 +78,12 @@ export default function AdminLayout({
         return <>{children}</>;
     }
 
-    if (loading || !isAdmin) {
+    if (loading || !canAccessPayments) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
                 <div className="text-center">
                     <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-                    <p className="text-slate-500 font-medium">Verifying admin access...</p>
+                    <p className="text-slate-500 font-medium">Verifying access...</p>
                 </div>
             </div>
         );

@@ -13,6 +13,11 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid))
           .data.get('role', '') == 'admin';
     }
+    function isCashier() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.get('role', '') == 'cashier';
+    }
 
     // ── Users ─────────────────────────────────────────
     match /users/{uid} {
@@ -78,10 +83,10 @@ service cloud.firestore {
     // ── Payment Requests ──────────────────────────────
     match /paymentRequests/{reqId} {
       allow read: if isAuth()
-        && (resource.data.requestedBy == request.auth.uid || isAdmin());
+        && (resource.data.requestedBy == request.auth.uid || isAdmin() || isCashier());
       allow create: if isAuth()
         && request.resource.data.requestedBy == request.auth.uid;
-      allow update: if isAdmin();
+      allow update: if isAdmin() || isCashier();
       allow delete: if isAdmin();
     }
 

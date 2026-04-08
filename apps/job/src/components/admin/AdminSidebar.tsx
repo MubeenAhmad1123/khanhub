@@ -64,9 +64,11 @@ export default function AdminSidebar({ isOpen, onClose }: SidebarProps) {
     const [badges, setBadges] = useState<BadgeCounts>({ pendingVideos: 0, pendingPayments: 0 });
 
     const { user } = useAuth();
+    const role = ((user as any)?.role || '') as string;
+    const isCashier = role === 'cashier';
 
     useEffect(() => {
-        if (user?.role !== 'admin') return;
+        if (role !== 'admin' && role !== 'cashier') return;
 
         // Live badge counts
         const videosUnsub = onSnapshot(
@@ -80,7 +82,7 @@ export default function AdminSidebar({ isOpen, onClose }: SidebarProps) {
             (err) => console.warn('[AdminSidebar] Payments error:', err.message)
         );
         return () => { videosUnsub(); paymentsUnsub(); };
-    }, [user?.role]);
+    }, [role]);
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full">
@@ -102,7 +104,7 @@ export default function AdminSidebar({ isOpen, onClose }: SidebarProps) {
 
             {/* Nav */}
             <nav className="flex-1 overflow-y-auto py-4 px-3">
-                {navSections.map((section, si) => (
+                {(isCashier ? navSections.filter((s) => s.label === 'PAYMENTS') : navSections).map((section, si) => (
                     <div key={si} className="mb-2">
                         {section.label && (
                             <p className="text-[10px] font-bold tracking-widest text-slate-600 uppercase px-3 py-2 mt-2">

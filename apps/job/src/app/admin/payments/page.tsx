@@ -31,6 +31,7 @@ export default function AdminPaymentsPage() {
     const [filter, setFilter] = useState<'all' | PaymentStatus>('pending')
     const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
+    const [lockedActions, setLockedActions] = useState<Record<string, boolean>>({})
 
     const fetchPayments = async () => {
         setLoading(true)
@@ -50,6 +51,8 @@ export default function AdminPaymentsPage() {
     useEffect(() => { fetchPayments() }, [])
 
     const handleApprove = async (payment: PaymentRequest) => {
+        if (lockedActions[payment.id] || processing === payment.id) return
+        setLockedActions(prev => ({ ...prev, [payment.id]: true }))
         setProcessing(payment.id)
         try {
             // 1. Update payment request status
@@ -73,12 +76,19 @@ export default function AdminPaymentsPage() {
             await fetchPayments()
         } catch (err) {
             console.error('Approval error:', err)
+            setLockedActions(prev => {
+                const next = { ...prev }
+                delete next[payment.id]
+                return next
+            })
         } finally {
             setProcessing(null)
         }
     }
 
     const handleReject = async (paymentId: string) => {
+        if (lockedActions[paymentId] || processing === paymentId) return
+        setLockedActions(prev => ({ ...prev, [paymentId]: true }))
         setProcessing(paymentId)
         try {
             await updateDoc(doc(db, 'paymentRequests', paymentId), {
@@ -89,6 +99,11 @@ export default function AdminPaymentsPage() {
             await fetchPayments()
         } catch (err) {
             console.error('Rejection error:', err)
+            setLockedActions(prev => {
+                const next = { ...prev }
+                delete next[paymentId]
+                return next
+            })
         } finally {
             setProcessing(null)
         }
@@ -253,32 +268,32 @@ export default function AdminPaymentsPage() {
                             </div>
 
                             {/* Action buttons — only for pending */}
-                            {payment.status === 'pending' && (
+                            {payment.status === 'pending' && !lockedActions[payment.id] && (
                                 <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
                                     <button
                                         onClick={() => handleApprove(payment)}
-                                        disabled={processing === payment.id}
+                                        disabled={processing === payment.id || !!lockedActions[payment.id]}
                                         style={{
                                             flex: 1, padding: '10px',
                                             background: '#00C896', color: '#fff',
                                             border: 'none', borderRadius: 10,
                                             fontFamily: 'DM Sans', fontWeight: 700,
                                             fontSize: 14, cursor: 'pointer',
-                                            opacity: processing === payment.id ? 0.6 : 1,
+                                            opacity: (processing === payment.id || !!lockedActions[payment.id]) ? 0.6 : 1,
                                         }}
                                     >
                                         {processing === payment.id ? '...' : '✅ Approve & Reveal'}
                                     </button>
                                     <button
                                         onClick={() => handleReject(payment.id)}
-                                        disabled={processing === payment.id}
+                                        disabled={processing === payment.id || !!lockedActions[payment.id]}
                                         style={{
                                             flex: 1, padding: '10px',
                                             background: '#fff', color: '#FF3B30',
                                             border: '1.5px solid #FF3B30', borderRadius: 10,
                                             fontFamily: 'DM Sans', fontWeight: 700,
                                             fontSize: 14, cursor: 'pointer',
-                                            opacity: processing === payment.id ? 0.6 : 1,
+                                            opacity: (processing === payment.id || !!lockedActions[payment.id]) ? 0.6 : 1,
                                         }}
                                     >
                                         ❌ Reject
