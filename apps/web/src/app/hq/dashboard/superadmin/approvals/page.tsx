@@ -53,7 +53,7 @@ export default function HqApprovalsPage() {
         name: tx.patientName,
         href:
           tx.patientId
-            ? `/departments/rehab/dashboard/admin/patients/${tx.patientId}`
+            ? `/hq/dashboard/superadmin/rehab/patients/${tx.patientId}`
             : null,
       };
     }
@@ -388,9 +388,6 @@ export default function HqApprovalsPage() {
                       <div>
                         <p className="text-2xl font-black text-white">Rs. {Number(tx?.amount || 0).toLocaleString()}</p>
                         <p className="text-xs font-bold text-amber-500/70 uppercase tracking-widest">{tx?.categoryName || tx?.category || 'General'}</p>
-                        <p className="mt-1 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                          TX ID: {String(tx?.id || '').slice(-10).toUpperCase()}
-                        </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -433,12 +430,6 @@ export default function HqApprovalsPage() {
                       tx?.cashierId ||
                       'System';
 
-                    const requestedById =
-                      tx?.cashierId ||
-                      tx?.cashierForwardedBy ||
-                      tx?.createdBy ||
-                      null;
-
                     return (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2 text-slate-300 font-medium min-w-0">
@@ -449,9 +440,6 @@ export default function HqApprovalsPage() {
                             </p>
                             <p className="font-black text-white truncate">
                               {entity.name || '—'}
-                            </p>
-                            <p className="text-[10px] font-bold text-slate-400 truncate">
-                              {entity.id ? `ID: ${entity.id}` : 'ID: —'}
                             </p>
                             {entity.href ? (
                               <a
@@ -482,15 +470,6 @@ export default function HqApprovalsPage() {
                               {requestedByName}
                             </span>
                           </div>
-
-                          {requestedById ? (
-                            <div className="flex items-center justify-between gap-2 text-slate-400 font-medium">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                Cashier ID
-                              </span>
-                              <span className="text-xs font-mono font-bold text-slate-300">{requestedById}</span>
-                            </div>
-                          ) : null}
 
                           {tx?.paymentMethod ? (
                             <div className="flex items-center justify-between gap-2 text-slate-400 font-medium">
