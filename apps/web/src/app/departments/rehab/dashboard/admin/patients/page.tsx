@@ -121,6 +121,21 @@ export default function PatientsListPage() {
     }
   };
 
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+    const matches = allPatients.filter((p) =>
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q)
+    );
+    setSearchResults(matches.slice(0, 10));
+    setSearchOpen(true);
+  }, [searchQuery, allPatients]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -140,21 +155,6 @@ export default function PatientsListPage() {
       p.fatherName.toLowerCase().includes(s)
     );
   });
-
-  useEffect(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) {
-      setSearchResults([]);
-      setSearchOpen(false);
-      return;
-    }
-    const matches = allPatients.filter((p) =>
-      (p.name || '').toLowerCase().includes(q) ||
-      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q)
-    );
-    setSearchResults(matches.slice(0, 10));
-    setSearchOpen(true);
-  }, [searchQuery, allPatients]);
 
   const totalActive = patients.filter(p => p.isActive).length;
   const totalDischarged = patients.filter(p => !p.isActive).length;
