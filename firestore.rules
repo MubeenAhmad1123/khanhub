@@ -277,6 +277,14 @@ service cloud.firestore {
       allow write: if isRehabRole('cashier') || isRehabSuperAdmin();
     }
 
+    // ── Rehab salary records ───────────────────────────
+    // Superadmin/admin create and approve staff salary payment records.
+    match /rehab_salary_records/{docId} {
+      allow read: if isRehabAdminOrAbove();
+      allow write: if isRehabAdminOrAbove();
+      allow delete: if isRehabSuperAdmin();
+    }
+
     // ── Transactions ───────────────────────────────────
     // Cashier creates. Superadmin approves/rejects (update).
     // Admin and superadmin can read all. Cashier reads own entries.
@@ -721,6 +729,13 @@ service cloud.firestore {
       allow create: if isHqCashier() || isHqSuperOrManager(); 
       allow update: if isHqCashier() || isHqSuperOrManager(); 
     } 
+
+    // HQ overlay: staff salary payment records created/approved from HQ.
+    match /rehab_salary_records/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
+    }
 
     match /rehab_staff/{staffId} { 
       allow read: if isHqSuperOrManager(); 
