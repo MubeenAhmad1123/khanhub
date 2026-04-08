@@ -106,8 +106,8 @@ export interface HqTransaction {
   cashierName: string;
 
   // Workflow
-  workflowStage: 'pending_cashier' | 'pending' | 'approved' | 'rejected';
-  status: 'pending_cashier' | 'pending' | 'approved' | 'rejected';
+  workflowStage: 'pending_cashier' | 'rejected_cashier' | 'pending' | 'approved' | 'rejected';
+  status: 'pending_cashier' | 'rejected_cashier' | 'pending' | 'approved' | 'rejected';
 
   // Proof
   proofRequired?: boolean;
@@ -124,6 +124,12 @@ export interface HqTransaction {
   cashierForwardedAt?: string;
   cashierForwardedBy?: string;
   cashierForwardedByName?: string;
+
+  // Cashier rejection (before forwarding)
+  cashierRejectedAt?: string;
+  cashierRejectedBy?: string;
+  cashierRejectedByName?: string;
+  cashierRejectReason?: string;
 
   // Approval / rejection
   approvedBy?: string;

@@ -47,6 +47,9 @@ export default function CashierStationPage() {
   const [forwardProofFile, setForwardProofFile] = useState<File | null>(null);
   const [forwardProofReason, setForwardProofReason] = useState('');
   const [forwardProofUploading, setForwardProofUploading] = useState(false);
+  const [rejectModalTx, setRejectModalTx] = useState<any | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
   const [superadminRecipient, setSuperadminRecipient] = useState('SUPERADMIN');
 
   const [departmentCode, setDepartmentCode] = useState('rehab');
@@ -148,6 +151,42 @@ export default function CashierStationPage() {
     setForwardProofUploading(false);
   }
 
+  function openRejectModal(tx: any) {
+    setRejectModalTx(tx);
+    setRejectReason('');
+    setRejecting(false);
+  }
+
+  async function confirmRejectIncoming() {
+    if (!rejectModalTx?.id) return;
+    if (rejecting) return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      setMessage({ type: 'error', text: 'Enter a rejection reason.' });
+      return;
+    }
+    setRejecting(true);
+    setMessage(null);
+    try {
+      await updateDoc(doc(db, 'rehab_transactions', rejectModalTx.id), {
+        status: 'rejected_cashier',
+        cashierRejectedAt: Timestamp.now(),
+        cashierRejectedBy: session?.uid,
+        cashierRejectedByName: session?.name || session?.displayName || 'HQ Cashier',
+        cashierRejectReason: reason,
+      });
+      setMessage({ type: 'success', text: 'Request rejected and sent back to admin.' });
+      setRejectModalTx(null);
+      setRejectReason('');
+      await fetchHistory();
+    } catch (err: any) {
+      console.error('[HQ Cashier] reject error:', err);
+      setMessage({ type: 'error', text: `${err?.code || 'error'}: ${err?.message || 'Failed to reject request.'}` });
+    } finally {
+      setRejecting(false);
+    }
+  }
+
   async function confirmForwardToSuperadmin() {
     if (!forwardModalTx?.id) return;
     if (incomingActionId) return;
@@ -171,15 +210,17 @@ export default function CashierStationPage() {
         proofUrl = await uploadToCloudinary(forwardProofFile, 'khanhub/hq/receipts');
       }
 
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+      const updatePayload: Record<string, any> = {
         status: 'pending',
-        proofUrl: proofUrl || undefined,
-        proofMissingReason: proofUrl ? undefined : reason,
         proofRequired: true,
         cashierForwardedAt: Timestamp.now(),
         cashierForwardedBy: session?.uid,
         cashierForwardedByName: session?.name || session?.displayName || 'HQ Cashier',
-      });
+      };
+      if (proofUrl) updatePayload.proofUrl = proofUrl;
+      if (!proofUrl && reason) updatePayload.proofMissingReason = reason;
+
+      await updateDoc(doc(db, 'rehab_transactions', txId), updatePayload);
 
       await sendHqNotification({
         recipientId: superadminRecipient,
@@ -324,7 +365,7 @@ export default function CashierStationPage() {
         proofUrl = await uploadToCloudinary(proofFile, 'khanhub/hq/receipts');
       }
 
-      await addDoc(collection(db, activeDepartment.txCollection), {
+      const createPayload: Record<string, any> = {
         type: txnType,
         amount: Number(amount),
         category: selectedCategory.id,
@@ -338,15 +379,18 @@ export default function CashierStationPage() {
         paymentMethod,
         referenceNo,
         status: 'pending',
-        proofUrl: proofUrl || undefined,
-        proofMissingReason: proofUrl ? undefined : proofReason.trim(),
         proofRequired: true,
         date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
         transactionDate: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
         createdBy: session?.uid,
         createdByName: session?.displayName || session?.name || 'HQ Cashier',
         createdAt: Timestamp.now(),
-      });
+      };
+      if (proofUrl) createPayload.proofUrl = proofUrl;
+      const missingReason = proofReason.trim();
+      if (!proofUrl && missingReason) createPayload.proofMissingReason = missingReason;
+
+      await addDoc(collection(db, activeDepartment.txCollection), createPayload);
       setMessage({ type: 'success', text: 'Transaction sent for superadmin approval.' });
       setAmount('');
       setDescription('');
@@ -441,14 +485,24 @@ export default function CashierStationPage() {
                           {tx.status || 'pending_cashier'}
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        disabled={incomingActionId === tx.id}
-                        onClick={() => openForwardModal(tx)}
-                        className="min-h-[44px] shrink-0 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
-                      >
-                        {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
-                      </button>
+                      <div className="shrink-0 flex flex-col gap-2">
+                        <button
+                          type="button"
+                          disabled={incomingActionId === tx.id}
+                          onClick={() => openForwardModal(tx)}
+                          className="min-h-[44px] px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
+                        >
+                          {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={incomingActionId === tx.id}
+                          onClick={() => openRejectModal(tx)}
+                          className="min-h-[44px] px-3 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-200 border border-red-500/25 text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
+                        >
+                          Reject
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -765,6 +819,63 @@ export default function CashierStationPage() {
                   className="min-h-[44px] flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-60"
                 >
                   {forwardProofUploading ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Add'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rejectModalTx && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-[#0d0f14] border border-white/10 rounded-2xl p-5">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <p className="text-lg font-black text-white">Reject Fee Request</p>
+                <p className="text-sm font-bold text-gray-400 mt-1">
+                  {rejectModalTx.patientName || rejectModalTx.patientId || 'Patient'} - Rs {Number(rejectModalTx.amount || 0).toLocaleString()}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={rejecting}
+                onClick={() => setRejectModalTx(null)}
+                className="min-h-[44px] p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 disabled:opacity-60"
+              >
+                X
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                  Rejection reason (shown to admin)
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Explain why this request is rejected..."
+                  className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-semibold text-white border border-white/10 min-h-[110px] resize-none placeholder:text-gray-500"
+                  disabled={rejecting}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setRejectModalTx(null)}
+                  disabled={rejecting}
+                  className="min-h-[44px] flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 text-gray-200 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void confirmRejectIncoming()}
+                  disabled={rejecting}
+                  className="min-h-[44px] flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-red-600 hover:bg-red-700 text-white disabled:opacity-60"
+                >
+                  {rejecting ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Reject'}
                 </button>
               </div>
             </div>

@@ -27,7 +27,7 @@ export interface Transaction {
   type: 'income' | 'expense';
   category: string;
   txnDescription?: string;
-  status: 'pending_cashier' | 'pending' | 'approved' | 'rejected';
+  status: 'pending_cashier' | 'rejected_cashier' | 'pending' | 'approved' | 'rejected';
   createdBy?: string;
   createdByName?: string;
   cashierId?: string;
@@ -35,6 +35,10 @@ export interface Transaction {
   proofUrl?: string;
   proofMissingReason?: string;
   proofRequired?: boolean;
+  cashierRejectedAt?: Timestamp | Date;
+  cashierRejectedBy?: string;
+  cashierRejectedByName?: string;
+  cashierRejectReason?: string;
   approvedBy?: string;
   approvedAt?: Timestamp | Date;
   date: Date | Timestamp;

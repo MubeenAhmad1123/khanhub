@@ -779,6 +779,18 @@ service cloud.firestore {
             'cashierForwardedBy',
             'cashierForwardedByName'
           ])
+        )
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'rejected_cashier'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'cashierRejectedAt',
+            'cashierRejectedBy',
+            'cashierRejectedByName',
+            'cashierRejectReason'
+          ])
         );
     } 
 

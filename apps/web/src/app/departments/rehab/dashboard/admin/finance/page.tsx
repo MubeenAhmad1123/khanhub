@@ -23,7 +23,7 @@ export default function FinanceLogPage() {
   const [dateFrom, setDateFrom] = useState(thirtyDaysAgo.toISOString().split('T')[0]);
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0]);
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'rejected_cashier'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -197,6 +197,7 @@ export default function FinanceLogPage() {
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
+                <option value="rejected_cashier">Rejected by Cashier</option>
               </select>
             </div>
             <div className="sm:col-span-2 lg:col-span-1">
@@ -299,7 +300,14 @@ export default function FinanceLogPage() {
                           <span className="font-medium text-gray-900">{formatCategory(tx.category)}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 truncate max-w-xs">{tx.description || '-'}</td>
+                      <td className="px-6 py-4 truncate max-w-xs">
+                        <div className="text-gray-700">{tx.description || '-'}</div>
+                        {tx.status === 'rejected_cashier' && tx.cashierRejectReason && (
+                          <div className="mt-1 text-[11px] font-bold text-red-600">
+                            Rejected reason: {tx.cashierRejectReason}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                         {formatDateDMY(tx.date?.toDate?.() ? tx.date.toDate() : tx.date)}
                       </td>
@@ -321,6 +329,11 @@ export default function FinanceLogPage() {
                         {tx.status === 'rejected' && (
                           <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                             <AlertCircle className="w-3 h-3" /> Rejected
+                          </span>
+                        )}
+                        {tx.status === 'rejected_cashier' && (
+                          <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                            <AlertCircle className="w-3 h-3" /> Rejected by Cashier
                           </span>
                         )}
                       </td>
