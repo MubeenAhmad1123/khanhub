@@ -74,6 +74,16 @@ export default function HqApprovalsPage() {
       const txSnap = await getDoc(doc(db, collectionName, id));
       const tx = txSnap.exists() ? ({ id: txSnap.id, ...txSnap.data() } as any) : null;
 
+      if (status === 'approved' && tx?.proofRequired) {
+        // New rule: proof OR missing-proof reason must be present before approval.
+        const hasProof = !!tx?.proofUrl || !!tx?.proofMissingReason;
+        if (!hasProof) {
+          alert('Cannot approve: proof upload is required (or missing-proof reason).');
+          setActionLoading(null);
+          return;
+        }
+      }
+
       await updateDoc(doc(db, collectionName, id), {
         status,
         approvedBy: status === 'approved' ? session?.customId : undefined,
@@ -84,8 +94,8 @@ export default function HqApprovalsPage() {
         processedBy: session?.customId
       });
 
-      // Apply to rehab profiles only when APPROVED (patient_fee / canteen)
-      if (status === 'approved' && activeTab === 'rehab' && tx?.patientId && tx?.category) {
+      // Sync to rehab profiles only when APPROVED
+      if (status === 'approved' && activeTab === 'rehab' && tx?.category) {
         try {
           const txDate: Date =
             tx?.date instanceof Timestamp
@@ -98,18 +108,23 @@ export default function HqApprovalsPage() {
 
           const month = txDate.toISOString().slice(0, 7);
 
-          if (tx.category === 'patient_fee') {
+          const isPatientFee =
+            tx.category === 'patient_fee' || tx.category === 'fee' || tx.category === 'admission_fee';
+
+          if (isPatientFee && tx.patientId) {
             const feesQ = query(
               collection(db, 'rehab_fees'),
               where('patientId', '==', tx.patientId),
               where('month', '==', month)
             );
             const feesSnap = await getDocs(feesQ);
+            const amountPaid = Number(tx.amount) || 0;
+            const proofUrl = tx.proofUrl || undefined;
+            const proofMissingReason = proofUrl ? undefined : (tx.proofMissingReason || undefined);
 
             if (feesSnap.empty) {
               const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
               const packageAmount = patientSnap.exists() ? (patientSnap.data().packageAmount || 60000) : 60000;
-              const amountPaid = Number(tx.amount) || 0;
               const amountRemaining = Math.max(0, packageAmount - amountPaid);
 
               await addDoc(collection(db, 'rehab_fees'), {
@@ -128,6 +143,8 @@ export default function HqApprovalsPage() {
                     approvedBy: session?.customId,
                     status: 'approved',
                     note: tx.description || '',
+                    proofUrl: proofUrl || null,
+                    proofMissingReason: proofMissingReason || null,
                   },
                 ],
                 lastPaymentDate: serverTimestamp(),
@@ -137,7 +154,7 @@ export default function HqApprovalsPage() {
             } else {
               const feeDoc = feesSnap.docs[0];
               const current = feeDoc.data() as any;
-              const newPaid = (current.amountPaid || 0) + (Number(tx.amount) || 0);
+              const newPaid = (current.amountPaid || 0) + amountPaid;
               const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
               const existingPayments = current.payments || [];
 
@@ -145,19 +162,67 @@ export default function HqApprovalsPage() {
                 amountPaid: newPaid,
                 amountRemaining: newRemaining,
                 lastPaymentDate: serverTimestamp(),
-                lastPaymentAmount: Number(tx.amount) || 0,
+                lastPaymentAmount: amountPaid,
                 payments: [
                   ...existingPayments,
                   {
                     id,
-                    amount: Number(tx.amount) || 0,
+                    amount: amountPaid,
                     date: Timestamp.fromDate(txDate),
                     cashierId: tx.cashierId || 'HQ',
                     approvedBy: session?.customId,
                     status: 'approved',
                     note: tx.description || '',
+                    proofUrl: proofUrl || null,
+                    proofMissingReason: proofMissingReason || null,
                   },
                 ],
+              });
+            }
+          }
+
+          if (tx.category === 'staff_salary' && tx.staffId) {
+            const salaryQ = query(
+              collection(db, 'rehab_salary_records'),
+              where('staffId', '==', tx.staffId),
+              where('month', '==', month)
+            );
+            const salarySnap = await getDocs(salaryQ);
+            const amount = Number(tx.amount) || 0;
+            const proofUrl = tx.proofUrl || undefined;
+            const proofMissingReason = proofUrl ? undefined : (tx.proofMissingReason || undefined);
+
+            const proofEntry = {
+              id,
+              amount,
+              date: Timestamp.fromDate(txDate),
+              proofUrl: proofUrl || null,
+              proofMissingReason: proofMissingReason || null,
+            };
+
+            if (salarySnap.empty) {
+              await addDoc(collection(db, 'rehab_salary_records'), {
+                staffId: tx.staffId,
+                staffName: tx.staffName || '',
+                month,
+                amount,
+                transactionId: id,
+                paidAt: serverTimestamp(),
+                approvedBy: session?.customId,
+                proofs: [proofEntry],
+                createdAt: serverTimestamp(),
+              });
+            } else {
+              const salaryDoc = salarySnap.docs[0];
+              const current = salaryDoc.data() as any;
+              const currentAmount = Number(current.amount) || 0;
+              const proofs = current.proofs || [];
+
+              await updateDoc(doc(db, 'rehab_salary_records', salaryDoc.id), {
+                amount: currentAmount + amount,
+                lastPaidAt: serverTimestamp(),
+                transactionId: id,
+                proofs: [...proofs, proofEntry],
               });
             }
           }
@@ -276,6 +341,30 @@ export default function HqApprovalsPage() {
                       })()}
                     </div>
                   </div>
+
+                  {(tx?.proofUrl || tx?.proofMissingReason) && (
+                    <div className="mt-3">
+                      {tx?.proofUrl ? (
+                        <div className="flex items-start gap-3">
+                          <a
+                            href={tx.proofUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] font-black uppercase tracking-widest text-teal-400 hover:text-teal-300 whitespace-nowrap"
+                          >
+                            View Proof
+                          </a>
+                          {typeof tx.proofUrl === 'string' && /\.(png|jpg|jpeg|webp|gif)$/i.test(tx.proofUrl) && (
+                            <img src={tx.proofUrl} alt="Proof of payment" className="w-20 h-20 rounded-xl object-cover border border-slate-700/50" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] font-black text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl uppercase tracking-widest">
+                          Missing Proof Reason: {tx?.proofMissingReason || '—'}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="mt-4 pt-4 border-t border-amber-500/10 flex items-center justify-between">
                     <div className="flex items-center gap-2">

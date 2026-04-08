@@ -21,6 +21,8 @@ export interface Transaction {
   id: string;
   patientId?: string;
   patientName?: string;
+  staffId?: string;
+  staffName?: string;
   amount: number;
   type: 'income' | 'expense';
   category: string;
@@ -30,6 +32,9 @@ export interface Transaction {
   createdByName?: string;
   cashierId?: string;
   cashierName?: string;
+  proofUrl?: string;
+  proofMissingReason?: string;
+  proofRequired?: boolean;
   approvedBy?: string;
   approvedAt?: Timestamp | Date;
   date: Date | Timestamp;

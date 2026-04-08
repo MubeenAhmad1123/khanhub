@@ -98,6 +98,7 @@ export default function SuperadminFeeRequestsPage() {
         patientName: selectedPatient!.name,
         cashierId: selectedCashierId,
         status: 'pending_cashier',
+        proofRequired: true,
         date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
         transactionDate: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
         createdBy: session?.uid,

@@ -8,6 +8,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, History, Loader2, Mi
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, toDate } from '@/lib/utils';
+import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 type TxnType = 'income' | 'expense';
 type DateMode = 'today' | 'all' | 'range';
@@ -40,6 +41,10 @@ export default function CashierStationPage() {
   const [incomingFeeReqs, setIncomingFeeReqs] = useState<any[]>([]);
   const [incomingLoading, setIncomingLoading] = useState(false);
   const [incomingActionId, setIncomingActionId] = useState<string | null>(null);
+  const [forwardModalTx, setForwardModalTx] = useState<any | null>(null);
+  const [forwardProofFile, setForwardProofFile] = useState<File | null>(null);
+  const [forwardProofReason, setForwardProofReason] = useState('');
+  const [forwardProofUploading, setForwardProofUploading] = useState(false);
 
   const [departmentCode, setDepartmentCode] = useState('rehab');
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,6 +58,9 @@ export default function CashierStationPage() {
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [referenceNo, setReferenceNo] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofReason, setProofReason] = useState('');
+  const [proofUploading, setProofUploading] = useState(false);
 
   const [customCategories, setCustomCategories] = useState<{ id: string; name: string; appliesTo: 'income' | 'expense' | 'both' }[]>([]);
   const [categorySearch, setCategorySearch] = useState('');
@@ -74,6 +82,7 @@ export default function CashierStationPage() {
   const allCategories = useMemo(() => [...BASE_CATEGORIES, ...customCategories], [customCategories]);
   const selectedCategory = allCategories.find((c) => c.id === selectedCategoryId);
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
+  const isStaffMode = departmentCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary';
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -112,22 +121,56 @@ export default function CashierStationPage() {
     }
   }
 
-  async function forwardToSuperadmin(txId: string) {
+  function openForwardModal(tx: any) {
+    setForwardModalTx(tx);
+    setForwardProofFile(null);
+    setForwardProofReason('');
+    setForwardProofUploading(false);
+  }
+
+  async function confirmForwardToSuperadmin() {
+    if (!forwardModalTx?.id) return;
     if (incomingActionId) return;
+    const txId = forwardModalTx.id;
+
+    const hasProofFile = !!forwardProofFile;
+    const reason = forwardProofReason.trim();
+
+    if (!hasProofFile && !reason) {
+      setMessage({ type: 'error', text: 'Upload proof OR enter reason for missing proof.' });
+      return;
+    }
+
     setIncomingActionId(txId);
+    setForwardProofUploading(true);
+    setMessage(null);
+
     try {
+      let proofUrl: string | undefined;
+      if (forwardProofFile) {
+        proofUrl = await uploadToCloudinary(forwardProofFile, 'khanhub/hq/receipts');
+      }
+
       await updateDoc(doc(db, 'rehab_transactions', txId), {
         status: 'pending',
+        proofUrl: proofUrl || undefined,
+        proofMissingReason: proofUrl ? undefined : reason,
+        proofRequired: true,
         cashierForwardedAt: Timestamp.now(),
         cashierForwardedBy: session?.uid,
         cashierForwardedByName: session?.name || session?.displayName || 'HQ Cashier',
       });
+
+      setMessage({ type: 'success', text: 'Request sent to superadmin approvals.' });
+      setForwardModalTx(null);
+      setForwardProofFile(null);
+      setForwardProofReason('');
       await fetchHistory();
-      setMessage({ type: 'success', text: 'Sent to superadmin approvals.' });
     } catch {
       setMessage({ type: 'error', text: 'Failed to forward request.' });
     } finally {
       setIncomingActionId(null);
+      setForwardProofUploading(false);
     }
   }
 
@@ -175,7 +218,13 @@ export default function CashierStationPage() {
     if (!searchQuery.trim()) return;
     setSearchLoading(true);
     try {
-      const q = query(collection(db, activeDepartment.entityCollection), where('name', '>=', searchQuery), where('name', '<=', `${searchQuery}\uf8ff`), limit(20));
+      const entityCollection = isStaffMode ? 'rehab_staff' : activeDepartment.entityCollection;
+      const q = query(
+        collection(db, entityCollection),
+        where('name', '>=', searchQuery),
+        where('name', '<=', `${searchQuery}\uf8ff`),
+        limit(20)
+      );
       const snap = await getDocs(q);
       setEntityResults(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } finally {
@@ -204,9 +253,18 @@ export default function CashierStationPage() {
     if (!selectedEntity) return setMessage({ type: 'error', text: 'Select account first.' });
     if (!selectedCategory) return setMessage({ type: 'error', text: 'Select category field.' });
     if (!amount || Number(amount) <= 0) return setMessage({ type: 'error', text: 'Enter valid amount.' });
+    if (!proofFile && !proofReason.trim()) {
+      return setMessage({ type: 'error', text: 'Upload proof OR enter reason if proof is missing.' });
+    }
 
     setProcessing(true);
+    setProofUploading(true);
     try {
+      let proofUrl: string | undefined;
+      if (proofFile) {
+        proofUrl = await uploadToCloudinary(proofFile, 'khanhub/hq/receipts');
+      }
+
       await addDoc(collection(db, activeDepartment.txCollection), {
         type: txnType,
         amount: Number(amount),
@@ -214,12 +272,16 @@ export default function CashierStationPage() {
         categoryName: selectedCategory.name,
         departmentCode: activeDepartment.code,
         departmentName: activeDepartment.label,
-        patientId: selectedEntity.id,
-        patientName: selectedEntity.name || selectedEntity.fullName || 'Unknown',
+        ...(isStaffMode
+          ? { staffId: selectedEntity.id, staffName: selectedEntity.name || selectedEntity.employeeId || 'Unknown' }
+          : { patientId: selectedEntity.id, patientName: selectedEntity.name || selectedEntity.fullName || 'Unknown' }),
         description,
         paymentMethod,
         referenceNo,
         status: 'pending',
+        proofUrl: proofUrl || undefined,
+        proofMissingReason: proofUrl ? undefined : proofReason.trim(),
+        proofRequired: true,
         date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
         transactionDate: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
         createdBy: session?.uid,
@@ -230,11 +292,15 @@ export default function CashierStationPage() {
       setAmount('');
       setDescription('');
       setReferenceNo('');
+      setProofFile(null);
+      setProofReason('');
+      setProofUploading(false);
       await fetchHistory();
     } catch {
       setMessage({ type: 'error', text: 'Failed to submit transaction.' });
     } finally {
       setProcessing(false);
+      setProofUploading(false);
     }
   }
 
@@ -249,7 +315,7 @@ export default function CashierStationPage() {
     if (historyStatus !== 'all' && tx.status !== historyStatus) return false;
     if (historyType !== 'all' && tx.type !== historyType) return false;
     if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
-    return !searchQuery.trim() || `${tx.patientName || ''} ${tx.patientId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase().includes(searchQuery.toLowerCase());
+    return !searchQuery.trim() || `${tx.patientName || ''} ${tx.patientId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const totals = useMemo(() => {
@@ -308,7 +374,7 @@ export default function CashierStationPage() {
                       <button
                         type="button"
                         disabled={incomingActionId === tx.id}
-                        onClick={() => forwardToSuperadmin(tx.id)}
+                        onClick={() => openForwardModal(tx)}
                         className="shrink-0 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
                       >
                         {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
@@ -325,7 +391,7 @@ export default function CashierStationPage() {
 
           <div className="bg-[#11151d] rounded-2xl p-4 border border-white/10">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
-              <Search size={14} /> Search Account
+              <Search size={14} /> {isStaffMode ? 'Search Staff' : 'Search Account'}
             </h2>
             <div className="space-y-3">
               <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10">
@@ -410,6 +476,34 @@ export default function CashierStationPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Proof Upload (Image/PDF)</label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                    className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
+                    disabled={processing}
+                  />
+                  <p className="mt-2 text-[11px] text-gray-500 font-bold break-all">
+                    {proofFile ? `Selected: ${proofFile.name}` : 'No file selected.'}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                    Reason if proof is missing
+                  </label>
+                  <textarea
+                    value={proofReason}
+                    onChange={(e) => setProofReason(e.target.value)}
+                    placeholder="If you cannot upload screenshot, explain why..."
+                    className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-semibold text-white border border-white/10 min-h-[96px] resize-none placeholder:text-gray-500"
+                    disabled={processing}
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Purpose / Note</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Purpose of this transaction..." className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-semibold text-white border border-white/10 min-h-[110px] resize-none placeholder:text-gray-500" />
@@ -453,9 +547,9 @@ export default function CashierStationPage() {
             <div className="bg-[#11151d] rounded-xl p-4 border border-white/10 text-sm font-bold text-gray-400">No transactions match your filters.</div>
           ) : historyFiltered.map((tx) => (
             <div key={tx.id} className="bg-[#11151d] rounded-xl p-4 border border-white/10">
-              <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-sm font-black text-white truncate">{tx.patientName || '-'}</div>
+                  <div className="text-sm font-black text-white truncate">{tx.patientName || tx.staffName || '-'}</div>
                   <div className="text-[10px] font-bold text-gray-400">{tx.departmentName || tx.departmentCode}</div>
                 </div>
                 <div className={cn('text-sm font-black shrink-0', tx.type === 'income' ? 'text-teal-400' : 'text-red-400')}>{tx.type === 'income' ? '+' : '-'} Rs {Number(tx.amount || 0).toLocaleString()}</div>
@@ -473,11 +567,82 @@ export default function CashierStationPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-left">
               <thead><tr className="bg-white/[0.02] border-b border-white/10"><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Department</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Entity</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Category</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Status</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Amount</th></tr></thead>
-              <tbody>{historyLoading ? <tr><td colSpan={6} className="px-4 py-8 text-center"><Loader2 className="w-7 h-7 animate-spin text-teal-400 mx-auto" /></td></tr> : historyFiltered.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm font-bold text-gray-400">No transactions match your filters.</td></tr> : historyFiltered.map((tx) => (<tr key={tx.id} className="border-b border-white/5"><td className="px-4 py-3 text-sm font-black text-white">{toDate(tx.transactionDate || tx.date || tx.createdAt)?.toLocaleDateString('en-GB')}</td><td className="px-4 py-3 text-sm font-bold text-gray-300">{tx.departmentName || tx.departmentCode}</td><td className="px-4 py-3"><div className="text-sm font-black text-white">{tx.patientName || '-'}</div><div className="text-[10px] font-bold text-gray-400">{tx.patientId || '-'}</div></td><td className="px-4 py-3 text-sm font-bold text-gray-300">{tx.categoryName || tx.category}</td><td className="px-4 py-3"><span className={cn('px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider', tx.status === 'approved' ? 'bg-teal-500/10 text-teal-300' : tx.status === 'rejected' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300')}>{tx.status || 'pending'}</span></td><td className="px-4 py-3 text-right"><div className={cn('text-sm font-black flex items-center justify-end gap-2', tx.type === 'income' ? 'text-teal-400' : 'text-red-400')}>{tx.type === 'income' ? <Plus size={12} /> : <Minus size={12} />}Rs {Number(tx.amount || 0).toLocaleString()}</div></td></tr>))}</tbody>
+              <tbody>{historyLoading ? <tr><td colSpan={6} className="px-4 py-8 text-center"><Loader2 className="w-7 h-7 animate-spin text-teal-400 mx-auto" /></td></tr> : historyFiltered.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm font-bold text-gray-400">No transactions match your filters.</td></tr> : historyFiltered.map((tx) => (<tr key={tx.id} className="border-b border-white/5"><td className="px-4 py-3 text-sm font-black text-white">{toDate(tx.transactionDate || tx.date || tx.createdAt)?.toLocaleDateString('en-GB')}</td><td className="px-4 py-3 text-sm font-bold text-gray-300">{tx.departmentName || tx.departmentCode}</td><td className="px-4 py-3"><div className="text-sm font-black text-white">{tx.patientName || tx.staffName || '-'}</div><div className="text-[10px] font-bold text-gray-400">{tx.patientId || tx.staffId || '-'}</div></td><td className="px-4 py-3 text-sm font-bold text-gray-300">{tx.categoryName || tx.category}</td><td className="px-4 py-3"><span className={cn('px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider', tx.status === 'approved' ? 'bg-teal-500/10 text-teal-300' : tx.status === 'rejected' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300')}>{tx.status || 'pending'}</span></td><td className="px-4 py-3 text-right"><div className={cn('text-sm font-black flex items-center justify-end gap-2', tx.type === 'income' ? 'text-teal-400' : 'text-red-400')}>{tx.type === 'income' ? <Plus size={12} /> : <Minus size={12} />}Rs {Number(tx.amount || 0).toLocaleString()}</div></td></tr>))}</tbody>
             </table>
           </div>
         </div>
       </div>
+
+      {forwardModalTx && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-[#0d0f14] border border-white/10 rounded-2xl p-5">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <p className="text-lg font-black text-white">Add Fee Request Proof</p>
+                <p className="text-sm font-bold text-gray-400 mt-1">
+                  {forwardModalTx.patientName || forwardModalTx.patientId || 'Patient'} - Rs {Number(forwardModalTx.amount || 0).toLocaleString()}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={forwardProofUploading}
+                onClick={() => setForwardModalTx(null)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 disabled:opacity-60"
+              >
+                X
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Proof Upload (Image/PDF)</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setForwardProofFile(e.target.files?.[0] || null)}
+                  className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"
+                  disabled={forwardProofUploading}
+                />
+                <p className="mt-2 text-[11px] text-gray-500 font-bold">
+                  {forwardProofFile ? `Selected: ${forwardProofFile.name}` : 'No file selected yet.'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                  Reason (required if no proof uploaded)
+                </label>
+                <textarea
+                  value={forwardProofReason}
+                  onChange={(e) => setForwardProofReason(e.target.value)}
+                  placeholder="Why proof is missing? (e.g., app error / receipt not available)"
+                  className="mt-2 w-full bg-[#1a1f2a] rounded-xl px-4 py-3 text-sm font-semibold text-white border border-white/10 min-h-[90px] resize-none placeholder:text-gray-500"
+                  disabled={forwardProofUploading}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setForwardModalTx(null)}
+                  disabled={forwardProofUploading}
+                  className="flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 text-gray-200 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void confirmForwardToSuperadmin()}
+                  disabled={forwardProofUploading}
+                  className="flex-1 py-3 rounded-xl font-black uppercase tracking-[0.2em] bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-60"
+                >
+                  {forwardProofUploading ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Add'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
