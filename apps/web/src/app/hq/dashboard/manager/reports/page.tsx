@@ -1,0 +1,141 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useHqSession } from '@/hooks/hq/useHqSession';
+import { Loader2, Printer, Award } from 'lucide-react';
+import type { HqStaff } from '@/types/hq';
+
+export default function ManagerReportsPage() {
+  const router = useRouter();
+  const { session, loading: sessionLoading } = useHqSession();
+  const [staff, setStaff] = useState<HqStaff[]>([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [dressLogs, setDressLogs] = useState<any[]>([]);
+  const [dutyLogs, setDutyLogs] = useState<any[]>([]);
+  const [growthPoints, setGrowthPoints] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!session || !['manager', 'superadmin'].includes(session.role)) router.push('/hq/login');
+  }, [session, sessionLoading, router]);
+
+  useEffect(() => {
+    if (!session) return;
+    Promise.all([
+      getDocs(query(collection(db, 'hq_staff'), where('isActive', '==', true))),
+      getDocs(collection(db, 'hq_attendance')),
+      getDocs(collection(db, 'rehab_dress_logs')),
+      getDocs(collection(db, 'rehab_duty_logs')),
+      getDocs(collection(db, 'rehab_growth_points')),
+    ]).then(([staffSnap, attSnap, dressSnap, dutySnap, gpSnap]) => {
+      setStaff(staffSnap.docs.map(d => ({ id: d.id, ...d.data() } as HqStaff)));
+      setAttendance(attSnap.docs.map(d => d.data()));
+      setDressLogs(dressSnap.docs.map(d => d.data()));
+      setDutyLogs(dutySnap.docs.map(d => d.data()));
+      setGrowthPoints(gpSnap.docs.map(d => d.data()));
+      setLoading(false);
+    });
+  }, [session]);
+
+  const getStaffStats = (staffId: string) => {
+    const monthAtt = attendance.filter(a => a.staffId === staffId && (a.date || '').startsWith(selectedMonth));
+    const present = monthAtt.filter(a => a.status === 'present').length;
+    const total = monthAtt.length || 1;
+    const attPct = Math.round((present / total) * 100);
+
+    const monthDress = dressLogs.filter(d => d.staffId === staffId && (d.date || '').startsWith(selectedMonth));
+    const dressCompliant = monthDress.filter(d => d.items?.every((i: any) => i.status === 'yes' || i.status === 'na')).length;
+    const dressPct = monthDress.length > 0 ? Math.round((dressCompliant / monthDress.length) * 100) : 0;
+
+    const monthDuty = dutyLogs.filter(d => d.staffId === staffId && (d.date || '').startsWith(selectedMonth));
+    const dutyDone = monthDuty.filter(d => d.duties?.every((i: any) => i.status === 'done' || i.status === 'na')).length;
+    const dutyPct = monthDuty.length > 0 ? Math.round((dutyDone / monthDuty.length) * 100) : 0;
+
+    const gp = growthPoints
+      .filter(g => g.staffId === staffId && (g.month || '').startsWith(selectedMonth))
+      .reduce((s, g) => s + (g.points || 0), 0);
+
+    return { attPct, dressPct, dutyPct, gp, present, total };
+  };
+
+  const staffWithStats = staff.map(m => ({ ...m, stats: getStaffStats(m.id) }))
+    .sort((a, b) => (b.stats.gp + b.stats.attPct) - (a.stats.gp + a.stats.attPct));
+
+  if (sessionLoading || loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-950"><Loader2 className="animate-spin text-amber-500" size={32} /></div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4 md:p-8 pb-24" id="reports-print">
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Staff Reports</h1>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Monthly performance overview</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 [color-scheme:dark]" />
+            <button onClick={() => window.print()} className="bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white font-black text-xs uppercase tracking-widest px-4 py-3 rounded-2xl transition-all active:scale-95 flex items-center gap-2">
+              <Printer size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/8 rounded-3xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center gap-2">
+            <Award className="text-amber-500" size={16} />
+            <h3 className="text-white font-black text-xs uppercase tracking-widest">Performance Leaderboard</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-white/5 border-b border-white/5">
+                  {['#', 'Staff', 'Attendance', 'Dress Code', 'Duty', 'Growth Pts'].map(h => (
+                    <th key={h} className="px-4 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {staffWithStats.map((member, index) => (
+                  <tr key={member.id} style={{ animationDelay: `${index * 40}ms` }} className="animate-in fade-in duration-300 hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-4">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-gray-400 text-black' : index === 2 ? 'bg-amber-800 text-white' : 'bg-white/5 text-gray-500'}`}>
+                        {index + 1}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="text-white font-bold text-sm">{member.name}</p>
+                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{member.designation}</p>
+                    </td>
+                    {[
+                      { value: member.stats.attPct, threshold: 80 },
+                      { value: member.stats.dressPct, threshold: 80 },
+                      { value: member.stats.dutyPct, threshold: 80 },
+                    ].map((stat, i) => (
+                      <td key={i} className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${stat.value >= stat.threshold ? 'bg-emerald-500' : stat.value >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${stat.value}%` }} />
+                          </div>
+                          <span className={`text-xs font-black ${stat.value >= stat.threshold ? 'text-emerald-400' : stat.value >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>{stat.value}%</span>
+                        </div>
+                      </td>
+                    ))}
+                    <td className="px-4 py-4">
+                      <span className="text-amber-400 font-black text-sm">{member.stats.gp}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

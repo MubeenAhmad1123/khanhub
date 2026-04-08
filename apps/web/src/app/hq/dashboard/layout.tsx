@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   LayoutDashboard, Users, Shield, Eye, FileText,
   UserCog, CalendarCheck, CheckCircle, CreditCard, History,
-  LogOut, Menu, X, ArrowLeft, Sun, Moon, Calculator, Tag
+  LogOut, Menu, X, ArrowLeft, Sun, Moon, Calculator, Tag, DollarSign, TrendingUp, BarChart2
 } from 'lucide-react';
 import type { HqRole, HqSession } from '@/types/hq';
 
@@ -26,12 +26,15 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Fee Requests', href: '/hq/dashboard/superadmin/fee-requests', icon: <CreditCard size={16} />, roles: ['superadmin'] },
   { label: 'Reconciliation', href: '/hq/dashboard/superadmin/reconciliation', icon: <Calculator size={16} />, roles: ['superadmin'] },
   { label: 'Categories', href: '/hq/dashboard/superadmin/categories', icon: <Tag size={16} />, roles: ['superadmin'] },
+  { label: 'Finance Tower', href: '/hq/dashboard/superadmin/finance', icon: <TrendingUp size={16} />, roles: ['superadmin'] },
   { label: 'All Passwords', href: '/hq/dashboard/superadmin/passwords', icon: <Eye size={16} />, roles: ['superadmin'] },
   { label: 'Audit Log', href: '/hq/dashboard/superadmin/audit', icon: <FileText size={16} />, roles: ['superadmin'] },
   { label: 'Overview', href: '/hq/dashboard/manager', icon: <LayoutDashboard size={16} />, roles: ['manager'] },
   { label: 'Staff Roster', href: '/hq/dashboard/manager/staff', icon: <UserCog size={16} />, roles: ['manager'] },
   { label: 'Mark Attendance', href: '/hq/dashboard/manager/staff/attendance', icon: <CalendarCheck size={16} />, roles: ['manager'] },
   { label: 'Approvals', href: '/hq/dashboard/manager/approvals', icon: <CheckCircle size={16} />, roles: ['manager'] },
+  { label: 'Salary Slips', href: '/hq/dashboard/manager/salary', icon: <DollarSign size={16} />, roles: ['manager'] },
+  { label: 'Reports', href: '/hq/dashboard/manager/reports', icon: <BarChart2 size={16} />, roles: ['manager'] },
   { label: 'Create Users', href: '/hq/dashboard/manager/users', icon: <Users size={16} />, roles: ['manager'] },
   { label: 'Cashier Station', href: '/hq/dashboard/cashier', icon: <CreditCard size={16} />, roles: ['cashier'] },
   { label: 'Daily Close', href: '/hq/dashboard/cashier/reconciliation', icon: <Calculator size={16} />, roles: ['cashier'] },
