@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+import { sendHqNotification } from '@/lib/hqNotifications';
 
 type TxnType = 'income' | 'expense';
 type DateMode = 'today' | 'all' | 'range';
@@ -45,6 +46,7 @@ export default function CashierStationPage() {
   const [forwardProofFile, setForwardProofFile] = useState<File | null>(null);
   const [forwardProofReason, setForwardProofReason] = useState('');
   const [forwardProofUploading, setForwardProofUploading] = useState(false);
+  const [superadminRecipient, setSuperadminRecipient] = useState('SUPERADMIN');
 
   const [departmentCode, setDepartmentCode] = useState('rehab');
   const [searchQuery, setSearchQuery] = useState('');
@@ -163,6 +165,15 @@ export default function CashierStationPage() {
         cashierForwardedByName: session?.name || session?.displayName || 'HQ Cashier',
       });
 
+      await sendHqNotification({
+        recipientId: superadminRecipient,
+        recipientRole: 'superadmin',
+        type: 'tx_forwarded',
+        title: 'New Transaction Pending Approval',
+        body: `Cashier ${session?.name || 'HQ Cashier'} forwarded a Rs ${Number(forwardModalTx?.amount || 0).toLocaleString()} ${forwardModalTx?.type || 'income'} transaction for approval.`,
+        relatedId: txId,
+      });
+
       setMessage({ type: 'success', text: 'Request sent to superadmin approvals.' });
       setForwardModalTx(null);
       setForwardProofFile(null);
@@ -197,6 +208,22 @@ export default function CashierStationPage() {
     };
     void run();
   }, [session, departmentCode, isStaffMode, activeDepartment.entityCollection]);
+
+  useEffect(() => {
+    if (!session) return;
+    const loadSuperadminRecipient = async () => {
+      try {
+        const usersSnap = await getDocs(
+          query(collection(db, 'hq_users'), where('role', '==', 'superadmin'))
+        );
+        const first = usersSnap.docs[0]?.data() as any;
+        if (first?.customId) setSuperadminRecipient(first.customId);
+      } catch {
+        setSuperadminRecipient('SUPERADMIN');
+      }
+    };
+    void loadSuperadminRecipient();
+  }, [session]);
 
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();

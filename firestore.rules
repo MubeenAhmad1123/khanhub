@@ -717,6 +717,17 @@ service cloud.firestore {
       allow create: if request.auth != null; 
     } 
 
+    // hq_notifications — in-app notifications for HQ users
+    match /hq_notifications/{docId} {
+      allow read: if isHqAuth()
+        && resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId;
+      allow create: if isHqAuth();
+      allow update: if isHqAuth()
+        && resource.data.recipientId == get(/databases/$(database)/documents/hq_users/$(request.auth.uid)).data.customId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false;
+    }
+
     // hq_ledger_entries — immutable canonical ledger
     // Written by server action (Admin SDK) on every superadmin approval.
     // HQ tier1 can read. Nobody deletes or updates from client.

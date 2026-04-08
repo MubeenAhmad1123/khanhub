@@ -6,6 +6,7 @@ import { addDoc, collection, doc, getDoc, getDocs, limit, onSnapshot, query, ser
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
+import { sendHqNotification } from '@/lib/hqNotifications';
 import { 
   Loader2, CheckCircle, XCircle, Clock, History, 
   ChevronDown, ChevronUp, DollarSign, ArrowUpRight, 
@@ -111,6 +112,19 @@ export default function HqApprovalsPage() {
         processedAt: Timestamp.now(),
         processedBy: session?.customId
       });
+
+      if (tx?.cashierId) {
+        await sendHqNotification({
+          recipientId: tx.cashierId,
+          recipientRole: 'cashier',
+          type: status === 'approved' ? 'tx_approved' : 'tx_rejected',
+          title: status === 'approved' ? 'Transaction Approved' : 'Transaction Rejected',
+          body: status === 'approved'
+            ? `Your transaction of Rs ${Number(tx.amount || 0).toLocaleString()} has been approved.`
+            : `Transaction of Rs ${Number(tx.amount || 0).toLocaleString()} was rejected. Reason: ${reason || 'N/A'}`,
+          relatedId: id,
+        });
+      }
 
       // Sync to rehab profiles only when APPROVED
       if (status === 'approved' && activeTab === 'rehab' && tx?.category) {

@@ -6,9 +6,10 @@ import Link from 'next/link';
 import {
   LayoutDashboard, Users, Shield, Eye, FileText,
   UserCog, CalendarCheck, CheckCircle, CreditCard, History,
-  LogOut, Menu, X, ArrowLeft, Sun, Moon, Calculator, Tag, DollarSign, TrendingUp, BarChart2
+  LogOut, Menu, X, ArrowLeft, Sun, Moon, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User
 } from 'lucide-react';
 import type { HqRole, HqSession } from '@/types/hq';
+import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 43200000;
@@ -35,10 +36,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Approvals', href: '/hq/dashboard/manager/approvals', icon: <CheckCircle size={16} />, roles: ['manager'] },
   { label: 'Salary Slips', href: '/hq/dashboard/manager/salary', icon: <DollarSign size={16} />, roles: ['manager'] },
   { label: 'Reports', href: '/hq/dashboard/manager/reports', icon: <BarChart2 size={16} />, roles: ['manager'] },
+  { label: 'Profile', href: '/hq/dashboard/manager/profile', icon: <User size={16} />, roles: ['manager'] },
   { label: 'Create Users', href: '/hq/dashboard/manager/users', icon: <Users size={16} />, roles: ['manager'] },
   { label: 'Cashier Station', href: '/hq/dashboard/cashier', icon: <CreditCard size={16} />, roles: ['cashier'] },
   { label: 'Daily Close', href: '/hq/dashboard/cashier/reconciliation', icon: <Calculator size={16} />, roles: ['cashier'] },
   { label: 'Transaction History', href: '/hq/dashboard/cashier/history', icon: <History size={16} />, roles: ['cashier'] },
+  { label: 'Profile', href: '/hq/dashboard/cashier/profile', icon: <User size={16} />, roles: ['cashier'] },
 ];
 
 const ROLE_COLORS: Record<HqRole, string> = {
@@ -243,9 +246,12 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             </div>
             <span className={`font-black text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>KhanHub HQ</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${ROLE_COLORS[role]}`}>
-            {ROLE_LABELS[role]}
-          </span>
+          <div className="flex items-center gap-2">
+            {user ? <HqNotificationBell session={user} /> : null}
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${ROLE_COLORS[role]}`}>
+              {ROLE_LABELS[role]}
+            </span>
+          </div>
         </header>
 
         <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${
@@ -255,6 +261,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             KhanHub HQ Portal
           </div>
           <div className="flex items-center gap-3">
+            {user ? <HqNotificationBell session={user} /> : null}
             <button onClick={toggleDark} className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-400 hover:bg-gray-100'}`} title="Toggle dark mode">
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
