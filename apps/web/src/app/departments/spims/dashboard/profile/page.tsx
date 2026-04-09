@@ -1,7 +1,7 @@
 // src/app/departments/rehab/dashboard/profile/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { 
@@ -15,9 +15,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, toDate } from '@/lib/utils';
+import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -25,6 +27,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [staffDoc, setStaffDoc] = useState<any>(null);
   const [patientDoc, setPatientDoc] = useState<any>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   
   // Tabs for Admin/Staff
   const [activeTab, setActiveTab] = useState<'attendance'|'duties'|'dress'|'contributions'>('attendance');
@@ -126,6 +129,41 @@ export default function ProfilePage() {
     loadProfile();
   }, [router, fetchMetrics]);
 
+  const displayedPhone =
+    session?.role === 'student'
+      ? (patientDoc?.contact || profile?.phone || null)
+      : (profile?.phone || null);
+
+  const displayedPhotoUrl =
+    session?.role === 'student'
+      ? (patientDoc?.photoUrl || profile?.photoUrl || null)
+      : (profile?.photoUrl || null);
+
+  const handleUploadPhoto = async (file: File) => {
+    if (!session?.uid) return;
+    try {
+      setUploadingPhoto(true);
+      const url = await uploadToCloudinary(file, 'khanhub/spims/profile');
+
+      // Update user doc for all roles
+      await updateDoc(doc(db, 'spims_users', session.uid), { photoUrl: url });
+
+      // Also update linked student doc if role=student
+      if (session.role === 'student' && patientDoc?.id) {
+        await updateDoc(doc(db, 'spims_students', patientDoc.id), { photoUrl: url });
+        setPatientDoc((p: any) => (p ? { ...p, photoUrl: url } : p));
+      }
+
+      setProfile((p: any) => (p ? { ...p, photoUrl: url } : p));
+      toast.success('Photo updated');
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handleAddContribution = async () => {
     if (!newContrib.title || !newContrib.content) return toast.error("Fill all fields");
     if (!staffDoc) return;
@@ -195,20 +233,45 @@ export default function ProfilePage() {
         {/* Basic Info Card */}
         <div className="bg-white rounded-none md:rounded-[2.5rem] p-6 md:p-8 shadow-sm border-y border-gray-100 w-full flex flex-col items-center">
           <div className="relative">
-            {profile?.photoUrl ? (
-              <img src={profile.photoUrl} className="w-20 h-20 rounded-2xl mx-auto object-cover shadow-xl ring-4 ring-gray-50" />
+            {displayedPhotoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={displayedPhotoUrl}
+                alt="Profile photo"
+                className="w-20 h-20 rounded-2xl mx-auto object-cover shadow-xl ring-4 ring-gray-50"
+              />
             ) : (
               <div className="w-20 h-20 rounded-2xl mx-auto bg-teal-50 text-teal-600 flex items-center justify-center text-3xl font-black shadow-inner">
                 {profile?.displayName?.[0]}
               </div>
             )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleUploadPhoto(f);
+                if (e.target) e.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              disabled={uploadingPhoto}
+              onClick={() => fileRef.current?.click()}
+              className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-white border border-gray-100 shadow-lg flex items-center justify-center hover:bg-gray-50 disabled:opacity-50"
+              title="Upload photo"
+            >
+              {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin text-teal-600" /> : <Camera size={16} className="text-teal-600" />}
+            </button>
           </div>
           <h2 className="text-center text-xl font-black mt-3 text-gray-900">{profile?.displayName}</h2>
           <span className="mx-auto mt-2 px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-teal-500/10 text-teal-500">
             {session?.role}
           </span>
           <p className="text-sm font-medium text-gray-500 flex items-center justify-center gap-2 mt-3">
-            <Phone size={14} className="text-teal-500" /> {profile?.phone || 'No phone provided'}
+            <Phone size={14} className="text-teal-500" /> {displayedPhone || 'No phone provided'}
           </p>
         </div>
 
