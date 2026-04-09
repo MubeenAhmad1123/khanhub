@@ -30,6 +30,7 @@ export default function PatientDetailPage() {
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const isAdmin = session?.role === 'admin';
   
   // Data
   const [patient, setPatient] = useState<any>(null);
@@ -252,6 +253,10 @@ export default function PatientDetailPage() {
 
   const handleInitializeFee = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isAdmin) {
+      toast.error('Admins are not allowed to create fee/payment requests.');
+      return;
+    }
     try {
       const amount = Number(initialPayment) || 0;
 
@@ -299,6 +304,10 @@ export default function PatientDetailPage() {
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feeRecord) return;
+    if (isAdmin) {
+      toast.error('Admins are not allowed to create fee/payment requests.');
+      return;
+    }
     try {
       const amount = Number(payAmt) || 0;
       if (amount <= 0) {
@@ -372,6 +381,10 @@ export default function PatientDetailPage() {
   const handleCanteenEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canteenModal) return;
+    if (isAdmin) {
+      toast.error('Admins are not allowed to record canteen deposits/expenses.');
+      return;
+    }
     try {
       const entry = {
         id: Date.now().toString(),
@@ -995,7 +1008,7 @@ export default function PatientDetailPage() {
                     <ChevronRight size={20} className="text-gray-400" />
                   </button>
                 </div>
-                {feeRecord && (
+                {feeRecord && !isAdmin && (
                   <button 
                     onClick={() => {
                       setPayAmt('');
@@ -1019,6 +1032,7 @@ export default function PatientDetailPage() {
                   <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
                     You can initialize a fee record manually with the patient's base package amount.
                   </p>
+                  {!isAdmin && (
                   <button 
                     onClick={() => {
                       setPackageAmt(patient.packageAmount?.toString() || '');
@@ -1030,6 +1044,7 @@ export default function PatientDetailPage() {
                   >
                     <Plus size={16} /> Initialize Fee Record
                   </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-8 animate-in fade-in duration-500">
@@ -1125,16 +1140,18 @@ export default function PatientDetailPage() {
                     <ChevronRight size={20} className="text-gray-400" />
                   </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto">
-                  <button onClick={() => setCanteenModal('deposit')}
-                    className="flex items-center justify-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-green-600 transition shadow-sm active:scale-95">
-                    <Plus size={14} /> Deposit
-                  </button>
-                  <button onClick={() => setCanteenModal('expense')}
-                    className="flex items-center justify-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition shadow-sm active:scale-95">
-                    <Minus size={14} /> Expense
-                  </button>
-                </div>
+                {!isAdmin && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto">
+                    <button onClick={() => setCanteenModal('deposit')}
+                      className="flex items-center justify-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-green-600 transition shadow-sm active:scale-95">
+                      <Plus size={14} /> Deposit
+                    </button>
+                    <button onClick={() => setCanteenModal('expense')}
+                      className="flex items-center justify-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition shadow-sm active:scale-95">
+                      <Minus size={14} /> Expense
+                    </button>
+                  </div>
+                )}
               </div>
 
               {!canteenRecord ? (
