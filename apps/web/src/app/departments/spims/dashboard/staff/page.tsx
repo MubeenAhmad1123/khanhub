@@ -125,7 +125,7 @@ export default function StaffSelfPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!user || user.role !== 'staff') { router.push('/departments/rehab/login'); return; }
+    if (!user || user.role !== 'staff') { router.push('/departments/spims/login'); return; }
     fetchData();
   }, [sessionLoading, user, fetchData, router]);
 

@@ -1,43 +1,44 @@
+// apps/web/src/app/departments/spims/page.tsx
 'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { RehabUser } from '@/types/rehab';
 
-export default function RehabRootPage() {
+export default function SpimsRootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const raw = localStorage.getItem('rehab_session');
+    const raw = localStorage.getItem('spims_session');
     if (!raw) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/spims/login');
       return;
     }
 
     try {
-      const user = JSON.parse(raw) as RehabUser;
-      if (!user.isActive) {
-        localStorage.removeItem('rehab_session');
-        router.push('/departments/rehab/login');
-        return;
-      }
-
-      // Redirect based on role to the last known dashboard
+      const user = JSON.parse(raw);
       const role = user.role;
-      if (role === 'family') {
-        router.push(`/departments/rehab/dashboard/family/${user.patientId}`);
+      const sid = user.studentId || user.patientId;
+
+      if (role === 'student') {
+        if (!sid) {
+          router.push('/departments/spims/login');
+          return;
+        }
+        router.push(`/departments/spims/dashboard/student/${sid}`);
       } else if (role === 'staff') {
-        router.push('/departments/rehab/dashboard/staff');
+        router.push('/departments/spims/dashboard/staff');
       } else if (role === 'cashier') {
-        router.push('/departments/rehab/dashboard/cashier');
+        router.push('/departments/spims/dashboard/cashier');
       } else if (role === 'admin') {
-        router.push('/departments/rehab/dashboard/admin');
+        router.push('/departments/spims/dashboard/admin');
       } else if (role === 'superadmin') {
-        router.push('/departments/rehab/dashboard/superadmin');
+        router.push('/departments/spims/dashboard/superadmin');
+      } else {
+        router.push('/departments/spims/login');
       }
-    } catch (err) {
-      localStorage.removeItem('rehab_session');
-      router.push('/departments/rehab/login');
+    } catch {
+      localStorage.removeItem('spims_session');
+      router.push('/departments/spims/login');
     }
   }, [router]);
 

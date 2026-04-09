@@ -30,14 +30,14 @@ export default function FinanceLogPage() {
   const [stats, setStats] = useState({ income: 0, expense: 0, net: 0 });
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('spims_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/spims/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/spims/login');
       return;
     }
     setSession(parsed);

@@ -8,69 +8,79 @@ import {
   Banknote, FileBarChart, CreditCard, CalendarDays,
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-type RehabRole = 'admin' | 'staff' | 'family';
+type SpimsDashRole = 'admin' | 'staff' | 'student' | 'cashier' | 'superadmin';
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
-  roles: RehabRole[];
+  roles: SpimsDashRole[];
 }
 
 const NAV_ITEMS: NavItem[] = [
-  // Admin nav — patients only (admin cannot manage staff)
-  { label: 'Overview',      href: '/departments/rehab/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin'] },
-  { label: 'Patients',      href: '/departments/rehab/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin'] },
-  { label: 'Credentials',   href: '/departments/rehab/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin'] },
-
-  // Self-service nav (all roles)
-  { label: 'My Attendance', href: '/departments/rehab/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
-  { label: 'My Patient',    href: '/departments/rehab/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
-  { label: 'My Profile',    href: '/departments/rehab/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family'] },
+  { label: 'Overview', href: '/departments/spims/dashboard/admin', icon: <LayoutDashboard size={16} />, roles: ['admin'] },
+  { label: 'Students', href: '/departments/spims/dashboard/admin/students', icon: <Heart size={16} />, roles: ['admin'] },
+  { label: 'Credentials', href: '/departments/spims/dashboard/admin/passwords', icon: <Shield size={16} />, roles: ['admin'] },
+  { label: 'My Attendance', href: '/departments/spims/dashboard/staff', icon: <CalendarDays size={16} />, roles: ['staff'] },
+  { label: 'Student portal', href: '/departments/spims/dashboard/student', icon: <User size={16} />, roles: ['student'] },
+  {
+    label: 'My Profile',
+    href: '/departments/spims/dashboard/profile',
+    icon: <UserCog size={16} />,
+    roles: ['admin', 'staff', 'student', 'cashier', 'superadmin'],
+  },
 ];
 
-const ROLE_COLORS: Record<RehabRole, string> = {
-  admin:      'bg-blue-100 text-blue-700',
-  staff:      'bg-teal-100 text-teal-700',
-  family:     'bg-green-100 text-green-700',
+const ROLE_COLORS: Record<SpimsDashRole, string> = {
+  admin: 'bg-blue-100 text-blue-700',
+  staff: 'bg-teal-100 text-teal-700',
+  student: 'bg-green-100 text-green-700',
+  cashier: 'bg-amber-100 text-amber-800',
+  superadmin: 'bg-violet-100 text-violet-800',
 };
 
-const ROLE_LABELS: Record<RehabRole, string> = {
-  admin:      'Admin',
-  staff:      'Staff',
-  family:     'Family',
+const ROLE_LABELS: Record<SpimsDashRole, string> = {
+  admin: 'Admin',
+  staff: 'Staff',
+  student: 'Student',
+  cashier: 'Cashier',
+  superadmin: 'Superadmin',
 };
 
-export default function RehabDashboardLayout({ children }: { children: React.ReactNode }) {
+export default function SpimsDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
-  const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
+  const [user, setUser] = useState<{
+    role: SpimsDashRole;
+    displayName: string;
+    customId: string;
+    uid: string;
+    studentId?: string;
+    patientId?: string;
+  } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    const session = localStorage.getItem('rehab_session');
-    if (!session) { router.push('/departments/rehab/login'); return; }
+    const session = localStorage.getItem('spims_session');
+    if (!session) {
+      router.push('/departments/spims/login');
+      return;
+    }
 
     const performAuthCheck = async () => {
       try {
         const parsed = JSON.parse(session);
-        if (!parsed.uid || !parsed.role) { throw new Error('Invalid session'); }
-
-        // NEW: Redirect HQ roles to HQ login
-        if (parsed.role === 'superadmin' || parsed.role === 'cashier') {
-          localStorage.removeItem('rehab_session');
-          router.push('/hq/login?msg=Please+use+HQ+portal');
-          return;
+        if (!parsed.uid || !parsed.role) {
+          throw new Error('Invalid session');
         }
 
-        // 1. Session Timeout Check (12 Hours)
-        const loginTime = localStorage.getItem('rehab_login_time');
+        const loginTime = localStorage.getItem('spims_login_time');
         if (loginTime) {
           const hoursElapsed = (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60);
           if (hoursElapsed > 12) {
@@ -79,8 +89,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           }
         }
 
-        // 2. Background Verification (Role & Active Status)
-        const userDoc = await getDoc(doc(db, 'rehab_users', parsed.uid));
+        const userDoc = await getDoc(doc(db, 'spims_users', parsed.uid));
         if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
           handleSignOut();
           return;
@@ -97,19 +106,19 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
     performAuthCheck();
     
-    const saved = localStorage.getItem('rehab_dark_mode');
+    const saved = localStorage.getItem('spims_dark_mode');
     if (saved === 'true') setDarkMode(true);
   }, [router]);
 
   const toggleDark = () => {
     const next = !darkMode;
     setDarkMode(next);
-    localStorage.setItem('rehab_dark_mode', String(next));
+    localStorage.setItem('spims_dark_mode', String(next));
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem('rehab_session');
-    router.push('/departments/rehab/login');
+    localStorage.removeItem('spims_session');
+    router.push('/departments/spims/login');
   };
 
   if (isChecking) {
@@ -123,8 +132,16 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     );
   }
 
-  const role = user?.role as RehabRole;
-  const navItems = NAV_ITEMS.filter(item => user && item.roles.includes(role));
+  const role = user?.role as SpimsDashRole;
+  const navItems = NAV_ITEMS.filter((item) => user && item.roles.includes(role)).map((item) => {
+    if (item.label === 'Student portal' && (user?.studentId || user?.patientId)) {
+      return {
+        ...item,
+        href: `/departments/spims/dashboard/student/${user.studentId || user.patientId}`,
+      };
+    }
+    return item;
+  });
 
   const SidebarContent = () => (
     <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
@@ -139,7 +156,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
             <Shield size={18} />
           </div>
           <div>
-            <p className="font-black text-gray-900 text-sm leading-none">Rehab Portal</p>
+            <p className="font-black text-gray-900 text-sm leading-none">SPIMS Portal</p>
             <p className="text-gray-400 text-[10px] font-semibold mt-0.5">KhanHub</p>
           </div>
         </div>
@@ -255,7 +272,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
             <div className="w-7 h-7 bg-teal-500 rounded-lg flex items-center justify-center text-white">
               <Shield size={14} />
             </div>
-            <span className="font-black text-gray-900 text-sm">Rehab Portal</span>
+            <span className="font-black text-gray-900 text-sm">SPIMS Portal</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>
             {role ? ROLE_LABELS[role] : ''}
@@ -267,7 +284,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
         }`}>
           <div className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            KhanHub Rehab Portal
+            KhanHub SPIMS Portal
           </div>
           <div className="flex items-center gap-3">
             <button onClick={toggleDark} className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-400 hover:bg-gray-100'}`} title="Toggle dark mode">

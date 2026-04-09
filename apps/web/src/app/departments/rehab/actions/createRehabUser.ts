@@ -160,6 +160,107 @@ export async function createRehabUserServer(
   }
 }
 
+const SPIMS_DOMAIN = '@spims.khanhub';
+
+/** Creates Firebase Auth + `spims_users` doc for a student portal login. */
+export async function createSpimsStudentUserServer(
+  customId: string,
+  password: string,
+  displayName: string,
+  studentId: string
+): Promise<{ success: boolean; uid?: string; error?: string }> {
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
+
+  try {
+    const app = getAdminApp();
+    const adminAuth = getAuth(app);
+    const adminDb = getFirestore(app);
+
+    try {
+      const setupSnap = await adminDb.collection('spims_meta').doc('setup').get();
+      const setupData = setupSnap.data() as any;
+      if (setupSnap.exists && setupData?.completed === true) {
+        const reservedSuper = String(setupData?.superAdminCustomId || '').toUpperCase();
+        const reservedCashier = String(setupData?.cashierCustomId || '').toUpperCase();
+        const incoming = String(customId || '').toUpperCase();
+        if (incoming && (incoming === reservedSuper || incoming === reservedCashier)) {
+          return {
+            success: false,
+            error: 'This Login ID is reserved. Please choose a different Student Login ID.',
+          };
+        }
+      }
+    } catch {
+      // ignore guardrail failures
+    }
+
+    const email = `${customId.toLowerCase()}${SPIMS_DOMAIN}`;
+
+    try {
+      const existingUser = await adminAuth.getUserByEmail(email);
+      const existingProfileSnap = await adminDb.collection('spims_users').doc(existingUser.uid).get();
+      const nextStudentId = studentId || null;
+
+      if (!existingProfileSnap.exists) {
+        await adminDb.collection('spims_users').doc(existingUser.uid).set({
+          customId,
+          role: 'student',
+          displayName,
+          password,
+          studentId: nextStudentId,
+          isActive: true,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        return { success: true, uid: existingUser.uid };
+      }
+
+      const existingProfile = existingProfileSnap.data() as any;
+      if (existingProfile?.role && existingProfile.role !== 'student') {
+        return {
+          success: false,
+          error: `Login ID already exists for a different account type.`,
+        };
+      }
+      if (existingProfile?.studentId && existingProfile.studentId !== nextStudentId) {
+        return {
+          success: false,
+          error: `This Student Login ID is already assigned to another student.`,
+        };
+      }
+
+      await adminDb.collection('spims_users').doc(existingUser.uid).set(
+        {
+          customId,
+          role: 'student',
+          displayName,
+          password,
+          studentId: nextStudentId,
+          isActive: true,
+        },
+        { merge: true }
+      );
+      return { success: true, uid: existingUser.uid };
+    } catch {
+      // User doesn't exist — continue
+    }
+
+    const userRecord = await adminAuth.createUser({ email, password, displayName });
+    await getFirestore(app).collection('spims_users').doc(userRecord.uid).set({
+      customId,
+      role: 'student',
+      displayName,
+      password,
+      studentId,
+      isActive: true,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    return { success: true, uid: userRecord.uid };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 export async function deactivateRehabUser(
   uid: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -194,6 +295,24 @@ export async function resetRehabPassword(
     const app = getAdminApp();
     await getAuth(app).updateUser(uid, { password: newPassword });
     await getFirestore(app).collection('rehab_users').doc(uid).update({
+      password: newPassword,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function resetSpimsPassword(
+  uid: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
+    return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
+  try {
+    const app = getAdminApp();
+    await getAuth(app).updateUser(uid, { password: newPassword });
+    await getFirestore(app).collection('spims_users').doc(uid).update({
       password: newPassword,
     });
     return { success: true };

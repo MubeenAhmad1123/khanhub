@@ -1,7 +1,7 @@
-// src/components/sukoon/patient-profile/TherapyTab.tsx
+// src/components/job-center/patient-profile/TherapyTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { TherapySession } from '@/types/sukoon';
-import { getTherapySessions, addTherapySession } from '@/lib/sukoon/patients';
+import { TherapySession } from '@/types/job-center';
+import { getTherapySessions, addTherapySession } from '@/lib/job-center/seekers';
 import { Loader2, Plus, Star, Calendar, User, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 

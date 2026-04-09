@@ -1,7 +1,7 @@
 // src/components/job-center/patient-profile/ProgressTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { WeeklyProgress } from '@/types/job-center';
-import { getWeeklyProgress, addWeeklyProgress } from '@/lib/job-center/patients';
+import { getWeeklyProgress, addWeeklyProgress } from '@/lib/job-center/seekers';
 import { Loader2, Plus, TrendingUp, LineChart as LineChartIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 

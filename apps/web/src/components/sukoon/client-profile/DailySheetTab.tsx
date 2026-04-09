@@ -1,7 +1,7 @@
 // src/components/sukoon/patient-profile/DailySheetTab.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/sukoon';
-import { getDailyActivities, saveDailyActivity } from '@/lib/sukoon/patients';
+import { getDailyActivities, saveDailyActivity } from '@/lib/sukoon/clients';
 import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 

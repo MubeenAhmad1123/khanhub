@@ -14,9 +14,10 @@ import { db } from '@/lib/firebase';
 import type { Transaction } from '@/types/spims';
 
 export async function createTransaction(data: Omit<Transaction, 'id' | 'status' | 'approvedBy' | 'approvedAt'>): Promise<string> {
+  const d = data.date instanceof Timestamp ? data.date.toDate() : (data.date as Date);
   const res = await addDoc(collection(db, 'spims_transactions'), {
     ...data,
-    date: Timestamp.fromDate(data.date),
+    date: Timestamp.fromDate(d),
     status: 'pending'
   });
   return res.id;

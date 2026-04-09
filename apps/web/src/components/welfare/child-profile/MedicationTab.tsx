@@ -1,7 +1,7 @@
 // src/components/welfare/patient-profile/MedicationTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { MedicationRecord } from '@/types/welfare';
-import { getMedicationRecords, addMedicationRecord } from '@/lib/welfare/patients';
+import { getMedicationRecords, addMedicationRecord } from '@/lib/welfare/children';
 import { Loader2, Plus, Calendar, Pill } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 

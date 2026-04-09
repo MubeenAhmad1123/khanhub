@@ -1,7 +1,7 @@
 // src/components/sukoon/patient-profile/ProgressTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { WeeklyProgress } from '@/types/sukoon';
-import { getWeeklyProgress, addWeeklyProgress } from '@/lib/sukoon/patients';
+import { getWeeklyProgress, addWeeklyProgress } from '@/lib/sukoon/clients';
 import { Loader2, Plus, TrendingUp, LineChart as LineChartIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 

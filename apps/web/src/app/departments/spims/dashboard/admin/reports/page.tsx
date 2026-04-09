@@ -38,11 +38,11 @@ export default function AdminReportsPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('spims_session');
+    if (!sessionData) { router.push('/departments/spims/login'); return; }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login'); return;
+      router.push('/departments/spims/login'); return;
     }
     setSession(parsed);
   }, [router]);

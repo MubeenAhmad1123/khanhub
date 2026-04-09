@@ -46,6 +46,14 @@ export default function HqApprovalsPage() {
   };
 
   const getEntity = (tx: any) => {
+    if (tx?.departmentCode === 'spims' && tx?.patientId) {
+      return {
+        kind: 'student' as const,
+        id: tx.patientId,
+        name: tx.patientName,
+        href: `/departments/spims/dashboard/admin/students/${tx.patientId}`,
+      };
+    }
     if (tx?.patientId || tx?.patientName) {
       return {
         kind: 'patient' as const,
@@ -300,6 +308,53 @@ export default function HqApprovalsPage() {
           }
         } catch (syncErr) {
           console.error('Rehab profile sync failed:', syncErr);
+        }
+      }
+
+      if (status === 'approved' && activeTab === 'spims' && tx?.patientId && tx?.feePaymentId) {
+        try {
+          await updateDoc(doc(db, 'spims_fees', tx.feePaymentId), { status: 'approved' });
+          const studentRef = doc(db, 'spims_students', tx.patientId);
+          const stSnap = await getDoc(studentRef);
+          if (!stSnap.exists()) throw new Error('spims student missing');
+          const st = stSnap.data() as Record<string, unknown>;
+          const pkg = Number(st.totalPackage) || 0;
+          const feesSnap = await getDocs(
+            query(collection(db, 'spims_fees'), where('studentId', '==', tx.patientId))
+          );
+          const approvedRows = feesSnap.docs
+            .map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>))
+            .filter((r) => r.status === 'approved');
+          const feeTime = (row: Record<string, unknown>) => {
+            const d = row.date as { toMillis?: () => number; seconds?: number } | undefined;
+            if (!d) return 0;
+            if (typeof d.toMillis === 'function') return d.toMillis();
+            if (typeof d.seconds === 'number') return d.seconds * 1000;
+            return 0;
+          };
+          approvedRows.sort((a, b) => feeTime(a) - feeTime(b));
+          let bal = pkg;
+          for (const r of approvedRows) {
+            bal -= Number(r.amount) || 0;
+            await updateDoc(doc(db, 'spims_fees', r.id as string), { remaining: Math.max(0, bal) });
+          }
+          const remainingBal = Math.max(0, bal);
+          const totalReceived = pkg - remainingBal;
+          await updateDoc(studentRef, {
+            totalReceived,
+            remaining: remainingBal,
+            updatedAt: serverTimestamp(),
+          });
+        } catch (spimsErr) {
+          console.error('SPIMS fee sync failed:', spimsErr);
+        }
+      }
+
+      if (status === 'rejected' && activeTab === 'spims' && tx?.feePaymentId) {
+        try {
+          await updateDoc(doc(db, 'spims_fees', tx.feePaymentId), { status: 'rejected' });
+        } catch (spimsRejErr) {
+          console.error('SPIMS fee reject sync failed:', spimsRejErr);
         }
       }
     } catch (err) {

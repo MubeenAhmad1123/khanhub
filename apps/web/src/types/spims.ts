@@ -2,19 +2,168 @@
 
 import { Timestamp } from 'firebase/firestore';
 
-export type SpimsRole = 'admin' | 'staff' | 'family' | 'cashier' | 'superadmin';
+export type SpimsRole = 'admin' | 'staff' | 'student' | 'cashier' | 'superadmin';
 
 // ─── SPIMS USER (Auth) ───────────────────────────────────────────────────────
 
 export interface SpimsUser {
   uid: string;
   customId: string;
-  name: string;
+  name?: string;
   displayName?: string;
   role: SpimsRole;
   isActive: boolean;
-  patientId?: string;
+  /** Linked spims_students document id */
+  studentId?: string | null;
+  /** @deprecated migrated to studentId */
+  patientId?: string | null;
+  password?: string;
   createdAt?: Timestamp | Date;
+}
+
+// ─── SPIMS STUDENT (College admission record) ────────────────────────────────
+
+export type SpimsStudentStatus =
+  | 'Active'
+  | 'Pass'
+  | '1st Year Supply'
+  | '2nd Year Supply'
+  | 'Fail'
+  | 'Left';
+
+export type SpimsAnnualResult = 'Pass' | 'Fail' | 'Supply';
+
+export type SpimsDegreeStatus = 'Not Applied' | 'Applied' | 'Received';
+
+export type SpimsFeePaymentStatus =
+  | 'pending_cashier'
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'rejected_cashier';
+
+export type SpimsFeePaymentType =
+  | 'monthly'
+  | 'admission'
+  | 'registration'
+  | 'examination'
+  | 'other';
+
+export const SPIMS_COURSES = ['Pharmacy', 'OT', 'Core Course', 'LHV', 'CMW'] as const;
+
+export interface SpimsStudent {
+  id: string;
+
+  // Personal
+  rollNo: string;
+  name: string;
+  fatherName: string;
+  cnic: string;
+  contact: string;
+  fatherContact: string;
+  address: string;
+  dateOfBirth: Timestamp | Date | string;
+  studentOccupation?: string;
+  fatherOccupation?: string;
+  photoUrl?: string;
+
+  // Academic (Matric / Inter)
+  qualification: 'Matric' | 'Inter';
+  subjectPhysics_marks: number;
+  subjectChemistry_marks: number;
+  subjectBiology_marks: number;
+  board: string;
+  totalMarks: number;
+  percentage: number;
+
+  // Course
+  course: string;
+  session: string;
+  admissionDate: Timestamp | Date;
+  status: SpimsStudentStatus;
+
+  // Fee structure (set at admission)
+  totalPackage: number;
+  monthlyFee: number;
+  admissionFee: number;
+  registrationFee: number;
+  examinationFee: number;
+  admissionFeePaid: number;
+  registrationFeePaid: number;
+  examinationFeePaid: number;
+  /** Sum of all approved fee payments toward package */
+  totalReceived: number;
+  /** totalPackage - totalReceived (maintained on approve) */
+  remaining: number;
+
+  // Optional dates when initial portions were marked paid at admission
+  admissionFeePaidOn?: Timestamp | Date | null;
+  registrationFeePaidOn?: Timestamp | Date | null;
+  examinationFeePaidOn?: Timestamp | Date | null;
+
+  // Referral
+  referredBy?: string;
+  referralSheetAmount?: number;
+
+  // Year 1 exams
+  year1_rollNo?: string;
+  year1_examDate?: Timestamp | Date | null;
+  year1_annualResult?: string;
+  year1_supplementaryResult1?: string;
+  year1_supplementaryResult2?: string;
+  year1_passDate?: Timestamp | Date | null;
+
+  // Year 2 exams
+  year2_rollNo?: string;
+  year2_examDate?: Timestamp | Date | null;
+  year2_annualResult?: string;
+  year2_supplementaryResult1?: string;
+  year2_supplementaryResult2?: string;
+  year2_passDate?: Timestamp | Date | null;
+
+  degreeStatus?: SpimsDegreeStatus;
+
+  createdAt: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+  createdBy?: string;
+}
+
+/** One row in spims_fees (monthly / fee ledger) */
+export interface SpimsFeePayment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  course: string;
+  session: string;
+  date: Timestamp | Date;
+  amount: number;
+  remaining: number;
+  receivedBy: string;
+  type: SpimsFeePaymentType;
+  note?: string;
+  status: SpimsFeePaymentStatus;
+  createdBy: string;
+  createdAt: Timestamp | Date;
+  /** Linked HQ workflow doc when routed through Cashier Station */
+  linkedTransactionId?: string | null;
+}
+
+/** Uploaded files for Documents tab — collection spims_student_documents */
+export interface SpimsStudentDocument {
+  id: string;
+  studentId: string;
+  title: string;
+  fileUrl: string;
+  createdAt: Timestamp | Date;
+  createdBy?: string;
+}
+
+/** Aggregate shape used by FeeTracker.tsx */
+export interface SpimsFeeTrackerRecord {
+  totalPaid: number;
+  totalCourseFee: number;
+  totalRemaining: number;
+  payments: { amount: number; date: Timestamp | Date; paymentType: string }[];
 }
 
 export interface Transaction {

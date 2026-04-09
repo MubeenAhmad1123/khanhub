@@ -3,40 +3,41 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2, Search, Eye, EyeOff, Copy, Check, ArrowLeft, Shield } from 'lucide-react';
-import { resetRehabPassword } from '@/app/departments/rehab/actions/createRehabUser';
+import { resetSpimsPassword } from '@/app/departments/rehab/actions/createRehabUser';
 
-type RehabPatientCredential = {
+type SpimsStudentCredential = {
   id: string;
   displayName?: string;
   customId?: string;
   password?: string;
   role?: string;
   patientId?: string;
+  studentId?: string;
   isActive?: boolean;
 };
 
-export default function RehabAdminPasswordsPage() {
+export default function SpimsAdminPasswordsPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<RehabPatientCredential[]>([]);
+  const [users, setUsers] = useState<SpimsStudentCredential[]>([]);
   const [search, setSearch] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [resettingId, setResettingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('spims_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/spims/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/spims/login');
       return;
     }
     setSession(parsed);
@@ -45,16 +46,12 @@ export default function RehabAdminPasswordsPage() {
   useEffect(() => {
     if (!session) return;
 
-    const fetchPatientCredentials = async () => {
+    const fetchStudentCredentials = async () => {
       try {
         setLoading(true);
-        const q = query(
-          collection(db, 'rehab_users'),
-          where('role', '==', 'family'),
-          orderBy('displayName', 'asc'),
-        );
+        const q = query(collection(db, 'spims_users'), where('role', '==', 'student'));
         const snap = await getDocs(q);
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RehabPatientCredential));
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SpimsStudentCredential));
 
         list.sort((a, b) => {
           const aName = (a.displayName || '').toLowerCase();
@@ -69,14 +66,16 @@ export default function RehabAdminPasswordsPage() {
       }
     };
 
-    void fetchPatientCredentials();
+    void fetchStudentCredentials();
   }, [session]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
     return users.filter((u) =>
-      `${u.displayName || ''} ${u.customId || ''} ${u.patientId || ''}`.toLowerCase().includes(q),
+      `${u.displayName || ''} ${u.customId || ''} ${u.studentId || u.patientId || ''}`
+        .toLowerCase()
+        .includes(q),
     );
   }, [users, search]);
 
@@ -84,14 +83,14 @@ export default function RehabAdminPasswordsPage() {
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const copyCredentials = (u: RehabPatientCredential) => {
+  const copyCredentials = (u: SpimsStudentCredential) => {
     const text = `ID: ${u.customId || '-'} | Password: ${u.password || '-'}`;
     void navigator.clipboard.writeText(text);
     setCopiedId(u.id);
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleResetPassword = async (u: RehabPatientCredential) => {
+  const handleResetPassword = async (u: SpimsStudentCredential) => {
     const next = window.prompt(`Enter new password for ${u.customId || u.displayName || 'user'} (min 6 chars):`);
     if (!next) return;
     if (next.length < 6) {
@@ -101,7 +100,7 @@ export default function RehabAdminPasswordsPage() {
 
     try {
       setResettingId(u.id);
-      const res = await resetRehabPassword(u.id, next);
+      const res = await resetSpimsPassword(u.id, next);
       if (!res.success) {
         window.alert(res.error || 'Failed to reset password.');
         return;
@@ -137,9 +136,9 @@ export default function RehabAdminPasswordsPage() {
             <Shield size={18} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-gray-900">Patient Login Credentials</h1>
+            <h1 className="text-xl md:text-2xl font-black text-gray-900">Student login credentials</h1>
             <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
-              Rehab patients only (family accounts)
+              SPIMS student portal accounts only
             </p>
           </div>
         </div>
@@ -163,7 +162,7 @@ export default function RehabAdminPasswordsPage() {
             <div key={u.id} className="p-4 space-y-3">
               <div>
                 <p className="text-sm font-bold text-gray-900">{u.displayName || '-'}</p>
-                <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black mt-1">Patient</p>
+                <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black mt-1">Student</p>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <div className="bg-gray-50 rounded-xl p-3">
@@ -171,8 +170,8 @@ export default function RehabAdminPasswordsPage() {
                   <p className="text-xs font-mono font-black text-gray-700 mt-1 break-all">{u.customId || '-'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Patient ID</p>
-                  <p className="text-xs font-mono font-black text-gray-500 mt-1 break-all">{u.patientId || '-'}</p>
+                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Student doc</p>
+                  <p className="text-xs font-mono font-black text-gray-500 mt-1 break-all">{u.studentId || u.patientId || '-'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Password</p>
@@ -213,7 +212,7 @@ export default function RehabAdminPasswordsPage() {
               <tr>
                 <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Name</th>
                 <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Login ID</th>
-                <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Patient ID</th>
+                <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Student doc</th>
                 <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Password</th>
                 <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black text-right">Action</th>
               </tr>
@@ -223,7 +222,7 @@ export default function RehabAdminPasswordsPage() {
                 <tr key={u.id}>
                   <td className="px-4 py-3 text-sm font-bold text-gray-900">{u.displayName || '-'}</td>
                   <td className="px-4 py-3 text-xs font-mono font-black text-gray-700">{u.customId || '-'}</td>
-                  <td className="px-4 py-3 text-xs font-mono font-black text-gray-500">{u.patientId || '-'}</td>
+                  <td className="px-4 py-3 text-xs font-mono font-black text-gray-500">{u.studentId || u.patientId || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="inline-flex items-center gap-2">
                       <span className="font-mono text-sm font-bold text-gray-800">

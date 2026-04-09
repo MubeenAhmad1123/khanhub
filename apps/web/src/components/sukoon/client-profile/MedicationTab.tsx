@@ -1,7 +1,7 @@
 // src/components/sukoon/patient-profile/MedicationTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { MedicationRecord } from '@/types/sukoon';
-import { getMedicationRecords, addMedicationRecord } from '@/lib/sukoon/patients';
+import { getMedicationRecords, addMedicationRecord } from '@/lib/sukoon/clients';
 import { Loader2, Plus, Calendar, Pill } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 

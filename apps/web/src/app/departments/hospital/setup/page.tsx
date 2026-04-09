@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer, markSetupComplete } from '../actions/createRehabUser';
+import { createRehabUserServer, markSetupComplete } from '../actions/createHospitalUser';
 import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 
 export default function SetupPage() {
@@ -34,8 +34,8 @@ export default function SetupPage() {
 
   useEffect(() => {
     if (!mounted) return;
-    import('../actions/createRehabUser').then(m => {
-      m.debugEnvVars().then(result => {
+    import('../actions/createHospitalUser').then(m => {
+      m.debugEnvVars().then((result: unknown) => {
         console.log('ENV CHECK:', result);
       });
     });

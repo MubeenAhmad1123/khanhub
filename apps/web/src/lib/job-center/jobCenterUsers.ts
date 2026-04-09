@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { buildEmail } from './job-centerAuth';
+import { buildEmail } from './jobCenterAuth';
 import type { JobCenterUser, JobCenterRole } from '@/types/job-center';
 
 export async function createJobCenterUser(

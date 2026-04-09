@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
-import { createRehabUserServer, deactivateRehabUser, resetRehabPassword } from '../../../actions/createRehabUser';
+import { createRehabUserServer, deactivateRehabUser, resetRehabPassword } from '../../../actions/createJobCenterUser';
 import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';

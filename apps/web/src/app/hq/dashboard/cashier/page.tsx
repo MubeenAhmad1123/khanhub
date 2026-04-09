@@ -112,31 +112,71 @@ export default function CashierStationPage() {
     setIncomingError(null);
     try {
       const cashierCustomId = String(session.customId || '').trim().toUpperCase();
-      const q = query(
+      let rehabRows: any[] = [];
+      let spimsRows: any[] = [];
+
+      const merge = () => {
+        const all = [
+          ...rehabRows.map((tx) => ({ ...tx, _txCollection: 'rehab_transactions' })),
+          ...spimsRows.map((tx) => ({ ...tx, _txCollection: 'spims_transactions' })),
+        ];
+        const visible = all.filter((tx: any) => {
+          const txCashier = String(tx.cashierId || '').trim();
+          if (!txCashier) return true;
+          return txCashier.toUpperCase() === cashierCustomId;
+        });
+        const createdMs = (row: any) => {
+          const c = row.createdAt;
+          if (!c) return 0;
+          if (typeof c.toMillis === 'function') return c.toMillis();
+          if (typeof c.seconds === 'number') return c.seconds * 1000;
+          return 0;
+        };
+        visible.sort((a: any, b: any) => createdMs(b) - createdMs(a));
+        setIncomingFeeReqs(visible);
+        setIncomingLoading(false);
+      };
+
+      const onErr = (err: unknown) => {
+        console.error('[HQ Cashier] subscribeIncoming error:', err);
+        setIncomingError(
+          `${(err as any)?.code || 'error'}: ${(err as any)?.message || 'Failed to load incoming requests.'}`
+        );
+        setIncomingLoading(false);
+      };
+
+      const qRehab = query(
         collection(db, 'rehab_transactions'),
         where('status', '==', 'pending_cashier'),
         orderBy('createdAt', 'desc')
       );
-      return onSnapshot(
-        q,
-        (snap) => {
-          const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          // Some older writes may have missing/mismatched cashierId. We still show them,
-          // but if cashierId exists we filter to this cashier.
-          const visible = all.filter((tx: any) => {
-            const txCashier = String(tx.cashierId || '').trim();
-            if (!txCashier) return true;
-            return txCashier.toUpperCase() === cashierCustomId;
-          });
-          setIncomingFeeReqs(visible);
-          setIncomingLoading(false);
-        },
-        (err) => {
-          console.error('[HQ Cashier] subscribeIncoming error:', err);
-          setIncomingError(`${(err as any)?.code || 'error'}: ${(err as any)?.message || 'Failed to load incoming requests.'}`);
-          setIncomingLoading(false);
-        }
+      const qSpims = query(
+        collection(db, 'spims_transactions'),
+        where('status', '==', 'pending_cashier'),
+        orderBy('createdAt', 'desc')
       );
+
+      const unsubRehab = onSnapshot(
+        qRehab,
+        (snap) => {
+          rehabRows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          merge();
+        },
+        onErr
+      );
+      const unsubSpims = onSnapshot(
+        qSpims,
+        (snap) => {
+          spimsRows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          merge();
+        },
+        onErr
+      );
+
+      return () => {
+        unsubRehab();
+        unsubSpims();
+      };
     } catch (err) {
       console.error('[HQ Cashier] subscribeIncoming setup error:', err);
       setIncomingError('Failed to load incoming requests.');
@@ -168,13 +208,21 @@ export default function CashierStationPage() {
     setRejecting(true);
     setMessage(null);
     try {
-      await updateDoc(doc(db, 'rehab_transactions', rejectModalTx.id), {
+      const col =
+        rejectModalTx._txCollection ||
+        (String(rejectModalTx.departmentCode || '').toLowerCase() === 'spims'
+          ? 'spims_transactions'
+          : 'rehab_transactions');
+      await updateDoc(doc(db, col, rejectModalTx.id), {
         status: 'rejected_cashier',
         cashierRejectedAt: Timestamp.now(),
         cashierRejectedBy: session?.uid,
         cashierRejectedByName: session?.name || session?.displayName || 'HQ Cashier',
         cashierRejectReason: reason,
       });
+      if (rejectModalTx.feePaymentId && col === 'spims_transactions') {
+        await updateDoc(doc(db, 'spims_fees', rejectModalTx.feePaymentId), { status: 'rejected_cashier' });
+      }
       setMessage({ type: 'success', text: 'Request rejected and sent back to admin.' });
       setRejectModalTx(null);
       setRejectReason('');
@@ -220,7 +268,16 @@ export default function CashierStationPage() {
       if (proofUrl) updatePayload.proofUrl = proofUrl;
       if (!proofUrl && reason) updatePayload.proofMissingReason = reason;
 
-      await updateDoc(doc(db, 'rehab_transactions', txId), updatePayload);
+      const col =
+        forwardModalTx._txCollection ||
+        (String(forwardModalTx.departmentCode || '').toLowerCase() === 'spims'
+          ? 'spims_transactions'
+          : 'rehab_transactions');
+      await updateDoc(doc(db, col, txId), updatePayload);
+
+      if (forwardModalTx.feePaymentId && col === 'spims_transactions') {
+        await updateDoc(doc(db, 'spims_fees', forwardModalTx.feePaymentId), { status: 'pending' });
+      }
 
       await sendHqNotification({
         recipientId: superadminRecipient,

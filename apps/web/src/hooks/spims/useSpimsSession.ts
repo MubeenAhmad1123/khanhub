@@ -6,6 +6,8 @@ export interface SpimsSession {
   customId: string;
   role: string;
   displayName: string;
+  studentId?: string | null;
+  /** @deprecated use studentId */
   patientId?: string | null;
 }
 

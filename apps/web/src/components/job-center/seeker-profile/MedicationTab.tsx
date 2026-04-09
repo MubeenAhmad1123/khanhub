@@ -1,7 +1,7 @@
 // src/components/job-center/patient-profile/MedicationTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { MedicationRecord } from '@/types/job-center';
-import { getMedicationRecords, addMedicationRecord } from '@/lib/job-center/patients';
+import { getMedicationRecords, addMedicationRecord } from '@/lib/job-center/seekers';
 import { Loader2, Plus, Calendar, Pill } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 

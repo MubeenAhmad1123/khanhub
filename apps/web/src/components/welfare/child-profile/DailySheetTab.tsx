@@ -1,7 +1,7 @@
 // src/components/welfare/patient-profile/DailySheetTab.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/welfare';
-import { getDailyActivities, saveDailyActivity } from '@/lib/welfare/patients';
+import { getDailyActivities, saveDailyActivity } from '@/lib/welfare/children';
 import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 

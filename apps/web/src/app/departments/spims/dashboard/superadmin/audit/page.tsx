@@ -71,10 +71,10 @@ export default function AuditLogPage() {
   const [filter, setFilter] = useState('');
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('spims_session');
+    if (!sessionData) { router.push('/departments/spims/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'superadmin') { router.push('/departments/rehab/login'); return; }
+    if (parsed.role !== 'superadmin') { router.push('/departments/spims/login'); return; }
     fetchAudit('');
   }, [router]);
 

@@ -41,7 +41,7 @@ export default function SuperAdminUserManagement() {
   useEffect(() => {
     if (!sessionLoading) {
       if (!user || user.role !== 'superadmin') {
-        router.push('/departments/rehab/login');
+        router.push('/departments/spims/login');
       } else {
         fetchData();
       }

@@ -9,7 +9,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
     type: 'income' as 'income' | 'expense',
     category: 'patient_fee',
     amount: '',
-    description: '',
+    txnDescription: '',
     patientId: '',
     date: new Date().toISOString().split('T')[0]
   });
@@ -27,12 +27,12 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
         type: formData.type,
         category: formData.category,
         amount: parseFloat(formData.amount),
-        description: formData.description,
+        txnDescription: formData.txnDescription,
         cashierId,
         patientId: formData.patientId || undefined,
         date: new Date(formData.date)
       });
-      setFormData({ ...formData, amount: '', description: '', patientId: '' });
+      setFormData({ ...formData, amount: '', txnDescription: '', patientId: '' });
       onSuccess();
     } catch (err) {
       alert('Error creating transaction');
@@ -119,8 +119,8 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
           rows={3}
           placeholder="Provide more details..."
           className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-medium focus:ring-2 focus:ring-[#1D9E75]/20 outline-none resize-none"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          value={formData.txnDescription}
+          onChange={(e) => setFormData({ ...formData, txnDescription: e.target.value })}
         />
       </div>
 

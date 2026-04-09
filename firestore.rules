@@ -495,7 +495,15 @@ service cloud.firestore {
       allow read: if isSpimsAdminOrAbove()
         || (isSpimsRole('cashier'))
         || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId);
-      allow write: if isSpimsRole('cashier') || isSpimsSuperAdmin();
+      allow create: if isSpimsAdminOrAbove() || isSpimsRole('cashier');
+      allow update: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isSpimsSuperAdmin();
+      allow delete: if isSpimsSuperAdmin();
+    }
+
+    match /spims_student_documents/{docId} {
+      allow read: if isSpimsAdminOrAbove()
+        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId);
+      allow create, update, delete: if isSpimsAdminOrAbove();
     }
 
     // Student specific records (similar to patient records)

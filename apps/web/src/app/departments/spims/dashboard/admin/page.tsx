@@ -5,15 +5,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import {
-  collection, getDocs, query, where, orderBy, limit, Timestamp
-} from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import {
   Heart, UserCog, TrendingUp, TrendingDown,
   Users, Calendar, ChevronRight, Activity, Loader2,
   BarChart3, Plus, AlertCircle
 } from 'lucide-react';
-import { formatDateDMY, toDate } from '@/lib/utils';
+import { formatDateDMY } from '@/lib/utils';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -31,11 +29,15 @@ export default function AdminDashboardPage() {
   const [activePatients, setActivePatients] = useState<any[]>([]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('spims_session');
+    if (!sessionData) {
+      router.push('/departments/spims/login');
+      return;
+    }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin') {
-      router.push('/departments/rehab/login'); return;
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
+      router.push('/departments/spims/login');
+      return;
     }
     setSession(parsed);
   }, [router]);
@@ -47,17 +49,14 @@ export default function AdminDashboardPage() {
 
   const loadDashboard = async () => {
     try {
-      const patientsSnap = await getDocs(query(
-        collection(db, 'rehab_patients'), 
-        where('isActive', '==', true),
-        orderBy('name', 'asc')
-      ));
+      const studentsSnap = await getDocs(collection(db, 'spims_students'));
+      const active = studentsSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((s: any) => s.status === 'Active')
+        .sort((a: any, b: any) => String(a.name || '').localeCompare(String(b.name || '')));
 
-      setTotalPatients(patientsSnap.size);
-      setActivePatients(patientsSnap.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      })).slice(0, 5));
+      setTotalPatients(active.length);
+      setActivePatients(active.slice(0, 5));
 
     } catch (error) {
       console.error('Dashboard load error:', error);
@@ -88,11 +87,11 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link 
-            href="/departments/rehab/dashboard/admin/patients/new"
+          <Link
+            href="/departments/spims/dashboard/admin/students/new"
             className="flex items-center gap-2 px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-black hover:bg-teal-700 transition-all shadow-lg shadow-teal-100 whitespace-nowrap"
           >
-            <Plus size={16} /> Add Patient
+            <Plus size={16} /> New student
           </Link>
         </div>
       </div>
@@ -105,7 +104,7 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-2xl md:text-4xl font-black text-gray-900">{totalPatients}</div>
-            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Active Patients</div>
+            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Active students</div>
           </div>
         </div>
 
@@ -135,24 +134,24 @@ export default function AdminDashboardPage() {
         <div className="lg:col-span-2 bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-4 md:p-8 border-b border-gray-50 flex items-center justify-between">
             <h2 className="font-black text-gray-900 flex items-center gap-3 text-sm md:text-base">
-              <Activity className="w-5 h-5 text-teal-500" /> Recent Patients
+              <Activity className="w-5 h-5 text-teal-500" />               Recent students
             </h2>
-            <Link href="/departments/rehab/dashboard/admin/patients" className="text-[9px] md:text-xs font-black text-teal-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform whitespace-nowrap">
+            <Link href="/departments/spims/dashboard/admin/students" className="text-[9px] md:text-xs font-black text-teal-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform whitespace-nowrap">
               View All <ChevronRight size={12} />
             </Link>
           </div>
           <div className="p-3 md:p-4">
             {activePatients.length === 0 ? (
               <div className="text-center py-10">
-                <p className="text-gray-400 text-sm font-medium">No active patients found.</p>
-                <Link href="/departments/rehab/dashboard/admin/patients/new" className="text-teal-600 text-sm font-bold mt-2 inline-block">Add your first patient</Link>
+                <p className="text-gray-400 text-sm font-medium">No active students found.</p>
+                <Link href="/departments/spims/dashboard/admin/students/new" className="text-teal-600 text-sm font-bold mt-2 inline-block">New admission</Link>
               </div>
             ) : (
                 <div className="grid grid-cols-1 gap-2">
                   {activePatients.map(patient => (
                     <Link 
                       key={patient.id} 
-                      href={`/departments/rehab/dashboard/admin/patients/${patient.id}`}
+                      href={`/departments/spims/dashboard/admin/students/${patient.id}`}
                       className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 transition-colors group active:bg-gray-100"
                     >
                       <div className="flex items-center gap-3">
@@ -161,7 +160,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <div>
                           <p className="font-bold text-gray-900 text-sm">{patient.name}</p>
-                          <p className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">{patient.customId || patient.id}</p>
+                          <p className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">{patient.rollNo || patient.id}</p>
                         </div>
                       </div>
                       <ChevronRight size={16} className="text-gray-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
@@ -178,8 +177,8 @@ export default function AdminDashboardPage() {
             <TrendingUp className="w-5 h-5 text-teal-500" /> Quick Tasks
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
-            <Link 
-              href="/departments/rehab/dashboard/admin/patients/new"
+            <Link
+              href="/departments/spims/dashboard/admin/students/new"
               className="flex items-center gap-3 p-4 rounded-2xl bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors group active:scale-95"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
@@ -188,18 +187,18 @@ export default function AdminDashboardPage() {
               <span className="font-bold text-sm">New Admission</span>
             </Link>
             
-            <Link 
-              href="/departments/rehab/dashboard/admin/patients"
+            <Link
+              href="/departments/spims/dashboard/admin/students"
               className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors group active:scale-95"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
                 <Users size={18} />
               </div>
-              <span className="font-bold text-sm">Patient Registry</span>
+              <span className="font-bold text-sm">Student registry</span>
             </Link>
 
             <Link 
-              href="/departments/rehab/dashboard/profile"
+              href="/departments/spims/dashboard/profile"
               className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors group active:scale-95"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">

@@ -12,18 +12,18 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Student View', href: '/departments/spims/dashboard/family', roles: ['student'] },
+  { label: 'Student View', href: '/departments/spims/dashboard/student', roles: ['student'] },
   { label: 'Staff Dashboard', href: '/departments/spims/dashboard/staff', roles: ['staff'] },
   { label: 'Cashier Dashboard', href: '/departments/spims/dashboard/cashier', roles: ['cashier', 'superadmin'] },
   { label: 'Admin Overview', href: '/departments/spims/dashboard/admin', roles: ['admin', 'superadmin'] },
-  { label: 'Students', href: '/departments/spims/dashboard/admin/patients', roles: ['admin', 'superadmin'] },
+  { label: 'Students', href: '/departments/spims/dashboard/admin/students', roles: ['admin', 'superadmin'] },
   { label: 'Staff Management', href: '/departments/spims/dashboard/admin/staff', roles: ['admin', 'superadmin'] },
   { label: 'Finance', href: '/departments/spims/dashboard/admin/finance', roles: ['admin', 'superadmin'] },
   { label: 'Reports', href: '/departments/spims/dashboard/admin/reports', roles: ['admin', 'superadmin'] },
   { label: 'Approvals', href: '/departments/spims/dashboard/superadmin/approvals', roles: ['superadmin'] },
 ];
 
-export default function SpimsSidebar({ role, studentId }: { role: SpimsRole, studentId?: string }) {
+export default function SpimsSidebar({ role, studentId }: { role: SpimsRole; studentId?: string }) {
   const pathname = usePathname();
 
   const filteredNav = navItems.filter(item => item.roles.includes(role));

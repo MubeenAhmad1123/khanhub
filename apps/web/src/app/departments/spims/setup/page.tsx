@@ -91,7 +91,7 @@ export default function SetupPage() {
       if (!metaResult.success) throw new Error(metaResult.error || 'Failed to mark setup complete');
 
       setSuccess(true);
-      setTimeout(() => router.push('/departments/rehab/login'), 2000);
+      setTimeout(() => router.push('/departments/spims/login'), 2000);
     } catch (err: any) {
       setError(err.message || 'Setup failed. Please try again.');
     } finally {
@@ -116,7 +116,7 @@ export default function SetupPage() {
         <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column',
                       alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
           <p className="text-gray-700 font-medium">System already initialized.</p>
-          <button onClick={() => router.push('/departments/rehab/login')}
+          <button onClick={() => router.push('/departments/spims/login')}
              className="text-teal-600 underline text-sm">Go to Login</button>
         </div>
       );

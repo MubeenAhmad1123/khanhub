@@ -43,7 +43,7 @@ export default function ProfilePage() {
 
   const fetchMetrics = useCallback(async (sId: string, dept: string) => {
     try {
-      const prefix = dept === 'hq' ? 'hq' : 'rehab';
+      const prefix = dept === 'hq' ? 'hq' : dept === 'spims' ? 'spims' : 'rehab';
       
       const [attSnap, dutySnap, dressSnap, contribSnap, pointsSnap] = await Promise.all([
         getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))),
@@ -74,8 +74,11 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('spims_session');
+    if (!sessionData) {
+      router.push('/departments/spims/login');
+      return;
+    }
     const parsed = JSON.parse(sessionData);
     setSession(parsed);
 
@@ -83,10 +86,10 @@ export default function ProfilePage() {
       try {
         setLoading(true);
         // 1. User Doc
-        const userSnap = await getDoc(doc(db, 'rehab_users', parsed.uid));
+        const userSnap = await getDoc(doc(db, 'spims_users', parsed.uid));
         if (!userSnap.exists()) {
           toast.error("User not found");
-          router.push('/departments/rehab/login');
+          router.push('/departments/spims/login');
           return;
         }
         const uData = userSnap.data();
@@ -95,18 +98,22 @@ export default function ProfilePage() {
         // 2. Role Data
         if (parsed.role === 'admin' || parsed.role === 'staff') {
           // Find staff dock in rehab_staff or hq_staff
-          let sSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
+          let sSnap = await getDocs(query(collection(db, 'spims_staff'), where('loginUserId', '==', parsed.uid)));
+          if (sSnap.empty) {
+            sSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
+          }
           if (sSnap.empty) {
             sSnap = await getDocs(query(collection(db, 'hq_staff'), where('loginUserId', '==', parsed.uid)));
           }
-          
+
           if (!sSnap.empty) {
             const sd = sSnap.docs[0].data();
             setStaffDoc({ id: sSnap.docs[0].id, ...sd });
-            fetchMetrics(sSnap.docs[0].id, sd.department || 'rehab');
+            fetchMetrics(sSnap.docs[0].id, sd.department || 'spims');
           }
-        } else if (parsed.role === 'family' && uData.patientId) {
-          const pSnap = await getDoc(doc(db, 'rehab_patients', uData.patientId));
+        } else if (parsed.role === 'student' && (uData.studentId || uData.patientId)) {
+          const sid = uData.studentId || uData.patientId;
+          const pSnap = await getDoc(doc(db, 'spims_students', sid));
           if (pSnap.exists()) setPatientDoc({ id: pSnap.id, ...pSnap.data() });
         }
       } catch (err) {
@@ -125,7 +132,8 @@ export default function ProfilePage() {
 
     try {
       setSubmittingContrib(true);
-      const prefix = staffDoc.department === 'hq' ? 'hq' : 'rehab';
+      const prefix =
+        staffDoc.department === 'hq' ? 'hq' : staffDoc.department === 'spims' ? 'spims' : 'rehab';
       await addDoc(collection(db, `${prefix}_contributions`), {
         staffId: staffDoc.id,
         title: newContrib.title,
@@ -138,7 +146,7 @@ export default function ProfilePage() {
       toast.success("Contribution submitted for approval");
       setIsAddingContrib(false);
       setNewContrib({ title: '', content: '' });
-      fetchMetrics(staffDoc.id, staffDoc.department || 'rehab');
+      fetchMetrics(staffDoc.id, staffDoc.department || 'spims');
     } catch (error) {
       toast.error("Failed to submit");
     } finally {
@@ -149,10 +157,11 @@ export default function ProfilePage() {
   const handleDeleteContribution = async (cid: string) => {
     if (!confirm("Are you sure?")) return;
     try {
-      const prefix = staffDoc.department === 'hq' ? 'hq' : 'rehab';
+      const prefix =
+        staffDoc.department === 'hq' ? 'hq' : staffDoc.department === 'spims' ? 'spims' : 'rehab';
       await deleteDoc(doc(db, `${prefix}_contributions`, cid));
       toast.success("Deleted");
-      fetchMetrics(staffDoc.id, staffDoc.department || 'rehab');
+      fetchMetrics(staffDoc.id, staffDoc.department || 'spims');
     } catch (error) {
       toast.error("Failed to delete");
     }
@@ -204,10 +213,10 @@ export default function ProfilePage() {
         </div>
 
         {/* Role Specific Content */}
-        {session?.role === 'family' ? (
+        {session?.role === 'student' ? (
           <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-green-100 w-full">
             <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
-              <Heart className="text-green-500" /> Linked Patient Information
+              <Heart className="text-green-500" /> Linked student
             </h3>
             {patientDoc ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
@@ -222,12 +231,12 @@ export default function ProfilePage() {
                 <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-start gap-1">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
                   <span className="px-3 py-1 bg-green-100 text-green-700 rounded-xl text-[9px] font-black uppercase tracking-widest">
-                    {patientDoc.isActive ? 'Active' : 'Inactive'}
+                    {patientDoc.status || '—'}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-400 font-medium italic">No patient linked to this account.</p>
+              <p className="text-sm text-gray-400 font-medium italic">No student linked to this account.</p>
             )}
           </div>
         ) : (

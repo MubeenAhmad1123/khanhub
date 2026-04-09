@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, updateDoc, doc, query, where, Timestamp, onSnapshot, getDocs, serverTimestamp, addDoc, getDoc } from 'firebase/firestore';
+import { collection, updateDoc, doc, query, where, Timestamp, onSnapshot, getDocs, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
   CheckCircle, XCircle, Clock, TrendingUp, TrendingDown, 
@@ -24,14 +24,14 @@ export default function ApprovalsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('spims_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/spims/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/spims/login');
       return;
     }
     setSession(parsed);
@@ -44,7 +44,7 @@ export default function ApprovalsPage() {
 
     // No orderBy — avoids index requirement
     const q = query(
-      collection(db, 'rehab_transactions'),
+      collection(db, 'spims_transactions'),
       where('status', '==', 'pending')
     )
 
@@ -87,7 +87,7 @@ export default function ApprovalsPage() {
       // No orderBy — avoids composite index requirement
       const snap = await getDocs(
         query(
-          collection(db, 'rehab_transactions'),
+          collection(db, 'spims_transactions'),
           where('status', 'in', ['approved', 'rejected'])
         )
       )
@@ -149,166 +149,62 @@ export default function ApprovalsPage() {
   const handleApprove = async (txId: string) => {
     try {
       setActionLoading(txId);
-      
-      // 1. Update the transaction status first
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+
+      await updateDoc(doc(db, 'spims_transactions', txId), {
         status: 'approved',
         approvedBy: session.uid,
-        approvedAt: Timestamp.now()
+        approvedAt: Timestamp.now(),
       });
 
-      // ── SYNC TO PATIENT RECORDS AFTER APPROVAL ──
-      const allTransactions = [...pendingTransactions, ...historyTransactions];
-      const tx = allTransactions.find((t: any) => t.id === txId);
-      if (tx && tx.patientId) {
-        try {
-          const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
-          const month = txDate.toISOString().slice(0, 7); // "2026-03"
-
-          if (tx.category === 'patient_fee') {
-            // Find or CREATE the fee record for this patient+month
-            const feesQ = query(
-              collection(db, 'rehab_fees'),
-              where('patientId', '==', tx.patientId),
-              where('month', '==', month)
-            );
-            const feesSnap = await getDocs(feesQ);
-
-            if (feesSnap.empty) {
-              // Auto-create fee record — fetch patient package amount first
-              const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
-              const packageAmount = patientSnap.exists()
-                ? (patientSnap.data().packageAmount || 60000)
-                : 60000;
-              const amountPaid = tx.amount;
-              const amountRemaining = Math.max(0, packageAmount - amountPaid);
-              await addDoc(collection(db, 'rehab_fees'), {
-                patientId: tx.patientId,
-                patientName: tx.patientName || '',
-                month,
-                packageAmount,
-                amountPaid,
-                amountRemaining,
-                payments: [{
-                  amount: tx.amount,
-                  date: txDate,
-                  transactionId: txId,
-                  approvedBy: session?.uid,
-                }],
-                lastPaymentDate: serverTimestamp(),
-                lastPaymentAmount: tx.amount,
-                createdAt: serverTimestamp(),
-              });
-            } else {
-              // Update existing fee record
-              const feeDoc = feesSnap.docs[0];
-              const current = feeDoc.data();
-              const newPaid = (current.amountPaid || 0) + tx.amount;
-              const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
-              const existingPayments = current.payments || [];
-              await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
-                amountPaid: newPaid,
-                amountRemaining: newRemaining,
-                lastPaymentDate: serverTimestamp(),
-                lastPaymentAmount: tx.amount,
-                payments: [...existingPayments, {
-                  amount: tx.amount,
-                  date: txDate,
-                  transactionId: txId,
-                  approvedBy: session?.uid,
-                }],
+      const txSnap = await getDoc(doc(db, 'spims_transactions', txId));
+      if (txSnap.exists()) {
+        const raw = txSnap.data() as Record<string, unknown>;
+        const feePaymentId = raw.feePaymentId as string | undefined;
+        const studentEntityId = raw.patientId as string | undefined;
+        if (feePaymentId && studentEntityId) {
+          try {
+            await updateDoc(doc(db, 'spims_fees', feePaymentId), { status: 'approved' });
+            const studentRef = doc(db, 'spims_students', studentEntityId);
+            const stSnap = await getDoc(studentRef);
+            if (stSnap.exists()) {
+              const pkg = Number((stSnap.data() as { totalPackage?: number }).totalPackage) || 0;
+              const feesSnap = await getDocs(
+                query(collection(db, 'spims_fees'), where('studentId', '==', studentEntityId))
+              );
+              const approvedRows = feesSnap.docs
+                .map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>))
+                .filter((r) => r.status === 'approved');
+              const feeTime = (row: Record<string, unknown>) => {
+                const d = row.date as { toMillis?: () => number; seconds?: number } | undefined;
+                if (!d) return 0;
+                if (typeof d.toMillis === 'function') return d.toMillis();
+                if (typeof d.seconds === 'number') return d.seconds * 1000;
+                return 0;
+              };
+              approvedRows.sort((a, b) => feeTime(a) - feeTime(b));
+              let bal = pkg;
+              for (const r of approvedRows) {
+                bal -= Number(r.amount) || 0;
+                await updateDoc(doc(db, 'spims_fees', r.id as string), { remaining: Math.max(0, bal) });
+              }
+              const remainingBal = Math.max(0, bal);
+              await updateDoc(studentRef, {
+                totalReceived: pkg - remainingBal,
+                remaining: remainingBal,
+                updatedAt: serverTimestamp(),
               });
             }
+          } catch (syncErr) {
+            console.error('SPIMS fee sync (local superadmin):', syncErr);
           }
-
-          if (tx.category === 'canteen_deposit') {
-            const canteenQ = query(
-              collection(db, 'rehab_canteen'),
-              where('patientId', '==', tx.patientId),
-              where('month', '==', month)
-            );
-            const canteenSnap = await getDocs(canteenQ);
-
-            if (canteenSnap.empty) {
-              // Auto-create canteen record
-              await addDoc(collection(db, 'rehab_canteen'), {
-                patientId: tx.patientId,
-                patientName: tx.patientName || '',
-                month,
-                totalDeposited: tx.amount,
-                totalSpent: 0,
-                balance: tx.amount,
-                lastDepositDate: serverTimestamp(),
-                createdAt: serverTimestamp(),
-              });
-            } else {
-              const canteenDoc = canteenSnap.docs[0];
-              const current = canteenDoc.data();
-              const newDeposited = (current.totalDeposited || 0) + tx.amount;
-              const newBalance = newDeposited - (current.totalSpent || 0);
-              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
-                totalDeposited: newDeposited,
-                balance: newBalance,
-                lastDepositDate: serverTimestamp(),
-              });
-            }
-          }
-
-          if (tx.category === 'canteen_expense') {
-            const canteenQ = query(
-              collection(db, 'rehab_canteen'),
-              where('patientId', '==', tx.patientId),
-              where('month', '==', month)
-            );
-            const canteenSnap = await getDocs(canteenQ);
-            if (!canteenSnap.empty) {
-              const canteenDoc = canteenSnap.docs[0];
-              const current = canteenDoc.data();
-              const newSpent = (current.totalSpent || 0) + tx.amount;
-              const newBalance = (current.totalDeposited || 0) - newSpent;
-              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
-                totalSpent: newSpent,
-                balance: Math.max(0, newBalance),
-              });
-            }
-          }
-
-          if (tx.category === 'staff_salary' && tx.staffId) {
-            // Mark salary as paid for this staff member this month
-            const salaryQ = query(
-              collection(db, 'rehab_salary_records'),
-              where('staffId', '==', tx.staffId),
-              where('month', '==', month)
-            );
-            const salarySnap = await getDocs(salaryQ);
-            if (salarySnap.empty) {
-              await addDoc(collection(db, 'rehab_salary_records'), {
-                staffId: tx.staffId,
-                staffName: tx.staffName || '',
-                month,
-                amount: tx.amount,
-                transactionId: txId,
-                paidAt: serverTimestamp(),
-                approvedBy: session?.uid,
-              });
-            } else {
-              await updateDoc(doc(db, 'rehab_salary_records', salarySnap.docs[0].id), {
-                amount: (salarySnap.docs[0].data().amount || 0) + tx.amount,
-                lastPaidAt: serverTimestamp(),
-              });
-            }
-          }
-        } catch (syncErr) {
-          console.error('Sync error after approval:', syncErr);
-          // Don't fail the approval if sync fails — transaction is already approved
         }
       }
 
       toast.success('Approved ✓');
-      fetchHistory(); // Refresh history
+      fetchHistory();
     } catch (error) {
-      console.error("Approve error", error);
-      toast.error("Failed to approve");
+      console.error('Approve error', error);
+      toast.error('Failed to approve');
     } finally {
       setActionLoading(null);
     }
@@ -323,11 +219,19 @@ export default function ApprovalsPage() {
     
     try {
       setActionLoading(txId);
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+      const txSnap = await getDoc(doc(db, 'spims_transactions', txId));
+      const fd = txSnap.exists() ? txSnap.data() : null;
+      if (fd && (fd as { feePaymentId?: string }).feePaymentId) {
+        await updateDoc(doc(db, 'spims_fees', (fd as { feePaymentId: string }).feePaymentId), {
+          status: 'rejected',
+        });
+      }
+
+      await updateDoc(doc(db, 'spims_transactions', txId), {
         status: 'rejected',
         rejectedBy: session.uid,
         rejectedAt: Timestamp.now(),
-        rejectReason: rejectReason || null
+        rejectReason: rejectReason || null,
       });
       toast.success('Rejected');
       setRejectId(null);

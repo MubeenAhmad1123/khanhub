@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import type { FeeRecord } from '@/types/spims';
+import type { SpimsFeeTrackerRecord } from '@/types/spims';
+import { formatDateDMY } from '@/lib/utils';
 
-export default function FeeTracker({ feeRecord }: { feeRecord: FeeRecord | null }) {
+export default function FeeTracker({ feeRecord }: { feeRecord: SpimsFeeTrackerRecord | null }) {
   if (!feeRecord) return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 italic text-gray-400">
       No fee record found for this student.
@@ -39,7 +40,7 @@ export default function FeeTracker({ feeRecord }: { feeRecord: FeeRecord | null 
           <p className="text-sm text-gray-500">No payments recorded yet.</p>
         ) : (
           feeRecord.payments.map((payment, idx) => {
-            const dateStr = payment.date?.toDate ? payment.date.toDate().toLocaleDateString() : new Date(payment.date || Date.now()).toLocaleDateString();
+            const dateStr = formatDateDMY(payment.date);
             return (
               <div key={idx} className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-xl">
                 <div>
