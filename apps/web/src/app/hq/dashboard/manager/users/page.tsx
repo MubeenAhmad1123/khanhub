@@ -67,7 +67,7 @@ type TabType = 'admin' | 'staff' | 'client';
 
 const DEPARTMENTS = [
   { id: 'rehab', name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', collection: 'rehab_users', staffCollection: 'rehab_staff', prefix: 'REHAB' },
-  { id: 'spims', name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.edu.pk', collection: 'spims_users', staffCollection: 'spims_staff', prefix: 'SPIMS' },
+  { id: 'spims', name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', collection: 'spims_users', staffCollection: 'spims_staff', prefix: 'SPIMS' },
   { id: 'hospital', name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Briefcase, color: 'emerald', emailDomain: '@hospital.khanhub', collection: 'hospital_users', staffCollection: 'hospital_staff', prefix: 'HOSP' },
   { id: 'sukoon-center', name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', collection: 'sukoon_users', staffCollection: 'sukoon_staff', prefix: 'SUK' },
   { id: 'social-media', name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.khanhub', collection: 'media_users', staffCollection: 'media_staff', prefix: 'MED' },
