@@ -49,7 +49,41 @@ export type SpimsFeePaymentType =
   | 'examination'
   | 'other';
 
-export const SPIMS_COURSES = ['Pharmacy', 'OT', 'Core Course', 'LHV', 'CMW'] as const;
+export const SPIMS_COURSES = [
+  // Pharmacy
+  'Pharm-D (Doctor of Pharmacy) — 5 Years',
+  'Pharmacy Technician (Category-B) — 2 Years (Diploma)',
+
+  // Nursing
+  'BS Nursing — 4 Years',
+  'Post-RN BSN — 2 Years',
+  'LHV (Lady Health Visitor) — 2 Years (Diploma)',
+  'CMW (Community Midwife) — 2 Years (Diploma)',
+  'CNA (Certified Nursing Assistant) — 2 Years (Diploma)',
+
+  // Allied Health Sciences & Technology (4 Years)
+  'BS Optometry — 4 Years',
+  'BS Forensic Science — 4 Years',
+  'BS Clinical Psychology — 4 Years',
+  'BS Human Nutrition & Dietetics — 4 Years',
+  'BS Food Science & Technology — 4 Years',
+  'BS Operation Theater Technology — 4 Years',
+  'BS Cosmetology & Dermatological — 4 Years',
+  'BS Medical Laboratory Technology — 4 Years',
+  'BS Radiology & Imaging Technology — 4 Years',
+
+  // Physical Therapy
+  'DPT (Doctor of Physical Therapy) — 5 Years',
+
+  // FSC Paramedical Courses (2 Years)
+  'Dispenser — 2 Years (Diploma, equal to FSC Pre-Medical)',
+  'Operation Theater Technician — 2 Years (Diploma, equal to FSC Pre-Medical)',
+  'Medical Laboratory Technician — 2 Years (Diploma, equal to FSC Pre-Medical)',
+  'Radiography & Imaging Technician — 2 Years (Diploma, equal to FSC Pre-Medical)',
+  'Dental Technician — 2 Years (Diploma)',
+  'Dialysis Technician — 2 Years (Diploma)',
+  'Anesthesia Technician — 2 Years (Diploma)',
+] as const;
 
 export interface SpimsStudent {
   id: string;

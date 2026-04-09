@@ -41,7 +41,7 @@ export default function NewSpimsStudentPage() {
   const [percentage, setPercentage] = useState('');
 
   const [rollNo, setRollNo] = useState('');
-  const [course, setCourse] = useState('Pharmacy');
+  const [course, setCourse] = useState<string>(() => SPIMS_COURSES[0] || '');
   const [session, setSession] = useState('');
   const [admissionDate, setAdmissionDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState<SpimsStudentStatus>('Active');

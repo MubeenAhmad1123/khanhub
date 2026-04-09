@@ -94,7 +94,7 @@ export default function AdmitPatientPage() {
     
     // Validate required fields
     if (!loginId || !loginPassword || !name || !fatherName || 
-        !age || !dateOfBirth || !gender || !maritalStatus || !address || 
+        !age || !gender || !maritalStatus || !address || 
         !guardianName || !guardianPhone || !guardianRelation || 
         !admissionDate || reasonsForAdmission.length === 0) {
       setError('Please fill all required fields');
@@ -123,7 +123,7 @@ export default function AdmitPatientPage() {
         name,
         fatherName,
         age: Number(age),
-        dateOfBirth,
+        dateOfBirth: dateOfBirth || null,
         gender,
         education: education || null,
         maritalStatus,
@@ -303,7 +303,7 @@ export default function AdmitPatientPage() {
 
               <div className="space-y-1.5 mt-2">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input required type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+                <input type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
               </div>
 
               {maritalStatus === 'Married' && (
