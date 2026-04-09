@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, Users, CheckCircle, Heart, UserCog,
-  Banknote, FileBarChart, CreditCard, CalendarDays,
+  Banknote, FileBarChart, CreditCard, CalendarDays, ClipboardCheck,
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon
 } from 'lucide-react';
 import { getDoc, doc } from 'firebase/firestore';
@@ -24,6 +24,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/departments/spims/dashboard/admin', icon: <LayoutDashboard size={16} />, roles: ['admin'] },
   { label: 'Students', href: '/departments/spims/dashboard/admin/students', icon: <Heart size={16} />, roles: ['admin'] },
   { label: 'Credentials', href: '/departments/spims/dashboard/admin/passwords', icon: <Shield size={16} />, roles: ['admin'] },
+  { label: 'Attendance', href: '/departments/spims/dashboard/admin/attendance', icon: <CalendarDays size={16} />, roles: ['admin'] },
+  { label: 'Tests', href: '/departments/spims/dashboard/admin/tests', icon: <ClipboardCheck size={16} />, roles: ['admin'] },
   { label: 'My Attendance', href: '/departments/spims/dashboard/staff', icon: <CalendarDays size={16} />, roles: ['staff'] },
   { label: 'Student portal', href: '/departments/spims/dashboard/student', icon: <User size={16} />, roles: ['student'] },
   {

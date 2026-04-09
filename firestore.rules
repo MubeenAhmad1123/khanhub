@@ -544,6 +544,35 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // spims_tests — admin announcements for tests (course/session or single student)
+    function spimsStudentDoc() {
+      return get(/databases/$(database)/documents/spims_students/$(spimsStudentId())).data;
+    }
+    match /spims_tests/{docId} {
+      allow read: if isSpimsAdminOrAbove()
+        || (
+          isSpimsRole('student')
+          && (
+            resource.data.scope == 'all'
+            || (resource.data.scope == 'student' && resource.data.studentId == spimsStudentId())
+            || (
+              resource.data.scope == 'course_session'
+              && resource.data.course == spimsStudentDoc().course
+              && resource.data.session == spimsStudentDoc().session
+            )
+          )
+        );
+      allow create, update, delete: if isSpimsAdminOrAbove();
+    }
+
+    // spims_student_attendance — attendance marked by admin for students
+    match /spims_student_attendance/{docId} {
+      allow read: if isSpimsAdminOrAbove()
+        || (isSpimsRole('student') && resource.data.studentId == spimsStudentId());
+      allow create, update: if isSpimsAdminOrAbove();
+      allow delete: if false;
+    }
+
     match /spims_audit/{docId} {
       allow read: if isSpimsSuperAdmin();
       allow create: if isSpimsAuth();

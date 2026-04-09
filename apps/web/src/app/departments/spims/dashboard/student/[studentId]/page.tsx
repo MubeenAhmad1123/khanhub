@@ -12,8 +12,10 @@ import FeeRecordTab from '@/components/spims/student-profile/FeeRecordTab';
 import ExamRecordTab from '@/components/spims/student-profile/ExamRecordTab';
 import DocumentsTab from '@/components/spims/student-profile/DocumentsTab';
 import FinanceSummaryTab from '@/components/spims/student-profile/FinanceSummaryTab';
+import TestsTab from '@/components/spims/student-profile/TestsTab';
+import AttendanceTab from '@/components/spims/student-profile/AttendanceTab';
 
-type Tab = 'admission' | 'fees' | 'exam' | 'documents' | 'finance';
+type Tab = 'admission' | 'fees' | 'exam' | 'documents' | 'finance' | 'tests' | 'attendance';
 
 export default function StudentSelfServicePage() {
   const router = useRouter();
@@ -58,6 +60,8 @@ export default function StudentSelfServicePage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'fees', label: 'Fee record' },
     { id: 'finance', label: 'Finance summary' },
+    { id: 'tests', label: 'Tests' },
+    { id: 'attendance', label: 'Attendance' },
     { id: 'exam', label: 'Exam record' },
     { id: 'admission', label: 'Admission' },
     { id: 'documents', label: 'Documents' },
@@ -100,6 +104,8 @@ export default function StudentSelfServicePage() {
 
         {tab === 'admission' && <AdmissionTab student={student} session={session} onSaved={load} />}
         {tab === 'fees' && <FeeRecordTab student={student} session={session} />}
+        {tab === 'tests' && <TestsTab student={student} />}
+        {tab === 'attendance' && <AttendanceTab studentId={student.id} />}
         {tab === 'exam' && <ExamRecordTab student={student} session={session} onSaved={load} />}
         {tab === 'documents' && <DocumentsTab studentId={student.id} session={session} />}
         {tab === 'finance' && <FinanceSummaryTab student={student} />}
