@@ -5,7 +5,6 @@ export interface HqUser {
   customId: string;
   name: string;
   role: HqRole;
-  password: string;
   email: string;
   phone?: string;
   createdBy: string;

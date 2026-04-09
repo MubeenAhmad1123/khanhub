@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { HqSession, HqRole } from '@/types/hq';
 
@@ -108,6 +109,13 @@ export default function HqLoginPage() {
         loginTime: Date.now(),
       };
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+      try {
+        const idToken = await cred.user.getIdToken();
+        await setHqSessionCookieFromIdToken(idToken);
+      } catch {
+        // ignore
+      }
 
       const routes: Record<HqRole, string> = {
         superadmin: '/hq/dashboard/superadmin',

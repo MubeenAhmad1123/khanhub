@@ -45,10 +45,6 @@ export async function resetPortalUserPassword(
   try {
     const app = getAdminApp();
     await getAuth(app).updateUser(uid, { password: newPassword });
-    await getFirestore(app)
-      .collection(COLLECTION_BY_PORTAL[portal])
-      .doc(uid)
-      .set({ password: newPassword }, { merge: true });
 
     return { success: true };
   } catch (err: any) {

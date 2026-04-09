@@ -722,8 +722,15 @@ service cloud.firestore {
     // hq_audit — cross-system audit log 
     match /hq_audit/{docId} { 
       allow read: if isHqSuperAdmin(); 
-      allow create: if request.auth != null; 
+      allow create: if isHqAuth(); 
     } 
+
+    // hq_settings — HQ superadmin settings (toggles/thresholds)
+    match /hq_settings/{docId} {
+      allow read: if isHqSuperAdmin();
+      allow create, update: if isHqSuperAdmin();
+      allow delete: if false;
+    }
 
     // hq_notifications — in-app notifications for HQ users
     match /hq_notifications/{docId} {

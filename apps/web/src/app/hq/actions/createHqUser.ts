@@ -68,7 +68,6 @@ export async function createHqUserServer(data: {
       customId: data.customId,
       name: data.name,
       role: data.role,
-      password: data.password,
       email,
       ...(data.phone ? { phone: data.phone } : {}),
       createdBy: data.createdBy,
