@@ -72,8 +72,8 @@ export default function NewSpimsStudentPage() {
       toast.error('Login ID and password (6+ chars) required');
       return;
     }
-    if (!name.trim() || !fatherName.trim() || !rollNo.trim() || !session.trim()) {
-      toast.error('Name, father name, roll number, and session are required');
+    if (!name.trim() || !fatherName.trim() || !session.trim()) {
+      toast.error('Name, father name, and session are required');
       return;
     }
     const pkg = Number(totalPackage) || 0;
@@ -220,7 +220,7 @@ export default function NewSpimsStudentPage() {
                   </button>
                 </div>
               </div>
-              <Field label="Roll Number" value={rollNo} onChange={setRollNo} placeholder="e.g. 2024-001" />
+              <Field label="Roll Number (optional)" value={rollNo} onChange={setRollNo} placeholder="e.g. 2024-001" />
             </div>
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest pt-4">Personal</h2>
             <div className="grid sm:grid-cols-2 gap-4">

@@ -32,7 +32,7 @@ export default function SuperAdminRedirect() {
 
         <div className="space-y-4">
           <Link 
-            href="/hq/dashboard"
+            href="/hq/dashboard/superadmin"
             className="flex items-center justify-center gap-2 w-full py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-teal-100 group"
           >
             Go to HQ Dashboard

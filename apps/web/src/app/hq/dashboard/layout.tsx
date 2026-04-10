@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Shield, Eye, FileText,
   UserCog, CalendarCheck, CheckCircle, CreditCard, History,
   LogOut, Menu, X, ArrowLeft, Sun, Moon, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User,
-  Building2, GraduationCap
+  Building2, GraduationCap, ChevronLeft, ExternalLink
 } from 'lucide-react';
 import type { HqRole, HqSession } from '@/types/hq';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
@@ -60,6 +60,16 @@ const ROLE_LABELS: Record<HqRole, string> = {
   cashier: 'Cashier',
 };
 
+// Dept label map for sidebar shortcuts
+const DEPT_LABELS: Record<string, { label: string; adminUrl: string; color: string }> = {
+  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-rose-500' },
+  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500' },
+  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500' },
+  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500' },
+  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500' },
+  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500' },
+};
+
 export default function HqDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -68,6 +78,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [activeDepts, setActiveDepts] = useState<string[]>([]);
 
   const normalizeRole = (role: unknown): HqRole | null => {
     const r = String(role || '').trim().toLowerCase();
@@ -90,6 +101,12 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       setUser(parsed);
       setIsChecking(false);
       setTimeout(() => setMounted(true), 50);
+
+      // Detect any active dept sessions (from impersonation)
+      const depts = Object.keys(DEPT_LABELS).filter(d => {
+        try { return !!localStorage.getItem(`${d}_session`); } catch { return false; }
+      });
+      setActiveDepts(depts);
     } catch {
       localStorage.removeItem(SESSION_KEY);
       router.push('/hq/login');
@@ -213,6 +230,26 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         })}
       </nav>
 
+      {/* Dept shortcut section — only shown when a dept session is active */}
+      {activeDepts.length > 0 && (
+        <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+          <p className={`text-[10px] font-black uppercase tracking-widest mb-2 px-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Active Dept Views</p>
+          {activeDepts.map(dept => {
+            const info = DEPT_LABELS[dept];
+            return (
+              <Link
+                key={dept}
+                href={info.adminUrl}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold mb-0.5 transition-all ${darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-50 text-gray-600'}`}
+              >
+                <ExternalLink size={12} className={info.color} />
+                <span>View {info.label} Dashboard</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
       <div className={`px-4 pb-6 pt-2 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
         <button
           onClick={toggleDark}
@@ -261,12 +298,21 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between ${
           darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
         }`}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
-          >
-            <Menu size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              <Menu size={20} />
+            </button>
+            <button
+              onClick={() => router.back()}
+              className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+              title="Go back"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-gray-800 rounded-lg flex items-center justify-center text-white">
               <Shield size={14} />
@@ -284,8 +330,20 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${
           darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
         }`}>
-          <div className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            KhanHub HQ Portal
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                darkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-100' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+              title="Go back"
+            >
+              <ChevronLeft size={15} />
+              Back
+            </button>
+            <span className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              KhanHub HQ Portal
+            </span>
           </div>
           <div className="flex items-center gap-3">
             {user ? <HqNotificationBell session={user} /> : null}
