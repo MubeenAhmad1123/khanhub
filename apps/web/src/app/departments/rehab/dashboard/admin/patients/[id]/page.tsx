@@ -159,7 +159,7 @@ export default function PatientDetailPage() {
         });
       });
 
-      const totalPkg = data.totalPackageAmount || (data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1);
+      const totalPkg = (Number(data.monthlyPackage || data.packageAmount || 0) * Number(data.durationMonths || 1));
       const overallRemaining = totalPkg - overallReceived;
 
       setPatient({ 
@@ -485,12 +485,17 @@ export default function PatientDetailPage() {
         setPhotoUploading(false);
       }
 
+      const monthlyPkg = Number(editForm.packageAmount);
+      const duration = Number(editForm.durationMonths);
+      const totalPkgValue = monthlyPkg * duration;
+
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         name: editForm.name,
         diagnosis: editForm.diagnosis,
-        packageAmount: Number(editForm.packageAmount),
-        monthlyPackage: Number(editForm.packageAmount),
-        durationMonths: Number(editForm.durationMonths),
+        packageAmount: monthlyPkg,
+        monthlyPackage: monthlyPkg,
+        durationMonths: duration,
+        totalPackageAmount: totalPkgValue,
         admissionDate: Timestamp.fromDate(new Date(editForm.admissionDate)),
         photoUrl: photoUrl || null
       });
@@ -499,7 +504,11 @@ export default function PatientDetailPage() {
         ...prev, 
         name: editForm.name,
         diagnosis: editForm.diagnosis,
-        packageAmount: Number(editForm.packageAmount),
+        packageAmount: monthlyPkg,
+        monthlyPackage: monthlyPkg,
+        durationMonths: duration,
+        totalPkg: totalPkgValue,
+        overallRemaining: totalPkgValue - (prev.overallReceived || 0),
         photoUrl: photoUrl 
       }));
       setEditForm(prev => ({ ...prev, photoUrl }));

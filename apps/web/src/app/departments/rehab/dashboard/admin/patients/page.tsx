@@ -74,8 +74,8 @@ export default function PatientsListPage() {
         const pFees = feesMap[d.id] || [];
         const pCanteen = canteenMap[d.id] || [];
         
-        // Use standardized fields with backward compatibility fallback
-        const totalPkg = data.totalPackageAmount || (Number(data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1));
+        // Standardized calculation (Recalculate to avoid stale totalPackageAmount)
+        const totalPkg = (Number(data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1));
         let totalReceived = 0;
         pFees.forEach(f => {
           (f.payments || []).forEach((p: any) => {

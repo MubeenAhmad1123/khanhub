@@ -60,8 +60,8 @@ export default function FamilyPatientViewPage() {
         });
       });
 
-      // Standardized calculation
-      const totalPkg = data.totalPackageAmount || (Number(data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1));
+      // Standardized calculation (Recalculate to avoid stale totalPackageAmount)
+      const totalPkg = (Number(data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1));
       const remaining = totalPkg - totalReceived;
 
       let totalCanteenDeposited = 0, totalCanteenSpent = 0;
