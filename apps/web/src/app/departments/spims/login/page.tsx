@@ -1,7 +1,7 @@
 // apps/web/src/app/departments/spims/login/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginSpims } from '@/lib/spims/spimsAuth';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
@@ -12,6 +12,18 @@ export default function SpimsLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    const hqSessionStr = localStorage.getItem('hq_session');
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession && hqSession.role === 'superadmin') {
+          router.push('/departments/spims/dashboard/admin');
+        }
+      } catch (e) {}
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

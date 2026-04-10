@@ -11,7 +11,7 @@ import {
 import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-type RehabRole = 'admin' | 'staff' | 'family';
+type RehabRole = 'admin' | 'staff' | 'family' | 'superadmin';
 
 interface NavItem {
   label: string;
@@ -22,26 +22,28 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   // Admin nav — patients only (admin cannot manage staff)
-  { label: 'Overview',      href: '/departments/rehab/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin'] },
-  { label: 'Patients',      href: '/departments/rehab/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin'] },
-  { label: 'Credentials',   href: '/departments/rehab/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin'] },
+  { label: 'Overview',      href: '/departments/sukoon/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
+  { label: 'Patients',      href: '/departments/sukoon/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
+  { label: 'Credentials',   href: '/departments/sukoon/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin', 'superadmin'] },
 
   // Self-service nav (all roles)
-  { label: 'My Attendance', href: '/departments/rehab/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
-  { label: 'My Patient',    href: '/departments/rehab/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
-  { label: 'My Profile',    href: '/departments/rehab/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family'] },
+  { label: 'My Attendance', href: '/departments/sukoon/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
+  { label: 'My Patient',    href: '/departments/sukoon/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
+  { label: 'My Profile',    href: '/departments/sukoon/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },
 ];
 
 const ROLE_COLORS: Record<RehabRole, string> = {
   admin:      'bg-blue-100 text-blue-700',
   staff:      'bg-teal-100 text-teal-700',
   family:     'bg-green-100 text-green-700',
+  superadmin: 'bg-purple-100 text-purple-700',
 };
 
 const ROLE_LABELS: Record<RehabRole, string> = {
   admin:      'Admin',
   staff:      'Staff',
   family:     'Family',
+  superadmin: 'HQ Admin',
 };
 
 export default function RehabDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -54,23 +56,43 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    const session = localStorage.getItem('rehab_session');
-    if (!session) { router.push('/departments/rehab/login'); return; }
+    let session = localStorage.getItem('sukoon_session');
+    const hqSessionStr = localStorage.getItem('hq_session');
+    
+    // Auto-inject session for HQ superadmin
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession && hqSession.role === 'superadmin') {
+          const syncSession = {
+            uid: hqSession.uid,
+            customId: hqSession.customId || hqSession.email || 'HQ-USER',
+            role: 'superadmin',
+            displayName: hqSession.displayName || 'Superadmin',
+          };
+          localStorage.setItem('sukoon_session', JSON.stringify(syncSession));
+          localStorage.setItem('sukoon_login_time', Date.now().toString());
+          session = JSON.stringify(syncSession);
+        }
+      } catch (e) {}
+    }
+
+    if (!session) { router.push('/departments/sukoon/login'); return; }
 
     const performAuthCheck = async () => {
       try {
-        const parsed = JSON.parse(session);
+        const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) { throw new Error('Invalid session'); }
 
-        // NEW: Redirect HQ roles to HQ login
-        if (parsed.role === 'superadmin' || parsed.role === 'cashier') {
-          localStorage.removeItem('rehab_session');
+        // Redirect HQ cashiers to HQ login
+        if (parsed.role === 'cashier') {
+          localStorage.removeItem('sukoon_session');
           router.push('/hq/login?msg=Please+use+HQ+portal');
           return;
         }
 
         // 1. Session Timeout Check (12 Hours)
-        const loginTime = localStorage.getItem('rehab_login_time');
+        const loginTime = localStorage.getItem('sukoon_login_time');
         if (loginTime) {
           const hoursElapsed = (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60);
           if (hoursElapsed > 12) {
@@ -80,10 +102,13 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
         }
 
         // 2. Background Verification (Role & Active Status)
-        const userDoc = await getDoc(doc(db, 'rehab_users', parsed.uid));
-        if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
-          handleSignOut();
-          return;
+        // Skip for superadmin because they authenticate via HQ
+        if (parsed.role !== 'superadmin') {
+          const userDoc = await getDoc(doc(db, 'sukoon_users', parsed.uid));
+          if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
+            handleSignOut();
+            return;
+          }
         }
 
         setUser(parsed);
@@ -108,8 +133,12 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem('rehab_session');
-    router.push('/departments/rehab/login');
+    localStorage.removeItem('sukoon_session');
+    if (user?.role === 'superadmin') {
+      router.push('/hq/dashboard/superadmin');
+    } else {
+      router.push('/departments/sukoon/login');
+    }
   };
 
   if (isChecking) {

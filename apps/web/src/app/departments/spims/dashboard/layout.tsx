@@ -21,11 +21,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Overview', href: '/departments/spims/dashboard/admin', icon: <LayoutDashboard size={16} />, roles: ['admin'] },
-  { label: 'Students', href: '/departments/spims/dashboard/admin/students', icon: <Heart size={16} />, roles: ['admin'] },
-  { label: 'Credentials', href: '/departments/spims/dashboard/admin/passwords', icon: <Shield size={16} />, roles: ['admin'] },
-  { label: 'Attendance', href: '/departments/spims/dashboard/admin/attendance', icon: <CalendarDays size={16} />, roles: ['admin'] },
-  { label: 'Tests', href: '/departments/spims/dashboard/admin/tests', icon: <ClipboardCheck size={16} />, roles: ['admin'] },
+  { label: 'Overview', href: '/departments/spims/dashboard/admin', icon: <LayoutDashboard size={16} />, roles: ['admin', 'superadmin'] },
+  { label: 'Students', href: '/departments/spims/dashboard/admin/students', icon: <Heart size={16} />, roles: ['admin', 'superadmin'] },
+  { label: 'Credentials', href: '/departments/spims/dashboard/admin/passwords', icon: <Shield size={16} />, roles: ['admin', 'superadmin'] },
+  { label: 'Attendance', href: '/departments/spims/dashboard/admin/attendance', icon: <CalendarDays size={16} />, roles: ['admin', 'superadmin'] },
+  { label: 'Tests', href: '/departments/spims/dashboard/admin/tests', icon: <ClipboardCheck size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/spims/dashboard/staff', icon: <CalendarDays size={16} />, roles: ['staff'] },
   { label: 'Student portal', href: '/departments/spims/dashboard/student', icon: <User size={16} />, roles: ['student'] },
   {
@@ -69,7 +69,27 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    const session = localStorage.getItem('spims_session');
+    let session = localStorage.getItem('spims_session');
+    const hqSessionStr = localStorage.getItem('hq_session');
+    
+    // Auto-inject session for HQ superadmin
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession && hqSession.role === 'superadmin') {
+          const syncSession = {
+            uid: hqSession.uid,
+            customId: hqSession.customId || hqSession.email || 'HQ-USER',
+            role: 'superadmin',
+            displayName: hqSession.displayName || 'Superadmin',
+          };
+          localStorage.setItem('spims_session', JSON.stringify(syncSession));
+          localStorage.setItem('spims_login_time', Date.now().toString());
+          session = JSON.stringify(syncSession);
+        }
+      } catch (e) {}
+    }
+
     if (!session) {
       router.push('/departments/spims/login');
       return;
@@ -77,7 +97,7 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
 
     const performAuthCheck = async () => {
       try {
-        const parsed = JSON.parse(session);
+        const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) {
           throw new Error('Invalid session');
         }
@@ -91,10 +111,12 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
           }
         }
 
-        const userDoc = await getDoc(doc(db, 'spims_users', parsed.uid));
-        if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
-          handleSignOut();
-          return;
+        if (parsed.role !== 'superadmin') {
+          const userDoc = await getDoc(doc(db, 'spims_users', parsed.uid));
+          if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
+            handleSignOut();
+            return;
+          }
         }
 
         setUser(parsed);
@@ -134,7 +156,11 @@ export default function SpimsDashboardLayout({ children }: { children: React.Rea
 
   const handleSignOut = () => {
     localStorage.removeItem('spims_session');
-    router.push('/departments/spims/login');
+    if (user?.role === 'superadmin') {
+      router.push('/hq/dashboard/superadmin');
+    } else {
+      router.push('/departments/spims/login');
+    }
   };
 
   if (isChecking) {

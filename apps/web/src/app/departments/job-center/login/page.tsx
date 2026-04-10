@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginRehab } from '@/lib/rehab/rehabAuth';
 import EyePasswordInput from '@/components/rehab/EyePasswordInput';
@@ -11,6 +11,18 @@ export default function RehabLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    const hqSessionStr = localStorage.getItem('hq_session');
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession && hqSession.role === 'superadmin') {
+          router.push('/departments/job-center/dashboard/admin');
+        }
+      } catch (e) {}
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
