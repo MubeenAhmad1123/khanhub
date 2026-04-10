@@ -8,22 +8,33 @@ import {
   where, 
   getDocs, 
   orderBy, 
+  limit,
+  addDoc,
+  serverTimestamp,
   Timestamp 
 } from 'firebase/firestore';
 import { 
+  AlertCircle,
   ArrowLeft, 
+  Calculator,
   Calendar, 
+  CheckCircle2,
   ChevronDown, 
   ChevronUp, 
+  Coins,
   Download, 
+  FileCheck,
   Filter, 
   LayoutDashboard, 
   List, 
+  Loader2,
   Printer, 
+  Save,
   Search, 
   TrendingDown, 
   TrendingUp,
-  Wallet
+  Wallet,
+  X
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -55,6 +66,14 @@ export default function DailyReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Settlement States
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [openingBalance, setOpeningBalance] = useState(0);
+  const [actualCash, setActualCash] = useState('');
+  const [closingNote, setClosingNote] = useState('');
+  const [isDayClosed, setIsDayClosed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
     if (sessionLoading) return;
     if (!session || (session.role !== 'cashier' && session.role !== 'superadmin')) {
@@ -62,14 +81,13 @@ export default function DailyReportPage() {
       return;
     }
     fetchData();
+    fetchOpeningBalance();
   }, [sessionLoading, session, reportDate]);
 
   async function fetchData() {
     setLoading(true);
     setError(null);
     try {
-      // Fetch from cashierTransactions collection
-      // Rule 51 compliance: query without mixed where/orderBy, sort client-side
       const q = query(
         collection(db, 'cashierTransactions'),
         where('dateStr', '==', formatDateDMY(new Date(reportDate)))
@@ -81,10 +99,19 @@ export default function DailyReportPage() {
         ...doc.data()
       })) as Transaction[];
       
-      // Client-side sort to follow business rules and avoid index complexites
       data.sort((a,b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
       
       setTransactions(data);
+
+      // Check if already closed
+      const closedQ = query(
+        collection(db, 'hq_reconciliation'),
+        where('date', '==', formatDateDMY(new Date(reportDate))),
+        limit(1)
+      );
+      const closedSnap = await getDocs(closedQ);
+      setIsDayClosed(!closedSnap.empty);
+
     } catch (err: any) {
       console.error('Error fetching daily report:', err);
       setError('Failed to load transaction data.');
@@ -93,6 +120,57 @@ export default function DailyReportPage() {
     }
   }
 
+  async function fetchOpeningBalance() {
+    try {
+      const q = query(
+        collection(db, 'hq_reconciliation'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        setOpeningBalance(snap.docs[0].data().actualClosing || snap.docs[0].data().actualCash || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching opening balance:', err);
+    }
+  }
+
+  const handleCloseDay = async () => {
+    if (!actualCash) return alert('Please enter actual cash in hand');
+    setSubmitting(true);
+    try {
+      const actual = Number(actualCash);
+      const expected = openingBalance + stats.totalIncome - stats.totalExpense;
+      const variance = actual - expected;
+
+      await addDoc(collection(db, 'hq_reconciliation'), {
+        date: formatDateDMY(new Date(reportDate)),
+        openingBalance,
+        totalInflow: stats.totalIncome,
+        totalOutflow: stats.totalExpense,
+        expectedClosing: expected,
+        actualClosing: actual,
+        actualCash: actual, // for compatibility
+        variance,
+        varianceNote: closingNote,
+        cashierId: session?.customId || session?.uid,
+        cashierName: session?.name || session?.displayName,
+        status: 'submitted',
+        createdAt: serverTimestamp(),
+      });
+
+      setIsDayClosed(true);
+      setShowCloseModal(false);
+      alert('Day closed and reconciliation submitted successfully!');
+    } catch (err) {
+      console.error('Error closing day:', err);
+      alert('Failed to close day. Check console for details.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Calculations for Summary View
   const stats = useMemo(() => {
     const summary = {
@@ -100,209 +178,392 @@ export default function DailyReportPage() {
       totalExpense: 0,
       netTotal: 0,
       deptTotals: {} as Record<string, { income: number, expense: number }>,
-      categoryTotals: {} as Record<string, number>,
+      categoryBreakdown: {
+        income: {} as Record<string, { total: number, txs: Transaction[] }>,
+        expense: {} as Record<string, { total: number, txs: Transaction[] }>
+      },
       methodTotals: {} as Record<string, number>,
+      cashExpected: 0
     };
 
     transactions.forEach(tx => {
       const amt = Number(tx.amount) || 0;
-      if (tx.type === 'income') {
+      const type = tx.type || 'income';
+      const catKey = tx.categoryName || tx.category || 'Uncategorized';
+      
+      if (type === 'income') {
         summary.totalIncome += amt;
+        if (!summary.categoryBreakdown.income[catKey]) {
+          summary.categoryBreakdown.income[catKey] = { total: 0, txs: [] };
+        }
+        summary.categoryBreakdown.income[catKey].total += amt;
+        summary.categoryBreakdown.income[catKey].txs.push(tx);
+        
         if (!summary.deptTotals[tx.departmentName]) summary.deptTotals[tx.departmentName] = { income: 0, expense: 0 };
         summary.deptTotals[tx.departmentName].income += amt;
       } else {
         summary.totalExpense += amt;
+        if (!summary.categoryBreakdown.expense[catKey]) {
+          summary.categoryBreakdown.expense[catKey] = { total: 0, txs: [] };
+        }
+        summary.categoryBreakdown.expense[catKey].total += amt;
+        summary.categoryBreakdown.expense[catKey].txs.push(tx);
+
         if (!summary.deptTotals[tx.departmentName]) summary.deptTotals[tx.departmentName] = { income: 0, expense: 0 };
         summary.deptTotals[tx.departmentName].expense += amt;
       }
 
-      const catKey = tx.categoryName || tx.category || 'Uncategorized';
-      summary.categoryTotals[catKey] = (summary.categoryTotals[catKey] || 0) + (tx.type === 'income' ? amt : -amt);
+      if (tx.paymentMethod === 'cash' && tx.status === 'approved') {
+        summary.cashExpected += (type === 'income' ? amt : -amt);
+      }
       
       const methodKey = tx.paymentMethod || 'Other';
-      summary.methodTotals[methodKey] = (summary.methodTotals[methodKey] || 0) + amt;
+      summary.methodTotals[methodKey] = (summary.methodTotals[methodKey] || 0) + (type === 'income' ? amt : -amt);
     });
 
     summary.netTotal = summary.totalIncome - summary.totalExpense;
     return summary;
   }, [transactions]);
 
-  function handlePrint() {
-    window.print();
-  }
+  const [expandedCats, setExpandedCats] = useState<string[]>([]);
+  const toggleCat = (cat: string) => {
+    setExpandedCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  };
+
+  const handlePrint = () => {
+    if (typeof window !== 'undefined') window.print();
+  };
 
   if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center animate-pulse">
           <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 font-medium">Loading Daily Report...</p>
+          <p className="text-slate-600 font-medium">Gathering Financial Data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 print:bg-white print:pb-0">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-4 md:px-8 print:hidden">
+    <div className="min-h-screen bg-[#F8FAFC] pb-20 print:bg-white print:pb-0 font-sans">
+      {/* Premium Header */}
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 px-4 py-4 md:px-8 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <button 
               onClick={() => router.back()}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              className="p-2.5 hover:bg-slate-100/80 rounded-2xl transition-all active:scale-95 text-slate-400 hover:text-slate-900"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-600" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Daily Financial Report</h1>
-              <p className="text-sm text-slate-500 font-medium">HQ Cashier Audit Portal</p>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">Daily Report</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">HQ Financial Intelligence</p>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-            <div className="relative group">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+          <div className="flex items-center gap-3">
+            <div className="relative group overflow-hidden rounded-2xl border border-slate-200 shadow-sm bg-white">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors z-10" />
               <input 
                 type="date" 
                 value={reportDate}
                 onChange={(e) => setReportDate(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-slate-100 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 rounded-xl text-sm font-semibold text-slate-700 outline-none transition-all cursor-pointer"
+                className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 outline-none transition-all cursor-pointer relative z-0"
               />
             </div>
             <button 
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-indigo-100 active:scale-95"
+              className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-900 rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center gap-2 border border-slate-200 shadow-sm"
             >
               <Printer className="w-4 h-4" />
-              <span>Print</span>
+              Print
             </button>
+            
+            {!isDayClosed ? (
+              <button 
+                onClick={() => setShowCloseModal(true)}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center gap-2"
+              >
+                <FileCheck className="w-4 h-4" />
+                Close Day
+              </button>
+            ) : (
+                <div className="px-5 py-2.5 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-black flex items-center gap-2 border border-emerald-100 italic">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Day Finalized
+                </div>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 md:px-8">
-        {/* Toggle Controls */}
-        <div className="flex justify-center mb-8 print:hidden">
-          <div className="bg-slate-200 p-1 rounded-2xl flex items-center shadow-inner">
+      <main className="max-w-7xl mx-auto px-4 py-10 md:px-8">
+        {/* Day Status Banner */}
+        {isDayClosed && (
+            <div className="mb-10 bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-[2.5rem] text-white shadow-xl shadow-emerald-100 flex flex-col md:flex-row md:items-center justify-between gap-6 animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex items-center gap-5">
+                    <div className="bg-white/20 p-4 rounded-[2rem] backdrop-blur-md">
+                        <FileCheck className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black tracking-tight leading-none">Financial Settlement Complete</h2>
+                        <p className="text-white/80 text-xs font-bold mt-1.5 uppercase tracking-widest">Verified and Archived by Cashier Console</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                   <div className="text-right hidden md:block">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status</p>
+                      <p className="text-sm font-black italic">Read Only</p>
+                   </div>
+                   <div className="w-px h-10 bg-white/20 hidden md:block mx-2" />
+                   <button className="px-6 py-3 bg-white text-emerald-700 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg transition-transform active:scale-95">
+                      Audit Trail
+                   </button>
+                </div>
+            </div>
+        )}
+
+        {/* Toggle Controls - Premium Style */}
+        <div className="flex justify-center mb-12 print:hidden">
+          <div className="bg-slate-200/50 p-1.5 rounded-[22px] flex items-center border border-slate-200/50 gap-1">
             <button 
               onClick={() => setViewMode('summary')}
               className={cn(
-                "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap",
+                "flex items-center gap-2.5 px-8 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap",
                 viewMode === 'summary' 
-                  ? "bg-white text-indigo-700 shadow-sm" 
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-slate-900 shadow-xl shadow-slate-200/50 scale-100" 
+                  : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
               )}
             >
               <LayoutDashboard className="w-4 h-4" />
-              Summary View
+              Insight View
             </button>
             <button 
               onClick={() => setViewMode('detail')}
               className={cn(
-                "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap",
+                "flex items-center gap-2.5 px-8 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap",
                 viewMode === 'detail' 
-                  ? "bg-white text-indigo-700 shadow-sm" 
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-slate-900 shadow-xl shadow-slate-200/50 scale-100" 
+                  : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
               )}
             >
               <List className="w-4 h-4" />
-              Detailed Logs
+              Raw Ledger
             </button>
           </div>
         </div>
 
         {viewMode === 'summary' ? (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Top Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm shadow-emerald-50/50">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="bg-emerald-50 p-3 rounded-2xl">
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            {/* Main KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-white p-7 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 transition-transform group-hover:rotate-12">
+                   <div className="bg-emerald-50 p-3 rounded-2xl">
                     <TrendingUp className="w-6 h-6 text-emerald-600" />
-                  </div>
-                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">Today's Income</span>
+                   </div>
                 </div>
-                <h3 className="text-sm font-medium text-slate-500 mb-1">Total Received</h3>
-                <p className="text-3xl font-black text-slate-900">PKR {stats.totalIncome.toLocaleString()}</p>
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Income</h3>
+                <p className="text-3xl font-black text-slate-900 tracking-tight">PKR {stats.totalIncome.toLocaleString()}</p>
+                <div className="mt-4 flex items-center gap-1.5">
+                   <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: '100%' }} />
+                   </div>
+                </div>
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-rose-100 shadow-sm shadow-rose-50/50">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="bg-rose-50 p-3 rounded-2xl">
+              <div className="bg-white p-7 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 transition-transform group-hover:-rotate-12">
+                   <div className="bg-rose-50 p-3 rounded-2xl">
                     <TrendingDown className="w-6 h-6 text-rose-600" />
-                  </div>
-                  <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">Today's Expense</span>
+                   </div>
                 </div>
-                <h3 className="text-sm font-medium text-slate-500 mb-1">Total Paid</h3>
-                <p className="text-3xl font-black text-slate-900">PKR {stats.totalExpense.toLocaleString()}</p>
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Expenses</h3>
+                <p className="text-3xl font-black text-slate-900 tracking-tight">PKR {stats.totalExpense.toLocaleString()}</p>
+                <div className="mt-4 flex items-center gap-1.5">
+                   <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-rose-500 rounded-full" style={{ width: `${(stats.totalExpense / (stats.totalIncome || 1)) * 100}%` }} />
+                   </div>
+                </div>
               </div>
 
-              <div className="bg-indigo-600 p-6 rounded-3xl shadow-lg shadow-indigo-100 group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="bg-white/20 p-3 rounded-2xl">
-                    <Wallet className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-white/80 bg-white/10 px-2 py-1 rounded-lg">Net Standing</span>
+              <div className="bg-slate-900 p-7 rounded-[32px] shadow-2xl shadow-slate-200 relative overflow-hidden group col-span-1 md:col-span-2">
+                <div className="absolute top-0 right-0 p-4 opacity-20">
+                    <Wallet className="w-20 h-20 text-white" />
                 </div>
-                <h3 className="text-sm font-medium text-white/70 mb-1">Closing Balance</h3>
-                <p className="text-3xl font-black text-white">PKR {stats.netTotal.toLocaleString()}</p>
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Net Flow Balance</h3>
+                <p className="text-4xl font-black text-white tracking-tighter">PKR {stats.netTotal.toLocaleString()}</p>
+                <div className="mt-6 flex items-center gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Expected Cash</span>
+                    <span className="text-emerald-400 font-black">PKR {stats.cashExpected.toLocaleString()}</span>
+                  </div>
+                  <div className="h-8 w-[1px] bg-slate-800" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Digital/Bank</span>
+                    <span className="text-indigo-400 font-black">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Department Totals */}
-              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
-                  <h2 className="font-bold text-slate-800">Department Wise Breakdown</h2>
+            {/* Expandable Breakdown Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {/* Income Breakdown */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-2">
+                  <h2 className="text-lg font-black text-slate-900 flex items-center gap-3">
+                    <div className="w-2 h-8 bg-emerald-500 rounded-full" />
+                    Income Streams
+                  </h2>
+                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.income).length} Categories</span>
                 </div>
-                <div className="p-6">
-                  {Object.keys(stats.deptTotals).length > 0 ? (
-                    <div className="space-y-4">
-                      {Object.entries(stats.deptTotals).map(([dept, totals]) => (
-                        <div key={dept} className="flex flex-col gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-slate-900 capitalize">{dept}</span>
-                            <span className="text-sm font-black text-indigo-600">PKR {(totals.income - totals.expense).toLocaleString()}</span>
+                 <div className="space-y-3">
+                  {Object.entries(stats.categoryBreakdown.income).map(([cat, data]) => (
+                    <div key={cat} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all hover:border-emerald-200">
+                      <button 
+                        onClick={() => toggleCat(`in-${cat}`)}
+                        className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="bg-emerald-50 p-2.5 rounded-xl">
+                            <ArrowLeft className="w-5 h-5 text-emerald-600 rotate-135" />
                           </div>
-                          <div className="grid grid-cols-2 gap-4 text-xs">
-                            <div className="flex justify-between text-emerald-600 font-bold">
-                              <span>In:</span>
-                              <span>PKR {totals.income.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-rose-600 font-bold">
-                              <span>Out:</span>
-                              <span>PKR {totals.expense.toLocaleString()}</span>
-                            </div>
+                          <div className="text-left">
+                            <p className="font-black text-slate-900 leading-none">{cat}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1.5">{data.txs.length} Transactions</p>
                           </div>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-4">
+                          <span className="text-lg font-black text-slate-900">PKR {data.total.toLocaleString()}</span>
+                          {expandedCats.includes(`in-${cat}`) ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                        </div>
+                      </button>
+                      
+                      {expandedCats.includes(`in-${cat}`) && (
+                        <div className="px-6 pb-6 pt-2 border-t border-slate-50 bg-slate-50/30">
+                          <div className="space-y-2">
+                            {data.txs.map(tx => (
+                              <div key={tx.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100/50 shadow-sm">
+                                <div className="space-y-0.5">
+                                  <p className="text-xs font-bold text-slate-800">{tx.description || 'General Receipt'}</p>
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                    {tx.departmentName} • {tx.paymentMethod}
+                                  </p>
+                                </div>
+                                <span className="text-sm font-black text-emerald-600">+{tx.amount.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-center py-10 text-slate-400 italic">No department data for this date.</p>
+                  ))}
+                  {Object.keys(stats.categoryBreakdown.income).length === 0 && (
+                    <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                      <p className="text-slate-400 font-bold italic">No Income Recorded Today</p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Payment Method Totals */}
-              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm font-medium">
-                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
-                  <h2 className="font-bold text-slate-800">Payment Collection Modes</h2>
+              {/* Expense Breakdown */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-2">
+                  <h2 className="text-lg font-black text-slate-900 flex items-center gap-3">
+                    <div className="w-2 h-8 bg-rose-500 rounded-full" />
+                    Operating Expenses
+                  </h2>
+                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{Object.keys(stats.categoryBreakdown.expense).length} Categories</span>
                 </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    {Object.entries(stats.methodTotals).map(([method, total]) => (
-                      <div key={method} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-xl transition-colors">
-                        <span className="text-slate-600 capitalize">{method.replace('_', ' ')}</span>
-                        <span className="font-bold text-slate-900">PKR {total.toLocaleString()}</span>
-                      </div>
-                    ))}
-                    {Object.keys(stats.methodTotals).length === 0 && (
-                      <p className="text-center py-10 text-slate-400 italic font-normal">No transaction methods recorded.</p>
-                    )}
-                  </div>
+                <div className="space-y-3">
+                  {Object.entries(stats.categoryBreakdown.expense).map(([cat, data]) => (
+                    <div key={cat} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all hover:border-rose-200">
+                      <button 
+                        onClick={() => toggleCat(`ex-${cat}`)}
+                        className="w-full px-6 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="bg-rose-50 p-2.5 rounded-xl">
+                            <ArrowLeft className="w-5 h-5 text-rose-600 -rotate-45" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-black text-slate-900 leading-none">{cat}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1.5">{data.txs.length} Transactions</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-lg font-black text-slate-900">PKR {data.total.toLocaleString()}</span>
+                          {expandedCats.includes(`ex-${cat}`) ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                        </div>
+                      </button>
+                      
+                      {expandedCats.includes(`ex-${cat}`) && (
+                        <div className="px-6 pb-6 pt-2 border-t border-slate-50 bg-slate-50/30">
+                          <div className="space-y-2">
+                            {data.txs.map(tx => (
+                              <div key={tx.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100/50 shadow-sm">
+                                <div className="space-y-0.5">
+                                  <p className="text-xs font-bold text-slate-800">{tx.description || 'Operational Cost'}</p>
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                    {tx.departmentName} • {tx.receivedBy}
+                                  </p>
+                                </div>
+                                <span className="text-sm font-black text-rose-600">-{tx.amount.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                   {Object.keys(stats.categoryBreakdown.expense).length === 0 && (
+                    <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                      <p className="text-slate-400 font-bold italic">No Expenses Recorded Today</p>
+                    </div>
+                  )}
                 </div>
               </div>
+            </div>
+
+            {/* Department Comparison Horizontal Scroll */}
+            <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+                <h2 className="text-lg font-black text-slate-900 mb-8 px-2">Cash Flow by Department</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Object.entries(stats.deptTotals).map(([dept, totals]) => (
+                        <div key={dept} className="p-6 rounded-3xl bg-slate-50 border border-slate-100 relative group transition-all hover:bg-white hover:shadow-xl hover:shadow-slate-200/50">
+                            <div className="flex justify-between items-start mb-6">
+                                <span className="p-2 bg-white rounded-xl text-[10px] font-black uppercase text-slate-500 shadow-sm border border-slate-100">{dept}</span>
+                                <span className="text-sm font-black text-slate-900">PKR {(totals.income - totals.expense).toLocaleString()}</span>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-1.5">
+                                        <span>Income</span>
+                                        <span className="text-emerald-600">PKR {totals.income.toLocaleString()}</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-200 rounded-full">
+                                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: '100%' }} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-1.5">
+                                        <span>Expense</span>
+                                        <span className="text-rose-600">PKR {totals.expense.toLocaleString()}</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-200 rounded-full">
+                                        <div className="h-full bg-rose-500 rounded-full" style={{ width: `${(totals.expense / (totals.income || 1)) * 100}%` }} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
           </div>
         ) : (
@@ -430,24 +691,109 @@ export default function DailyReportPage() {
         )}
       </main>
 
-      {/* CSS for print */}
+      {/* Settlement Modal */}
+      {showCloseModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowCloseModal(false)} />
+          <div className="bg-white w-full max-w-xl rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between p-8 border-b border-slate-100">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Day Settlement</h2>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1 italic">Audit Ref: {reportDate}</p>
+              </div>
+              <button onClick={() => setShowCloseModal(false)} className="p-3 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-8">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100">
+                  <p className="text-[10px] uppercase font-black text-slate-400 mb-1.5 leading-none">Opening</p>
+                  <p className="text-lg font-black text-slate-900">Rs {openingBalance.toLocaleString()}</p>
+                </div>
+                <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100">
+                  <p className="text-[10px] uppercase font-black text-slate-400 mb-1.5 leading-none">Today's Flow</p>
+                  <p className="text-lg font-black text-slate-900">Rs {stats.netTotal.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="bg-indigo-600 p-8 rounded-[32px] text-center text-white shadow-xl shadow-indigo-200">
+                <div className="flex flex-col items-center">
+                   <div className="bg-white/20 p-3 rounded-2xl mb-4 backdrop-blur-sm">
+                      <Calculator className="w-6 h-6 text-white" />
+                   </div>
+                   <h3 className="text-xs font-black text-white/70 uppercase tracking-widest mb-1">Expected Closing Cash</h3>
+                   <p className="text-4xl font-black text-white tracking-tighter">
+                    Rs {(openingBalance + stats.totalIncome - stats.totalExpense).toLocaleString()}
+                   </p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Actual Physical Cash</label>
+                  <div className="relative group">
+                    <Coins className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-within:text-indigo-600 transition-colors" />
+                    <input 
+                      type="number"
+                      value={actualCash}
+                      onChange={(e) => setActualCash(e.target.value)}
+                      placeholder="Enter amount..."
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 focus:bg-white focus:border-indigo-600 rounded-[28px] outline-none transition-all font-black text-2xl text-slate-900 placeholder:text-slate-300"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                   <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Settlement Narration</label>
+                   <textarea
+                    value={closingNote}
+                    onChange={(e) => setClosingNote(e.target.value)}
+                    placeholder="Describe any shortages or excess if applicable..."
+                    rows={3}
+                    className="w-full p-6 bg-slate-50 border-2 border-slate-100 focus:bg-white focus:border-indigo-600 rounded-[28px] outline-none transition-all text-sm font-bold text-slate-700 placeholder:text-slate-300"
+                   />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleCloseDay}
+                disabled={submitting || !actualCash}
+                className="w-full py-6 bg-slate-950 hover:bg-black text-white rounded-full font-black text-lg transition-all shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-3 mb-4"
+              >
+                {submitting ? <Loader2 className="w-6 h-6 animate-spin text-white" /> : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Archive & Finalize
+                  </>
+                )}
+              </button>
+              
+              <div className="flex gap-4 p-4 rounded-3xl bg-amber-50 border border-amber-100">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <p className="text-[10px] font-black text-amber-800 leading-relaxed uppercase tracking-tight">
+                  Security Warning: Once finalized, today's data is LOCKED. Ensure physical verification is performed.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global CSS for animations & premium feel */}
       <style jsx global>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+        .zoom-in-95 { animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
         @media print {
-          body {
-            background-color: white !important;
-          }
-          .print\:hidden {
-            display: none !important;
-          }
-          main {
-            padding: 0 !important;
-            margin: 0 !important;
-            max-width: 100% !important;
-          }
-          .bg-white {
-            box-shadow: none !important;
-            border: none !important;
-          }
+          body { background: white !important; }
+          .print\:hidden { display: none !important; }
+          main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+          .rounded-\[40px\], .rounded-\[2\.5rem\] { border-radius: 12px !important; }
+          .bg-white { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
         }
       `}</style>
     </div>
