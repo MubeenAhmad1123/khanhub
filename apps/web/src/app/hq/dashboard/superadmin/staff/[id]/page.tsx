@@ -90,12 +90,20 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
         url = `/departments/${dept}/dashboard/admin`;
       } else if (role === 'staff') {
         url = `/departments/${dept}/dashboard/staff`;
-      } else if (role === 'family' || role === 'client' || role === 'patient' || role === 'child' || role === 'seeker' || role === 'student') {
-        url = `/departments/${dept}/dashboard/family`;
       } else if (role === 'cashier') {
         url = `/departments/${dept}/dashboard/cashier`;
       } else {
-        url = `/departments/${dept}/dashboard/admin`;
+        // Each dept has its own non-admin user sub-route
+        const deptUserRoute: Record<string, string> = {
+          rehab:      'family',    // /departments/rehab/dashboard/family
+          spims:      'student',   // /departments/spims/dashboard/student
+          sukoon:     'client',    // /departments/sukoon/dashboard/client
+          welfare:    'child',     // /departments/welfare/dashboard/child
+          'job-center': 'seeker',  // /departments/job-center/dashboard/seeker
+          hospital:   'patient',   // /departments/hospital/dashboard/patient
+        };
+        const subroute = deptUserRoute[dept] ?? 'family';
+        url = `/departments/${dept}/dashboard/${subroute}`;
       }
 
       // Write a dept-specific session so the layout accepts them
