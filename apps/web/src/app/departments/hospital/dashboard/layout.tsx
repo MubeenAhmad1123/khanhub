@@ -56,39 +56,47 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
+    let session = localStorage.getItem('hospital_session');
+    const hqSessionStr = localStorage.getItem('hq_session');
+    
+    // Auto-inject session for HQ superadmin
+    if (hqSessionStr) {
+      try {
+        const hqSession = JSON.parse(hqSessionStr);
+        if (hqSession && hqSession.role === 'superadmin') {
+          const syncSession = {
+            uid: hqSession.uid,
+            customId: hqSession.customId || hqSession.email || 'HQ-USER',
+            role: 'superadmin',
+            displayName: hqSession.displayName || 'Superadmin',
+          };
+          localStorage.setItem('hospital_session', JSON.stringify(syncSession));
+          localStorage.setItem('hospital_login_time', Date.now().toString());
+          session = JSON.stringify(syncSession);
+        }
+      } catch (e) {}
+    }
+
+    if (!session) { router.push('/departments/hospital/login'); return; }
+
     const performAuthCheck = async () => {
       try {
-        const hqSessionStr = localStorage.getItem('hq_session');
-        let parsed = null;
-        let isSuperAdmin = false;
+        const parsed = JSON.parse(session!);
+        if (!parsed.uid || !parsed.role) { throw new Error('Invalid session'); }
 
-        if (hqSessionStr) {
-          const hqSession = JSON.parse(hqSessionStr);
-          if (hqSession && hqSession.role === 'superadmin') {
-            isSuperAdmin = true;
-            // Inject a pseudo-session for superadmin if hq_session is active
-            parsed = { ...hqSession, role: 'superadmin' };
+        // 1. Session Timeout Check (12 Hours)
+        const loginTime = localStorage.getItem('hospital_login_time');
+        if (loginTime) {
+          const hoursElapsed = (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60);
+          if (hoursElapsed > 12) {
+            handleSignOut();
+            return;
           }
         }
 
-        if (!isSuperAdmin) {
-          const session = localStorage.getItem('hospital_session');
-          if (!session) { router.push('/departments/hospital/login'); return; }
-          parsed = JSON.parse(session);
-          
-          if (!parsed.uid || !parsed.role) { throw new Error('Invalid session'); }
-          
-          // 1. Session Timeout Check (12 Hours)
-          const loginTime = localStorage.getItem('hospital_login_time');
-          if (loginTime) {
-            const hoursElapsed = (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60);
-            if (hoursElapsed > 12) {
-              handleSignOut();
-              return;
-            }
-          }
-
-          // 2. Background Verification (Role & Active Status)
+        // 2. Background Verification (Role & Active Status)
+        // Skip for superadmin because they authenticate via HQ
+        if (parsed.role !== 'superadmin') {
           const userDoc = await getDoc(doc(db, 'hospital_users', parsed.uid));
           if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
             handleSignOut();

@@ -2,53 +2,20 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-const GLITCH = '!@#$%^&*<>?[]{}ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-const rnd = () => GLITCH[Math.floor(Math.random() * GLITCH.length)];
-
-const STATUS = {
-  locked: { text: '[ LOCKED ]', color: '#1e3a4a' },
-  decoding: { text: '[ DECODING... ]', color: '#22d3ee' },
-  decoded: { text: '[ DECRYPTED ]', color: '#22c55e' },
-  locking: { text: '[ ENCRYPTING... ]', color: '#f59e0b' },
-};
-
-interface StrengthInfo {
-  pct: number;
-  color: string;
-  label: string;
-}
-
-const getStrength = (v: string): StrengthInfo => {
-  if (!v.length) return { pct: 0, color: '#ef4444', label: '' };
-  if (v.length < 4) return { pct: 18, color: '#ef4444', label: 'WEAK' };
-  if (v.length < 8) return { pct: 55, color: '#f59e0b', label: 'MEDIUM' };
-  return { pct: 100, color: '#22c55e', label: 'STRONG' };
-};
-
-let _key = 0;
-const nextKey = () => ++_key;
-
-interface CharState {
-  ch: string;
-  mode: 'clear' | 'glitch' | 'dot';
-  key: number;
-}
+const GLITCH_CHARS = '!@#$%^&*<>?[]{}ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+const getRandomChar = () => GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
 
 interface EyePasswordInputProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   required?: boolean;
-  className?: string; // Standard prop for integration
+  className?: string;
   id?: string;
   name?: string;
-  label?: string; // New added prop
+  label?: string;
 }
 
-/**
- * Enhanced GlitchDualEyeInput (Exported as EyePasswordInput for compatibility)
- * Fixes: TypeScript errors, missing className support, ref typing.
- */
 export default function EyePasswordInput({
   value,
   onChange,
@@ -59,336 +26,219 @@ export default function EyePasswordInput({
   name,
   label,
 }: EyePasswordInputProps) {
-  const [shown, setShown] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<keyof typeof STATUS>('locked');
-  const [chars, setChars] = useState<CharState[]>([]);
-  const [eyeOpen, setEyeOpen] = useState(false);
-  const [eyePeek, setEyePeek] = useState(false);
-  const [eyeShake, setEyeShake] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const [isBlinking, setIsBlinking] = useState(false);
-  const [pupilOff, setPupilOff] = useState({ x: 0, y: 0 });
-
-  const [laser, setLaser] = useState({
-    visible: false, color: '#22d3ee', fromX: 0, toX: 0, dur: 300,
-  });
-
-  const timers = useRef<NodeJS.Timeout[]>([]);
-  const blinkTmr = useRef<NodeJS.Timeout | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [eyeState, setEyeState] = useState<'closed' | 'peek' | 'open' | 'blink'>('closed');
+  const [pupilPos, setPupilPos] = useState({ x: 0, y: 0 });
+  const [displayChars, setDisplayChars] = useState<string[]>([]);
+  
   const svgRef = useRef<SVGSVGElement>(null);
+  const blinkTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const clr = () => { timers.current.forEach(clearTimeout); timers.current = []; };
-  const T = (fn: () => void, d: number) => { const t = setTimeout(fn, d); timers.current.push(t); };
-  useEffect(() => () => clr(), []);
-
-  /* ── Blinking ─────────────────────────────────────────────────────── */
-  const schedBlink = useCallback(() => {
-    if (blinkTmr.current) clearTimeout(blinkTmr.current);
-    blinkTmr.current = setTimeout(() => {
-      if (!eyeOpen) return;
-      setIsBlinking(true);
-      setTimeout(() => { setIsBlinking(false); schedBlink(); }, 130);
-    }, 2500 + Math.random() * 2500);
-  }, [eyeOpen]);
-
+  // Sync display characters immediately when value or visibility changes
   useEffect(() => {
-    if (eyeOpen) schedBlink();
-    else { if (blinkTmr.current) clearTimeout(blinkTmr.current); setPupilOff({ x: 0, y: 0 }); }
-    return () => { if (blinkTmr.current) clearTimeout(blinkTmr.current); };
-  }, [eyeOpen, schedBlink]);
-
-  /* ── Pupil tracking ───────────────────────────────────────────────── */
-  useEffect(() => {
-    if (!eyeOpen) return;
-    const onMove = (e: MouseEvent) => {
-      if (!svgRef.current || isBlinking) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      const dx = e.clientX - (rect.left + rect.width / 2);
-      const dy = e.clientY - (rect.top + rect.height / 2);
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const maxM = 1.6;
-      const s = dist > 0 ? Math.min(maxM / dist, 1) * maxM : 0;
-      setPupilOff({ x: (dx * s) / maxM, y: (dy * s) / maxM });
-    };
-    window.addEventListener('mousemove', onMove);
-    return () => window.removeEventListener('mousemove', onMove);
-  }, [eyeOpen, isBlinking]);
-
-  /* ── Char display sync ────────────────────────────────────────────── */
-  useEffect(() => {
-    if (shown && !busy)
-      setChars(value.split('').map(c => ({ ch: c, mode: 'clear', key: nextKey() })));
-    else if (!shown && !busy)
-      setChars(value.split('').map(() => ({ ch: '●', mode: 'dot', key: nextKey() })));
-  }, [value, shown, busy]);
-
-  /* ── Decode (reveal) ──────────────────────────────────────────────── */
-  const decode = useCallback((v: string) => {
-    if (busy) return;
-    setBusy(true); setShown(true); setEyeOpen(true);
-    const arr = v.split('');
-    if (!arr.length) { setStatus('decoded'); setBusy(false); return; }
-
-    setStatus('decoding');
-    setChars(arr.map(() => ({ ch: rnd(), mode: 'glitch', key: nextKey() })));
-
-    const dur = 100 + arr.length * 70;
-    setLaser({ visible: true, color: '#22d3ee', fromX: 16, toX: 16 + arr.length * 13 + 10, dur });
-    T(() => setLaser(l => ({ ...l, visible: false })), dur + 80);
-
-    arr.forEach((c, i) => {
-      const revAt = 40 + (i / arr.length) * dur * 0.9;
-      for (let s = 0; s < 6; s++)
-        T(() => setChars(prev => {
-          const n = [...prev]; if (n[i]) n[i] = { ...n[i], ch: rnd(), mode: 'glitch' }; return n;
-        }), revAt - 80 + s * 12);
-      T(() => {
-        setChars(prev => { const n = [...prev]; if (n[i]) n[i] = { ch: c, mode: 'clear', key: n[i].key }; return n; });
-        if (i === arr.length - 1) T(() => { setStatus('decoded'); setBusy(false); }, 80);
-      }, revAt);
-    });
-  }, [busy]);
-
-  /* ── Encode (hide) ────────────────────────────────────────────────── */
-  const encode = useCallback((v: string) => {
-    if (busy) return;
-    setBusy(true); setShown(false);
-    const arr = v.split('');
-    if (!arr.length) { setEyeOpen(false); setStatus('locked'); setBusy(false); return; }
-
-    setStatus('locking');
-    setChars(arr.map(c => ({ ch: c, mode: 'clear', key: nextKey() })));
-
-    const dur = 80 + arr.length * 55;
-    const endX = 16 + arr.length * 13 + 10;
-    setLaser({ visible: true, color: '#ef4444', fromX: endX, toX: 16, dur });
-    T(() => setLaser(l => ({ ...l, visible: false })), dur + 80);
-
-    for (let i = arr.length - 1; i >= 0; i--) {
-      const d = ((arr.length - 1 - i) / arr.length) * dur * 0.8;
-      for (let s = 0; s < 5; s++)
-        T(() => setChars(prev => {
-          const n = [...prev]; if (n[i]) n[i] = { ...n[i], ch: rnd(), mode: 'glitch' }; return n;
-        }), d + s * 10);
-      T(() => {
-        setChars(prev => { const n = [...prev]; if (n[i]) n[i] = { ...n[i], ch: '●', mode: 'dot' }; return n; });
-        if (i === 0) T(() => {
-          setEyeOpen(false);
-          setEyeShake(true);
-          setTimeout(() => setEyeShake(false), 350);
-          setStatus('locked'); setBusy(false);
-        }, 60);
-      }, d + 60);
+    if (isVisible) {
+      setDisplayChars(value.split(''));
+    } else {
+      setDisplayChars(value.split('').map(() => '●'));
     }
-  }, [busy]);
+  }, [value, isVisible]);
 
-  const toggle = () => (shown ? encode(value) : decode(value));
+  // Handle Eye State Transitions
+  useEffect(() => {
+    if (isVisible) {
+      setEyeState('open');
+    } else if (isFocused) {
+      setEyeState('peek');
+    } else {
+      setEyeState('closed');
+    }
+  }, [isVisible, isFocused]);
 
-  /* ── Derived ──────────────────────────────────────────────────────── */
-  const str = getStrength(value);
-  const st = STATUS[status];
-  const px = pupilOff.x;
-  const py = pupilOff.y;
+  // Self-managed blinking for realistic feel
+  const scheduleBlink = useCallback(() => {
+    if (blinkTimeout.current) clearTimeout(blinkTimeout.current);
+    if (!isVisible) return;
 
-  const lidState =
-    isBlinking ? 'blink' :
-      eyeOpen ? 'open' :
-        (eyePeek || focused) ? 'peek' : 'closed';
+    blinkTimeout.current = setTimeout(() => {
+      setEyeState('blink');
+      setTimeout(() => {
+        setEyeState('open');
+        scheduleBlink();
+      }, 150);
+    }, 3000 + Math.random() * 4000);
+  }, [isVisible]);
 
-  const lTopD = {
-    open: 'M2 11 Q8 4 14 11',
-    peek: 'M2 11 Q8 7 14 11',
-    blink: 'M2 11 Q8 11 14 11',
-    closed: 'M2 11 Q8 11 14 11',
-  }[lidState];
-  const rTopD = {
-    open: 'M18 11 Q24 4 30 11',
-    peek: 'M18 11 Q24 7 30 11',
-    blink: 'M18 11 Q24 11 30 11',
-    closed: 'M18 11 Q24 11 30 11',
-  }[lidState];
+  useEffect(() => {
+    scheduleBlink();
+    return () => { if (blinkTimeout.current) clearTimeout(blinkTimeout.current); };
+  }, [isVisible, scheduleBlink]);
 
-  const botOpacity = lidState === 'closed' ? 1 : lidState === 'peek' ? 0.5 : lidState === 'blink' ? 1 : 0;
-  const pupilOpacity = eyeOpen && !isBlinking ? 1 : 0;
-  const slashOpacity = eyeOpen ? 0 : 1;
-  const eyeStroke = eyeOpen ? '#22d3ee' : focused ? '#1e4a5a' : '#1e3a5f';
-  const eyeFill = eyeOpen ? '#0a1a2e' : '#0a1525';
+  // Mouse tracking for pupils
+  useEffect(() => {
+    if (!isVisible || eyeState === 'blink') return;
 
-  /* ── Render ───────────────────────────────────────────────────────── */
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      const dx = e.clientX - centerX;
+      const dy = e.clientY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      const maxMove = 1.5;
+      const scale = distance > 0 ? Math.min(maxMove / distance, 1) : 0;
+      
+      setPupilPos({ x: dx * scale, y: dy * scale });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [isVisible, eyeState]);
+
+  const toggleVisibility = () => setIsVisible(!isVisible);
+
+  // SVG Path Data for Eyelids
+  const getEyelidPath = (side: 'left' | 'right') => {
+    const xBase = side === 'left' ? 8 : 24;
+    switch (eyeState) {
+      case 'open': return `M${xBase - 6} 11 Q${xBase} 4 ${xBase + 6} 11`;
+      case 'peek': return `M${xBase - 6} 11 Q${xBase} 7 ${xBase + 6} 11`;
+      case 'blink':
+      case 'closed': return `M${xBase - 6} 11 Q${xBase} 11 ${xBase + 6} 11`;
+      default: return `M${xBase - 6} 11 Q${xBase} 11 ${xBase + 6} 11`;
+    }
+  };
+
   return (
-    <div className={`rehab-eye-pass-container ${className}`} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-      {/* Optional label */}
-      {(label || id) && (
-        <label htmlFor={id} style={{
-          fontFamily: "'Courier New',monospace", fontSize: 10, letterSpacing: '.15em',
-          textTransform: 'uppercase', color: focused ? '#22d3ee' : '#1e3a4a', transition: 'color .3s',
-        }}>
-          {label || name || "Security Key"}
+    <div className={`flex flex-col gap-1.5 w-full ${className}`}>
+      {label && (
+        <label htmlFor={id} className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-300 ${isFocused ? 'text-teal-400' : 'text-gray-500'}`}>
+          {label}
         </label>
       )}
 
-      {/* Input shell */}
-      <div style={{
-        border: `1px solid ${eyeOpen ? '#22d3ee' : focused ? '#1e3a4a' : '#0f2035'}`,
-        borderRadius: 11, background: '#060d18', overflow: 'hidden',
-        boxShadow: eyeOpen ? '0 0 18px rgba(34,211,238,.12)' : 'none',
-        transition: 'border-color .3s, box-shadow .3s',
-      }}>
-        <div style={{ position: 'relative', height: 52, display: 'flex', alignItems: 'center' }}>
+      <div className={`relative flex items-center h-12 rounded-xl border transition-all duration-300 overflow-hidden ${
+        isFocused 
+          ? 'border-teal-500/50 bg-[#0f172a] shadow-[0_0_15px_rgba(20,184,166,0.1)]' 
+          : 'border-white/10 bg-[#0d1117]'
+      }`}>
+        {/* Real Input (Hidden Text) */}
+        <input
+          id={id}
+          name={name}
+          type="password"
+          value={value}
+          onChange={onChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder={placeholder}
+          required={required}
+          className="absolute inset-0 w-full h-full px-4 pr-14 bg-transparent border-none outline-none text-transparent caret-teal-400 font-mono text-sm z-10"
+          autoComplete="off"
+        />
 
-          {/* Native input (invisible text / caret only) */}
-          <input
-            id={id} name={name} type="password"
-            value={value} onChange={onChange}
-            required={required} placeholder={placeholder}
-            autoComplete="off"
-            onFocus={() => { setFocused(true); if (!shown) setEyePeek(true); }}
-            onBlur={() => { setFocused(false); setEyePeek(false); }}
-            style={{
-              position: 'absolute', inset: 0, width: '100%', zIndex: 3,
-              background: 'transparent', border: 'none', outline: 'none',
-              color: 'transparent', caretColor: '#22d3ee',
-              fontFamily: "'Courier New',monospace", fontSize: 14,
-              padding: '0 64px 0 16px', letterSpacing: '.18em',
-            }}
-          />
-
-          {/* Glitch character display */}
-          <div style={{
-            position: 'absolute', left: 16, right: 64, top: '50%', transform: 'translateY(-50%)',
-            display: 'flex', alignItems: 'center', gap: 1,
-            pointerEvents: 'none', zIndex: 2, overflow: 'hidden',
-          }}>
-            {chars.length === 0
-              ? <span style={{
-                fontFamily: "'Courier New',monospace", fontSize: 13,
-                color: '#0f2035', letterSpacing: '.04em',
-              }}>{placeholder}</span>
-              : chars.map((c, i) => (
-                <span key={c.key} style={{
-                  fontFamily: "'Courier New',monospace",
-                  fontSize: c.mode === 'dot' ? 16 : 13,
-                  width: 12, textAlign: 'center', display: 'inline-block',
-                  lineHeight: 1, flexShrink: 0,
-                  color:
-                    c.mode === 'glitch' ? '#22d3ee' :
-                      c.mode === 'dot' ? '#1e3a4a' : '#e2e8f0',
-                  animation:
-                    c.mode === 'dot' ? `dotPulse 2s ease-in-out ${i * .1}s infinite` :
-                      c.mode === 'clear' ? 'clearIn .12s ease forwards' : 'none',
-                }}>{c.ch}</span>
-              ))
-            }
-          </div>
-
-          {/* Laser beam */}
-          {laser.visible && (
-            <div style={{
-              position: 'absolute', top: 0, bottom: 0, width: 3, borderRadius: 1,
-              background: laser.color, zIndex: 4, pointerEvents: 'none',
-              boxShadow: `0 0 6px 3px ${laser.color}, 0 0 20px 7px ${laser.color}70, 0 0 45px 12px ${laser.color}30`,
-              left: laser.fromX,
-              transition: `left ${laser.dur}ms linear`,
-            }} />
+        {/* Visual Layer (Display Characters) */}
+        <div className="flex items-center gap-1.5 px-4 pointer-events-none select-none overflow-hidden max-w-[calc(100%-56px)]">
+          {displayChars.length === 0 ? (
+            <span className="text-gray-600 font-mono text-sm opacity-50">{placeholder}</span>
+          ) : (
+            displayChars.map((char, i) => (
+              <span 
+                key={i} 
+                className={`flex-shrink-0 transition-all duration-200 font-mono ${
+                  isVisible ? 'text-teal-50 text-sm' : 'text-teal-500/40 text-lg translate-y-[1px]'
+                }`}
+                style={{ 
+                  animation: !isVisible ? `pulse-dot 2s infinite ${i * 0.15}s` : 'none' 
+                }}
+              >
+                {char}
+              </span>
+            ))
           )}
+        </div>
 
-          {/* ── Dual-Eye toggle button ──────────────────────────────── */}
-          <button
-            type="button" onClick={toggle} tabIndex={-1}
-            aria-label={shown ? 'Hide password' : 'Show password'}
-            style={{
-              position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-              width: 52, height: 40, border: 'none', background: 'transparent',
-              cursor: 'pointer', zIndex: 5, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', borderRadius: 10,
-              animation: eyeShake ? 'eyeShake .35s ease' : 'none',
-            }}
+        {/* Eye Toggle Button */}
+        <button
+          type="button"
+          onClick={toggleVisibility}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-white/5 rounded-lg transition-colors z-20 group"
+          title={isVisible ? "Hide Password" : "Show Password"}
+        >
+          <svg
+            ref={svgRef}
+            width="36"
+            height="20"
+            viewBox="0 0 32 22"
+            className="transition-transform duration-300 group-hover:scale-110"
           >
-            <svg
-              ref={svgRef}
-              width="46" height="22" viewBox="0 0 32 22"
-              fill="none" xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <clipPath id="lEyeClip"><ellipse cx="8" cy="11" rx="6" ry="4.5" /></clipPath>
-                <clipPath id="rEyeClip"><ellipse cx="24" cy="11" rx="6" ry="4.5" /></clipPath>
-                <radialGradient id="irisGrad" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#7ef9ff" />
-                  <stop offset="55%" stopColor="#22d3ee" />
-                  <stop offset="100%" stopColor="#0891b2" />
-                </radialGradient>
-              </defs>
+            <defs>
+              <clipPath id="eye-clip-l"><ellipse cx="8" cy="11" rx="6" ry="4.5" /></clipPath>
+              <clipPath id="eye-clip-r"><ellipse cx="24" cy="11" rx="6" ry="4.5" /></clipPath>
+              <radialGradient id="iris-gradient">
+                <stop offset="0%" stopColor="#99f6e4" />
+                <stop offset="60%" stopColor="#2dd4bf" />
+                <stop offset="100%" stopColor="#0f766e" />
+              </radialGradient>
+            </defs>
 
-              {/* Sclerae */}
-              <ellipse cx="8" cy="11" rx="6" ry="4.5" fill={eyeFill} stroke={eyeStroke} strokeWidth="1.1" style={{ transition: 'fill .3s,stroke .3s' }} />
-              <ellipse cx="24" cy="11" rx="6" ry="4.5" fill={eyeFill} stroke={eyeStroke} strokeWidth="1.1" style={{ transition: 'fill .3s,stroke .3s' }} />
+            {/* Sclera (White part) */}
+            <ellipse cx="8" cy="11" rx="6" ry="4.5" className="stroke-teal-500/30 fill-[#0d1520]" strokeWidth="1" />
+            <ellipse cx="24" cy="11" rx="6" ry="4.5" className="stroke-teal-500/30 fill-[#0d1520]" strokeWidth="1" />
 
-              {/* Left iris + pupil + highlight */}
-              <circle cx={8 + px} cy={11 + py} r="2.8" fill="url(#irisGrad)" opacity={pupilOpacity} clipPath="url(#lEyeClip)" style={{ transition: 'opacity .25s' }} />
-              <circle cx={8 + px} cy={11 + py} r="1.3" fill="#060d18" opacity={pupilOpacity} clipPath="url(#lEyeClip)" style={{ transition: 'opacity .25s' }} />
-              <circle cx={8.8 + px} cy={9.8 + py} r="0.7" fill="white" opacity={pupilOpacity * .92} clipPath="url(#lEyeClip)" style={{ transition: 'opacity .25s' }} />
-              <circle cx={6.8 + px} cy={12.2 + py} r="0.35" fill="rgba(255,255,255,.45)" opacity={pupilOpacity} clipPath="url(#lEyeClip)" style={{ transition: 'opacity .25s' }} />
+            {/* Iris & Pupil */}
+            <g clipPath="url(#eye-clip-l)" className="transition-opacity duration-300" style={{ opacity: isVisible ? 1 : 0 }}>
+              <circle cx={8 + pupilPos.x} cy={11 + pupilPos.y} r="3" fill="url(#iris-gradient)" />
+              <circle cx={8 + pupilPos.x} cy={11 + pupilPos.y} r="1.2" fill="#020617" />
+              <circle cx={8.8 + pupilPos.x} cy={10 + pupilPos.y} r="0.6" fill="white" fillOpacity="0.8" />
+            </g>
+            <g clipPath="url(#eye-clip-r)" className="transition-opacity duration-300" style={{ opacity: isVisible ? 1 : 0 }}>
+              <circle cx={24 + pupilPos.x} cy={11 + pupilPos.y} r="3" fill="url(#iris-gradient)" />
+              <circle cx={24 + pupilPos.x} cy={11 + pupilPos.y} r="1.2" fill="#020617" />
+              <circle cx={24.8 + pupilPos.x} cy={10 + pupilPos.y} r="0.6" fill="white" fillOpacity="0.8" />
+            </g>
 
-              {/* Right iris + pupil + highlight */}
-              <circle cx={24 + px} cy={11 + py} r="2.8" fill="url(#irisGrad)" opacity={pupilOpacity} clipPath="url(#rEyeClip)" style={{ transition: 'opacity .25s' }} />
-              <circle cx={24 + px} cy={11 + py} r="1.3" fill="#060d18" opacity={pupilOpacity} clipPath="url(#rEyeClip)" style={{ transition: 'opacity .25s' }} />
-              <circle cx={24.8 + px} cy={9.8 + py} r="0.7" fill="white" opacity={pupilOpacity * .92} clipPath="url(#rEyeClip)" style={{ transition: 'opacity .25s' }} />
-              <circle cx={22.8 + px} cy={12.2 + py} r="0.35" fill="rgba(255,255,255,.45)" opacity={pupilOpacity} clipPath="url(#rEyeClip)" style={{ transition: 'opacity .25s' }} />
+            {/* Eyelids */}
+            <path 
+              d={getEyelidPath('left')} 
+              className="stroke-teal-400 fill-[#0d1117] transition-all duration-150" 
+              strokeWidth="1.2" 
+              strokeLinecap="round" 
+            />
+            <path 
+              d={getEyelidPath('right')} 
+              className="stroke-teal-400 fill-[#0d1117] transition-all duration-150" 
+              strokeWidth="1.2" 
+              strokeLinecap="round" 
+            />
 
-              {/* Left eyelids */}
-              <path d={lTopD} fill={eyeFill} stroke={eyeStroke} strokeWidth="1.1" strokeLinecap="round" style={{ transition: 'd .15s ease,fill .3s,stroke .3s' }} />
-              <path d="M2 11 Q8 18 14 11" fill={eyeFill} stroke={eyeStroke} strokeWidth="1.1" strokeLinecap="round" opacity={botOpacity} style={{ transition: 'opacity .12s,fill .3s,stroke .3s' }} />
+            {/* Bottom Eyelid (only visible when closed/peek) */}
+            <path 
+              d="M2 11 Q8 18 14 11" 
+              className={`stroke-teal-800 fill-[#0d1117] transition-opacity duration-200 ${eyeState === 'open' ? 'opacity-0' : 'opacity-100'}`} 
+              strokeWidth="1" 
+            />
+            <path 
+              d="M18 11 Q24 18 30 11" 
+              className={`stroke-teal-800 fill-[#0d1117] transition-opacity duration-200 ${eyeState === 'open' ? 'opacity-0' : 'opacity-100'}`} 
+              strokeWidth="1" 
+            />
 
-              {/* Right eyelids */}
-              <path d={rTopD} fill={eyeFill} stroke={eyeStroke} strokeWidth="1.1" strokeLinecap="round" style={{ transition: 'd .15s ease,fill .3s,stroke .3s' }} />
-              <path d="M18 11 Q24 18 30 11" fill={eyeFill} stroke={eyeStroke} strokeWidth="1.1" strokeLinecap="round" opacity={botOpacity} style={{ transition: 'opacity .12s,fill .3s,stroke .3s' }} />
-
-              {/* Slash (when locked) */}
-              <line x1="3" y1="20" x2="29" y2="2" stroke={eyeStroke} strokeWidth="1.4" strokeLinecap="round" opacity={slashOpacity} style={{ transition: 'opacity .2s,stroke .3s' }} />
-            </svg>
-          </button>
-
-        </div>
-
-        {/* Strength bar */}
-        <div style={{ height: 2 }}>
-          <div style={{
-            height: '100%', width: str.pct + '%', background: str.color,
-            transition: 'width .55s cubic-bezier(.34,1.56,.64,1), background .4s',
-          }} />
-        </div>
+            {/* Slash (Static when locked) */}
+            {!isVisible && (
+              <line x1="4" y1="18" x2="28" y2="4" className="stroke-teal-500/50" strokeWidth="1.5" strokeLinecap="round" />
+            )}
+          </svg>
+        </button>
       </div>
 
-      {/* Status row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 3px 0' }}>
-        <span style={{
-          fontFamily: "'Courier New',monospace", fontSize: 10,
-          letterSpacing: '.1em', color: st.color, transition: 'color .3s',
-        }}>{st.text}</span>
-        {str.label && (
-          <span style={{
-            fontFamily: "'Courier New',monospace", fontSize: 10,
-            letterSpacing: '.1em', color: str.color,
-          }}>{`// ${str.label}`}</span>
-        )}
-      </div>
-
-      <style>{`
-        @keyframes dotPulse {
-          0%,100% { opacity:.4; transform:scale(.88) }
-          50%     { opacity:1;  transform:scale(1.1) }
-        }
-        @keyframes clearIn {
-          0%   { opacity:.3; transform:scaleX(.6) }
-          100% { opacity:1;  transform:scaleX(1)  }
-        }
-        @keyframes eyeShake {
-          0%,100% { transform:translateY(-50%) }
-          20%     { transform:translateY(-50%) translateX(-2px) rotate(-4deg) }
-          55%     { transform:translateY(-50%) translateX( 2px) rotate( 4deg) }
-          80%     { transform:translateY(-50%) translateX(-1px) }
+      <style jsx>{`
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 0.3; transform: scale(0.9) translateY(1px); }
+          50% { opacity: 0.8; transform: scale(1.1) translateY(1px); }
         }
       `}</style>
     </div>

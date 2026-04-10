@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Patient } from '@/types/rehab';
 import { Edit3, Save, Loader2, User, Heart, Brain, Phone, Shield, DollarSign } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
 
@@ -36,18 +36,18 @@ export default function AdmissionTab({
     try {
       setSaving(true);
       
-      // Calculate derived financial fields
       const monthlyPkg = Number(form.monthlyPackage || form.packageAmount || 0);
-      const duration = Number(form.durationMonths || 1);
-      const totalPkg = monthlyPkg * duration;
       const dRate = Math.round(monthlyPkg / 30);
+      const admissionDate = form.admissionDate instanceof Timestamp ? form.admissionDate.toDate() : new Date(form.admissionDate as any);
+      const now = new Date();
+      const diffMs = now.getTime() - admissionDate.getTime();
+      const days = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      const dynamicTotal = days * dRate;
 
       const finalData = {
         ...form,
         monthlyPackage: monthlyPkg,
         packageAmount: monthlyPkg, // Keep legacy in sync
-        durationMonths: duration,
-        totalPackageAmount: totalPkg,
         dailyRate: dRate
       };
 
@@ -238,16 +238,41 @@ export default function AdmissionTab({
 
         <SectionCard title="6. Financial Details" icon={DollarSign}>
           <Field label="Monthly Package (PKR)" value={form.monthlyPackage || form.packageAmount} type="number" fieldKey="monthlyPackage" />
-          <Field label="Duration (Months)" value={form.durationMonths} type="number" fieldKey="durationMonths" />
           <div className="md:col-span-2 lg:col-span-3 p-4 bg-teal-50 rounded-2xl border border-teal-100">
-             <div className="flex flex-wrap gap-8">
+             <div className="flex flex-wrap gap-8 items-center">
                 <div>
-                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Estimated Total Package</span>
-                  <span className="text-xl font-black text-teal-900">PKR {((form.monthlyPackage || form.packageAmount || 0) * (form.durationMonths || 1)).toLocaleString()}</span>
+                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Monthly Package</span>
+                  <span className="text-xl font-black text-teal-900">PKR {(Number(form.monthlyPackage || form.packageAmount || 0)).toLocaleString()}</span>
                 </div>
+                <div className="w-px h-8 bg-teal-200 hidden md:block"></div>
                 <div>
                   <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Daily Rate</span>
                   <span className="text-xl font-black text-teal-900">PKR {(Math.round((form.monthlyPackage || form.packageAmount || 0) / 30)).toLocaleString()}</span>
+                </div>
+                <div className="w-px h-8 bg-teal-200 hidden md:block"></div>
+                <div>
+                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Days Stayed</span>
+                  <span className="text-xl font-black text-teal-900">
+                    {(() => {
+                      const adm = patient.admissionDate instanceof Timestamp ? patient.admissionDate.toDate() : new Date(patient.admissionDate as any);
+                      const diffDays = Math.max(0, Math.floor((new Date().getTime() - adm.getTime()) / (1000 * 60 * 60 * 24)));
+                      const months = Math.floor(diffDays / 30);
+                      const extraDays = diffDays % 30;
+                      return `${diffDays} days (${months > 0 ? `${months} months ` : ''}${extraDays} days)`;
+                    })()}
+                  </span>
+                </div>
+                <div className="w-px h-8 bg-teal-200 hidden md:block"></div>
+                <div>
+                  <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Total Due (Based on Days)</span>
+                  <span className="text-xl font-black text-teal-900">
+                    PKR {(() => {
+                      const adm = patient.admissionDate instanceof Timestamp ? patient.admissionDate.toDate() : new Date(patient.admissionDate as any);
+                      const diffDays = Math.max(0, Math.floor((new Date().getTime() - adm.getTime()) / (1000 * 60 * 60 * 24)));
+                      const dRate = Math.round((form.monthlyPackage || form.packageAmount || 0) / 30);
+                      return (diffDays * dRate).toLocaleString();
+                    })()}
+                  </span>
                 </div>
              </div>
           </div>

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
-import FinanceHistory, { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
+import FinanceHistory from '@/components/patient/FinanceHistory';
 import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
@@ -44,9 +44,13 @@ export default function FamilyPatientViewPage() {
       const data = pDoc.data() as Patient;
       
       const admissionDate = toDate(data.admissionDate);
-      const totalDays = (data.durationMonths || 1) * 30;
-      const daysSince = Math.floor((Date.now() - admissionDate.getTime()) / (1000 * 60 * 60 * 24));
-      const remainingDays = Math.max(0, totalDays - daysSince);
+      const diffMs = new Date().getTime() - admissionDate.getTime();
+      const daysSince = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      const months = Math.floor(daysSince / 30);
+      const days = daysSince % 30;
+      const durationFormatted = months > 0 
+        ? `${months} Month${months > 1 ? 's' : ''}${days > 0 ? ` and ${days} Day${days > 1 ? 's' : ''}` : ''}`
+        : `${days} Day${days > 1 ? 's' : ''}`;
 
       const [feesSnap, canteenSnap] = await Promise.all([
         getDocs(query(collection(db, 'rehab_fees'), where('patientId', '==', patientId))),
@@ -64,15 +68,14 @@ export default function FamilyPatientViewPage() {
           allPayments.push({ ...p, month: feeData.month });
         });
       });
-      setPayments(allPayments.sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime()));
+      setPayments(allPayments.sort((a, b) => toDate(b.date || 0).getTime() - toDate(a.date || 0).getTime()));
 
       const visitsSnap = await getDocs(query(collection(db, 'rehab_visits'), where('patientId', '==', patientId)));
       const vData = visitsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      setVisits(vData.sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime()));
+      setVisits(vData.sort((a, b) => toDate(b.date || 0).getTime() - toDate(a.date || 0).getTime()));
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
-      const totalPkg = (monthlyPkg * (data.durationMonths || 1));
-      const dailyRate = Math.floor(monthlyPkg / 30);
+      const dailyRate = Math.round(monthlyPkg / 30);
       const dueTillDate = daysSince * dailyRate;
       const remainingTillDate = dueTillDate - totalReceived;
 
@@ -86,18 +89,15 @@ export default function FamilyPatientViewPage() {
       setPatient({ 
         ...data, 
         admissionDate, 
-        remainingDays, 
         daysAdmitted: daysSince,
-        totalDays,
-        daysSince,
-        totalPkg,
+        durationFormatted,
+        monthlyPackage: monthlyPkg,
         totalReceived,
         overallReceived: totalReceived,
-        overallRemaining: totalPkg - totalReceived,
         dailyRate,
         dueTillDate,
         remainingTillDate,
-        remaining: totalPkg - totalReceived,
+        overallRemaining: dueTillDate - totalReceived,
         canteenBalance: totalCanteenDeposited - totalCanteenSpent,
         canteenDeposit: totalCanteenDeposited,
         canteenSpent: totalCanteenSpent,
@@ -113,7 +113,9 @@ export default function FamilyPatientViewPage() {
     const sessionData = localStorage.getItem('rehab_session');
     if (!sessionData) { router.push('/departments/rehab/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'family' || parsed.patientId !== patientId) {
+    const isSuperAdmin = parsed.role === 'superadmin';
+    
+    if (!isSuperAdmin && (parsed.role !== 'family' || parsed.patientId !== patientId)) {
       setLoading(false);
       return;
     }
@@ -201,19 +203,19 @@ export default function FamilyPatientViewPage() {
           <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-4 relative z-10">Real-time Financial History</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Est. Total</span>
-              <span className="text-xl font-black text-white">₨{patient.totalPkg?.toLocaleString()}</span>
-              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">{patient.durationMonths || 1} M Program</span>
+              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Monthly Package</span>
+              <span className="text-xl font-black text-white">₨{patient.monthlyPackage?.toLocaleString()}</span>
+              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">PKR {patient.dailyRate}/Day</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Received</span>
+              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Total Received</span>
               <span className="text-xl font-black text-teal-400">₨{patient.totalReceived?.toLocaleString()}</span>
               <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">Verified Payments</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase font-black text-orange-400/80 tracking-widest">Due till Date</span>
+              <span className="text-[10px] uppercase font-black text-orange-400/80 tracking-widest">Current Balance</span>
               <span className="text-xl font-black text-orange-400">₨{(patient.remainingTillDate || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">Day {patient.daysAdmitted}</span>
+              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">{patient.durationFormatted}</span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Canteen</span>
@@ -263,47 +265,51 @@ export default function FamilyPatientViewPage() {
         {activeTab === 'finance' && (
           <div className="space-y-8 mt-6">
              <FinanceHistory 
-              patientName={patient.name}
-              records={(() => {
-                const records: MonthRecord[] = [];
+              payments={payments.map(p => ({
+                date: toDate(p.date).toLocaleDateString('en-PK', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, ' '),
+                amount: Number(p.amount),
+                type: p.type || 'Monthly Fee',
+                status: (p.approved || p.status === 'approved') ? 'Approved' : 'Pending',
+                note: p.note || p.receivedByNote || 'Standard payment',
+                receivedBy: p.receivedBy || p.receiver || 'Staff'
+              }))}
+              monthlyDetails={(() => {
+                const details: any[] = [];
                 const monthlyPkg = Number(patient.monthlyPackage || 40000);
                 
-                // Group payments by month
-                const groups: { [key: string]: PaymentType[] } = {};
+                // Group payments by month (roughly for demo/initial implementation)
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                
+                // We should ideally have real billing records, but derivative from payments works for now
+                const groups: { [key: string]: number } = {};
                 payments.forEach(p => {
-                  const date = toDate(p.date);
-                  const monthLabel = date.toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase();
-                  if (!groups[monthLabel]) groups[monthLabel] = [];
-                  groups[monthLabel].push({
-                    date: date.toLocaleDateString('en-PK'),
-                    amount: Number(p.amount),
-                    receivedBy: p.receivedBy || p.receiver || "Office",
-                    note: p.note || p.receivedByNote || "",
-                    verifiedByHQ: p.approved || p.status === 'approved',
-                    status: (p.approved || p.status === 'approved') ? "Approved" : "Pending"
+                  const d = toDate(p.date);
+                  const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+                  if (p.approved || p.status === 'approved') {
+                    groups[key] = (groups[key] || 0) + Number(p.amount);
+                  }
+                });
+
+                // If no groups, show current month
+                if (Object.keys(groups).length === 0) {
+                  const d = new Date();
+                  groups[`${monthNames[d.getMonth()]} ${d.getFullYear()}`] = 0;
+                }
+
+                Object.keys(groups).forEach(month => {
+                  details.push({
+                    month,
+                    totalDue: monthlyPkg,
+                    totalPaid: groups[month],
+                    remaining: Math.max(0, monthlyPkg - groups[month])
                   });
                 });
 
-                // Create MonthRecord from groups
-                Object.keys(groups).forEach(label => {
-                  const monthPayments = groups[label];
-                  const totalPaid = monthPayments.reduce((acc, curr) => acc + curr.amount, 0);
-                  records.push({
-                    label,
-                    package: monthlyPkg,
-                    totalPaid,
-                    remaining: Math.max(0, monthlyPkg - totalPaid),
-                    payments: monthPayments
-                  });
+                return details.sort((a, b) => {
+                   const dateA = new Date(a.month);
+                   const dateB = new Date(b.month);
+                   return dateB.getTime() - dateA.getTime();
                 });
-
-                return records.length > 0 ? records : [{
-                  label: new Date().toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase(),
-                  package: monthlyPkg,
-                  totalPaid: 0,
-                  remaining: monthlyPkg,
-                  payments: []
-                }];
               })()}
             />
 
@@ -311,11 +317,11 @@ export default function FamilyPatientViewPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-                  <DollarSign size={24} />
+                  <Activity size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Package</p>
-                  <p className="text-xl font-black text-[#1a3a5c]">PKR {Number(patient.totalPkg).toLocaleString()}</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Days Since Admission</p>
+                  <p className="text-xl font-black text-[#1a3a5c] capitalize">{patient.daysAdmitted} Days</p>
                 </div>
               </div>
               
@@ -334,7 +340,7 @@ export default function FamilyPatientViewPage() {
                   <Clock size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Due Till Today</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Remaining till Date</p>
                   <p className="text-xl font-black text-orange-600">PKR {Number(patient.remainingTillDate).toLocaleString()}</p>
                 </div>
               </div>

@@ -272,7 +272,8 @@ service cloud.firestore {
         || (isRehabRole('cashier'))
         || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
         || isHqSuperAdmin();
-      allow write: if isRehabRole('cashier') || isRehabSuperAdmin() || isHqSuperAdmin();
+      allow create, update: if isRehabRole('cashier') || isRehabSuperAdmin() || isHqSuperAdmin();
+      allow delete: if isRehabSuperAdmin();
     }
 
     // ── Canteen records ────────────────────────────────
@@ -280,7 +281,8 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('cashier'))
         || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
-      allow write: if isRehabRole('cashier') || isRehabSuperAdmin();
+      allow create, update: if isRehabRole('cashier') || isRehabSuperAdmin();
+      allow delete: if isRehabSuperAdmin();
     }
 
     // ── Rehab salary records ───────────────────────────
@@ -373,6 +375,13 @@ service cloud.firestore {
     match /rehab_audit/{docId} {
       allow read: if isRehabSuperAdmin();
       allow create: if isRehabAuth();
+      allow update, delete: if false;
+    }
+
+    // ── Deletion logs (Audit trail for sensitive financial deletions) ──
+    match /rehab_deletion_logs/{docId} {
+      allow read: if isRehabSuperAdmin();
+      allow create: if isRehabSuperAdmin();
       allow update, delete: if false;
     }
 
@@ -925,7 +934,19 @@ service cloud.firestore {
 
     match /spims_users/{uid} { 
       allow read: if isHqTier1(); 
+      allow create: if isHqSuperOrManager();
       allow update: if isHqSuperAdmin(); 
+    }
+
+    match /spims_salary_records/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
+    }
+
+    match /spims_board_fees/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqCashier() || isHqSuperOrManager();
     }
 
     match /rehab_attendance/{docId} {
@@ -1545,11 +1566,17 @@ service cloud.firestore {
     }
     match /hospital_users/{uid} {
       allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
       allow update: if isHqSuperAdmin();
     }
     match /hospital_attendance/{docId} {
       allow read: if isHqSuperOrManager();
       allow create, update: if isHqSuperOrManager();
+    }
+    match /hospital_salary_records/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
     }
 
     match /sukoon_transactions/{docId} {
@@ -1588,11 +1615,17 @@ service cloud.firestore {
     }
     match /sukoon_users/{uid} {
       allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
       allow update: if isHqSuperAdmin();
     }
     match /sukoon_attendance/{docId} {
       allow read: if isHqSuperOrManager();
       allow create, update: if isHqSuperOrManager();
+    }
+    match /sukoon_salary_records/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
     }
 
     match /welfare_transactions/{docId} {
@@ -1631,11 +1664,17 @@ service cloud.firestore {
     }
     match /welfare_users/{uid} {
       allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
       allow update: if isHqSuperAdmin();
     }
     match /welfare_attendance/{docId} {
       allow read: if isHqSuperOrManager();
       allow create, update: if isHqSuperOrManager();
+    }
+    match /welfare_salary_records/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
     }
 
     match /job_center_transactions/{docId} {
@@ -1674,11 +1713,17 @@ service cloud.firestore {
     }
     match /job_center_users/{uid} {
       allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
       allow update: if isHqSuperAdmin();
     }
     match /job_center_attendance/{docId} {
       allow read: if isHqSuperOrManager();
       allow create, update: if isHqSuperOrManager();
+    }
+    match /job_center_salary_records/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════

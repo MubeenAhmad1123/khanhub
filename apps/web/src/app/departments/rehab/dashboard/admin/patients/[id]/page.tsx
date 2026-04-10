@@ -61,7 +61,6 @@ export default function PatientDetailPage() {
     diagnosis: '', 
     packageAmount: 0, 
     photoUrl: '',
-    durationMonths: 1,
     admissionDate: new Date().toISOString().split('T')[0]
   });
   const [savingEdit, setSavingEdit] = useState(false);
@@ -109,6 +108,11 @@ export default function PatientDetailPage() {
   const [canteenAmt, setCanteenAmt] = useState('');
   const [canteenDesc, setCanteenDesc] = useState('');
   const [canteenDate, setCanteenDate] = useState(new Date().toISOString().split('T')[0]);
+  // Deletion state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingPayment, setDeletingPayment] = useState<any>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -143,9 +147,9 @@ export default function PatientDetailPage() {
       const diffTimeMs = new Date().getTime() - admission.getTime();
       const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
       
-      const durationMonthsValue = data.durationMonths || 1;
-      const totalDays = durationMonthsValue * 30;
-      const remainingDays = Math.max(0, totalDays - daysAdmitted);
+      const monthsAdmitted = Math.floor(daysAdmitted / 30);
+      const extraAdmittedDays = daysAdmitted % 30;
+      const durationFormatted = `${daysAdmitted} Days (${monthsAdmitted > 0 ? `${monthsAdmitted} months ` : ''}${extraAdmittedDays} days)`;
 
       // Fetch all fees to calculate total received
       const allFeesQ = query(
@@ -171,30 +175,25 @@ export default function PatientDetailPage() {
       setAllPayments(aggregatedPayments);
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
-      const totalPkg = (monthlyPkg * Number(data.durationMonths || 1));
-      const overallRemaining = totalPkg - overallReceived;
       const dailyRate = Math.floor(monthlyPkg / 30);
       const dueTillDate = daysAdmitted * dailyRate;
-      const remainingTillDate = dueTillDate - overallReceived;
+      const overallRemaining = dueTillDate - overallReceived;
 
       setPatient({ 
         id: pDoc.id, 
         ...data, 
-        remainingDays, 
         daysAdmitted,
+        durationFormatted,
         overallReceived,
         overallRemaining,
-        totalPkg,
         dailyRate,
         dueTillDate,
-        remainingTillDate
       });
       setEditForm({
         name: data.name || '',
         diagnosis: data.diagnosis || '',
         packageAmount: data.packageAmount || data.monthlyPackage || 0,
         photoUrl: data.photoUrl || '',
-        durationMonths: data.durationMonths || 1,
         admissionDate: data.admissionDate?.toDate?.() 
           ? data.admissionDate.toDate().toISOString().split('T')[0] 
           : (typeof data.admissionDate === 'string' ? data.admissionDate : new Date().toISOString().split('T')[0])
@@ -504,31 +503,40 @@ export default function PatientDetailPage() {
       }
 
       const monthlyPkg = Number(editForm.packageAmount);
-      const duration = Number(editForm.durationMonths);
-      const totalPkgValue = monthlyPkg * duration;
 
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         name: editForm.name,
         diagnosis: editForm.diagnosis,
         packageAmount: monthlyPkg,
         monthlyPackage: monthlyPkg,
-        durationMonths: duration,
-        totalPackageAmount: totalPkgValue,
         admissionDate: Timestamp.fromDate(new Date(editForm.admissionDate)),
         photoUrl: photoUrl || null
       });
 
-      setPatient((prev: any) => ({ 
-        ...prev, 
-        name: editForm.name,
-        diagnosis: editForm.diagnosis,
-        packageAmount: monthlyPkg,
-        monthlyPackage: monthlyPkg,
-        durationMonths: duration,
-        totalPkg: totalPkgValue,
-        overallRemaining: totalPkgValue - (prev.overallReceived || 0),
-        photoUrl: photoUrl 
-      }));
+      setPatient((prev: any) => {
+        const admission = new Date(editForm.admissionDate);
+        const diffTimeMs = new Date().getTime() - admission.getTime();
+        const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+        const monthsAdmitted = Math.floor(daysAdmitted / 30);
+        const extraAdmittedDays = daysAdmitted % 30;
+        const durationFormatted = `${daysAdmitted} Days (${monthsAdmitted > 0 ? `${monthsAdmitted} months ` : ''}${extraAdmittedDays} days)`;
+        const dailyRate = Math.floor(monthlyPkg / 30);
+        const dueTillDate = daysAdmitted * dailyRate;
+
+        return { 
+          ...prev, 
+          name: editForm.name,
+          diagnosis: editForm.diagnosis,
+          packageAmount: monthlyPkg,
+          monthlyPackage: monthlyPkg,
+          daysAdmitted,
+          durationFormatted,
+          dailyRate,
+          dueTillDate,
+          overallRemaining: dueTillDate - (prev.overallReceived || 0),
+          photoUrl: photoUrl 
+        };
+      });
       setEditForm(prev => ({ ...prev, photoUrl }));
       setPhotoFile(null);
       setIsEditing(false);
@@ -570,6 +578,80 @@ export default function PatientDetailPage() {
       console.error("Discharge error", error);
       toast.error('Discharge failed');
       setDeactivating(false);
+    }
+  };
+
+  const handleDeletePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deletingPayment || !deleteReason) {
+      toast.error("Reason is mandatory");
+      return;
+    }
+    
+    try {
+      setIsDeletingTransaction(true);
+      
+      // 1. Find the fee doc id
+      const [feeDocId] = deletingPayment.id.split('_');
+      const feeRef = doc(db, 'rehab_fees', feeDocId);
+      const feeSnap = await getDoc(feeRef);
+      
+      if (!feeSnap.exists()) {
+        toast.error("Original fee record not found");
+        return;
+      }
+      
+      const feeData = feeSnap.data();
+      const currentPayments = feeData.payments || [];
+      
+      // 2. Filter out the payment
+      const newPayments = currentPayments.filter((p: any) => {
+        // Match by date and amount exactly as they are in the database
+        const pDateStr = p.date;
+        const pAmount = Number(p.amount);
+        
+        const isMatch = pAmount === Number(deletingPayment.amount) && pDateStr === deletingPayment.date;
+        return !isMatch;
+      });
+      
+      if (newPayments.length === currentPayments.length) {
+        toast.error("Payment not found in the record");
+        return;
+      }
+      
+      // 3. Update the fee record
+      const totalPaid = newPayments.reduce((acc: number, curr: any) => acc + Number(curr.amount || 0), 0);
+      await updateDoc(feeRef, {
+        payments: newPayments,
+        totalPaid: totalPaid,
+        remaining: Math.max(0, Number(feeData.package || 0) - totalPaid)
+      });
+      
+      // 4. Log the deletion in a separate collection for audit
+      await addDoc(collection(db, 'rehab_deletion_logs'), {
+        patientId,
+        patientName: patient?.name,
+        type: 'payment_deletion',
+        originalPayment: deletingPayment,
+        reason: deleteReason,
+        deletedBy: session.uid,
+        deletedByName: session.name || session.displayName || 'Super Admin',
+        createdAt: Timestamp.now()
+      });
+      
+      toast.success("Transaction deleted successfully");
+      setShowDeleteModal(false);
+      setDeleteReason('');
+      setDeletingPayment(null);
+      
+      // 5. Refresh data
+      fetchData();
+      
+    } catch (err) {
+      console.error("Delete payment error:", err);
+      toast.error("Failed to delete transaction");
+    } finally {
+      setIsDeletingTransaction(false);
     }
   };
 
@@ -765,10 +847,13 @@ export default function PatientDetailPage() {
                 Admitted: {formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate)}
               </span>
               <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
-                PKR {patient.packageAmount?.toLocaleString()} / m
+                PKR {patient.monthlyPackage?.toLocaleString() || patient.packageAmount?.toLocaleString()} / month
               </span>
-              <span className="flex items-center justify-center gap-1 text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full animate-pulse shadow-sm border border-orange-100">
-                ⏳ {patient.remainingDays} Days Left
+              <span className="flex items-center justify-center gap-1 text-orange-700 font-bold bg-orange-50 px-3 py-1 rounded-full shadow-sm border border-orange-100 italic">
+                📅 {patient.durationFormatted}
+              </span>
+              <span className="flex items-center justify-center gap-1 text-blue-700 font-bold bg-blue-50 px-3 py-1 rounded-full shadow-sm border border-blue-100">
+                💰 Total Due: PKR {patient.dueTillDate?.toLocaleString()}
               </span>
             </div>
             {patient.diagnosis && (
@@ -972,18 +1057,6 @@ export default function PatientDetailPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                     />
                   </div>
-                  <div className="md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (Months)</label>
-                    <select 
-                      value={editForm.durationMonths} 
-                      onChange={e => setEditForm({...editForm, durationMonths: Number(e.target.value)})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                    >
-                      {[1, 2, 3, 4, 5, 6, 12].map(m => (
-                        <option key={m} value={m}>{m} Month{m > 1 ? 's' : ''}</option>
-                      ))}
-                    </select>
-                  </div>
                   <div className="md:col-span-2">
                      <label className="block text-sm font-medium text-gray-700 mb-1">Admission Date</label>
                      <input 
@@ -1000,37 +1073,31 @@ export default function PatientDetailPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
-                  <div className="bg-orange-50 border border-orange-100 w-full p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
-                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Discharge Countdown</p>
-                    <p className="text-4xl font-black text-orange-700">
-                      {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)}
+                  <div className="bg-teal-50 border border-teal-100 w-full p-6 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2 shadow-sm">
+                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1">Total Stay Duration</p>
+                    <p className="text-4xl font-black text-teal-700">
+                      {patient.daysAdmitted || 0} Days
                     </p>
-                    <p className="text-xs font-bold text-orange-500 mt-1">
-                      {(patient.remainingDays || 0) > 0 ? `Days remaining in ${(patient.durationMonths || 1) * 30}-day program` : 'Days admitted in rehab center'}
+                    <p className="text-xs font-bold text-teal-500 mt-1 italic">
+                      {patient.durationFormatted}
                     </p>
-                    <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-1000 ${patient.progressPct >= 100 ? 'bg-green-500' : 'bg-orange-500'}`} 
-                        style={{ width: `${Math.min(100, Math.round(((patient.daysAdmitted || 0) / ((patient.durationMonths || 1) * 30)) * 100))}%` }}
-                      ></div>
-                    </div>
                     {patient.isActive && (
                       <button
                         type="button"
                         onClick={handleDischarge}
                         disabled={deactivating}
-                        className="mt-4 bg-white border border-orange-200 text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-60"
+                        className="mt-6 bg-white border border-teal-200 text-teal-600 hover:bg-teal-50 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-60"
                       >
                         {deactivating ? 'Discharging...' : 'Discharge Patient'}
                       </button>
                     )}
                   </div>
                   <div className="w-full">
-                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Total Package ({patient.durationMonths || 1} M)</span>
-                    <span className="font-black text-teal-700 border border-teal-100 bg-teal-50 px-3 py-1.5 rounded-lg inline-block text-sm">
-                      PKR {((patient.monthlyPackage || patient.packageAmount || 0) * (patient.durationMonths || 1)).toLocaleString()}
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Current Balance Due</span>
+                    <span className="font-black text-red-700 border border-red-100 bg-red-50 px-3 py-1.5 rounded-lg inline-block text-sm">
+                      PKR {patient.overallRemaining?.toLocaleString()}
                     </span>
-                    <p className="text-[10px] text-gray-400 mt-1">Monthly: PKR {(patient.monthlyPackage || patient.packageAmount || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">Total Due till today: PKR {patient.dueTillDate?.toLocaleString()}</p>
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
@@ -1172,6 +1239,7 @@ export default function PatientDetailPage() {
                           <th className="pb-4">Method</th>
                           <th className="pb-4">Status</th>
                           <th className="pb-4">Details</th>
+                          {session?.role === 'superadmin' && <th className="pb-4">Actions</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -1196,6 +1264,20 @@ export default function PatientDetailPage() {
                               <p className="text-[10px] text-gray-400 font-medium">Verifier: {p.cashierId || 'Admin'}</p>
                               {p.note && <p className="text-[10px] text-[#1a3a5c] font-black italic mt-0.5 truncate max-w-[150px]">{p.note}</p>}
                             </td>
+                            {session?.role === 'superadmin' && (
+                              <td className="py-5">
+                                <button
+                                  onClick={() => {
+                                    setDeletingPayment(p);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                  title="Delete Transaction"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         )})}
                       </tbody>
@@ -1732,6 +1814,70 @@ export default function PatientDetailPage() {
                 {isUpdatingVisit ? 'Saving...' : 'Save Changes'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Transaction Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-black text-rose-600 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Delete Transaction
+              </h2>
+              <button 
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteReason('');
+                  setDeletingPayment(null);
+                }} 
+                className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl mb-6">
+                <p className="text-xs font-bold text-rose-700 mb-1 uppercase tracking-widest">Warning</p>
+                <p className="text-sm text-rose-600">
+                  You are about to delete a transaction of <span className="font-black">PKR {Number(deletingPayment?.amount).toLocaleString()}</span>. 
+                  This will update the patient's balance and cannot be undone.
+                </p>
+              </div>
+
+              <form onSubmit={handleDeletePayment} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Reason for Deletion *</label>
+                  <textarea 
+                    required 
+                    value={deleteReason} 
+                    onChange={e => setDeleteReason(e.target.value)} 
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-rose-500 outline-none resize-none" 
+                    placeholder="e.g. Duplicate entry, Wrong amount entered..." 
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    type="button"
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isDeletingTransaction}
+                    className="flex-2 bg-rose-500 hover:bg-rose-600 text-white font-black py-3 px-6 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-rose-100 disabled:opacity-50"
+                  >
+                    {isDeletingTransaction ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 size={18} />}
+                    Confirm Delete
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

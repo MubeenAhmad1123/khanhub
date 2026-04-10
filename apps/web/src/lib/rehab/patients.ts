@@ -33,8 +33,9 @@ export interface PatientFinanceSummary {
   inpatientNumber: string;
   admissionDate: Date;
   packageAmount: number;
-  durationMonths: number;
-  totalFees: number;       // packageAmount × durationMonths
+  dailyRate: number;       // packageAmount / 30
+  daysStayed: number;
+  totalFees: number;       // dailyRate × daysStayed
   otherExpenses: number;
   totalDues: number;       // totalFees + otherExpenses
   totalReceived: number;
@@ -274,7 +275,11 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
     const pFees = feesByPatient[p.id] || [];
     const pCanteen = canteenByPatient[p.id] || [];
     
-    const totalFees = (p.packageAmount || 0) * (p.durationMonths || 1);
+    const admission = toDate(p.admissionDate);
+    const diffMs = new Date().getTime() - admission.getTime();
+    const daysStayed = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    const dailyRate = Math.round((p.packageAmount || 0) / 30);
+    const totalFees = dailyRate * daysStayed;
     const otherExpenses = p.otherExpenses || 0;
     const totalDues = totalFees + otherExpenses;
     
@@ -294,7 +299,8 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
       inpatientNumber: p.inpatientNumber,
       admissionDate: toDate(p.admissionDate),
       packageAmount: p.packageAmount,
-      durationMonths: p.durationMonths,
+      dailyRate,
+      daysStayed,
       totalFees,
       otherExpenses,
       totalDues,

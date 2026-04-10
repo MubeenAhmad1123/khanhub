@@ -117,13 +117,9 @@ export interface Patient {
   admissionDate: Timestamp | Date;
   timeOfAdmission?: string;        // "14:30"
   typeOfFacility?: string;
-  durationOfCurrentTreatment?: string;  // "3 months"
-  durationMonths: number;          // 1, 2, 3, 4 — for fee calculation
-
   // Financial
   monthlyPackage: number;          // monthly PKR fee
   packageAmount: number;           // (Legacy) monthly PKR fee
-  totalPackageAmount: number;      // monthlyPackage * durationMonths
   dailyRate: number;               // monthlyPackage / 30
   otherExpenses?: number;          // extra charges like transport
 

@@ -52,8 +52,6 @@ export default function AdmitPatientPage() {
 
   // SECTION 4: Admission Details
   const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [treatmentDuration, setTreatmentDuration] = useState('3 Months');
-  const [customDuration, setCustomDuration] = useState('');
   const [reasonsForAdmission, setReasonsForAdmission] = useState<string[]>([]);
   const [conditionOnAdmission, setConditionOnAdmission] = useState('');
   const [packageAmount, setPackageAmount] = useState('60000');
@@ -62,10 +60,21 @@ export default function AdmitPatientPage() {
   const [notes, setNotes] = useState('');
 
   const admissionReasons = [
-    'Heroin', 'Ice (Crystal Meth)', 'Charas/Hashish', 'Opium', 
-    'Alcohol', 'Cigarette/Tobacco', 'Prescription Drugs', 
+    'Substance Abuse', 'Alcoholism', 'Behavioral Issues',
     'Psychological', 'Other'
   ];
+
+  const calculateAge = (dob: string) => {
+    if (!dob) return '';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--;
+    }
+    return calculatedAge.toString();
+  };
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -119,10 +128,6 @@ export default function AdmitPatientPage() {
 
       // Financial Calculations
       const monthlyPackageValue = Number(packageAmount) || 60000;
-      const durationMonthsValue = treatmentDuration === 'Custom' 
-        ? Number(customDuration) 
-        : parseInt(treatmentDuration);
-      const totalPackageAmountValue = monthlyPackageValue * durationMonthsValue;
       const dailyRateValue = Math.round(monthlyPackageValue / 30);
 
       // 2. Create patient document in Firestore
@@ -145,11 +150,8 @@ export default function AdmitPatientPage() {
         contactNumber: guardianPhone, // used by AdmissionTab profile editor
         guardianCnic: guardianCnic || null,
         admissionDate: Timestamp.fromDate(new Date(admissionDate)),
-        treatmentDuration: `${durationMonthsValue} Months`,
-        durationMonths: durationMonthsValue,
         monthlyPackage: monthlyPackageValue,
         packageAmount: monthlyPackageValue, // Legacy support
-        totalPackageAmount: totalPackageAmountValue,
         dailyRate: dailyRateValue,
         reasonsForAdmission,
         conditionOnAdmission: conditionOnAdmission || null,
@@ -271,11 +273,22 @@ export default function AdmitPatientPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Age *</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
+                  <input required type="date" className={inputStyle} value={dateOfBirth} onChange={e => {
+                    const dobValue = e.target.value;
+                    setDateOfBirth(dobValue);
+                    setAge(calculateAge(dobValue));
+                  }} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Age * (Auto-filled)</label>
                   <input required type="number" min="1" max="120" placeholder="Age" className={inputStyle} value={age} onChange={e => setAge(e.target.value)} />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Gender *</label>
                   <select required className={inputStyle} value={gender} onChange={e => setGender(e.target.value)}>
@@ -309,11 +322,6 @@ export default function AdmitPatientPage() {
                     <option value="Widowed">Widowed</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="space-y-1.5 mt-2">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
               </div>
 
               {maritalStatus === 'Married' && (
@@ -410,28 +418,11 @@ export default function AdmitPatientPage() {
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Admission Date *</label>
                   <input required type="date" className={inputStyle} value={admissionDate} onChange={e => setAdmissionDate(e.target.value)} />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Planned Duration</label>
-                  <select className={inputStyle} value={treatmentDuration} onChange={e => setTreatmentDuration(e.target.value)}>
-                    <option value="1 Month">1 Month</option>
-                    <option value="2 Months">2 Months</option>
-                    <option value="3 Months">3 Months</option>
-                    <option value="6 Months">6 Months</option>
-                    <option value="Custom">Custom Months</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 md:col-span-2">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Monthly Package *</label>
                   <input required type="number" className={inputStyle} value={packageAmount} onChange={e => setPackageAmount(e.target.value)} />
                 </div>
               </div>
-
-              {treatmentDuration === 'Custom' && (
-                <div className="space-y-1.5 max-w-xs">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Duration in Months</label>
-                  <input type="number" className={inputStyle} value={customDuration} onChange={e => setCustomDuration(e.target.value)} />
-                </div>
-              )}
 
               <div className="space-y-3">
                 <label className="text-xs font-bold text-gray-500 uppercase px-1">Reasons for Admission *</label>

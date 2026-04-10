@@ -84,13 +84,6 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
         const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) { throw new Error('Invalid session'); }
 
-        // Redirect HQ cashiers to HQ login
-        if (parsed.role === 'cashier') {
-          localStorage.removeItem('sukoon_session');
-          router.push('/hq/login?msg=Please+use+HQ+portal');
-          return;
-        }
-
         // 1. Session Timeout Check (12 Hours)
         const loginTime = localStorage.getItem('sukoon_login_time');
         if (loginTime) {

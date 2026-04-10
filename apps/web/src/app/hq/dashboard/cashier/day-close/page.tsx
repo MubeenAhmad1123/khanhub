@@ -30,13 +30,13 @@ import { cn, formatDateDMY, toDate } from '@/lib/utils';
 
 type DayReport = {
   id?: string;
-  dateStr: string;
+  date?: string;
   expectedBalance: number;
   actualCash: number;
   difference: number;
   note: string;
-  closedBy: string;
-  closedByName: string;
+  cashierId: string;
+  cashierName: string;
   createdAt: any;
   incomeTotal?: number;
   expenseTotal?: number;
@@ -84,9 +84,10 @@ export default function DayClosePage() {
 
       // Fetch recent close history
       const qHist = query(
-        collection(db, 'dayCloseReports'),
+        collection(db, 'hq_reconciliation'),
+        where('cashierId', '==', session?.customId || session?.uid),
         orderBy('createdAt', 'desc'),
-        limit(5)
+        limit(10)
       );
       const snapHist = await getDocs(qHist);
       setHistory(snapHist.docs.map(d => ({ id: d.id, ...d.data() }) as DayReport));
@@ -121,20 +122,21 @@ export default function DayClosePage() {
     setError(null);
     try {
       const report = {
-        dateStr: formatDateDMY(new Date()),
+        date: formatDateDMY(new Date()),
         expectedBalance: totals.net,
         actualCash: Number(actualCash),
         difference: differenceValue,
         note: note.trim(),
-        closedBy: session?.customId || session?.uid || 'Unknown',
-        closedByName: session?.displayName || 'Cashier',
+        cashierId: session?.customId || session?.uid || 'Unknown',
+        cashierName: session?.displayName || 'Cashier',
+        status: 'pending',
         createdAt: Timestamp.now(),
         // Breakdown for easier aggregation later
         incomeTotal: totals.income,
         expenseTotal: totals.expense,
       };
 
-      await addDoc(collection(db, 'dayCloseReports'), report);
+      await addDoc(collection(db, 'hq_reconciliation'), report);
       setSuccess(true);
       setTimeout(() => router.push('/hq/dashboard/cashier'), 2000);
     } catch (err: any) {
@@ -298,9 +300,9 @@ export default function DayClosePage() {
                 
                 <div className="space-y-4">
                   {history.map((item, idx) => (
-                    <div key={item.id || idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:border-indigo-200 transition-colors">
+                    <div key={(item as any).id || idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:border-indigo-200 transition-colors">
                       <div className="flex justify-between items-start mb-2">
-                        <p className="text-xs font-black text-slate-900">{item.dateStr}</p>
+                        <p className="text-xs font-black text-slate-900">{(item as any).date || (item as any).dateStr}</p>
                         <span className={cn(
                           "text-[10px] font-black uppercase px-2 py-0.5 rounded-full",
                           item.difference === 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
@@ -310,7 +312,7 @@ export default function DayClosePage() {
                       </div>
                       <div className="flex justify-between items-end">
                         <p className="text-sm font-bold text-slate-600">PKR {item.actualCash.toLocaleString()}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">By {item.closedByName}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">By {item.cashierName}</p>
                       </div>
                     </div>
                   ))}

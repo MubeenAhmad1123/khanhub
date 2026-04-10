@@ -74,8 +74,11 @@ export default function PatientsListPage() {
         const pFees = feesMap[d.id] || [];
         const pCanteen = canteenMap[d.id] || [];
         
-        // Standardized calculation (Recalculate to avoid stale totalPackageAmount)
-        const totalPkg = (Number(data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1));
+        // Dynamic calculation based on days since admission
+        const dailyRate = Math.round(Number(data.monthlyPackage || data.packageAmount || 0) / 30);
+        const daysSinceAdmission = Math.max(0, Math.floor((Date.now() - admissionDate.getTime()) / (1000 * 60 * 60 * 24)));
+        const totalDueTillDate = dailyRate * daysSinceAdmission;
+        
         let totalReceived = 0;
         pFees.forEach(f => {
           (f.payments || []).forEach((p: any) => {
@@ -83,15 +86,17 @@ export default function PatientsListPage() {
           });
         });
 
-        const remaining = totalPkg - totalReceived;
+        const remaining = totalDueTillDate - totalReceived;
 
         const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (c.totalDeposited || 0), 0);
         const totalCanteenSpent = pCanteen.reduce((a, c) => a + (c.totalSpent || 0), 0);
         const canteenBalance = totalCanteenDeposited - totalCanteenSpent;
 
-        const daysSinceAdmission = Math.floor((Date.now() - admissionDate.getTime()) / (1000 * 60 * 60 * 24));
-        const totalDays = (data.durationMonths || 1) * 30;
-        const progressPct = Math.min(100, Math.round((daysSinceAdmission / totalDays) * 100));
+        const months = Math.floor(daysSinceAdmission / 30);
+        const days = daysSinceAdmission % 30;
+        const durationFormatted = months > 0 
+          ? `${months}M ${days}D`
+          : `${days} Days`;
 
         return {
           id: d.id,
@@ -100,7 +105,6 @@ export default function PatientsListPage() {
           photoUrl: data.photoUrl || null,
           admissionDate,
           monthlyPackage: Number(data.monthlyPackage || data.packageAmount) || 0,
-          durationMonths: data.durationMonths || 1,
           inpatientNumber: data.inpatientNumber || '',
           serialNumber: data.serialNumber || 0,
           substanceOfAddiction: data.substanceOfAddiction || '',
@@ -108,11 +112,10 @@ export default function PatientsListPage() {
           contactNumber: data.contactNumber || '',
           remaining,
           canteenBalance,
-          totalPkg,
+          totalPkg: totalDueTillDate,
           totalReceived,
-          progressPct,
           daysSinceAdmission,
-          totalDays,
+          durationFormatted,
           createdAt: toDate(data.createdAt),
         };
       })
@@ -203,7 +206,7 @@ export default function PatientsListPage() {
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0"><DollarSign className="w-4 h-4" /></div>
-              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Outstanding</p><p className="text-sm font-black text-red-600">₨{totalOutstanding.toLocaleString()}</p></div>
+              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Dues</p><p className="text-sm font-black text-red-600">₨{totalOutstanding.toLocaleString()}</p></div>
             </div>
           </div>
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -325,13 +328,12 @@ export default function PatientsListPage() {
                 <div className="mt-auto space-y-3 pt-3 border-t border-gray-50">
                     <div>
                       <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                        <span>Progress</span>
-                        <span>{patient.progressPct}%</span>
+                        <span>Stay Duration</span>
+                        <span>{patient.durationFormatted}</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5">
-                        <div className={`h-1.5 rounded-full transition-all ${patient.progressPct >= 80 ? 'bg-green-500' : patient.progressPct >= 50 ? 'bg-amber-500' : 'bg-teal-500'}`} style={{ width: `${patient.progressPct}%` }} />
+                      <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div className="h-full bg-teal-500 animate-pulse" style={{ width: '100%' }} />
                       </div>
-                      <p className="text-[9px] text-gray-400 mt-1">{patient.daysSinceAdmission}d / {patient.totalDays}d ({patient.durationMonths} month{patient.durationMonths > 1 ? 's' : ''})</p>
                     </div>
 
                     <div className="flex items-center justify-between">
