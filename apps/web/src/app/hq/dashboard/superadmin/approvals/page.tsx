@@ -77,6 +77,7 @@ type EntityEnrich = {
   session?: string;
   rollNo?: string;
   totalPackage?: number;
+  totalPackageAmount?: number; // Normalized field for Rehab
   totalReceived?: number;
   remaining?: number;
 };
@@ -924,7 +925,8 @@ export default function HqApprovalsPage() {
           const d = snap.data() as Record<string, unknown>;
           const next: EntityEnrich = {
             name: String(d.name || ''),
-            totalPackage: Number(d.totalPackage) || undefined,
+            totalPackageAmount: Number(d.totalPackageAmount || d.totalPackage) || undefined,
+            totalPackage: Number(d.totalPackage || d.totalPackageAmount) || undefined,
             totalReceived: Number(d.totalReceived) || undefined,
             remaining: Number(d.remaining) || undefined,
           };
@@ -1099,8 +1101,8 @@ export default function HqApprovalsPage() {
       const rehabIds = ids.filter((id) => txMap.get(id)?.dept === 'rehab');
       const spimsIds = ids.filter((id) => txMap.get(id)?.dept === 'spims');
       const results = await Promise.all([
-        rehabIds.length ? bulkDecideTransactions({ dept: 'rehab', txIds: rehabIds, decision: 'approved' }) : Promise.resolve({ success: true, processed: 0 }),
-        spimsIds.length ? bulkDecideTransactions({ dept: 'spims', txIds: spimsIds, decision: 'approved' }) : Promise.resolve({ success: true, processed: 0 }),
+        rehabIds.length ? bulkDecideTransactions({ dept: 'rehab', txIds: rehabIds, decision: 'approved' }) : Promise.resolve({ success: true, processed: 0, error: undefined }),
+        spimsIds.length ? bulkDecideTransactions({ dept: 'spims', txIds: spimsIds, decision: 'approved' }) : Promise.resolve({ success: true, processed: 0, error: undefined }),
       ]);
       const ok = results.every((r) => r.success !== false);
       if (!ok) {

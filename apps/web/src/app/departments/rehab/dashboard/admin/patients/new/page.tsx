@@ -117,6 +117,14 @@ export default function AdmitPatientPage() {
         photoUrl = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
       }
 
+      // Financial Calculations
+      const monthlyPackageValue = Number(packageAmount) || 60000;
+      const durationMonthsValue = treatmentDuration === 'Custom' 
+        ? Number(customDuration) 
+        : parseInt(treatmentDuration);
+      const totalPackageAmountValue = monthlyPackageValue * durationMonthsValue;
+      const dailyRateValue = Math.round(monthlyPackageValue / 30);
+
       // 2. Create patient document in Firestore
       setSubmitStatus('Creating patient record...');
       const patientRef = await addDoc(collection(db, 'rehab_patients'), {
@@ -137,13 +145,15 @@ export default function AdmitPatientPage() {
         contactNumber: guardianPhone, // used by AdmissionTab profile editor
         guardianCnic: guardianCnic || null,
         admissionDate: Timestamp.fromDate(new Date(admissionDate)),
-        treatmentDuration: treatmentDuration === 'Custom' 
-          ? Number(customDuration) 
-          : parseInt(treatmentDuration),
+        treatmentDuration: `${durationMonthsValue} Months`,
+        durationMonths: durationMonthsValue,
+        monthlyPackage: monthlyPackageValue,
+        packageAmount: monthlyPackageValue, // Legacy support
+        totalPackageAmount: totalPackageAmountValue,
+        dailyRate: dailyRateValue,
         reasonsForAdmission,
         conditionOnAdmission: conditionOnAdmission || null,
         conditionOnDischarge: null,
-        packageAmount: Number(packageAmount) || 60000,
         notes: notes || null,
         isActive: true,
         loginId: loginId.toUpperCase(),

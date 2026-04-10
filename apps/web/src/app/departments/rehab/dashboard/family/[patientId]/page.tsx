@@ -15,6 +15,7 @@ import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
+import { Patient } from '@/types/rehab';
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -39,15 +40,12 @@ export default function FamilyPatientViewPage() {
     try {
       const pDoc = await getDoc(doc(db, 'rehab_patients', patientId));
       if (!pDoc.exists()) { router.push('/departments/rehab/login'); return; }
-      const data = pDoc.data();
+      const data = pDoc.data() as Patient;
       
       const admissionDate = toDate(data.admissionDate);
       const totalDays = (data.durationMonths || 1) * 30;
       const daysSince = Math.floor((Date.now() - admissionDate.getTime()) / (1000 * 60 * 60 * 24));
       const remainingDays = Math.max(0, totalDays - daysSince);
-
-      const now = new Date();
-      const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       const [feesSnap, canteenSnap] = await Promise.all([
         getDocs(query(collection(db, 'rehab_fees'), where('patientId', '==', patientId))),
@@ -57,13 +55,14 @@ export default function FamilyPatientViewPage() {
       let totalReceived = 0;
       feesSnap.docs.forEach(d => {
         const feeData = d.data();
-        (feeData.payments || []).filter((p: any) => p.status === 'approved').forEach((p: any) => {
-          totalReceived += p.amount;
+        (feeData.payments || []).forEach((p: any) => {
+          if (p.status === 'approved') totalReceived += Number(p.amount || 0);
         });
       });
 
-      const totalDues = (data.packageAmount || 0) * (data.durationMonths || 1) + (data.otherExpenses || 0);
-      const remaining = totalDues - totalReceived;
+      // Standardized calculation
+      const totalPkg = data.totalPackageAmount || (Number(data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1));
+      const remaining = totalPkg - totalReceived;
 
       let totalCanteenDeposited = 0, totalCanteenSpent = 0;
       canteenSnap.docs.forEach(d => {
@@ -80,7 +79,7 @@ export default function FamilyPatientViewPage() {
         daysAdmitted: daysSince,
         totalDays,
         daysSince,
-        totalDues,
+        totalPkg,
         totalReceived,
         remaining,
         canteenBalance: totalCanteenDeposited - totalCanteenSpent,
@@ -196,8 +195,8 @@ export default function FamilyPatientViewPage() {
           <p className="text-teal-600 text-[9px] font-black uppercase tracking-widest mb-3">Financial Summary</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.totalDues?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Total Package</span>
+              <span className="text-lg font-black text-teal-700">₨{patient.totalPkg?.toLocaleString() || '0'}</span>
+              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Total Pkg ({patient.durationMonths || 1}m)</span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-lg font-black text-teal-700">₨{patient.totalReceived?.toLocaleString() || '0'}</span>

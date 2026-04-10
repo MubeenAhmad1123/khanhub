@@ -121,7 +121,10 @@ export interface Patient {
   durationMonths: number;          // 1, 2, 3, 4 — for fee calculation
 
   // Financial
-  packageAmount: number;           // monthly PKR fee (Total PKG)
+  monthlyPackage: number;          // monthly PKR fee
+  packageAmount: number;           // (Legacy) monthly PKR fee
+  totalPackageAmount: number;      // monthlyPackage * durationMonths
+  dailyRate: number;               // monthlyPackage / 30
   otherExpenses?: number;          // extra charges like transport
 
   // Health Status

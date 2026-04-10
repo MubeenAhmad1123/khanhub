@@ -131,18 +131,41 @@ export default function PatientDetailPage() {
       }
       const data = pDoc.data();
       
-      // Calculate Remaining Days
-      let remainingDays = 0;
-      let daysAdmitted = 0;
-      if (data.admissionDate) {
-        const admission = data.admissionDate.toDate();
-        const diffTimeMs = new Date().getTime() - admission.getTime();
-        // Days admitted should count from admission date until "today"
-        daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
-        remainingDays = Math.max(0, 100 - daysAdmitted);
-      }
+      // Calculate Financial Stats & Remaining Days
+      const admission = data.admissionDate?.toDate() || new Date();
+      const diffTimeMs = new Date().getTime() - admission.getTime();
+      const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+      
+      const durationMonthsValue = data.durationMonths || 1;
+      const totalDays = durationMonthsValue * 30;
+      const remainingDays = Math.max(0, totalDays - daysAdmitted);
 
-      setPatient({ id: pDoc.id, ...data, remainingDays, daysAdmitted });
+      // Fetch all fees to calculate total received
+      const allFeesQ = query(
+        collection(db, 'rehab_fees'),
+        where('patientId', '==', patientId)
+      );
+      const allFeesSnap = await getDocs(allFeesQ);
+      let overallReceived = 0;
+      allFeesSnap.docs.forEach(doc => {
+        const feeData = doc.data();
+        (feeData.payments || []).forEach((p: any) => {
+          if (p.status === 'approved') overallReceived += Number(p.amount || 0);
+        });
+      });
+
+      const totalPkg = data.totalPackageAmount || (data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1);
+      const overallRemaining = totalPkg - overallReceived;
+
+      setPatient({ 
+        id: pDoc.id, 
+        ...data, 
+        remainingDays, 
+        daysAdmitted,
+        overallReceived,
+        overallRemaining,
+        totalPkg
+      });
       setEditForm({
         name: data.name || '',
         diagnosis: data.diagnosis || '',
@@ -912,12 +935,12 @@ export default function PatientDetailPage() {
                       {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)}
                     </p>
                     <p className="text-xs font-bold text-orange-500 mt-1">
-                      {(patient.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in rehab center'}
+                      {(patient.remainingDays || 0) > 0 ? `Days remaining in ${(patient.durationMonths || 1) * 30}-day program` : 'Days admitted in rehab center'}
                     </p>
                     <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
                       <div 
-                        className="bg-orange-500 h-full transition-all duration-1000" 
-                        style={{ width: `${Math.min(100, (100 - (patient.remainingDays || 0)))}%` }}
+                        className={`h-full transition-all duration-1000 ${patient.progressPct >= 100 ? 'bg-green-500' : 'bg-orange-500'}`} 
+                        style={{ width: `${Math.min(100, Math.round(((patient.daysAdmitted || 0) / ((patient.durationMonths || 1) * 30)) * 100))}%` }}
                       ></div>
                     </div>
                     {patient.isActive && (
@@ -994,34 +1017,54 @@ export default function PatientDetailPage() {
           {/* TAB: FEES */}
           {activeTab === 'fees' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => changeMonth(-1)} 
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
-                    <ChevronLeft size={20} className="text-gray-400" />
-                  </button>
-                  <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
-                    {formatDateDMY(new Date(feeMonth + '-01'))}
-                  </span>
-                  <button onClick={() => changeMonth(1)}
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
-                    <ChevronRight size={20} className="text-gray-400" />
-                  </button>
+              {/* Overall Financial Summary */}
+              <div className="bg-gray-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-gray-200 mb-8 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center text-teal-400">
+                      <DollarSign size={18} />
+                    </div>
+                    <h3 className="font-black text-gray-400 text-[10px] uppercase tracking-widest">Overall Financial History</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div>
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Package ({patient.durationMonths || (patient.durationOfCurrentTreatment ? parseInt(patient.durationOfCurrentTreatment) : 1)} Months)</p>
+                      <h4 className="text-3xl font-black text-white">PKR {Number(patient.totalPkg || 0).toLocaleString()}</h4>
+                      <p className="text-teal-400 text-[10px] font-bold mt-1 uppercase tracking-widest">Base: PKR {Number(patient.monthlyPackage || patient.packageAmount || 0).toLocaleString()} /mo</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Received</p>
+                      <h4 className="text-3xl font-black text-teal-400">PKR {Number(patient.overallReceived || 0).toLocaleString()}</h4>
+                      <p className="text-gray-500 text-[10px] font-bold mt-1 uppercase tracking-widest">Across all months</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Overall Remaining</p>
+                      <h4 className={`text-3xl font-black ${(patient.overallRemaining || 0) > 0 ? 'text-orange-400' : 'text-green-400'}`}>PKR {Number(patient.overallRemaining || 0).toLocaleString()}</h4>
+                      <p className="text-gray-500 text-[10px] font-bold mt-1 uppercase tracking-widest">Outstanding balance</p>
+                    </div>
+                  </div>
                 </div>
-                {feeRecord && !isAdmin && (
-                  <button 
-                    onClick={() => {
-                      setPayAmt('');
-                      setPayDate(new Date().toISOString().split('T')[0]);
-                      setPayNote('');
-                      setShowAddPaymentModal(true);
-                    }}
-                    className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-teal-600 shadow-sm transition-all active:scale-95"
-                  >
-                    <Plus size={14} /> Add Payment
-                  </button>
-                )}
               </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-gray-900 font-bold">Monthly Details</h3>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => changeMonth(-1)} 
+                      className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+                      <ChevronLeft size={16} className="text-gray-400" />
+                    </button>
+                    <span className="font-black text-teal-600 text-sm min-w-[120px] text-center uppercase tracking-widest">
+                      {formatDateDMY(new Date(feeMonth + '-01')).split(' ').slice(1).join(' ')}
+                    </span>
+                    <button onClick={() => changeMonth(1)}
+                      className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+                      <ChevronRight size={16} className="text-gray-400" />
+                    </button>
+                  </div>
+                </div>
               
               {!feeRecord ? (
                 <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">

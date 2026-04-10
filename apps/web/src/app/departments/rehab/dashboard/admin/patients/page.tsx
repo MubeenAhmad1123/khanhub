@@ -10,6 +10,7 @@ import {
   Heart, Plus, Search, ChevronRight, User, Calendar, Loader2, 
   Phone, DollarSign, CheckCircle, AlertCircle, X
 } from 'lucide-react';
+import { Patient } from '@/types/rehab';
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -68,16 +69,21 @@ export default function PatientsListPage() {
       });
 
       const all = snap.docs.map(d => {
-        const data = d.data();
+        const data = d.data() as Patient;
         const admissionDate = toDate(data.admissionDate);
         const pFees = feesMap[d.id] || [];
         const pCanteen = canteenMap[d.id] || [];
         
-        const totalDues = (data.packageAmount || 0) * (data.durationMonths || 1) + (data.otherExpenses || 0);
-        const totalReceived = pFees.reduce((acc, f) => {
-          return acc + (f.payments || []).filter((p: any) => p.status === 'approved').reduce((s: number, p: any) => s + p.amount, 0);
-        }, 0);
-        const remaining = totalDues - totalReceived;
+        // Use standardized fields with backward compatibility fallback
+        const totalPkg = data.totalPackageAmount || (Number(data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1));
+        let totalReceived = 0;
+        pFees.forEach(f => {
+          (f.payments || []).forEach((p: any) => {
+            if (p.status === 'approved') totalReceived += Number(p.amount || 0);
+          });
+        });
+
+        const remaining = totalPkg - totalReceived;
 
         const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (c.totalDeposited || 0), 0);
         const totalCanteenSpent = pCanteen.reduce((a, c) => a + (c.totalSpent || 0), 0);
@@ -93,7 +99,7 @@ export default function PatientsListPage() {
           fatherName: data.fatherName || '',
           photoUrl: data.photoUrl || null,
           admissionDate,
-          packageAmount: Number(data.packageAmount) || 0,
+          monthlyPackage: Number(data.monthlyPackage || data.packageAmount) || 0,
           durationMonths: data.durationMonths || 1,
           inpatientNumber: data.inpatientNumber || '',
           serialNumber: data.serialNumber || 0,
@@ -102,7 +108,7 @@ export default function PatientsListPage() {
           contactNumber: data.contactNumber || '',
           remaining,
           canteenBalance,
-          totalDues,
+          totalPkg,
           totalReceived,
           progressPct,
           daysSinceAdmission,
@@ -110,7 +116,7 @@ export default function PatientsListPage() {
           createdAt: toDate(data.createdAt),
         };
       })
-      .sort((a, b) => b.serialNumber - a.serialNumber);
+      .sort((a, b) => b.serialNumber - (a.serialNumber || 0));
 
       setPatients(all);
       setAllPatients(all);
