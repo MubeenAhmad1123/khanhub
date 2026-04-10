@@ -301,7 +301,7 @@ export default function HqRehabPatientsPage() {
                                 <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 grid grid-cols-2 gap-4">
                                   <div className="col-span-2 pb-2 border-b border-slate-700/50 flex justify-between items-center">
                                     <div>
-                                      <p className="text-[10px] text-slate-500 font-bold uppercase">Outstanding Dues</p>
+                                      <p className="text-[10px] text-slate-500 font-bold uppercase">Pending Dues</p>
                                       <p className={`text-xl font-black ${patient.remaining > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                                         Rs. {(patient.remaining || 0).toLocaleString()}
                                       </p>

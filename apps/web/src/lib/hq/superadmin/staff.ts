@@ -18,7 +18,7 @@ export type StaffCardRow = {
   absentCount: number;
   lateCount: number;
   growthPointsTotal: number;
-  outstandingFines: number;
+  totalFines: number;
   lastDutyLabel?: string;
 };
 
@@ -63,7 +63,7 @@ async function loadFinesTotal(dept: StaffDept, staffId: string) {
 
 async function loadLastDuty(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return undefined;
-  const col = dept === 'rehab' ? 'rehab_duty_log' : 'spims_duty_log';
+  const col = dept === 'rehab' ? 'rehab_duty_logs' : 'spims_duty_logs';
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(1))).catch(
     () => ({ docs: [] } as any)
   );
@@ -125,12 +125,69 @@ export async function listStaffCards({
         absentCount: att.absent,
         lateCount: att.late,
         growthPointsTotal: gp,
-        outstandingFines: fines,
+        totalFines: fines,
         lastDutyLabel: lastDuty,
       } as StaffCardRow;
     })
   );
 
   return enriched;
+}
+
+export type StaffProfile = StaffCardRow & {
+  email?: string;
+  phone?: string;
+  customId?: string;
+  address?: string;
+  cnic?: string;
+  joiningDate?: any;
+  lastLoginAt?: any;
+};
+
+export async function fetchStaffProfile(compositeId: string): Promise<StaffProfile | null> {
+  const idx = compositeId.indexOf('_');
+  if (idx <= 0) return null;
+  const dept = compositeId.slice(0, idx) as StaffDept;
+  const uid = compositeId.slice(idx + 1);
+
+  if (!['hq', 'rehab', 'spims'].includes(dept)) return null;
+
+  const col = dept === 'hq' ? 'hq_users' : dept === 'rehab' ? 'rehab_users' : 'spims_users';
+  const { getDoc, doc } = await import('firebase/firestore');
+  const snap = await getDoc(doc(db, col, uid)).catch(() => null);
+  if (!snap || !snap.exists()) return null;
+
+  const data = snap.data() as any;
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const [att, gp, fines, lastDuty] = await Promise.all([
+    loadAttendanceMonth(dept, uid, monthKey),
+    loadGrowthPoints(dept, uid),
+    loadFinesTotal(dept, uid),
+    loadLastDuty(dept, uid),
+  ]);
+
+  return {
+    id: compositeId,
+    dept,
+    staffId: uid,
+    name: String(data.name || data.displayName || '—'),
+    role: normalizeRole(data.role),
+    isActive: data.isActive !== false,
+    email: data.email,
+    phone: data.phone,
+    customId: data.customId,
+    address: data.address,
+    cnic: data.cnic,
+    joiningDate: data.createdAt || data.joiningDate,
+    lastLoginAt: data.lastLoginAt,
+    presentCount: att.present,
+    absentCount: att.absent,
+    lateCount: att.late,
+    growthPointsTotal: gp,
+    totalFines: fines,
+    lastDutyLabel: lastDuty,
+  };
 }
 

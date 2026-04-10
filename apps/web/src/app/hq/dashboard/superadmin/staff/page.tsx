@@ -114,7 +114,7 @@ export default function SuperadminStaffPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-xs font-black text-gray-900 dark:text-white">GP: {r.growthPointsTotal}</p>
-                    <p className="mt-1 text-xs font-black text-amber-700 dark:text-amber-300">Fines: PKR {Number(r.outstandingFines || 0).toLocaleString('en-PK')}</p>
+                    <p className="mt-1 text-xs font-black text-amber-700 dark:text-amber-300">Fines: PKR {Number(r.totalFines || 0).toLocaleString('en-PK')}</p>
                   </div>
                 </div>
                 {r.lastDutyLabel ? (

@@ -1007,9 +1007,15 @@ service cloud.firestore {
           collectionId.matches('^[a-z0-9]+_staff$')
           || collectionId.matches('^[a-z0-9]+_attendance$')
           || collectionId.matches('^[a-z0-9]+_duty_logs$')
+          || collectionId.matches('^[a-z0-9]+_fines$')
+          || collectionId.matches('^[a-z0-9]+_growth_points$')
+          || collectionId.matches('^[a-z0-9]+_users$')
         );
       allow delete: if isHqSuperAdmin()
-        && collectionId.matches('^[a-z0-9]+_staff$');
+        && (
+          collectionId.matches('^[a-z0-9]+_staff$')
+          || collectionId.matches('^[a-z0-9]+_fines$')
+        );
     }
 
     // ═══════════════════════════════════════════════════════════

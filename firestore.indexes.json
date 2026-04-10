@@ -213,6 +213,46 @@
         { "fieldPath": "studentId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "rehab_attendance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "staffId", "order": "ASCENDING" },
+        { "fieldPath": "month", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "spims_attendance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "staffId", "order": "ASCENDING" },
+        { "fieldPath": "month", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "rehab_duty_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "staffId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "spims_duty_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "staffId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "hq_duty_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "staffId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

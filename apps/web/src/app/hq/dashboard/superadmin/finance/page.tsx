@@ -56,10 +56,10 @@ export default function SuperadminFinancePage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">Finance</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Summary + trends + outstanding.</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Summary + trends + dues.</p>
         </div>
         <div className="flex gap-2">
-          <CsvExportButton filename={`top_outstanding_${tab}.csv`} rows={csvRows} />
+          <CsvExportButton filename={`top_pending_${tab}.csv`} rows={csvRows} />
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export default function SuperadminFinancePage() {
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard title="Collected today" value={summary.collectedToday} subtitle="Approved" tone="primary" format="pkr" />
             <StatCard title="This month" value={summary.collectedThisMonth} subtitle="Approved" tone="neutral" format="pkr" />
-            <StatCard title="Outstanding" value={summary.outstandingTotal} subtitle="Total" tone="warning" format="pkr" />
+            <StatCard title="Total Dues" value={summary.outstandingTotal} subtitle="Total" tone="warning" format="pkr" />
             <StatCard title="Pending approvals" value={summary.pendingApprovals} subtitle="Needs action" tone="danger" />
           </div>
 
@@ -123,14 +123,14 @@ export default function SuperadminFinancePage() {
 
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-black text-gray-900 dark:text-white">Top outstanding</h2>
+              <h2 className="text-sm font-black text-gray-900 dark:text-white">Top pending</h2>
               <div className="text-xs font-bold text-gray-500 dark:text-gray-400">
                 Total rows: {insights.topOutstanding.length}
               </div>
             </div>
             {!insights.topOutstanding.length ? (
               <div className="mt-4">
-                <EmptyState title="No outstanding balances" message="Looks clean right now." />
+                <EmptyState title="No pending balances" message="Looks clean right now." />
               </div>
             ) : (
               <div className="mt-3 overflow-x-auto">
@@ -138,7 +138,7 @@ export default function SuperadminFinancePage() {
                   <thead>
                     <tr className="text-xs uppercase tracking-widest text-gray-400">
                       <th className="py-2 pr-4">Name</th>
-                      <th className="py-2 pr-4">Outstanding</th>
+                      <th className="py-2 pr-4">Pending</th>
                       <th className="py-2 pr-4">Received</th>
                       <th className="py-2">Due</th>
                     </tr>
