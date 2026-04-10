@@ -173,10 +173,15 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Logo + Back */}
       <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-        <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-teal-600 text-xs font-semibold mb-4 transition-colors group">
-          <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
-          Back to KhanHub
-        </Link>
+        {role === 'superadmin' && (
+          <Link 
+            href="/hq/dashboard/superadmin" 
+            className="flex items-center gap-2 text-teal-600 hover:bg-teal-50 px-3 py-2 rounded-xl text-xs font-black mb-4 transition-all group border border-teal-100"
+          >
+            <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
+            EXIT VISIT MODE
+          </Link>
+        )}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-200">
             <Shield size={18} />

@@ -34,7 +34,7 @@ export default function AdminDashboardPage() {
     const sessionData = localStorage.getItem('rehab_session');
     if (!sessionData) { router.push('/departments/rehab/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin') {
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
       router.push('/departments/rehab/login'); return;
     }
     setSession(parsed);

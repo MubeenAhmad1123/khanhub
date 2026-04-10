@@ -159,8 +159,12 @@ export default function PatientDetailPage() {
         });
       });
 
-      const totalPkg = (Number(data.monthlyPackage || data.packageAmount || 0) * Number(data.durationMonths || 1));
+      const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
+      const totalPkg = (monthlyPkg * Number(data.durationMonths || 1));
       const overallRemaining = totalPkg - overallReceived;
+      const dailyRate = Math.floor(monthlyPkg / 30);
+      const dueTillDate = daysAdmitted * dailyRate;
+      const remainingTillDate = dueTillDate - overallReceived;
 
       setPatient({ 
         id: pDoc.id, 
@@ -169,7 +173,10 @@ export default function PatientDetailPage() {
         daysAdmitted,
         overallReceived,
         overallRemaining,
-        totalPkg
+        totalPkg,
+        dailyRate,
+        dueTillDate,
+        remainingTillDate
       });
       setEditForm({
         name: data.name || '',
@@ -1070,31 +1077,48 @@ export default function PatientDetailPage() {
           {activeTab === 'fees' && (
             <div className="space-y-6">
               {/* Overall Financial Summary */}
-              <div className="bg-gray-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-gray-200 mb-8 overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+              <div className="bg-gray-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-gray-200 mb-8 overflow-hidden relative border border-gray-800">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
                 <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-6">
-                    <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center text-teal-400">
-                      <DollarSign size={18} />
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400 border border-teal-500/20">
+                        <DollarSign size={22} />
+                      </div>
+                      <div>
+                        <h3 className="font-black text-white text-lg tracking-tight">Overall Financial History</h3>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Real-time settlement data</p>
+                      </div>
                     </div>
-                    <h3 className="font-black text-gray-400 text-[10px] uppercase tracking-widest">Overall Financial History</h3>
+                    <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-2xl">
+                       <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Daily Rate</p>
+                       <p className="text-xl font-black text-teal-400">PKR {Number(patient.dailyRate).toLocaleString()}</p>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div>
-                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Package ({patient.durationMonths || (patient.durationOfCurrentTreatment ? parseInt(patient.durationOfCurrentTreatment) : 1)} Months)</p>
-                      <h4 className="text-3xl font-black text-white">PKR {Number(patient.totalPkg || 0).toLocaleString()}</h4>
-                      <p className="text-teal-400 text-[10px] font-bold mt-1 uppercase tracking-widest">Base: PKR {Number(patient.monthlyPackage || patient.packageAmount || 0).toLocaleString()} /mo</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
+                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Estimated Total</p>
+                      <h4 className="text-2xl font-black text-white">PKR {Number(patient.totalPkg || 0).toLocaleString()}</h4>
+                      <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase tracking-widest">{patient.durationMonths || 1} Months Program</p>
                     </div>
-                    <div>
-                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Received</p>
-                      <h4 className="text-3xl font-black text-teal-400">PKR {Number(patient.overallReceived || 0).toLocaleString()}</h4>
-                      <p className="text-gray-500 text-[10px] font-bold mt-1 uppercase tracking-widest">Across all months</p>
+                    
+                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
+                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Received</p>
+                      <h4 className="text-2xl font-black text-teal-400">PKR {Number(patient.overallReceived || 0).toLocaleString()}</h4>
+                      <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase tracking-widest">Across all months</p>
                     </div>
-                    <div>
-                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Overall Remaining</p>
-                      <h4 className={`text-3xl font-black ${(patient.overallRemaining || 0) > 0 ? 'text-orange-400' : 'text-green-400'}`}>PKR {Number(patient.overallRemaining || 0).toLocaleString()}</h4>
-                      <p className="text-gray-500 text-[10px] font-bold mt-1 uppercase tracking-widest">Outstanding balance</p>
+
+                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl highlight-border-orange">
+                      <p className="text-orange-400/80 text-[10px] font-black uppercase tracking-widest mb-1">Due Till Today</p>
+                      <h4 className="text-2xl font-black text-orange-400">PKR {Number(patient.remainingTillDate || 0).toLocaleString()}</h4>
+                      <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase tracking-widest">Day {patient.daysAdmitted} of Treatment</p>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
+                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Final Remaining</p>
+                      <h4 className={`text-2xl font-black ${(patient.overallRemaining || 0) > 0 ? 'text-white' : 'text-green-400'}`}>PKR {Number(patient.overallRemaining || 0).toLocaleString()}</h4>
+                      <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase tracking-widest">End of {patient.durationMonths || 1} months</p>
                     </div>
                   </div>
                 </div>

@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { 
   User, DollarSign, ShoppingCart, Heart, Calendar, Clock, 
   CheckCircle, AlertCircle, Loader2, Phone, MessageCircle,
-  Shield, Pill, TrendingUp, Activity, ArrowLeft
+  Shield, Pill, TrendingUp, Activity, ArrowLeft, Users
 } from 'lucide-react';
 import Link from 'next/link';
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
@@ -32,9 +32,9 @@ export default function FamilyPatientViewPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<any>(null);
-  const [feeRecord, setFeeRecord] = useState<any>(null);
-  const [canteenRecord, setCanteenRecord] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'daily' | 'therapy' | 'meds' | 'progress'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'daily' | 'therapy' | 'meds' | 'progress' | 'visits'>('overview');
+  const [payments, setPayments] = useState<any[]>([]);
+  const [visits, setVisits] = useState<any[]>([]);
 
   const fetchPatientData = useCallback(async () => {
     try {
@@ -53,16 +53,26 @@ export default function FamilyPatientViewPage() {
       ]);
 
       let totalReceived = 0;
+      const allPayments: any[] = [];
       feesSnap.docs.forEach(d => {
         const feeData = d.data();
         (feeData.payments || []).forEach((p: any) => {
-          if (p.status === 'approved') totalReceived += Number(p.amount || 0);
+          if (p.status === 'approved') {
+            totalReceived += Number(p.amount || 0);
+            allPayments.push({ ...p, month: feeData.month });
+          }
         });
       });
+      setPayments(allPayments.sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime()));
 
-      // Standardized calculation (Recalculate to avoid stale totalPackageAmount)
-      const totalPkg = (Number(data.monthlyPackage || data.packageAmount || 0) * (data.durationMonths || 1));
-      const remaining = totalPkg - totalReceived;
+      const visitsSnap = await getDocs(query(collection(db, 'rehab_visits'), where('patientId', '==', patientId)));
+      setVisits(visitsSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => toDate(b.date).getTime() - toDate(a.date).getTime()));
+
+      const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
+      const totalPkg = (monthlyPkg * (data.durationMonths || 1));
+      const dailyRate = Math.floor(monthlyPkg / 30);
+      const dueTillDate = daysSince * dailyRate;
+      const remainingTillDate = dueTillDate - totalReceived;
 
       let totalCanteenDeposited = 0, totalCanteenSpent = 0;
       canteenSnap.docs.forEach(d => {
@@ -80,7 +90,10 @@ export default function FamilyPatientViewPage() {
         daysSince,
         totalPkg,
         totalReceived,
-        remaining,
+        dailyRate,
+        dueTillDate,
+        remainingTillDate,
+        remaining: totalPkg - totalReceived,
         canteenBalance: totalCanteenDeposited - totalCanteenSpent,
         canteenDeposit: totalCanteenDeposited,
         canteenSpent: totalCanteenSpent,
@@ -190,26 +203,37 @@ export default function FamilyPatientViewPage() {
 
       {/* Finance Summary */}
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="rounded-2xl bg-teal-500/10 border border-teal-500/20 p-4">
-          <p className="text-teal-600 text-[9px] font-black uppercase tracking-widest mb-3">Financial Summary</p>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="bg-gray-900 rounded-[2rem] p-6 text-white shadow-xl shadow-gray-200 overflow-hidden relative border border-gray-800">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+          <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mb-4 relative z-10">Real-time Financial History</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
             <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.totalPkg?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest text-teal-600/90 font-bold">Total Pkg ({patient.durationMonths || 1}m)</span>
+              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Est. Total</span>
+              <span className="text-xl font-black text-white">₨{patient.totalPkg?.toLocaleString()}</span>
+              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">{patient.durationMonths || 1} M Program</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.totalReceived?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest text-teal-600/90 font-bold">Received</span>
+              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Received</span>
+              <span className="text-xl font-black text-teal-400">₨{patient.totalReceived?.toLocaleString()}</span>
+              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">Verified Payments</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className={`text-lg font-black ${(patient.remaining || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{patient.remaining?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest text-teal-600/90 font-bold">Remaining</span>
+              <span className="text-[10px] uppercase font-black text-orange-400/80 tracking-widest">Due till Date</span>
+              <span className="text-xl font-black text-orange-400">₨{(patient.remainingTillDate || 0).toLocaleString()}</span>
+              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">Day {patient.daysAdmitted}</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.canteenBalance?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest text-teal-600/90 font-bold">Canteen Balance</span>
+              <span className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Canteen</span>
+              <span className={`text-xl font-black ${patient.canteenBalance >= 0 ? 'text-white' : 'text-red-500'}`}>₨{patient.canteenBalance?.toLocaleString()}</span>
+              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">Current Wallet</span>
             </div>
           </div>
+          <button 
+            onClick={() => setActiveTab('finance')}
+            className="w-full mt-6 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-teal-400 flex items-center justify-center gap-2"
+          >
+            View Full Billing Details <DollarSign size={12} />
+          </button>
         </div>
       </div>
 
@@ -219,7 +243,9 @@ export default function FamilyPatientViewPage() {
           <div className="flex flex-wrap gap-1 pb-1">
             {[
               { key: 'overview', label: 'Overview', icon: User },
+              { key: 'finance', label: 'Finance', icon: DollarSign },
               { key: 'daily', label: 'Daily Sheet', icon: Activity },
+              { key: 'visits', label: 'Family Visits', icon: Clock },
               { key: 'therapy', label: 'Therapy', icon: Heart },
               { key: 'meds', label: 'Medication', icon: Pill },
               { key: 'progress', label: 'Progress', icon: TrendingUp },
@@ -237,6 +263,99 @@ export default function FamilyPatientViewPage() {
             ))}
           </div>
         </div>
+
+        {activeTab === 'finance' && (
+          <div className="space-y-6 mt-6">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm text-center">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Package</p>
+                  <p className="text-3xl font-black text-gray-900">₨{(patient.monthlyPackage || patient.packageAmount || 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm text-center">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Daily Rate</p>
+                  <p className="text-3xl font-black text-teal-600">₨{Number(patient.dailyRate).toLocaleString()}</p>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm text-center">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Days Admitted</p>
+                  <p className="text-3xl font-black text-gray-900">{patient.daysAdmitted} Days</p>
+                </div>
+             </div>
+
+             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                  <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2">
+                    <Clock size={18} className="text-teal-600" /> Payment History
+                  </h3>
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{payments.length} Transactions</span>
+                </div>
+                {payments.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <p className="text-gray-400 text-sm font-medium">No verified payments found.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {payments.map((p, idx) => (
+                      <div key={idx} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                        <div>
+                          <p className="font-black text-gray-900 text-base">₨{Number(p.amount).toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Verified on {formatDateDMY(p.date)}</p>
+                        </div>
+                        <div className="text-right">
+                           <span className="px-3 py-1 bg-green-100 text-green-700 text-[9px] font-black rounded-full uppercase tracking-widest">SUCCESS</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+             </div>
+          </div>
+        )}
+
+        {activeTab === 'visits' && (
+          <div className="space-y-6 mt-6">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-gray-50">
+                <h3 className="font-black text-gray-900 tracking-tight flex items-center gap-2">
+                  <Clock size={18} className="text-teal-600" /> Family Visit Logs
+                </h3>
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Official history of visitors</p>
+              </div>
+              {visits.length === 0 ? (
+                <div className="p-12 text-center text-gray-400">
+                  <Users size={48} className="mx-auto mb-4 opacity-20" />
+                  <p className="text-sm font-medium">No family visits have been logged yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 divide-y divide-gray-50">
+                  {visits.map((v, i) => (
+                    <div key={i} className="p-6 hover:bg-gray-50 transition-colors group">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center text-teal-600 border border-teal-100 group-hover:bg-teal-600 group-hover:text-white transition-all shrink-0">
+                            <User size={24} />
+                          </div>
+                          <div>
+                            <p className="font-black text-gray-900 text-lg">{v.visitorName}</p>
+                            <p className="text-xs text-gray-500 font-bold">{v.relation}</p>
+                          </div>
+                        </div>
+                        <div className="text-left sm:text-right">
+                          <p className="text-sm font-black text-gray-900">{formatDateDMY(v.date)}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Visit Logged</p>
+                        </div>
+                      </div>
+                      {v.notes && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-2xl text-sm text-gray-600 italic border border-gray-100 group-hover:bg-white group-hover:border-teal-100 transition-all">
+                          &ldquo;{v.notes}&rdquo;
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {activeTab === 'overview' && (
           <div className="space-y-6 mt-6">

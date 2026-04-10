@@ -35,7 +35,7 @@ export default function RehabAdminPasswordsPage() {
       return;
     }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin') {
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
       router.push('/departments/rehab/login');
       return;
     }
