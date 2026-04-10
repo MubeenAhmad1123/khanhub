@@ -43,13 +43,15 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     where('createdAt', '<=', to)
   );
 
+  const PENDING_LIST = ['pending', 'pending_cashier'];
+
   const pendingRehabTxQ = query(
     collection(db, 'rehab_transactions'),
-    where('status', '==', 'pending')
+    where('status', 'in', PENDING_LIST)
   );
   const pendingSpimsTxQ = query(
     collection(db, 'spims_transactions'),
-    where('status', '==', 'pending')
+    where('status', 'in', PENDING_LIST)
   );
 
   const pendingRecsQ = query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'));

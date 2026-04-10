@@ -49,14 +49,14 @@ export default function SuperadminStaffPage() {
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Merged staff directory + quick metrics.</p>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 sm:max-w-md">
-        {(['all', 'rehab', 'spims'] as const).map((t) => (
+      <div className="mt-4 grid grid-cols-4 gap-2 sm:max-w-md">
+        {(['all', 'hq', 'rehab', 'spims'] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setDept(t as any)}
             className={`h-11 rounded-2xl text-xs font-black uppercase tracking-widest transition ${
-              dept === t ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-50 text-gray-700 dark:bg-white/5 dark:text-gray-200'
+              dept === t ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-lg shadow-gray-200 dark:shadow-none' : 'bg-gray-50 text-gray-700 dark:bg-white/5 dark:text-gray-200'
             }`}
           >
             {t}

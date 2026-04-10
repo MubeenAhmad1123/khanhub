@@ -4,7 +4,7 @@ import { collection, getDocs, limit, orderBy, query, where } from 'firebase/fire
 import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
 
-export type StaffDept = 'rehab' | 'spims';
+export type StaffDept = 'hq' | 'rehab' | 'spims';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'other';
 
 export type StaffCardRow = {
@@ -29,6 +29,7 @@ function normalizeRole(raw: any): StaffRole {
 }
 
 async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: string) {
+  if (dept === 'hq') return { present: 0, absent: 0, late: 0 };
   const col = dept === 'rehab' ? 'rehab_attendance' : 'spims_attendance';
   const snap = await getDocs(
     query(collection(db, col), where('staffId', '==', staffId), where('month', '==', monthKey))
@@ -39,12 +40,13 @@ async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: s
     const s = String(r.status || r.state || '').toLowerCase();
     if (s.includes('present')) present++;
     else if (s.includes('late')) late++;
-    else absent++;
+    else if (s.includes('absent')) absent++;
   }
   return { present, absent, late };
 }
 
 async function loadGrowthPoints(dept: StaffDept, staffId: string) {
+  if (dept === 'hq') return 0;
   const col = dept === 'rehab' ? 'rehab_growth_points' : 'spims_growth_points';
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(200))).catch(
     () => ({ docs: [] } as any)
@@ -53,12 +55,14 @@ async function loadGrowthPoints(dept: StaffDept, staffId: string) {
 }
 
 async function loadFinesTotal(dept: StaffDept, staffId: string) {
+  if (dept === 'hq') return 0;
   const col = dept === 'rehab' ? 'rehab_fines' : 'spims_fines';
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId))).catch(() => ({ docs: [] } as any));
   return snap.docs.reduce((acc: number, d: any) => acc + (Number(d.data()?.amount) || 0), 0);
 }
 
 async function loadLastDuty(dept: StaffDept, staffId: string) {
+  if (dept === 'hq') return undefined;
   const col = dept === 'rehab' ? 'rehab_duty_log' : 'spims_duty_log';
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(1))).catch(
     () => ({ docs: [] } as any)
@@ -80,12 +84,12 @@ export async function listStaffCards({
 }): Promise<StaffCardRow[]> {
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const depts: StaffDept[] = dept === 'all' ? ['rehab', 'spims'] : [dept];
+  const targetDepts: StaffDept[] = dept === 'all' ? ['hq', 'rehab', 'spims'] : [dept];
 
   const base = await Promise.all(
-    depts.map(async (d) => {
-      const col = d === 'rehab' ? 'rehab_staff' : 'spims_staff';
-      const snap = await getDocs(query(collection(db, col), orderBy('createdAt', 'desc'), limit(400))).catch(() => ({ docs: [] } as any));
+    targetDepts.map(async (d) => {
+      const col = d === 'hq' ? 'hq_users' : d === 'rehab' ? 'rehab_users' : 'spims_users';
+      const snap = await getDocs(query(collection(db, col), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any));
       return snap.docs.map((docSnap: any) => ({ _dept: d, id: docSnap.id, ...docSnap.data() }));
     })
   );
@@ -94,20 +98,22 @@ export async function listStaffCards({
     const active = s.isActive !== false;
     if (status === 'active' && !active) return false;
     if (status === 'inactive' && active) return false;
-    if (role !== 'all' && normalizeRole(s.role) !== role) return false;
+    const normalizedRole = normalizeRole(s.role);
+    if (role !== 'all' && normalizedRole !== role) return false;
     return true;
   });
 
   const enriched = await Promise.all(
     rows.map(async (s: any) => {
       const d = s._dept as StaffDept;
-      const staffId = String(s.staffId || s.customId || s.id);
+      const staffId = String(s.id);
       const [att, gp, fines, lastDuty] = await Promise.all([
         loadAttendanceMonth(d, staffId, monthKey),
         loadGrowthPoints(d, staffId),
         loadFinesTotal(d, staffId),
         loadLastDuty(d, staffId),
       ]);
+
       return {
         id: `${d}_${s.id}`,
         dept: d,
