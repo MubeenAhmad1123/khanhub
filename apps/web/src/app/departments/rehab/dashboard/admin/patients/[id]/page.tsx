@@ -18,6 +18,7 @@ import { toast } from 'react-hot-toast';
 import { formatDateDMY } from '@/lib/utils';
 
 import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
+import FinanceHistory, { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
 import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
@@ -41,6 +42,7 @@ export default function PatientDetailPage() {
   // State
   const [activeTab, setActiveTab] = useState<'profile' | 'admission' | 'daily' | 'progress' | 'therapy' | 'meds' | 'fees' | 'canteen' | 'videos' | 'visits'>('profile');
   const [visits, setVisits] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [isSavingVisit, setIsSavingVisit] = useState(false);
   const [editVisitModal, setEditVisitModal] = useState<any | null>(null);
@@ -152,12 +154,21 @@ export default function PatientDetailPage() {
       );
       const allFeesSnap = await getDocs(allFeesQ);
       let overallReceived = 0;
+      const aggregatedPayments: any[] = [];
+      
       allFeesSnap.docs.forEach(doc => {
         const feeData = doc.data();
-        (feeData.payments || []).forEach((p: any) => {
+        const docPayments = feeData.payments || [];
+        docPayments.forEach((p: any) => {
           if (p.status === 'approved') overallReceived += Number(p.amount || 0);
+          aggregatedPayments.push({
+            id: `${doc.id}_${p.date}`,
+            ...p,
+            month: feeData.month // preserve month context if needed
+          });
         });
       });
+      setAllPayments(aggregatedPayments);
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
       const totalPkg = (monthlyPkg * Number(data.durationMonths || 1));
@@ -1076,170 +1087,119 @@ export default function PatientDetailPage() {
           {/* TAB: FEES */}
           {activeTab === 'fees' && (
             <div className="space-y-6">
-              {/* Overall Financial Summary */}
-              <div className="bg-gray-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-gray-200 mb-8 overflow-hidden relative border border-gray-800">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-                <div className="relative z-10">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400 border border-teal-500/20">
-                        <DollarSign size={22} />
-                      </div>
-                      <div>
-                        <h3 className="font-black text-white text-lg tracking-tight">Overall Financial History</h3>
-                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Real-time settlement data</p>
-                      </div>
-                    </div>
-                    <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-2xl">
-                       <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Daily Rate</p>
-                       <p className="text-xl font-black text-teal-400">PKR {Number(patient.dailyRate).toLocaleString()}</p>
-                    </div>
-                  </div>
+              {/* Premium Journey Section */}
+              <FinanceHistory 
+                patientName={patient?.name || "Patient"}
+                records={(() => {
+                  const records: MonthRecord[] = [];
+                  const monthlyPkg = Number(patient?.monthlyPackage || 40000);
+                  
+                  // Group payments by month
+                  const groups: { [key: string]: PaymentType[] } = {};
+                  allPayments.forEach((p: any) => {
+                    const date = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
+                    const monthLabel = date.toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase();
+                    if (!groups[monthLabel]) groups[monthLabel] = [];
+                    groups[monthLabel].push({
+                      date: date.toLocaleDateString('en-PK'),
+                      amount: Number(p.amount),
+                      receivedBy: p.cashierId || "Admin Portal",
+                      verifiedByHQ: p.status === 'approved',
+                      status: p.status === 'approved' ? "Approved" : "Pending"
+                    });
+                  });
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
-                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Estimated Total</p>
-                      <h4 className="text-2xl font-black text-white">PKR {Number(patient.totalPkg || 0).toLocaleString()}</h4>
-                      <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase tracking-widest">{patient.durationMonths || 1} Months Program</p>
-                    </div>
-                    
-                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
-                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Received</p>
-                      <h4 className="text-2xl font-black text-teal-400">PKR {Number(patient.overallReceived || 0).toLocaleString()}</h4>
-                      <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase tracking-widest">Across all months</p>
-                    </div>
+                  // Create MonthRecord from groups
+                  Object.keys(groups).forEach(label => {
+                    const monthPayments = groups[label];
+                    const totalPaid = monthPayments.reduce((acc, curr) => acc + curr.amount, 0);
+                    records.push({
+                      label,
+                      package: monthlyPkg,
+                      totalPaid,
+                      remaining: Math.max(0, monthlyPkg - totalPaid),
+                      payments: monthPayments
+                    });
+                  });
 
-                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl highlight-border-orange">
-                      <p className="text-orange-400/80 text-[10px] font-black uppercase tracking-widest mb-1">Due Till Today</p>
-                      <h4 className="text-2xl font-black text-orange-400">PKR {Number(patient.remainingTillDate || 0).toLocaleString()}</h4>
-                      <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase tracking-widest">Day {patient.daysAdmitted} of Treatment</p>
-                    </div>
+                  return records.length > 0 ? records : [{
+                    label: new Date().toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase(),
+                    package: monthlyPkg,
+                    totalPaid: 0,
+                    remaining: monthlyPkg,
+                    payments: []
+                  }];
+                })()}
+              />
 
-                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
-                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Final Remaining</p>
-                      <h4 className={`text-2xl font-black ${(patient.overallRemaining || 0) > 0 ? 'text-white' : 'text-green-400'}`}>PKR {Number(patient.overallRemaining || 0).toLocaleString()}</h4>
-                      <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase tracking-widest">End of {patient.durationMonths || 1} months</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-gray-900 font-bold">Monthly Details</h3>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => changeMonth(-1)} 
-                      className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-                      <ChevronLeft size={16} className="text-gray-400" />
-                    </button>
-                    <span className="font-black text-teal-600 text-sm min-w-[120px] text-center uppercase tracking-widest">
-                      {formatDateDMY(new Date(feeMonth + '-01')).split(' ').slice(1).join(' ')}
-                    </span>
-                    <button onClick={() => changeMonth(1)}
-                      className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-                      <ChevronRight size={16} className="text-gray-400" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              {!feeRecord ? (
-                <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <DollarSign className="w-8 h-8 text-gray-300" />
-                  </div>
-                  <h3 className="text-gray-900 font-bold mb-1">No fee record for this month</h3>
-                  <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                    You can initialize a fee record manually with the patient's base package amount.
-                  </p>
-                  {!isAdmin && (
-                  <button 
-                    onClick={() => {
-                      setPackageAmt(patient.packageAmount?.toString() || '');
-                      setInitialPayment('');
-                      setPaymentNote('');
-                      setShowAddFeeModal(true);
-                    }}
-                    className="inline-flex items-center gap-2 bg-teal-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-teal-600 transition shadow-lg shadow-teal-100"
-                  >
-                    <Plus size={16} /> Initialize Fee Record
-                  </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-8 animate-in fade-in duration-500">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div className="bg-white border border-gray-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Monthly Package</div>
-                      <div className="text-2xl font-black text-gray-900">PKR {feeRecord.packageAmount.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-green-50 border border-green-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">Total Paid</div>
-                      <div className="text-2xl font-black text-green-700">PKR {feeRecord.amountPaid.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-red-50 border border-red-100 p-4 md:p-6 rounded-2xl shadow-sm">
-                      <div className="text-[10px] text-red-500 font-black uppercase tracking-widest mb-1">Remaining</div>
-                      <div className="text-2xl font-black text-red-700">PKR {feeRecord.amountRemaining.toLocaleString()}</div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-100 h-3 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-teal-500 h-full transition-all duration-700 ease-out"
-                      style={{ width: `${Math.min(100, Math.max(0, (feeRecord.amountPaid / feeRecord.packageAmount) * 100))}%` }}
-                    />
-                  </div>
-
-                  {feeRecord.amountRemaining <= 0 && (
-                     <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-100 font-bold text-sm flex items-center gap-2">
-                       <Shield className="w-5 h-5" /> PAID IN FULL
-                     </div>
-                  )}
-
+              {/* Detailed Transaction Log */}
+              <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
                   <div>
-                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                      <h3 className="text-lg font-black text-gray-900">Payment History</h3>
-                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{feeRecord.payments?.length || 0} Entries</span>
-                    </div>
-                    
-                    {!feeRecord.payments || feeRecord.payments.length === 0 ? (
-                      <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                        <p className="text-gray-400 text-sm font-medium">No payments recorded for this month.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-3">
-                        {feeRecord.payments
-                          ?.sort((a: any, b: any) => {
-                            const aT = a.date?.toDate?.()?.getTime() || new Date(a.date).getTime();
-                            const bT = b.date?.toDate?.()?.getTime() || new Date(b.date).getTime();
-                            return bT - aT;
-                          })
-                          .map((p: any) => (
-                          <div key={p.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-teal-100 transition-colors">
-                            <div className="flex-1">
-                              <p className="font-black text-gray-900">
-                                PKR {Number(p.amount).toLocaleString('en-PK')}
-                              </p>
-                              {p.note && (
-                                <p className="text-xs text-gray-500 mt-0.5">{p.note}</p>
-                              )}
-                              <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Verified by {p.cashierId}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-700 font-bold">
-                                {formatDateDMY(p.date?.toDate?.() ? p.date.toDate() : p.date)}
-                              </p>
-                              <span className="inline-block mt-1 text-[9px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-black uppercase tracking-widest">
-                                APPROVED
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <h3 className="text-xl font-black text-[#1a3a5c] tracking-tight">Payment Transaction Log</h3>
+                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Full audit trail of all entries</p>
                   </div>
+                  {!isAdmin && (
+                    <button 
+                      onClick={() => {
+                        setPackageAmt(patient?.packageAmount?.toString() || '');
+                        setInitialPayment('');
+                        setPaymentNote('');
+                        setShowAddFeeModal(true);
+                      }}
+                      className="bg-[#1a3a5c] text-white px-5 py-2.5 rounded-xl font-black text-sm hover:translate-y-[-2px] transition-all active:scale-95 shadow-lg shadow-blue-900/10 flex items-center gap-2"
+                    >
+                      <Plus size={16} /> Add Payment
+                    </button>
+                  )}
                 </div>
-              )}
+
+                {allPayments.length === 0 ? (
+                  <div className="text-center py-16 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+                    <DollarSign size={48} className="mx-auto mb-4 opacity-10" />
+                    <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No transactions found</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-gray-500 text-[10px] uppercase font-black tracking-widest border-b border-gray-100">
+                          <th className="pb-4">Date</th>
+                          <th className="pb-4">Amount</th>
+                          <th className="pb-4">Method</th>
+                          <th className="pb-4">Status</th>
+                          <th className="pb-4">Details</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {allPayments.map((p: any) => {
+                          const dateObj = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
+                          return (
+                          <tr key={p.id} className="group hover:bg-gray-50/80 transition-colors">
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-gray-800">{dateObj.toLocaleDateString()}</p>
+                              <p className="text-[10px] text-gray-400 uppercase font-bold">{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </td>
+                            <td className="py-5">
+                              <span className="text-base font-black text-[#1a3a5c]">₨{Number(p.amount).toLocaleString()}</span>
+                            </td>
+                            <td className="py-5 font-bold text-xs text-gray-500">{p.method || 'Cash'}</td>
+                            <td className="py-5">
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${p.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                {p.status === 'approved' ? 'APPROVED' : 'PENDING'}
+                              </span>
+                            </td>
+                            <td className="py-5">
+                              <p className="text-[10px] text-gray-400 font-medium">Verifier: {p.cashierId || 'Admin'}</p>
+                              {p.note && <p className="text-[10px] text-[#1a3a5c] font-black italic mt-0.5 truncate max-w-[150px]">{p.note}</p>}
+                            </td>
+                          </tr>
+                        )})}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
