@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { HqRole, HqSession } from '@/types/hq';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
+import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 43200000;
@@ -187,9 +188,12 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             >
               <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
               <span>{item.label}</span>
-              {isActive ? (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />
-              ) : null}
+              <span className="ml-auto flex items-center gap-2 shrink-0">
+                {item.href === '/hq/dashboard/superadmin/approvals' && role === 'superadmin' ? (
+                  <HqSuperadminApprovalsNavBadge />
+                ) : null}
+                {isActive ? <span className="w-1.5 h-1.5 rounded-full bg-white/60" /> : null}
+              </span>
             </Link>
           );
         })}

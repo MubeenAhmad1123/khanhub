@@ -270,8 +270,9 @@ service cloud.firestore {
     match /rehab_fees/{docId} {
       allow read: if isRehabAdminOrAbove()
         || (isRehabRole('cashier'))
-        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
-      allow write: if isRehabRole('cashier') || isRehabSuperAdmin();
+        || (isRehabRole('family') && rehabPatientId() == resource.data.patientId)
+        || isHqSuperAdmin();
+      allow write: if isRehabRole('cashier') || isRehabSuperAdmin() || isHqSuperAdmin();
     }
 
     // ── Canteen records ────────────────────────────────
@@ -296,11 +297,12 @@ service cloud.firestore {
     // Superadmin approves/rejects (update). Cashier forwards requests (update).
     // Nobody deletes transactions — full audit trail.
     match /rehab_transactions/{docId} {
-      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier');
+      allow read: if isRehabAdminOrAbove() || isRehabRole('cashier') || isHqSuperAdmin();
       allow create: if isRehabRole('cashier')
         || isRehabSuperAdmin()
         || (isRehabAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isRehabSuperAdmin()
+        || isHqSuperAdmin()
         || (
           isRehabRole('cashier')
           && resource.data.status == 'pending_cashier'
@@ -494,9 +496,10 @@ service cloud.firestore {
     match /spims_fees/{docId} {
       allow read: if isSpimsAdminOrAbove()
         || (isSpimsRole('cashier'))
-        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId);
+        || (isSpimsRole('student') && spimsStudentId() == resource.data.studentId)
+        || isHqSuperAdmin();
       allow create: if isSpimsAdminOrAbove() || isSpimsRole('cashier');
-      allow update: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isSpimsSuperAdmin();
+      allow update: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isSpimsSuperAdmin() || isHqSuperAdmin();
       allow delete: if isSpimsSuperAdmin();
     }
 
@@ -522,9 +525,9 @@ service cloud.firestore {
     }
 
     match /spims_transactions/{docId} {
-      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier');
+      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isHqSuperAdmin();
       allow create: if isSpimsRole('cashier') || isSpimsSuperAdmin();
-      allow update: if isSpimsSuperAdmin();
+      allow update: if isSpimsSuperAdmin() || isHqSuperAdmin();
       allow delete: if false;
     }
 

@@ -52,8 +52,10 @@ export type UnifiedTx = {
   type?: string;
   category?: string;
   categoryName?: string;
+  feePaymentType?: string;
   proofUrl?: string | null;
   proofRequired?: boolean;
+  proofMissingReason?: string;
   description?: string;
   patientId?: string;
   patientName?: string;
@@ -63,9 +65,23 @@ export type UnifiedTx = {
   staffName?: string;
   cashierId?: string;
   cashierName?: string;
-  feePaymentId?: string;
+  cashierRole?: string;
+  createdByName?: string;
+  departmentName?: string;
+  forwardedFromLabel?: string;
   processedBy?: string;
   processedAt?: unknown;
+  approvedAt?: unknown;
+  rejectedAt?: unknown;
   rejectedReason?: string;
+  rejectionReason?: string;
+  /** Optional snapshot fields for package / progress (merged from entity doc or fee rows) */
+  totalPackage?: number;
+  runningTotalPaid?: number;
+  remainingAfterThis?: number;
+  course?: string;
+  session?: string;
+  rollNo?: string;
+  rehabDepartmentLabel?: string;
 };
 

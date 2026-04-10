@@ -20,8 +20,8 @@ import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
 export type ApprovalsFilters = {
   dept: DeptFilter;
   datePreset: DateRangePreset;
-  customFrom?: string; // yyyy-mm-dd
-  customTo?: string;   // yyyy-mm-dd
+  customFrom?: string;
+  customTo?: string;
   amountBucket: AmountBucket;
   sort: SortOrder;
   proof: ProofFilter;
@@ -29,6 +29,15 @@ export type ApprovalsFilters = {
 };
 
 export type ApprovalsTab = 'pending' | 'approved_today' | 'rejected_today' | 'history';
+
+export type EntityPick = {
+  id: string;
+  dept: 'rehab' | 'spims';
+  name: string;
+};
+
+const PENDING_STATUSES = ['pending', 'pending_cashier'] as const;
+const REJECT_STATUSES = ['rejected', 'rejected_cashier'] as const;
 
 function getAmountBucketPredicate(bucket: AmountBucket) {
   return (amt: number) => {
@@ -53,7 +62,11 @@ function sortComparator(sort: SortOrder) {
   };
 }
 
-function normalizeTx(dept: 'rehab' | 'spims', id: string, data: any): UnifiedTx {
+function normalizeTx(dept: 'rehab' | 'spims', id: string, data: Record<string, unknown>): UnifiedTx {
+  const patientId = data.patientId != null ? String(data.patientId) : undefined;
+  const studentId = data.studentId != null ? String(data.studentId) : undefined;
+  const rejectionReason =
+    (data.rejectionReason as string | undefined) || (data.rejectedReason as string | undefined);
   return {
     id,
     dept,
@@ -62,24 +75,33 @@ function normalizeTx(dept: 'rehab' | 'spims', id: string, data: any): UnifiedTx 
     date: data.date,
     transactionDate: data.transactionDate,
     amount: Number(data.amount) || 0,
-    type: data.type,
-    category: data.category,
-    categoryName: data.categoryName,
-    proofUrl: data.proofUrl ?? null,
-    proofRequired: data.proofRequired,
-    description: data.description,
-    patientId: data.patientId,
-    patientName: data.patientName,
-    studentId: data.studentId || data.patientId,
-    studentName: data.studentName || data.patientName,
-    staffId: data.staffId,
-    staffName: data.staffName,
-    cashierId: data.cashierId,
-    cashierName: data.cashierName,
-    feePaymentId: data.feePaymentId,
-    processedBy: data.processedBy,
+    type: data.type as string | undefined,
+    category: data.category as string | undefined,
+    categoryName: data.categoryName as string | undefined,
+    feePaymentType: data.feePaymentType as string | undefined,
+    proofUrl: (data.proofUrl as string | null | undefined) ?? null,
+    proofRequired: data.proofRequired as boolean | undefined,
+    proofMissingReason: data.proofMissingReason as string | undefined,
+    description: data.description as string | undefined,
+    patientId,
+    patientName: data.patientName as string | undefined,
+    studentId,
+    studentName: data.studentName as string | undefined,
+    staffId: data.staffId as string | undefined,
+    staffName: data.staffName as string | undefined,
+    cashierId: data.cashierId as string | undefined,
+    cashierName: data.cashierName as string | undefined,
+    cashierRole: data.cashierRole as string | undefined,
+    createdByName: data.createdByName as string | undefined,
+    departmentName: data.departmentName as string | undefined,
+    forwardedFromLabel: data.forwardedFromLabel as string | undefined,
+    feePaymentId: data.feePaymentId as string | undefined,
+    processedBy: data.processedBy as string | undefined,
     processedAt: data.processedAt,
-    rejectedReason: data.rejectedReason,
+    approvedAt: data.approvedAt,
+    rejectedAt: data.rejectedAt,
+    rejectedReason: rejectionReason,
+    rejectionReason,
   };
 }
 
@@ -90,6 +112,80 @@ function pickRange(filters: ApprovalsFilters): { from: Date; to: Date } {
   return { from, to };
 }
 
+function inDateRange(tx: UnifiedTx, from: Date, to: Date) {
+  const raw = tx.createdAt || tx.date || tx.transactionDate;
+  const t = toDate(raw);
+  return t >= from && t <= to;
+}
+
+function isTodayPakistan(tx: UnifiedTx, kind: 'processed' | 'created') {
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  let raw: unknown;
+  if (kind === 'processed') {
+    raw =
+      tx.processedAt ||
+      tx.approvedAt ||
+      tx.rejectedAt ||
+      tx.createdAt ||
+      tx.date ||
+      tx.transactionDate;
+  } else {
+    raw = tx.createdAt || tx.date || tx.transactionDate;
+  }
+  const t = toDate(raw);
+  return t >= start && t <= end;
+}
+
+function buildQueriesForTab(tab: ApprovalsTab, col: string) {
+  if (tab === 'pending') {
+    return [
+      query(
+        collection(db, col),
+        where('status', 'in', [...PENDING_STATUSES]),
+        orderBy('createdAt', 'desc'),
+        limit(500)
+      ),
+    ];
+  }
+  if (tab === 'approved_today') {
+    return [
+      query(
+        collection(db, col),
+        where('status', '==', 'approved'),
+        orderBy('createdAt', 'desc'),
+        limit(400)
+      ),
+    ];
+  }
+  if (tab === 'rejected_today') {
+    return [
+      query(
+        collection(db, col),
+        where('status', 'in', [...REJECT_STATUSES]),
+        orderBy('createdAt', 'desc'),
+        limit(400)
+      ),
+    ];
+  }
+  // history — broad pull; filters applied client-side
+  return [query(collection(db, col), orderBy('createdAt', 'desc'), limit(800))];
+}
+
+function tabFilterClient(tab: ApprovalsTab, tx: UnifiedTx): boolean {
+  if (tab === 'approved_today') return isTodayPakistan(tx, 'processed');
+  if (tab === 'rejected_today') return isTodayPakistan(tx, 'processed');
+  return true;
+}
+
+/**
+ * Main feed: real-time merged rehab + spims transactions.
+ * Server-side: status (+ orderBy) only; everything else is client-side.
+ */
 export function subscribeApprovalsFeed({
   tab,
   filters,
@@ -122,7 +218,15 @@ export function subscribeApprovalsFeed({
       return name.includes(entityQ);
     };
 
+    const dateOk = (tx: UnifiedTx) => {
+      if (tab === 'pending') return inDateRange(tx, from, to);
+      if (tab === 'approved_today' || tab === 'rejected_today') return tabFilterClient(tab, tx);
+      // history — respect date preset
+      return inDateRange(tx, from, to);
+    };
+
     const filtered = all
+      .filter((tx) => dateOk(tx))
       .filter((tx) => amtOk(Number(tx.amount || 0)))
       .filter(proofOk)
       .filter(entityOk)
@@ -134,40 +238,140 @@ export function subscribeApprovalsFeed({
   const wantsDept = (dept: 'rehab' | 'spims') => filters.dept === 'all' || filters.dept === dept;
 
   (['rehab', 'spims'] as const).forEach((dept) => {
-    if (!wantsDept(dept)) return;
-
-    const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
-
-    // Base query: time window + ordering.
-    // We rely on `createdAt` descending (your requested indexes include status+createdAt).
-    // If any collection uses `date` instead, we’ll switch consistently during QA.
-    let qBase: any = query(
-      collection(db, col),
-      where('createdAt', '>=', from),
-      where('createdAt', '<=', to),
-      orderBy('createdAt', 'desc'),
-      limit(200)
-    );
-
-    if (tab === 'pending') qBase = query(qBase, where('status', 'in', ['pending', 'pending_cashier']));
-    if (tab === 'approved_today') qBase = query(qBase, where('status', '==', 'approved'));
-    if (tab === 'rejected_today') qBase = query(qBase, where('status', 'in', ['rejected', 'rejected_cashier']));
-    if (tab === 'history') {
-      // all history: broader, but still time bounded by filters.
+    if (!wantsDept(dept)) {
+      buffers[dept] = [];
+      apply();
+      return;
     }
 
-    const u = onSnapshot(
-      qBase,
-      (snap: QuerySnapshot<DocumentData>) => {
-        buffers[dept] = snap.docs.map((d) => normalizeTx(dept, d.id, d.data()));
-        apply();
-      },
-      (err: unknown) => onError?.(err)
-    );
-    unsub.push(u);
+    const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+    const queries = buildQueriesForTab(tab, col);
+
+    queries.forEach((q) => {
+      const u = onSnapshot(
+        q,
+        (snap: QuerySnapshot<DocumentData>) => {
+          const chunk = snap.docs.map((d) => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
+          // Merge: replace dept slice from this query result is wrong if multiple queries.
+          // We only ever attach one listener per dept per tab (single query).
+          buffers[dept] = chunk;
+          apply();
+        },
+        (err: unknown) => onError?.(err)
+      );
+      unsub.push(u);
+    });
   });
 
   return () => unsub.forEach((u) => u());
+}
+
+/** All transactions for one entity (both statuses). Merges patientId + studentId listeners for SPIMS. */
+export function subscribeEntityTransactions({
+  entity,
+  onData,
+  onError,
+}: {
+  entity: EntityPick;
+  onData: (rows: UnifiedTx[]) => void;
+  onError?: (err: unknown) => void;
+}) {
+  const unsub: Array<() => void> = [];
+  /** SPIMS may subscribe twice (patientId + studentId); merge latest snapshot per listener */
+  const buffers: { rehab: UnifiedTx[]; spimsA: UnifiedTx[]; spimsB: UnifiedTx[] } = {
+    rehab: [],
+    spimsA: [],
+    spimsB: [],
+  };
+
+  const bump = () => {
+    const map = new Map<string, UnifiedTx>();
+    buffers.rehab.forEach((tx) => map.set(`r_${tx.id}`, tx));
+    buffers.spimsA.forEach((tx) => map.set(`s_${tx.id}`, tx));
+    buffers.spimsB.forEach((tx) => map.set(`s_${tx.id}`, tx));
+    onData(Array.from(map.values()).sort(sortComparator('newest')));
+  };
+
+  const attach = (
+    slot: 'rehab' | 'spimsA' | 'spimsB',
+    dept: 'rehab' | 'spims',
+    field: 'patientId' | 'studentId',
+    id: string
+  ) => {
+    const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+    const q = query(
+      collection(db, col),
+      where(field, '==', id),
+      orderBy('createdAt', 'desc'),
+      limit(200)
+    );
+    const u = onSnapshot(
+      q,
+      (snap) => {
+        const chunk = snap.docs.map((d) => normalizeTx(dept, d.id, d.data() as Record<string, unknown>));
+        buffers[slot] = chunk;
+        bump();
+      },
+      (e) => onError?.(e)
+    );
+    unsub.push(u);
+  };
+
+  if (entity.dept === 'rehab') {
+    attach('rehab', 'rehab', 'patientId', entity.id);
+  } else {
+    attach('spimsA', 'spims', 'patientId', entity.id);
+    attach('spimsB', 'spims', 'studentId', entity.id);
+  }
+
+  return () => unsub.forEach((x) => x());
+}
+
+export function subscribePendingApprovalsCount({
+  onCount,
+  onError,
+}: {
+  onCount: (n: number) => void;
+  onError?: (err: unknown) => void;
+}) {
+  let r = 0;
+  let s = 0;
+  const push = () => onCount(r + s);
+
+  const qR = query(
+    collection(db, 'rehab_transactions'),
+    where('status', 'in', [...PENDING_STATUSES]),
+    orderBy('createdAt', 'desc'),
+    limit(500)
+  );
+  const qS = query(
+    collection(db, 'spims_transactions'),
+    where('status', 'in', [...PENDING_STATUSES]),
+    orderBy('createdAt', 'desc'),
+    limit(500)
+  );
+
+  const u1 = onSnapshot(
+    qR,
+    (snap) => {
+      r = snap.size;
+      push();
+    },
+    (e) => onError?.(e)
+  );
+  const u2 = onSnapshot(
+    qS,
+    (snap) => {
+      s = snap.size;
+      push();
+    },
+    (e) => onError?.(e)
+  );
+
+  return () => {
+    u1();
+    u2();
+  };
 }
 
 export async function searchEntitiesByNamePrefix({
@@ -176,7 +380,7 @@ export async function searchEntitiesByNamePrefix({
 }: {
   dept: 'rehab' | 'spims';
   namePrefix: string;
-}): Promise<Array<{ id: string; name: string }>> {
+}): Promise<Array<{ id: string; name: string; dept: 'rehab' | 'spims' }>> {
   const p = namePrefix.trim();
   if (!p) return [];
   const col = dept === 'rehab' ? 'rehab_patients' : 'spims_students';
@@ -189,6 +393,20 @@ export async function searchEntitiesByNamePrefix({
     limit(12)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, name: String((d.data() as any)?.name || '—') }));
+  return snap.docs.map((d) => ({
+    id: d.id,
+    name: String((d.data() as Record<string, unknown>)?.name || '—'),
+    dept,
+  }));
 }
 
+export async function searchEntitiesCombined(
+  prefix: string,
+  deptFilter: 'all' | 'rehab' | 'spims'
+): Promise<Array<{ id: string; name: string; dept: 'rehab' | 'spims' }>> {
+  const parts: Promise<{ id: string; name: string; dept: 'rehab' | 'spims' }[]>[] = [];
+  if (deptFilter === 'all' || deptFilter === 'rehab') parts.push(searchEntitiesByNamePrefix({ dept: 'rehab', namePrefix: prefix }));
+  if (deptFilter === 'all' || deptFilter === 'spims') parts.push(searchEntitiesByNamePrefix({ dept: 'spims', namePrefix: prefix }));
+  const rows = (await Promise.all(parts)).flat();
+  return rows.slice(0, 16);
+}

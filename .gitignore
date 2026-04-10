@@ -7,6 +7,10 @@ node_modules/
 .next/
 out/
 
+# Firebase — local project alias (each dev runs `firebase use`)
+**/.firebaserc
+.firebaserc
+
 # Environment
 .env
 .env.local
