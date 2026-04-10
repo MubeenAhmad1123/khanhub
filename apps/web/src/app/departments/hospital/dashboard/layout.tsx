@@ -97,14 +97,28 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
     performAuthCheck();
     
-    const saved = localStorage.getItem('rehab_dark_mode');
-    if (saved === 'true') setDarkMode(true);
+    const saved = localStorage.getItem('hospital_dark_mode');
+    if (saved === 'true') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
   }, [router]);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   const toggleDark = () => {
     const next = !darkMode;
     setDarkMode(next);
-    localStorage.setItem('rehab_dark_mode', String(next));
+    localStorage.setItem('hospital_dark_mode', String(next));
   };
 
   const handleSignOut = () => {

@@ -15,14 +15,18 @@ type CredentialUser = {
   customId: string;
   password: string;
   role: string;
-  portal: 'hq' | 'rehab' | 'spims';
+  portal: 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'job-center' | 'welfare';
 };
 
-const PORTAL_LABELS = {
+const PORTAL_LABELS: Record<CredentialUser['portal'], string> = {
   hq: 'HQ',
   rehab: 'Rehab',
   spims: 'SPIMS',
-} as const;
+  hospital: 'Hospital',
+  sukoon: 'Sukoon',
+  'job-center': 'Job Center',
+  welfare: 'Welfare',
+};
 
 export default function HqPasswordsPage() {
   const router = useRouter();
@@ -30,7 +34,7 @@ export default function HqPasswordsPage() {
   const [users, setUsers] = useState<CredentialUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeRole, setActiveRole] = useState<string>('all');
-  const [activePortal, setActivePortal] = useState<'all' | 'hq' | 'rehab' | 'spims'>('all');
+  const [activePortal, setActivePortal] = useState<'all' | CredentialUser['portal']>('all');
   const [search, setSearch] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -55,11 +59,9 @@ export default function HqPasswordsPage() {
 
     const fetchUsers = async () => {
       try {
-        const [hqSnap, rehabSnap, spimsSnap] = await Promise.all([
-          getDocs(collection(db, 'hq_users')),
-          getDocs(collection(db, 'rehab_users')),
-          getDocs(collection(db, 'spims_users')),
-        ]);
+        const hqSnap = await getDocs(collection(db, 'hq_users'));
+        const depts = ['rehab', 'spims', 'hospital', 'sukoon', 'job-center', 'welfare'] as const;
+        const deptSnaps = await Promise.all(depts.map(d => getDocs(collection(db, `${d}_users`))));
 
         const hqUsers = hqSnap.docs.map((d) => {
           const data = d.data() as any;
@@ -73,31 +75,21 @@ export default function HqPasswordsPage() {
           };
         });
 
-        const rehabUsers = rehabSnap.docs.map((d) => {
-          const data = d.data() as any;
-          return {
-            id: `rehab_${d.id}`,
-            name: data.displayName || data.name || 'Unknown',
-            customId: data.customId || '-',
-            password: data.password || '',
-            role: data.role || 'unknown',
-            portal: 'rehab' as const,
-          };
+        const deptUsers = depts.flatMap((dept, i) => {
+          return deptSnaps[i].docs.map((d) => {
+            const data = d.data() as any;
+            return {
+              id: `${dept}_${d.id}`,
+              name: data.displayName || data.name || 'Unknown',
+              customId: data.customId || '-',
+              password: data.password || '',
+              role: data.role || 'unknown',
+              portal: dept,
+            };
+          });
         });
 
-        const spimsUsers = spimsSnap.docs.map((d) => {
-          const data = d.data() as any;
-          return {
-            id: `spims_${d.id}`,
-            name: data.displayName || data.name || 'Unknown',
-            customId: data.customId || '-',
-            password: data.password || '',
-            role: data.role || 'unknown',
-            portal: 'spims' as const,
-          };
-        });
-
-        const merged = [...hqUsers, ...rehabUsers, ...spimsUsers];
+        const merged = [...hqUsers, ...deptUsers] as CredentialUser[];
         merged.sort((a, b) => a.name.localeCompare(b.name));
         setUsers(merged);
       } catch (err) {
@@ -247,7 +239,7 @@ export default function HqPasswordsPage() {
 
           <div className="w-full">
             <div className="flex flex-wrap gap-1 p-1.5 rounded-2xl bg-slate-500/5 border border-slate-500/10">
-              {(['all', 'hq', 'rehab', 'spims'] as const).map((p) => (
+              {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'job-center', 'welfare'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setActivePortal(p)}

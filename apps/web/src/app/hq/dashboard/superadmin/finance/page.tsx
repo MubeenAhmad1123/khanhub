@@ -9,6 +9,8 @@ import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { CsvExportButton } from '@/components/hq/superadmin/CsvExportButton';
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
 import { formatPKR } from '@/lib/hq/superadmin/format';
+import { FileText } from 'lucide-react';
+import { FinanceReportModal } from '@/components/hq/superadmin/FinanceReportModal';
 
 export default function SuperadminFinancePage() {
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function SuperadminFinancePage() {
   const [summary, setSummary] = useState<null | Awaited<ReturnType<typeof fetchFinanceSummary>>>(null);
   const [insights, setInsights] = useState<null | Awaited<ReturnType<typeof fetchFinanceInsights>>>(null);
   const [loading, setLoading] = useState(true);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -59,6 +62,13 @@ export default function SuperadminFinancePage() {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Summary + trends + dues.</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="flex h-11 items-center gap-2 rounded-2xl bg-orange-600 px-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-orange-700 active:scale-95"
+          >
+            <FileText size={16} />
+            <span className="hidden sm:inline">Detailed Report</span>
+          </button>
           <CsvExportButton filename={`top_pending_${tab}.csv`} rows={csvRows} />
         </div>
       </div>
@@ -158,6 +168,13 @@ export default function SuperadminFinancePage() {
             )}
           </div>
         </>
+      )}
+
+      {showReportModal && (
+        <FinanceReportModal
+          tab={tab}
+          onClose={() => setShowReportModal(false)}
+        />
       )}
     </div>
   );

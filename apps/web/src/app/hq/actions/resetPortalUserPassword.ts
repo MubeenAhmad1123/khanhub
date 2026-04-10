@@ -25,12 +25,16 @@ function getAdminApp(): App {
   );
 }
 
-type Portal = 'hq' | 'rehab' | 'spims';
+type Portal = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'job-center' | 'welfare';
 
 const COLLECTION_BY_PORTAL: Record<Portal, string> = {
   hq: 'hq_users',
   rehab: 'rehab_users',
   spims: 'spims_users',
+  hospital: 'hospital_users',
+  sukoon: 'sukoon_users',
+  'job-center': 'job-center_users',
+  welfare: 'welfare_users',
 };
 
 export async function resetPortalUserPassword(

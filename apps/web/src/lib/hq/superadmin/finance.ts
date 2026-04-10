@@ -35,7 +35,7 @@ function classifyTxType(t: any): TxType {
   return 'other';
 }
 
-async function loadApprovedTx(dept: 'rehab' | 'spims', days = 35) {
+export async function loadApprovedTx(dept: 'rehab' | 'spims', days = 35) {
   const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
   const snap = await getDocs(
     query(collection(db, col), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(days * 300))
@@ -140,5 +140,73 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
     .slice(0, 10);
 
   return { daily, types, topOutstanding: top };
+}
+
+export async function loadTransactions(dept: 'rehab' | 'spims', start: Date, end: Date) {
+  const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+  const { query, collection, where, orderBy, getDocs } = await import('firebase/firestore');
+  const snap = await getDocs(
+    query(
+      collection(db, col), 
+      where('status', '==', 'approved'), 
+      where('transactionDate', '>=', start),
+      where('transactionDate', '<=', end),
+      orderBy('transactionDate', 'desc')
+    )
+  ).catch(async () => {
+    return getDocs(
+      query(
+        collection(db, col), 
+        where('status', '==', 'approved'),
+        where('createdAt', '>=', start),
+        where('createdAt', '<=', end),
+        orderBy('createdAt', 'desc')
+      )
+    ).catch(() => ({ docs: [] } as any));
+  });
+  return snap.docs.map((d: any) => ({ id: d.id, ...d.data(), _dept: dept }));
+}
+
+export type FinanceReport = {
+  income: number;
+  expense: number;
+  net: number;
+  categories: Record<string, number>;
+  transactions: any[];
+  start: Date;
+  end: Date;
+};
+
+export async function fetchFinanceReport(tab: FinanceTab, start: Date, end: Date): Promise<FinanceReport> {
+  const deptList = tab === 'combined' ? (['rehab', 'spims'] as const) : ([tab] as const);
+  const rows = (await Promise.all(deptList.map((d) => loadTransactions(d, start, end)))).flat();
+
+  let income = 0;
+  let expense = 0;
+  const categories: Record<string, number> = {};
+
+  for (const r of rows) {
+    const amt = Number(r.amount) || 0;
+    const isExpense = r.type === 'expense' || String(r.categoryName || r.category || '').toLowerCase().includes('expense');
+    
+    if (isExpense) {
+      expense += amt;
+    } else {
+      income += amt;
+    }
+
+    const cat = r.categoryName || r.category || 'Other';
+    categories[cat] = (categories[cat] || 0) + amt;
+  }
+
+  return {
+    income,
+    expense,
+    net: income - expense,
+    categories,
+    transactions: rows.sort((a, b) => toDate(b.transactionDate || b.createdAt).getTime() - toDate(a.transactionDate || a.createdAt).getTime()),
+    start,
+    end
+  };
 }
 

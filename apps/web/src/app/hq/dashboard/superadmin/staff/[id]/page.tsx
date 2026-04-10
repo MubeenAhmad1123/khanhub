@@ -19,23 +19,41 @@ import {
   AlertTriangle,
   User,
   ExternalLink,
-  History
+  History,
+  Edit2,
+  Lock,
+  LogIn
 } from 'lucide-react';
 import { toDate } from '@/lib/utils';
+import { EditStaffModal } from '@/components/hq/superadmin/EditStaffModal';
+import { ResetPasswordModal } from '@/components/hq/superadmin/ResetPasswordModal';
 
 export default function SuperadminStaffProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState<StaffProfile | null>(null);
+  
+  // Modals
+  const [showEdit, setShowEdit] = useState(false);
+  const [showReset, setShowReset] = useState(false);
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || session.role !== 'superadmin') router.push('/hq/login');
+    if (!session) {
+      router.push('/hq/login');
+      return;
+    }
+    const isSuper = session.role === 'superadmin';
+    const isManager = session.role === 'manager';
+    
+    if (!isSuper && !isManager) {
+      router.push('/hq/login');
+    }
   }, [sessionLoading, session, router]);
 
   useEffect(() => {
-    if (!session || session.role !== 'superadmin') return;
+    if (!session) return;
     loadData();
   }, [session, params.id]);
 
@@ -50,6 +68,28 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
       setLoading(false);
     }
   }
+
+  const handleImpersonate = () => {
+    if (!staff) return;
+    if (!confirm(`Warning: You will be logged into ${staff.name}'s account. Your current session will be replaced. Continue?`)) return;
+
+    // Save current session to restore later? (Optional complex feature)
+    // For now, just replace
+    const portalKey = staff.dept === 'hq' ? 'hq_session' : `${staff.dept}_session`;
+    const impersonatedSession = {
+      uid: staff.staffId,
+      displayName: staff.name,
+      role: staff.role,
+      dept: staff.dept,
+      customId: staff.customId
+    };
+
+    localStorage.setItem(portalKey, JSON.stringify(impersonatedSession));
+    
+    // Redirect to the portal
+    const url = staff.dept === 'hq' ? '/hq/dashboard' : `/departments/${staff.dept}/dashboard`;
+    window.location.href = url;
+  };
 
   if (loading) {
     return (
@@ -82,12 +122,17 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
   const joinDate = staff.joiningDate ? toDate(staff.joiningDate) : null;
   const lastLogin = staff.lastLoginAt ? toDate(staff.lastLoginAt) : null;
 
+  // Permission Checks for UI
+  const isSuperadmin = session?.role === 'superadmin';
+  const isManager = session?.role === 'manager';
+  const canEdit = isSuperadmin || (isManager && (staff.role === 'staff' || staff.role === 'cashier'));
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
       {/* Top Navigation */}
       <div className="mb-8 flex items-center justify-between">
         <Link
-          href="/hq/dashboard/superadmin/staff"
+          href={isSuperadmin ? "/hq/dashboard/superadmin/staff" : "/hq/dashboard/manager/staff"}
           className="group flex items-center gap-2 text-sm font-bold text-gray-500 transition-colors hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-orange-50 dark:bg-white/5 dark:group-hover:bg-orange-950/30">
@@ -95,10 +140,19 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           </div>
           Back to Directory
         </Link>
-        <div className="flex items-center gap-2">
-           <Link 
+        <div className="flex items-center gap-3">
+          {canEdit && (
+            <button
+              onClick={() => setShowEdit(true)}
+              className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-black hover:scale-105 active:scale-95 dark:bg-orange-600 dark:hover:bg-orange-500"
+            >
+              <Edit2 className="h-4 w-4" />
+              Edit Profile
+            </button>
+          )}
+          <Link 
             href={`/hq/dashboard/superadmin/audit?entity=${staff.name}`}
-            className="hidden sm:flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-gray-600 transition-all hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
+            className="hidden sm:flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-widest text-gray-600 transition-all hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
           >
             <History className="h-3 w-3" />
             Activity Log
@@ -112,8 +166,12 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-xl shadow-gray-200/50 dark:border-white/5 dark:bg-[#111] dark:shadow-none">
             <div className="flex flex-col items-center text-center">
               <div className="relative mb-4">
-                <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-4xl font-black text-white shadow-2xl">
-                  {staff.name.charAt(0)}
+                <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-4xl font-black text-white shadow-2xl">
+                  {staff.photoUrl ? (
+                    <img src={staff.photoUrl} alt={staff.name} className="h-full w-full object-cover" />
+                  ) : (
+                    staff.name.charAt(0)
+                  )}
                 </div>
                 <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 border-white dark:border-[#111] ${staff.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
               </div>
@@ -256,30 +314,72 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
             </div>
           </div>
 
-          {/* Placeholder for Future Integrations */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="relative overflow-hidden rounded-3xl border border-dashed border-gray-200 p-8 text-center transition-colors hover:border-orange-300 dark:border-white/10 dark:hover:border-orange-900">
-              <div className="relative z-10">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-300 dark:bg-white/5">
-                  <CreditCard className="h-6 w-6" />
-                </div>
-                <h4 className="text-sm font-black text-gray-400">Payroll History</h4>
-                <p className="mt-1 text-xs text-gray-400">Connection to Payroll module pending.</p>
-              </div>
+          {/* Payroll History Section */}
+          <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-xl shadow-gray-200/50 dark:border-white/5 dark:bg-[#111] dark:shadow-none">
+            <div className="border-b border-gray-50 bg-gray-50/50 px-6 py-4 dark:border-white/5 dark:bg-white/5">
+               <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                 <CreditCard className="h-4 w-4" />
+                 Payroll History
+               </h3>
             </div>
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+               <p className="font-bold text-sm">Connection to Payroll module pending.</p>
+               <p className="text-xs mt-1 opacity-70">Staff financial data and payouts will be listed here soon.</p>
+            </div>
+          </div>
 
-            <div className="relative overflow-hidden rounded-3xl border border-dashed border-gray-200 p-8 text-center transition-colors hover:border-orange-300 dark:border-white/10 dark:hover:border-orange-900">
-              <div className="relative z-10">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-300 dark:bg-white/5">
-                  <User className="h-6 w-6" />
-                </div>
-                <h4 className="text-sm font-black text-gray-400">Direct Actions</h4>
-                <p className="mt-1 text-xs text-gray-400">Login as this user or reset password.</p>
-              </div>
-            </div>
+          {/* Direct Actions Section */}
+          <div>
+             <h3 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-400">
+                <ExternalLink className="h-3 w-3" />
+                Administrative Actions
+             </h3>
+             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <button 
+                  onClick={() => setShowReset(true)}
+                  className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-gray-100 bg-white p-8 text-center transition-all hover:border-orange-500 hover:shadow-xl dark:border-white/5 dark:bg-[#111]"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-900/20">
+                    <History className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900 dark:text-white">Reset Password</h4>
+                    <p className="mt-1 text-[10px] text-gray-400 font-bold uppercase tracking-tight">Generate secure credentials</p>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={handleImpersonate}
+                  className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-gray-100 bg-white p-8 text-center transition-all hover:border-orange-500 hover:shadow-xl dark:border-white/5 dark:bg-[#111]"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-900/20">
+                    <LogIn className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900 dark:text-white">Login as User</h4>
+                    <p className="mt-1 text-[10px] text-gray-400 font-bold uppercase tracking-tight">Access their dashboard view</p>
+                  </div>
+                </button>
+             </div>
           </div>
         </div>
       </div>
+
+      {showEdit && (
+        <EditStaffModal
+          staff={staff}
+          onClose={() => setShowEdit(false)}
+          onSuccess={loadData}
+        />
+      )}
+
+      {showReset && (
+        <ResetPasswordModal
+          uid={staff.staffId}
+          portal={staff.dept as any}
+          onClose={() => setShowReset(false)}
+        />
+      )}
     </div>
   );
 }

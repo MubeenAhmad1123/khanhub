@@ -142,6 +142,7 @@ export type StaffProfile = StaffCardRow & {
   cnic?: string;
   joiningDate?: any;
   lastLoginAt?: any;
+  photoUrl?: string;
 };
 
 export async function fetchStaffProfile(compositeId: string): Promise<StaffProfile | null> {
@@ -182,6 +183,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     cnic: data.cnic,
     joiningDate: data.createdAt || data.joiningDate,
     lastLoginAt: data.lastLoginAt,
+    photoUrl: data.photoUrl || data.photoURL,
     presentCount: att.present,
     absentCount: att.absent,
     lateCount: att.late,
@@ -189,5 +191,29 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     totalFines: fines,
     lastDutyLabel: lastDuty,
   };
+}
+
+export async function updateStaffProfile(
+  compositeId: string,
+  updates: any
+): Promise<{ success: boolean; error?: string }> {
+  const idx = compositeId.indexOf('_');
+  if (idx <= 0) return { success: false, error: 'Invalid ID' };
+  const dept = compositeId.slice(0, idx) as StaffDept;
+  const uid = compositeId.slice(idx + 1);
+
+  if (!['hq', 'rehab', 'spims'].includes(dept)) return { success: false, error: 'Invalid department' };
+
+  const col = dept === 'hq' ? 'hq_users' : dept === 'rehab' ? 'rehab_users' : 'spims_users';
+  const { updateDoc, doc: firestoreDoc } = await import('firebase/firestore');
+
+  try {
+    const docRef = firestoreDoc(db, col, uid);
+    await updateDoc(docRef, updates);
+    return { success: true };
+  } catch (err: any) {
+    console.error('Update failed:', err);
+    return { success: false, error: err.message };
+  }
 }
 
