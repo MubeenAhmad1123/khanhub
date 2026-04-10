@@ -104,8 +104,22 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
   useEffect(() => {
     const saved = localStorage.getItem('hq_dark_mode');
-    if (saved === 'true') setDarkMode(true);
+    if (saved === 'true') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   if (isChecking) {
     return (
