@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Calendar, Clock, CheckCircle2, TrendingUp, DollarSign, Users } from 'lucide-react';
+import { 
+  Calendar, Clock, CheckCircle2, TrendingUp, DollarSign, 
+  Users, ChevronDown, ChevronUp, ShieldCheck, Receipt,
+  ArrowRightCircle, History
+} from 'lucide-react';
 
 export type Payment = {
   id?: string;
@@ -10,6 +14,7 @@ export type Payment = {
   receivedBy: string;     // e.g. "Dilshad saab"
   verifiedByHQ: boolean;
   status: "Approved" | "Pending" | "Rejected";
+  note?: string;         // Additional comments
 };
 
 export type MonthRecord = {
@@ -27,6 +32,7 @@ export type FinanceHistoryProps = {
 
 const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [expandedMonths, setExpandedMonths] = useState<Record<number, boolean>>({ 0: true }); // Expand first month by default
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,288 +53,232 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records })
     return () => observer.disconnect();
   }, []);
 
+  const toggleMonth = (idx: number) => {
+    setExpandedMonths(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
+  };
+
   const totalPaidOverall = records.reduce((acc, curr) => acc + curr.totalPaid, 0);
   const totalRemainingOverall = records.reduce((acc, curr) => acc + curr.remaining, 0);
-
-  // Flatten payments with their parent month index for positioning
-  const allSteps: { type: 'month' | 'payment'; data: any; monthIndex: number; stepIndex: number }[] = [];
-  records.forEach((record, mIdx) => {
-    allSteps.push({ type: 'month', data: record, monthIndex: mIdx, stepIndex: 0 });
-    record.payments.forEach((p, pIdx) => {
-      allSteps.push({ type: 'payment', data: p, monthIndex: mIdx, stepIndex: pIdx + 1 });
-    });
-  });
 
   return (
     <div 
       ref={sectionRef}
-      className="w-full min-h-screen bg-[#f0f4f8] py-12 px-6 overflow-hidden relative"
-      style={{ 
-        backgroundImage: 'radial-gradient(#d1d5db 1px, transparent 1px)', 
-        backgroundSize: '30px 30px' 
-      }}
+      className="w-full min-h-screen bg-[#f8fafc] py-8 sm:py-16 px-4 sm:px-8 overflow-hidden relative"
     >
       <style jsx>{`
-        @keyframes drawPath {
-          to { stroke-dashoffset: 0; }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes popIn {
-          0% { transform: scale(0); opacity: 0; }
-          70% { transform: scale(1.2); opacity: 1; }
-          100% { transform: scale(1); opacity: 1; }
+        .animate-fade-in {
+          animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        @keyframes fadeSlideUp {
-          from { transform: translateY(30px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes glowPulse {
-          0%, 100% { box-shadow: 0 0 5px #f97316; border-color: #f97316; }
-          50% { box-shadow: 0 0 20px #fb923c; border-color: #fb923c; }
-        }
-
-        .animate-draw {
-          stroke-dasharray: 2000;
-          stroke-dashoffset: 2000;
-          animation: drawPath 2.5s ease-in-out forwards;
-          animation-play-state: ${isVisible ? 'running' : 'paused'};
-        }
-        .animate-pop {
-          opacity: 0;
-          animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-          animation-play-state: ${isVisible ? 'running' : 'paused'};
-        }
-        .animate-card {
-          opacity: 0;
-          animation: fadeSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          animation-play-state: ${isVisible ? 'running' : 'paused'};
-        }
-        .road-glow {
-          filter: drop-shadow(0 0 8px rgba(79, 195, 247, 0.6));
+        .journey-line {
+          background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
         }
       `}</style>
 
-      {/* Header Section */}
-      <div className={`flex flex-col md:flex-row justify-between items-start md:items-center mb-16 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-        <div>
-          <h1 className="text-4xl font-black text-[#1a3a5c] tracking-tight">
-            FINANCE HISTORY: <span className="text-blue-600">PAYMENT JOURNEY</span>
-          </h1>
-          <p className="text-gray-500 font-medium flex items-center gap-2 mt-2">
-            <Users size={16} /> Patient: {patientName}
-          </p>
-        </div>
-        <div className="flex gap-4 mt-6 md:mt-0">
-          <SummaryChip icon={<Calendar size={16} />} label="Total Months" value={records.length.toString()} />
-          <SummaryChip icon={<DollarSign size={16} />} label="Total Paid" value={`PKR ${totalPaidOverall.toLocaleString('en-PK')}`} color="bg-green-100 text-green-700" />
-          <SummaryChip icon={<TrendingUp size={16} />} label="Remaining" value={`PKR ${totalRemainingOverall.toLocaleString('en-PK')}`} color="bg-orange-100 text-orange-700" />
-        </div>
-      </div>
+      {/* Background Decor */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.03]"
+        style={{ 
+          backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)', 
+          backgroundSize: '40px 40px' 
+        }}
+      />
 
-      {/* Timeline Section */}
-      <div className="relative min-h-[600px] w-full">
-        
-        {/* Desktop View (Horizontal Wavy Road) */}
-        <div className="hidden md:block relative w-full h-[600px]">
-          {/* Main Road SVG */}
-          <svg className="absolute top-1/2 left-0 w-full h-64 -translate-y-1/2 overflow-visible" preserveAspectRatio="none" viewBox="0 0 1200 200">
-            <path 
-              d="M 0 100 C 150 100, 150 0, 300 0 S 450 200, 600 100 S 750 0, 900 100 S 1050 200, 1200 100"
-              fill="none"
-              stroke="#1a3a5c"
-              strokeWidth="12"
-              strokeLinecap="round"
-              className="animate-draw"
-            />
-            <path 
-              d="M 0 100 C 150 100, 150 0, 300 0 S 450 200, 600 100 S 750 0, 900 100 S 1050 200, 1200 100"
-              fill="none"
-              stroke="#4fc3f7"
-              strokeWidth="4"
-              strokeLinecap="round"
-              className="animate-draw road-glow"
-              style={{ animationDelay: '0.2s' }}
-            />
-          </svg>
-
-          {/* Nodes and Cards Mapping */}
-          {allSteps.map((step, index) => {
-            const xPos = (index / (allSteps.length - 1)) * 100;
-            // Simplified Y calculation based on the cubic bezier points
-            // Rough sine wave approximation for Y
-            const yOffset = Math.sin((index / (allSteps.length - 1)) * Math.PI * 4) * 50;
-            const isTop = index % 2 === 0;
-
-            return (
-              <div 
-                key={index}
-                className="absolute"
-                style={{ 
-                  left: `${xPos}%`, 
-                  top: `calc(50% + ${yOffset}px)`,
-                  transform: 'translate(-50%, -50%)'
-                }}
-              >
-                {/* Node */}
-                <div 
-                  className={`w-4 h-4 rounded-full border-4 bg-white z-20 animate-pop ${index === allSteps.length - 1 ? 'border-orange-500' : 'border-[#1a3a5c]'}`}
-                  style={{ 
-                    animationDelay: `${0.5 + index * 0.3}s`,
-                    ...(index === allSteps.length - 1 ? { animation: 'glowPulse 2s infinite' } : {})
-                  }}
-                />
-
-                {/* Card Connector */}
-                <div 
-                  className={`absolute left-1/2 w-0.5 bg-gray-300 -translate-x-1/2 transition-all duration-1000 ${isVisible ? 'h-16' : 'h-0'}`}
-                  style={{ 
-                    top: isTop ? '-64px' : '16px',
-                    transitionDelay: `${1 + index * 0.2}s`
-                   }}
-                />
-
-                {/* Card Container */}
-                <div 
-                  className={`absolute left-1/2 -translate-x-1/2 w-64 animate-card`}
-                  style={{ 
-                    top: isTop ? '-220px' : '80px',
-                    animationDelay: `${1.2 + index * 0.2}s`
-                  }}
-                >
-                  {step.type === 'month' ? (
-                    <MonthCard record={step.data} />
-                  ) : (
-                    <PaymentCard payment={step.data} />
-                  )}
-                </div>
+      <div className="max-w-4xl mx-auto relative z-10">
+        {/* Header Section */}
+        <div className={`mb-12 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-3 border border-blue-100">
+                <History size={12} /> Financial Audit
               </div>
-            );
-          })}
+              <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-none">
+                Payment <span className="text-blue-600">Journey</span>
+              </h1>
+              <p className="text-slate-500 font-bold flex items-center gap-2 mt-4 text-sm sm:text-base">
+                <Users size={18} className="text-blue-400" /> 
+                Patient Account: <span className="text-slate-800">{patientName}</span>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3 w-full sm:w-auto">
+              <SummaryStats icon={<DollarSign size={16} />} label="Total Paid" value={`PKR ${totalPaidOverall.toLocaleString('en-PK')}`} color="bg-emerald-50 text-emerald-700 border-emerald-100" />
+              <SummaryStats icon={<TrendingUp size={16} />} label="Balance" value={`PKR ${totalRemainingOverall.toLocaleString('en-PK')}`} color="bg-orange-50 text-orange-700 border-orange-100" />
+            </div>
+          </div>
         </div>
 
-        {/* Mobile View (Vertical Design) */}
-        <div className="md:hidden flex flex-col items-center gap-12 relative px-4">
-          <div 
-            className={`absolute left-1/2 top-0 bottom-0 w-3 bg-[#1a3a5c] rounded-full -translate-x-1/2 origin-top transition-transform duration-[2.5s] ease-in-out ${isVisible ? 'scale-y-100' : 'scale-y-0'}`}
-            style={{ 
-              boxShadow: 'inset 0 0 5px #4fc3f7'
-            }}
-          />
-          
+        {/* Vertical Timeline Journey */}
+        <div className="relative pl-6 sm:pl-12 border-l-4 border-slate-100 py-4 space-y-12">
           {records.map((month, mIdx) => (
-            <div key={mIdx} className="w-full flex flex-col gap-8 relative">
-              {/* Monthly Card (Left) */}
-              <div 
-                className="w-full pr-8 flex justify-start animate-card"
-                style={{ animationDelay: `${mIdx * 0.5}s` }}
-              >
-                <div className="w-[85%] relative">
-                  <MonthCard record={month} />
-                  <div className="absolute right-[-32px] top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-4 border-[#1a3a5c] bg-white z-10" />
-                </div>
+            <div 
+              key={mIdx} 
+              className={`relative transition-all duration-700 delay-[${mIdx * 100}ms] ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}
+              style={{ animationDelay: `${mIdx * 0.1}s` }}
+            >
+              {/* Timeline Marker */}
+              <div className={`absolute left-[-22px] sm:left-[-60px] top-6 w-10 sm:w-16 h-1 bg-slate-100 z-0 hidden sm:block`} />
+              <div className={`absolute left-[-32px] sm:left-[-62px] top-2 w-10 h-10 rounded-2xl bg-white border-4 border-blue-600 shadow-xl shadow-blue-100 flex items-center justify-center z-10 transition-transform hover:scale-110 duration-300`}>
+                <Calendar size={20} className="text-blue-600" />
               </div>
 
-              {/* Payments Cards (Right) */}
-              {month.payments.map((payment, pIdx) => (
+              {/* Month Card */}
+              <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden group">
+                {/* Card Header (Expandable Trigger) */}
                 <div 
-                  key={pIdx} 
-                  className="w-full pl-8 flex justify-end animate-card"
-                  style={{ animationDelay: `${mIdx * 0.5 + (pIdx + 1) * 0.3}s` }}
+                  onClick={() => toggleMonth(mIdx)}
+                  className="p-5 sm:p-8 cursor-pointer hover:bg-slate-50/50 transition-colors"
                 >
-                  <div className="w-[85%] relative">
-                    <PaymentCard payment={payment} />
-                    <div className={`absolute left-[-32px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-4 bg-white z-10 ${mIdx === records.length - 1 && pIdx === month.payments.length - 1 ? 'border-orange-500 animate-pulse' : 'border-[#1a3a5c]'}`} />
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight mb-1">
+                        {month.label}
+                      </h2>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                          Period Context
+                        </span>
+                        {month.remaining === 0 && (
+                          <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600">
+                            <CheckCircle2 size={12} /> Fully Paid
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className={`w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 ${expandedMonths[mIdx] ? 'rotate-180 bg-blue-600 text-white' : ''}`}>
+                      <ChevronDown size={20} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/50">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Package</p>
+                      <p className="text-lg font-black text-slate-800">PKR {month.package.toLocaleString('en-PK')}</p>
+                    </div>
+                    <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100/50">
+                      <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Total Paid</p>
+                      <p className="text-lg font-black text-emerald-700">PKR {month.totalPaid.toLocaleString('en-PK')}</p>
+                    </div>
+                    <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100/50">
+                      <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Remaining</p>
+                      <p className="text-lg font-black text-orange-700">PKR {month.remaining.toLocaleString('en-PK')}</p>
+                    </div>
+                  </div>
+
+                  {/* Tiny progress bar */}
+                  <div className="mt-6 h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${month.remaining === 0 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                      style={{ width: `${Math.min(100, (month.totalPaid / month.package) * 100)}%` }}
+                    />
                   </div>
                 </div>
-              ))}
+
+                {/* Expanded Details: Transaction History */}
+                <div 
+                  className={`border-t border-slate-50 bg-slate-50/30 overflow-hidden transition-all duration-500 ease-in-out ${
+                    expandedMonths[mIdx] ? 'max-h-[1000px] opacity-100 p-5 sm:p-8' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-6 text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">
+                    <ArrowRightCircle size={14} className="text-blue-500" /> Transaction Audit Trail
+                  </div>
+
+                  <div className="space-y-4">
+                    {month.payments.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 text-sm italic">
+                        No transactions recorded for this period.
+                      </div>
+                    ) : (
+                      month.payments.map((p, pIdx) => (
+                        <div key={pIdx} className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow group/item">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0 group-hover/item:scale-110 transition-transform">
+                                <Receipt size={20} />
+                              </div>
+                              <div>
+                                <h4 className="text-xl font-black text-slate-900 leading-none">
+                                  PKR {p.amount.toLocaleString('en-PK')}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Clock size={12} className="text-slate-400" />
+                                  <span className="text-xs text-slate-500 font-bold">{p.date}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 self-end sm:self-center">
+                              <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                p.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' : 
+                                p.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 
+                                'bg-rose-100 text-rose-700'
+                              }`}>
+                                {p.status}
+                              </div>
+                              {p.verifiedByHQ && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-200">
+                                  <ShieldCheck size={12} /> HQ Verified
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col sm:flex-row gap-4 text-xs font-bold leading-relaxed">
+                            <div className="flex-1">
+                              <span className="text-slate-400 uppercase tracking-widest text-[9px] block mb-1">Received By</span>
+                              <div className="flex items-center gap-2 text-slate-700 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 w-fit">
+                                <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-700">
+                                  {p.receivedBy.charAt(0)}
+                                </div>
+                                {p.receivedBy}
+                              </div>
+                            </div>
+                            
+                            {(p.note || p.receivedBy.includes('sir')) && (
+                              <div className="flex-1">
+                                <span className="text-slate-400 uppercase tracking-widest text-[9px] block mb-1">Transaction Note</span>
+                                <div className="text-slate-500 bg-blue-50/30 px-3 py-2 rounded-xl border border-blue-100/50 italic">
+                                  "{p.note || `Payment verified and processed via ${p.receivedBy}`}"
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
+        </div>
+
+        {/* Footer Info */}
+        <div className="mt-12 text-center">
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">
+            End of Transaction Journey
+          </p>
         </div>
       </div>
     </div>
   );
 };
 
-const SummaryChip = ({ icon, label, value, color = "bg-white text-[#1a3a5c]" }: { icon: any, label: string, value: string, color?: string }) => (
-  <div className={`flex items-center gap-3 px-4 py-2 rounded-full shadow-sm border border-gray-100 ${color}`}>
-    {icon}
-    <div className="flex flex-col leading-none">
-      <span className="text-[10px] uppercase font-bold opacity-60">{label}</span>
-      <span className="text-sm font-black">{value}</span>
+const SummaryStats = ({ icon, label, value, color }: { icon: any, label: string, value: string, color: string }) => (
+  <div className={`flex flex-col p-3 sm:px-6 sm:py-4 rounded-[1.5rem] border shadow-sm flex-1 ${color}`}>
+    <div className="flex items-center gap-2 mb-1 opacity-60">
+      {icon}
+      <span className="text-[10px] uppercase font-black tracking-widest">{label}</span>
     </div>
-  </div>
-);
-
-const MonthCard = ({ record }: { record: MonthRecord }) => (
-  <div className="bg-white rounded-xl shadow-lg border-l-8 border-[#1a3a5c] p-4 group hover:shadow-xl transition-all duration-300">
-    <div className="flex items-center gap-2 mb-3 text-[#1a3a5c]">
-      <div className="p-2 bg-blue-50 rounded-lg">
-        <Calendar size={18} className="text-blue-600" />
-      </div>
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-wider opacity-60">Monthly Details</p>
-        <h3 className="text-lg font-black leading-none">{record.label}</h3>
-      </div>
-    </div>
-    
-    <div className="space-y-2">
-      <DataRow label="Package" value={`PKR ${record.package.toLocaleString('en-PK')}`} />
-      <DataRow label="Total Paid" value={`PKR ${record.totalPaid.toLocaleString('en-PK')}`} color="text-green-600" />
-      <div className="h-px bg-gray-100 my-1" />
-      <DataRow label="Remaining" value={`PKR ${record.remaining.toLocaleString('en-PK')}`} color="text-orange-600" weight="font-black" />
-    </div>
-  </div>
-);
-
-const DataRow = ({ label, value, color = "text-gray-700", weight = "font-bold" }: { label: string, value: string, color?: string, weight?: string }) => (
-  <div className="flex justify-between items-center text-xs">
-    <span className="text-gray-500">{label}</span>
-    <span className={`${color} ${weight}`}>{value}</span>
-  </div>
-);
-
-const PaymentCard = ({ payment }: { payment: Payment }) => (
-  <div className="bg-[#0f2744] rounded-2xl shadow-xl p-5 border border-white/5 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-    {/* Decorative Background Element */}
-    <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors" />
-
-    <div className="flex justify-between items-start mb-2">
-      <span className="text-[10px] font-bold text-blue-300 uppercase tracking-widest">Payment</span>
-      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-        payment.status === 'Approved' ? 'bg-green-500/20 text-green-400' : 
-        payment.status === 'Pending' ? 'bg-yellow-500/20 text-yellow-400' : 
-        'bg-red-500/20 text-red-400'
-      }`}>
-        {payment.status}
-      </span>
-    </div>
-
-    <h4 className="text-2xl font-black text-white mb-1">
-      PKR {payment.amount.toLocaleString('en-PK')}
-    </h4>
-    
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-        <p className="text-[10px] text-gray-400">
-          cash received by <span className="text-gray-200 font-bold">{payment.receivedBy}</span>
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10">
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-md">
-          <Clock size={10} className="text-blue-300" />
-          <span className="text-[10px] text-gray-300 font-medium">{payment.date}</span>
-        </div>
-        
-        {payment.verifiedByHQ && (
-          <div className="flex items-center gap-1 text-[10px] font-bold text-green-400">
-             <CheckCircle2 size={12} className="fill-green-400 text-[#0f2744]" />
-             <span>VERIFIED BY HQ</span>
-          </div>
-        )}
-      </div>
-    </div>
+    <span className="text-sm sm:text-lg font-black">{value}</span>
   </div>
 );
 
 export default FinanceHistory;
+

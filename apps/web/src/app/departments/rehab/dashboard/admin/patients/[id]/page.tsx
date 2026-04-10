@@ -1105,7 +1105,8 @@ export default function PatientDetailPage() {
                     groups[monthLabel].push({
                       date: date.toLocaleDateString('en-PK'),
                       amount: Number(p.amount),
-                      receivedBy: p.cashierId || "Admin Portal",
+                      receivedBy: p.cashierId || p.receivedBy || p.receiver || "Office",
+                      note: p.note || p.receivedByNote || "",
                       verifiedByHQ: p.status === 'approved',
                       status: p.status === 'approved' ? "Approved" : "Pending"
                     });

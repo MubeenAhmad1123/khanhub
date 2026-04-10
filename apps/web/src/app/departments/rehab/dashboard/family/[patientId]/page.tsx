@@ -277,9 +277,10 @@ export default function FamilyPatientViewPage() {
                   groups[monthLabel].push({
                     date: date.toLocaleDateString('en-PK'),
                     amount: Number(p.amount),
-                    receivedBy: "Admin Portal",
-                    verifiedByHQ: p.approved,
-                    status: p.approved ? "Approved" : "Pending"
+                    receivedBy: p.receivedBy || p.receiver || "Office",
+                    note: p.note || p.receivedByNote || "",
+                    verifiedByHQ: p.approved || p.status === 'approved',
+                    status: (p.approved || p.status === 'approved') ? "Approved" : "Pending"
                   });
                 });
 
