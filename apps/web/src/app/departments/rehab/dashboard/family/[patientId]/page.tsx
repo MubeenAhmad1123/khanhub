@@ -131,7 +131,7 @@ export default function FamilyPatientViewPage() {
   const statusColor = (status: string) => {
     if (status === 'positive') return 'bg-red-100 text-red-700';
     if (status === 'negative') return 'bg-green-100 text-green-700';
-    return 'bg-gray-100 text-gray-500';
+    return 'bg-gray-100 text-gray-600';
   };
 
   return (
@@ -195,19 +195,19 @@ export default function FamilyPatientViewPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <span className="text-lg font-black text-teal-700">₨{patient.totalPkg?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Total Pkg ({patient.durationMonths || 1}m)</span>
+              <span className="text-[9px] uppercase tracking-widest text-teal-600/90 font-bold">Total Pkg ({patient.durationMonths || 1}m)</span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-lg font-black text-teal-700">₨{patient.totalReceived?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Received</span>
+              <span className="text-[9px] uppercase tracking-widest text-teal-600/90 font-bold">Received</span>
             </div>
             <div className="flex flex-col gap-1">
               <span className={`text-lg font-black ${(patient.remaining || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{patient.remaining?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Remaining</span>
+              <span className="text-[9px] uppercase tracking-widest text-teal-600/90 font-bold">Remaining</span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-lg font-black text-teal-700">₨{patient.canteenBalance?.toLocaleString() || '0'}</span>
-              <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Canteen Balance</span>
+              <span className="text-[9px] uppercase tracking-widest text-teal-600/90 font-bold">Canteen Balance</span>
             </div>
           </div>
         </div>
@@ -228,7 +228,7 @@ export default function FamilyPatientViewPage() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
                 className={`flex items-center gap-2 px-3 py-2 text-[11px] whitespace-nowrap rounded-xl font-black transition-all active:scale-95 ${
-                  activeTab === tab.key ? 'bg-gray-900 text-white shadow-lg' : 'opacity-50 bg-white border border-gray-100'
+                  activeTab === tab.key ? 'bg-gray-900 text-white shadow-lg' : 'bg-white border border-gray-200 text-gray-500 hover:text-gray-800 hover:border-gray-300'
                 }`}
               >
                 <tab.icon size={14} />
@@ -251,7 +251,7 @@ export default function FamilyPatientViewPage() {
                   { label: 'STI', value: healthStatus.stiStatus },
                 ].map(item => (
                   <div key={item.label} className="bg-gray-50 rounded-2xl p-4 text-center">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{item.label}</p>
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{item.label}</p>
                     <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${statusColor(item.value || 'not_known')}`}>
                       {item.value?.replace('_', ' ') || 'Not Known'}
                     </span>
@@ -264,19 +264,19 @@ export default function FamilyPatientViewPage() {
               <h2 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2"><User size={18} /> Guardian Contact</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Name</p>
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Name</p>
                   <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Relationship</p>
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Relationship</p>
                   <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Phone</p>
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Phone</p>
                   <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">WhatsApp</p>
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">WhatsApp</p>
                   {patient.whatsappNumber ? (
                     <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
                   ) : <p className="font-bold text-gray-400 mt-1">—</p>}
