@@ -220,6 +220,7 @@ export default function NewSpimsStudentPage() {
                   </button>
                 </div>
               </div>
+              <Field label="Roll Number" value={rollNo} onChange={setRollNo} placeholder="e.g. 2024-001" />
             </div>
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest pt-4">Personal</h2>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -269,7 +270,6 @@ export default function NewSpimsStudentPage() {
           <>
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest">Course & fees</h2>
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Roll number" value={rollNo} onChange={setRollNo} />
               <div>
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Course</label>
                 <select
