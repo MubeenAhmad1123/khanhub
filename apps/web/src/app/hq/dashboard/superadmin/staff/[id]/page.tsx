@@ -71,23 +71,46 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
 
   const handleImpersonate = () => {
     if (!staff) return;
-    if (!confirm(`Warning: You will be logged into ${staff.name}'s account. Your current session will be replaced. Continue?`)) return;
+    if (!confirm(`You are about to view ${staff.name}'s dashboard as their role (${staff.role}). Your HQ session stays active. Continue?`)) return;
 
-    // Save current session to restore later? (Optional complex feature)
-    // For now, just replace
-    const portalKey = staff.dept === 'hq' ? 'hq_session' : `${staff.dept}_session`;
-    const impersonatedSession = {
-      uid: staff.staffId,
-      displayName: staff.name,
-      role: staff.role,
-      dept: staff.dept,
-      customId: staff.customId
-    };
+    const dept = staff.dept;
+    const role = staff.role;
 
-    localStorage.setItem(portalKey, JSON.stringify(impersonatedSession));
-    
-    // Redirect to the portal
-    const url = staff.dept === 'hq' ? '/hq/dashboard' : `/departments/${staff.dept}/dashboard`;
+    // Build correct role-based dashboard URL
+    let url: string;
+    if (dept === 'hq') {
+      // HQ roles
+      if (role === 'superadmin') url = '/hq/dashboard/superadmin';
+      else if (role === 'manager') url = '/hq/dashboard/manager';
+      else if (role === 'cashier') url = '/hq/dashboard/cashier';
+      else url = '/hq/dashboard';
+    } else {
+      // Department portals — role maps to sub-route
+      if (role === 'admin' || role === 'superadmin') {
+        url = `/departments/${dept}/dashboard/admin`;
+      } else if (role === 'staff') {
+        url = `/departments/${dept}/dashboard/staff`;
+      } else if (role === 'family' || role === 'client' || role === 'patient' || role === 'child' || role === 'seeker' || role === 'student') {
+        url = `/departments/${dept}/dashboard/family`;
+      } else if (role === 'cashier') {
+        url = `/departments/${dept}/dashboard/cashier`;
+      } else {
+        url = `/departments/${dept}/dashboard/admin`;
+      }
+
+      // Write a dept-specific session so the layout accepts them
+      const impersonatedSession = {
+        uid: staff.staffId,
+        displayName: staff.name,
+        role: role,
+        dept: dept,
+        customId: staff.customId
+      };
+      const portalKey = `${dept}_session`;
+      localStorage.setItem(portalKey, JSON.stringify(impersonatedSession));
+      localStorage.setItem(`${dept}_login_time`, Date.now().toString());
+    }
+
     window.location.href = url;
   };
 
