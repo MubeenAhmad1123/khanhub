@@ -6,7 +6,7 @@ import type { SukoonUser } from '@/types/sukoon';
 const DOMAIN = '@sukoon.khanhub';
 
 export function buildEmail(customId: string): string {
-  return `${customId.toLowerCase()}${DOMAIN}`;
+  return `${customId.trim().toLowerCase()}${DOMAIN}`;
 }
 
 export async function loginSukoon(customId: string, password: string): Promise<SukoonUser> {

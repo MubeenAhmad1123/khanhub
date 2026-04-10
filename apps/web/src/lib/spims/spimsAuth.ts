@@ -7,7 +7,7 @@ const DOMAIN = '@spims.khanhub';
 const LEGACY_DOMAIN = '@spims.edu.pk';
 
 export function buildEmail(customId: string): string {
-  return `${customId.toLowerCase()}${DOMAIN}`;
+  return `${customId.trim().toLowerCase()}${DOMAIN}`;
 }
 
 export async function loginSpims(customId: string, password: string): Promise<SpimsUser> {
@@ -20,7 +20,7 @@ export async function loginSpims(customId: string, password: string): Promise<Sp
   } catch (err: any) {
     const code = String(err?.code || '');
     if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-email') {
-      const legacyEmail = `${customId.toLowerCase()}${LEGACY_DOMAIN}`;
+      const legacyEmail = `${customId.trim().toLowerCase()}${LEGACY_DOMAIN}`;
       cred = await signInWithEmailAndPassword(auth, legacyEmail, password);
     } else {
       throw err;

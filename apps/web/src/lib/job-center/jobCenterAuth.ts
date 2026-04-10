@@ -6,7 +6,7 @@ import type { JobCenterUser } from '@/types/job-center';
 const DOMAIN = '@job-center.khanhub';
 
 export function buildEmail(customId: string): string {
-  return `${customId.toLowerCase()}${DOMAIN}`;
+  return `${customId.trim().toLowerCase()}${DOMAIN}`;
 }
 
 export async function loginJobCenter(customId: string, password: string): Promise<JobCenterUser> {

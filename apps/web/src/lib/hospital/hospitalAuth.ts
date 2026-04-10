@@ -6,7 +6,7 @@ import type { HospitalUser } from '@/types/hospital';
 const DOMAIN = '@hospital.khanhub';
 
 export function buildEmail(customId: string): string {
-  return `${customId.toLowerCase()}${DOMAIN}`;
+  return `${customId.trim().toLowerCase()}${DOMAIN}`;
 }
 
 export async function loginHospital(customId: string, password: string): Promise<HospitalUser> {

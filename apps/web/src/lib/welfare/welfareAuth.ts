@@ -6,7 +6,7 @@ import type { WelfareUser } from '@/types/welfare';
 const DOMAIN = '@welfare.khanhub';
 
 export function buildEmail(customId: string): string {
-  return `${customId.toLowerCase()}${DOMAIN}`;
+  return `${customId.trim().toLowerCase()}${DOMAIN}`;
 }
 
 export async function loginWelfare(customId: string, password: string): Promise<WelfareUser> {
