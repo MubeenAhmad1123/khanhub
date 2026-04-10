@@ -55,7 +55,12 @@ export default function PatientDetailPage() {
   const [vDate, setVDate] = useState(new Date().toISOString().split('T')[0]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: '', diagnosis: '', packageAmount: 0, photoUrl: ''
+    name: '', 
+    diagnosis: '', 
+    packageAmount: 0, 
+    photoUrl: '',
+    durationMonths: 1,
+    admissionDate: new Date().toISOString().split('T')[0]
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
@@ -169,8 +174,12 @@ export default function PatientDetailPage() {
       setEditForm({
         name: data.name || '',
         diagnosis: data.diagnosis || '',
-        packageAmount: data.packageAmount || 0,
-        photoUrl: data.photoUrl || ''
+        packageAmount: data.packageAmount || data.monthlyPackage || 0,
+        photoUrl: data.photoUrl || '',
+        durationMonths: data.durationMonths || 1,
+        admissionDate: data.admissionDate?.toDate?.() 
+          ? data.admissionDate.toDate().toISOString().split('T')[0] 
+          : (typeof data.admissionDate === 'string' ? data.admissionDate : new Date().toISOString().split('T')[0])
       });
       setPhotoPreview(data.photoUrl || '');
 
@@ -480,6 +489,9 @@ export default function PatientDetailPage() {
         name: editForm.name,
         diagnosis: editForm.diagnosis,
         packageAmount: Number(editForm.packageAmount),
+        monthlyPackage: Number(editForm.packageAmount),
+        durationMonths: Number(editForm.durationMonths),
+        admissionDate: Timestamp.fromDate(new Date(editForm.admissionDate)),
         photoUrl: photoUrl || null
       });
 
@@ -922,6 +934,36 @@ export default function PatientDetailPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Package (PKR)</label>
+                    <input
+                      type="number"
+                      value={editForm.packageAmount}
+                      onChange={e => setEditForm({...editForm, packageAmount: Number(e.target.value)})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (Months)</label>
+                    <select 
+                      value={editForm.durationMonths} 
+                      onChange={e => setEditForm({...editForm, durationMonths: Number(e.target.value)})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 12].map(m => (
+                        <option key={m} value={m}>{m} Month{m > 1 ? 's' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Admission Date</label>
+                     <input 
+                       type="date" 
+                       value={editForm.admissionDate} 
+                       onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
+                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                     />
+                  </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis / Notes</label>
                     <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" />
@@ -955,10 +997,11 @@ export default function PatientDetailPage() {
                     )}
                   </div>
                   <div className="w-full">
-                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Package</span>
-                    <span className="font-black text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
-                      PKR {patient.packageAmount?.toLocaleString()}
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Total Package ({patient.durationMonths || 1} M)</span>
+                    <span className="font-black text-teal-700 border border-teal-100 bg-teal-50 px-3 py-1.5 rounded-lg inline-block text-sm">
+                      PKR {((patient.monthlyPackage || patient.packageAmount || 0) * (patient.durationMonths || 1)).toLocaleString()}
                     </span>
+                    <p className="text-[10px] text-gray-400 mt-1">Monthly: PKR {(patient.monthlyPackage || patient.packageAmount || 0).toLocaleString()}</p>
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
@@ -1065,6 +1108,7 @@ export default function PatientDetailPage() {
                     </button>
                   </div>
                 </div>
+              </div>
               
               {!feeRecord ? (
                 <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">

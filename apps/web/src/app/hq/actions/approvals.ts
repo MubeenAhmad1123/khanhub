@@ -2,7 +2,7 @@
 'use server';
 
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireHqSuperadmin } from './auth';
 
 type Dept = 'rehab' | 'spims';
@@ -28,6 +28,54 @@ function getAdminApp(): App {
 
 function txCollection(dept: Dept) {
   return dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+}
+
+async function updateEntityTotals(
+  adminDb: FirebaseFirestore.Firestore,
+  dept: Dept,
+  txData: any
+) {
+  const entityId = txData.patientId || txData.studentId;
+  if (!entityId) return;
+
+  const col = dept === 'rehab' ? 'rehab_patients' : 'spims_students';
+  const ref = adminDb.collection(col).doc(entityId);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+
+  const amount = Number(txData.amount) || 0;
+  const isIncome = txData.type === 'income';
+  const diff = isIncome ? amount : -amount;
+
+  const update: Record<string, any> = {
+    totalReceived: FieldValue.increment(diff),
+  };
+
+  if (dept === 'spims' && isIncome) {
+    const subtype = txData.spimsFeeSubtype;
+    if (subtype === 'admission') update.admissionPaid = FieldValue.increment(amount);
+    if (subtype === 'registration') update.registrationPaid = FieldValue.increment(amount);
+    if (subtype === 'examination') update.examinationPaid = FieldValue.increment(amount);
+  }
+
+  // After incrementing, we should technically recalculate remaining,
+  // but since increment is atomic, we might need a separate step or just do it in the next read.
+  // To keep it simple and accurate, we'll fetch then set or use a transaction if very critical.
+  // However, increment is usually preferred for concurrency.
+  // For 'remaining', we will update it based on the new total if we can.
+  
+  await ref.update(update);
+
+  // Re-read to sync 'remaining' balance field if it exists
+  const updatedSnap = await ref.get();
+  const updatedData = updatedSnap.data() as any;
+  const pkg = Number(updatedData?.totalPackage || updatedData?.totalPackageAmount) || 0;
+  const received = Number(updatedData?.totalReceived) || 0;
+  
+  await ref.update({
+    remaining: Math.max(0, pkg - received),
+    remainingBalance: Math.max(0, pkg - received), // Support both naming conventions
+  });
 }
 
 export async function decideTransaction(params: {
@@ -64,6 +112,10 @@ export async function decideTransaction(params: {
     }
 
     await ref.set(update, { merge: true });
+
+    if (params.decision === 'approved') {
+      await updateEntityTotals(adminDb, params.dept, data);
+    }
 
     await adminDb.collection('hq_audit').add({
       action: params.decision === 'approved' ? 'tx_approved' : 'tx_rejected',
@@ -107,9 +159,13 @@ export async function bulkDecideTransactions(params: {
     const ids = Array.from(new Set(params.txIds || [])).filter(Boolean);
     if (!ids.length) return { success: true, processed: 0 };
 
+    const snaps = await Promise.all(ids.slice(0, 100).map((id) => adminDb.collection(col).doc(id).get()));
+    const validSnaps = snaps.filter((s) => s.exists && !s.data()?.processedAt);
+
     let processed = 0;
     const batch = adminDb.batch();
-    for (const txId of ids.slice(0, 200)) {
+    for (const snap of validSnaps) {
+      const txId = snap.id;
       const ref = adminDb.collection(col).doc(txId);
       batch.set(
         ref,
@@ -126,6 +182,13 @@ export async function bulkDecideTransactions(params: {
       processed++;
     }
     await batch.commit();
+
+    if (params.decision === 'approved') {
+      // Process entity updates sequentially to avoid race conditions on same entity
+      for (const snap of validSnaps) {
+        await updateEntityTotals(adminDb, params.dept, snap.data());
+      }
+    }
 
     await adminDb.collection('hq_audit').add({
       action: params.decision === 'approved' ? 'tx_bulk_approved' : 'tx_bulk_rejected',

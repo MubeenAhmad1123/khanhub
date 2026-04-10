@@ -81,11 +81,6 @@ export default function AdmissionTab({
         admissionFee: Number(form.admissionFee),
         registrationFee: Number(form.registrationFee),
         examinationFee: Number(form.examinationFee),
-        admissionFeePaid: Number(form.admissionFeePaid),
-        registrationFeePaid: Number(form.registrationFeePaid),
-        examinationFeePaid: Number(form.examinationFeePaid),
-        remaining: Number(form.remaining),
-        totalReceived: Number(form.totalReceived),
         referredBy: form.referredBy,
         referralSheetAmount:
           form.referralSheetAmount === undefined || form.referralSheetAmount === ('' as unknown as number)
@@ -381,104 +376,105 @@ export default function AdmissionTab({
           Totals shown reflect admission-time structure. Running balance is updated when payments are approved.
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {fld(
-            'Total package',
-            <input
-              type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.totalPackage ?? ''}
-              onChange={(e) => setForm({ ...form, totalPackage: Number(e.target.value) })}
-            />
+          {canEdit && (
+            <>
+              {fld(
+                'Total package',
+                <input
+                  type="number"
+                  disabled={!canEdit}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
+                  value={form.totalPackage ?? ''}
+                  onChange={(e) => setForm({ ...form, totalPackage: Number(e.target.value) })}
+                />
+              )}
+              {fld(
+                'Monthly fee',
+                <input
+                  type="number"
+                  disabled={!canEdit}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
+                  value={form.monthlyFee ?? ''}
+                  onChange={(e) => setForm({ ...form, monthlyFee: Number(e.target.value) })}
+                />
+              )}
+              {fld(
+                'Admission fee',
+                <input
+                  type="number"
+                  disabled={!canEdit}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
+                  value={form.admissionFee ?? ''}
+                  onChange={(e) => setForm({ ...form, admissionFee: Number(e.target.value) })}
+                />
+              )}
+              {fld(
+                'Registration fee',
+                <input
+                  type="number"
+                  disabled={!canEdit}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
+                  value={form.registrationFee ?? ''}
+                  onChange={(e) => setForm({ ...form, registrationFee: Number(e.target.value) })}
+                />
+              )}
+              {fld(
+                'Examination fee',
+                <input
+                  type="number"
+                  disabled={!canEdit}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
+                  value={form.examinationFee ?? ''}
+                  onChange={(e) => setForm({ ...form, examinationFee: Number(e.target.value) })}
+                />
+              )}
+            </>
           )}
+
+          {/* Paid fields - always read only as they come from cashier */}
           {fld(
-            'Monthly fee',
+            'Admission fee paid',
             <input
               type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.monthlyFee ?? ''}
-              onChange={(e) => setForm({ ...form, monthlyFee: Number(e.target.value) })}
-            />
-          )}
-          {fld(
-            'Admission fee',
-            <input
-              type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.admissionFee ?? ''}
-              onChange={(e) => setForm({ ...form, admissionFee: Number(e.target.value) })}
-            />
-          )}
-          {fld(
-            'Registration fee',
-            <input
-              type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.registrationFee ?? ''}
-              onChange={(e) => setForm({ ...form, registrationFee: Number(e.target.value) })}
-            />
-          )}
-          {fld(
-            'Examination fee',
-            <input
-              type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.examinationFee ?? ''}
-              onChange={(e) => setForm({ ...form, examinationFee: Number(e.target.value) })}
-            />
-          )}
-          {fld(
-            'Admission fee paid (so far)',
-            <input
-              type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.admissionFeePaid ?? ''}
-              onChange={(e) => setForm({ ...form, admissionFeePaid: Number(e.target.value) })}
+              disabled={true}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold bg-gray-50 text-emerald-700"
+              value={form.admissionFeePaid ?? 0}
             />
           )}
           {fld(
             'Registration fee paid',
             <input
               type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.registrationFeePaid ?? ''}
-              onChange={(e) => setForm({ ...form, registrationFeePaid: Number(e.target.value) })}
+              disabled={true}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold bg-gray-50 text-emerald-700"
+              value={form.registrationFeePaid ?? 0}
             />
           )}
           {fld(
             'Examination fee paid',
             <input
               type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.examinationFeePaid ?? ''}
-              onChange={(e) => setForm({ ...form, examinationFeePaid: Number(e.target.value) })}
+              disabled={true}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold bg-gray-50 text-emerald-700"
+              value={form.examinationFeePaid ?? 0}
             />
           )}
           {fld(
-            'Total received (ledger)',
+            'Total received',
             <input
               type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.totalReceived ?? ''}
-              onChange={(e) => setForm({ ...form, totalReceived: Number(e.target.value) })}
+              disabled={true}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold bg-gray-50 text-emerald-700"
+              value={form.totalReceived ?? 0}
             />
           )}
           {fld(
             'Remaining balance',
             <input
               type="number"
-              disabled={!canEdit}
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold disabled:bg-gray-50"
-              value={form.remaining ?? ''}
-              onChange={(e) => setForm({ ...form, remaining: Number(e.target.value) })}
+              disabled={true}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold bg-gray-50 text-amber-700"
+              value={form.remaining ?? 0}
             />
           )}
         </div>

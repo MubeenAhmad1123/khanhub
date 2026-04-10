@@ -72,7 +72,6 @@ export default function FamilyPatientViewPage() {
       });
 
       setPatient({ 
-        id: pDoc.id, 
         ...data, 
         admissionDate, 
         remainingDays, 

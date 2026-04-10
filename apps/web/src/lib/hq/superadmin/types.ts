@@ -69,6 +69,7 @@ export type UnifiedTx = {
   createdByName?: string;
   departmentName?: string;
   forwardedFromLabel?: string;
+  feePaymentId?: string;
   processedBy?: string;
   processedAt?: unknown;
   approvedAt?: unknown;

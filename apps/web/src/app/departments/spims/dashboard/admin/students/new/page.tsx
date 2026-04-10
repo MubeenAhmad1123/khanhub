@@ -50,12 +50,6 @@ export default function NewSpimsStudentPage() {
   const [admissionFee, setAdmissionFee] = useState('');
   const [registrationFee, setRegistrationFee] = useState('');
   const [examinationFee, setExaminationFee] = useState('');
-  const [admissionPaid, setAdmissionPaid] = useState('');
-  const [registrationPaid, setRegistrationPaid] = useState('');
-  const [examinationPaid, setExaminationPaid] = useState('');
-  const [admissionPaidOn, setAdmissionPaidOn] = useState('');
-  const [registrationPaidOn, setRegistrationPaidOn] = useState('');
-  const [examinationPaidOn, setExaminationPaidOn] = useState('');
   const [referredBy, setReferredBy] = useState('');
   const [referralAmt, setReferralAmt] = useState('');
 
@@ -83,10 +77,7 @@ export default function NewSpimsStudentPage() {
       return;
     }
     const pkg = Number(totalPackage) || 0;
-    const admPaid = Number(admissionPaid) || 0;
-    const regPaid = Number(registrationPaid) || 0;
-    const exPaid = Number(examinationPaid) || 0;
-    const initReceived = admPaid + regPaid + exPaid;
+    const initReceived = 0;
 
     setSubmitting(true);
     let studentDocId: string | null = null;
@@ -118,16 +109,16 @@ export default function NewSpimsStudentPage() {
         admissionFee: Number(admissionFee) || 0,
         registrationFee: Number(registrationFee) || 0,
         examinationFee: Number(examinationFee) || 0,
-        admissionFeePaid: admPaid,
-        registrationFeePaid: regPaid,
-        examinationFeePaid: exPaid,
-        admissionFeePaidOn: admissionPaidOn ? firestoreDate(admissionPaidOn) : null,
-        registrationFeePaidOn: registrationPaidOn ? firestoreDate(registrationPaidOn) : null,
-        examinationFeePaidOn: examinationPaidOn ? firestoreDate(examinationPaidOn) : null,
+        admissionFeePaid: 0,
+        registrationFeePaid: 0,
+        examinationFeePaid: 0,
+        admissionFeePaidOn: null,
+        registrationFeePaidOn: null,
+        examinationFeePaidOn: null,
         referredBy: referredBy.trim() || undefined,
         referralSheetAmount: referralAmt === '' ? undefined : Number(referralAmt),
-        totalReceived: initReceived,
-        remaining: Math.max(0, pkg - initReceived),
+        totalReceived: 0,
+        remaining: pkg,
         degreeStatus: 'Not Applied',
       });
 
@@ -314,12 +305,6 @@ export default function NewSpimsStudentPage() {
               <Field label="Admission fee" value={admissionFee} onChange={setAdmissionFee} type="number" />
               <Field label="Registration fee" value={registrationFee} onChange={setRegistrationFee} type="number" />
               <Field label="Examination fee" value={examinationFee} onChange={setExaminationFee} type="number" />
-              <Field label="Admission fee paid" value={admissionPaid} onChange={setAdmissionPaid} type="number" />
-              <Field type="date" label="Admission fee paid on" value={admissionPaidOn} onChange={setAdmissionPaidOn} />
-              <Field label="Registration fee paid" value={registrationPaid} onChange={setRegistrationPaid} type="number" />
-              <Field type="date" label="Registration paid on" value={registrationPaidOn} onChange={setRegistrationPaidOn} />
-              <Field label="Examination fee paid" value={examinationPaid} onChange={setExaminationPaid} type="number" />
-              <Field type="date" label="Examination paid on" value={examinationPaidOn} onChange={setExaminationPaidOn} />
               <Field label="Referred by (optional)" value={referredBy} onChange={setReferredBy} />
               <Field label="Referral sheet amount" value={referralAmt} onChange={setReferralAmt} type="number" />
             </div>

@@ -82,6 +82,7 @@ export default function CashierStationPage() {
   const [historyStatus, setHistoryStatus] = useState<StatusFilter>('all');
   const [historyType, setHistoryType] = useState<'all' | TxnType>('all');
   const [historyDepartment, setHistoryDepartment] = useState<'all' | string>('all');
+  const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
 
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -442,6 +443,7 @@ export default function CashierStationPage() {
         createdBy: session?.uid,
         createdByName: session?.displayName || session?.name || 'HQ Cashier',
         createdAt: Timestamp.now(),
+        ...(departmentCode === 'spims' && selectedCategory.id === 'fee' ? { spimsFeeSubtype } : {}),
       };
       if (proofUrl) createPayload.proofUrl = proofUrl;
       const missingReason = proofReason.trim();
@@ -688,6 +690,21 @@ export default function CashierStationPage() {
                       </button>
                     )}
                   </div>
+                  {departmentCode === 'spims' && selectedCategoryId === 'fee' && (
+                    <div className="mt-4 p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">SPIMS Fee Category</label>
+                      <select
+                        value={spimsFeeSubtype}
+                        onChange={(e) => setSpimsFeeSubtype(e.target.value as any)}
+                        className="mt-2 w-full bg-cyan-900/20 border border-cyan-500/30 rounded-2xl px-4 py-3 text-cyan-100 text-sm font-bold outline-none focus:border-cyan-400 transition-all duration-200"
+                      >
+                        <option value="admission">Admission Fee</option>
+                        <option value="registration">Registration Fee</option>
+                        <option value="examination">Examination Fee</option>
+                        <option value="monthly">Monthly Tuition</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-3 min-w-0">
                   <div>
