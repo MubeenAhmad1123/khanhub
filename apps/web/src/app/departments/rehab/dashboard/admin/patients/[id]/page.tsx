@@ -729,20 +729,22 @@ export default function PatientDetailPage() {
   if (!patient) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 overflow-x-hidden w-full max-w-full">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-8 overflow-x-hidden w-full max-w-full">
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         
-        {/* Top Link */}
-        <Link 
-          href="/departments/rehab/dashboard/admin/patients" 
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Patients
-        </Link>
+        {/* Top Link - Hidden on mobile if header is sticky */}
+        <div className="px-1 sm:px-0">
+          <Link 
+            href="/departments/rehab/dashboard/admin/patients" 
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Patients
+          </Link>
+        </div>
         
-        {/* Header Profile Summary */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-4 md:p-8 flex flex-col items-center gap-4 sm:gap-6 relative overflow-hidden">
+        {/* Header Profile Summary - Optimized for mobile */}
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 w-full p-4 sm:p-6 md:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 sticky top-2 z-30 sm:relative sm:top-0">
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 -z-0"></div>
           
           <div className="relative z-10">
@@ -778,89 +780,89 @@ export default function PatientDetailPage() {
           </div>
         </div>
 
-        {/* Tabs Navigation */}
-        <div className="w-full -mx-4 px-4">
-          <div className="flex flex-wrap gap-1 border-b border-gray-100 bg-white rounded-t-2xl p-1">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'profile' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <User className="w-4 h-4" /> Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('admission')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'admission' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4" /> Admission
-          </button>
-          <button
-            onClick={() => setActiveTab('daily')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'daily' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Activity className="w-4 h-4" /> Daily Sheet
-          </button>
-          <button
-            onClick={() => setActiveTab('progress')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'progress' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" /> Progress
-          </button>
-          <button
-            onClick={() => setActiveTab('therapy')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'therapy' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Brain className="w-4 h-4" /> Therapy
-          </button>
-          <button
-            onClick={() => setActiveTab('meds')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'meds' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Pill className="w-4 h-4" /> Medication
-          </button>
-          <button
-            onClick={() => setActiveTab('fees')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'fees' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <DollarSign className="w-4 h-4" /> Fees
-          </button>
-          <button
-            onClick={() => setActiveTab('canteen')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'canteen' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <ShoppingCart className="w-4 h-4" /> Canteen
-          </button>
-          <button
-            onClick={() => setActiveTab('videos')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'videos' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Video className="w-4 h-4" /> Videos ({videos.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('visits')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'visits' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Users className="w-4 h-4" /> Family Visits
-          </button>
+        {/* Tabs Navigation - Scrollable on mobile */}
+        <div className="sticky top-[100px] sm:static z-20 w-full -mx-2 px-2 sm:mx-0 sm:px-0">
+          <div className="flex overflow-x-auto no-scrollbar gap-1 border-b border-gray-100 bg-white rounded-t-xl sm:rounded-t-2xl p-1 shadow-sm">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'profile' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <User className="w-4 h-4" /> Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('admission')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'admission' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <ClipboardList className="w-4 h-4" /> Admission
+            </button>
+            <button
+              onClick={() => setActiveTab('daily')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'daily' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <Activity className="w-4 h-4" /> Daily Sheet
+            </button>
+            <button
+              onClick={() => setActiveTab('progress')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'progress' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <TrendingUp className="w-4 h-4" /> Progress
+            </button>
+            <button
+              onClick={() => setActiveTab('therapy')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'therapy' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <Brain className="w-4 h-4" /> Therapy
+            </button>
+            <button
+              onClick={() => setActiveTab('meds')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'meds' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <Pill className="w-4 h-4" /> Medication
+            </button>
+            <button
+              onClick={() => setActiveTab('fees')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'fees' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <DollarSign className="w-4 h-4" /> Fees
+            </button>
+            <button
+              onClick={() => setActiveTab('canteen')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'canteen' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <ShoppingCart className="w-4 h-4" /> Canteen
+            </button>
+            <button
+              onClick={() => setActiveTab('videos')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'videos' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <Video className="w-4 h-4" /> Videos
+            </button>
+            <button
+              onClick={() => setActiveTab('visits')}
+              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
+                activeTab === 'visits' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
+              } rounded-lg`}
+            >
+              <Users className="w-4 h-4" /> Visits
+            </button>
           </div>
         </div>
 

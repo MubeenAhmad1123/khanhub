@@ -58,16 +58,17 @@ export default function FamilyPatientViewPage() {
       feesSnap.docs.forEach(d => {
         const feeData = d.data();
         (feeData.payments || []).forEach((p: any) => {
-          if (p.status === 'approved') {
+          if (p.status === 'approved' || p.approved === true) {
             totalReceived += Number(p.amount || 0);
-            allPayments.push({ ...p, month: feeData.month });
           }
+          allPayments.push({ ...p, month: feeData.month });
         });
       });
       setPayments(allPayments.sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime()));
 
       const visitsSnap = await getDocs(query(collection(db, 'rehab_visits'), where('patientId', '==', patientId)));
-      setVisits(visitsSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => toDate(b.date).getTime() - toDate(a.date).getTime()));
+      const vData = visitsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setVisits(vData.sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime()));
 
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
       const totalPkg = (monthlyPkg * (data.durationMonths || 1));
@@ -151,54 +152,43 @@ export default function FamilyPatientViewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full max-w-full">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <Link href="/departments/rehab/dashboard/family" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold mb-4 transition-colors">
-            <ArrowLeft size={16} /> Back
-          </Link>
-          <div className="flex flex-col items-start gap-3 p-2 sm:p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 flex items-center justify-center text-teal-700 font-black text-3xl border border-teal-200/50 flex-shrink-0 overflow-hidden">
-                {patient.photoUrl ? (
-                  <img src={patient.photoUrl} alt={patient.name} className="w-full h-full object-cover rounded-2xl" />
-                ) : (
-                  patient.name.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div>
-                <h1 className="text-xl font-black text-gray-900">{patient.name}</h1>
-                <p className="text-gray-500 text-sm mt-0.5">S/o {patient.fatherName}</p>
-              </div>
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden w-full max-w-full pb-20 sm:pb-0">
+      {/* Sticky Header for Mobile */}
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-40 sm:relative">
+        <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+          <div className="hidden sm:block">
+            <Link href="/departments/rehab/dashboard/family" className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-800 text-xs font-black uppercase tracking-widest mb-4 transition-colors">
+              <ArrowLeft size={16} /> Back to dashboard
+            </Link>
+          </div>
+          <div className="flex items-center gap-3 sm:gap-6">
+            <div className="w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 flex items-center justify-center text-teal-700 font-black text-xl sm:text-3xl border border-teal-200/50 flex-shrink-0 overflow-hidden shadow-sm">
+              {patient.photoUrl ? (
+                <img src={patient.photoUrl} alt={patient.name} className="w-full h-full object-cover" />
+              ) : (
+                patient.name.charAt(0).toUpperCase()
+              )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${patient.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight truncate">{patient.name}</h1>
+              <p className="text-gray-500 text-[10px] sm:text-sm font-bold uppercase tracking-widest">S/o {patient.fatherName}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-widest ${patient.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                 {patient.isActive ? 'Active' : 'Discharged'}
               </span>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-black uppercase tracking-widest">
-                <Calendar size={10} /> {formatDateDMY(patient.admissionDate)}
-              </span>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                <Clock size={10} /> {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)} {(patient.remainingDays || 0) > 0 ? 'days remaining' : 'days admitted'}
-              </span>
-              {patient.substanceOfAddiction && (
-                <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                  {patient.substanceOfAddiction}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2 mt-1 w-full sm:w-auto">
-              {patient.contactNumber && (
-                <a href={`tel:${patient.contactNumber}`} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 active:scale-95 transition-all w-full sm:w-auto">
-                  <Phone size={14} /> Call
-                </a>
-              )}
-              {patient.whatsappNumber && (
-                <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 text-xs font-black hover:bg-green-100 active:scale-95 transition-all w-full sm:w-auto">
-                  <MessageCircle size={14} /> WhatsApp
-                </a>
-              )}
+              <div className="hidden sm:flex gap-2">
+                {patient.contactNumber && (
+                   <a href={`tel:${patient.contactNumber}`} className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 text-[11px] font-black hover:bg-blue-100 transition-all border border-blue-100/50">
+                     <Phone size={14} /> Call
+                   </a>
+                )}
+                {patient.whatsappNumber && (
+                  <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl bg-green-50 text-green-600 text-[11px] font-black hover:bg-green-100 transition-all border border-green-100/50">
+                     <MessageCircle size={14} /> WhatsApp
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -240,23 +230,23 @@ export default function FamilyPatientViewPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="max-w-6xl mx-auto px-4 pb-12">
-        <div className="w-full -mx-4 px-4">
-          <div className="flex flex-wrap gap-1 pb-1">
+      {/* Sticky Tabs for Mobile */}
+      <div className="sticky top-[72px] sm:static z-30 bg-gray-50/80 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-4 py-2">
+          <div className="flex overflow-x-auto no-scrollbar gap-1 border-b border-gray-200">
             {[
               { key: 'overview', label: 'Overview', icon: User },
               { key: 'finance', label: 'Finance', icon: DollarSign },
-              { key: 'daily', label: 'Daily Sheet', icon: Activity },
-              { key: 'visits', label: 'Family Visits', icon: Clock },
+              { key: 'daily', label: 'Sheet', icon: Activity },
+              { key: 'visits', label: 'Visits', icon: Clock },
               { key: 'therapy', label: 'Therapy', icon: Heart },
-              { key: 'meds', label: 'Medication', icon: Pill },
+              { key: 'meds', label: 'Meds', icon: Pill },
               { key: 'progress', label: 'Progress', icon: TrendingUp },
             ].map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`flex items-center gap-2 px-3 py-2 text-[11px] whitespace-nowrap rounded-xl font-black transition-all active:scale-95 ${
+                className={`flex items-center gap-2 px-4 py-2.5 text-[11px] whitespace-nowrap rounded-xl font-black transition-all active:scale-95 flex-shrink-0 ${
                   activeTab === tab.key ? 'bg-gray-900 text-white shadow-lg' : 'bg-white border border-gray-200 text-gray-500 hover:text-gray-800 hover:border-gray-300'
                 }`}
               >
@@ -266,127 +256,120 @@ export default function FamilyPatientViewPage() {
             ))}
           </div>
         </div>
+      </div>
 
+      {/* Tab Content Container */}
+      <div className="max-w-6xl mx-auto px-4 pb-12">
         {activeTab === 'finance' && (
-            <div className="space-y-8 mt-6">
-               <FinanceHistory 
-                patientName={patient.name}
-                records={(() => {
-                  const records: MonthRecord[] = [];
-                  const monthlyPkg = Number(patient.monthlyPackage || 40000);
-                  
-                  // Group payments by month
-                  const groups: { [key: string]: PaymentType[] } = {};
-                  payments.forEach(p => {
-                    const date = toDate(p.date);
-                    const monthLabel = date.toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase();
-                    if (!groups[monthLabel]) groups[monthLabel] = [];
-                    groups[monthLabel].push({
-                      date: date.toLocaleDateString('en-PK'),
-                      amount: Number(p.amount),
-                      receivedBy: "Admin Portal",
-                      verifiedByHQ: p.approved,
-                      status: p.approved ? "Approved" : "Pending"
-                    });
-                  });
-
-                  // Create MonthRecord from groups
-                  Object.keys(groups).forEach(label => {
-                    const monthPayments = groups[label];
-                    const totalPaid = monthPayments.reduce((acc, curr) => acc + curr.amount, 0);
-                    records.push({
-                      label,
-                      package: monthlyPkg,
-                      totalPaid,
-                      remaining: Math.max(0, monthlyPkg - totalPaid),
-                      payments: monthPayments
-                    });
-                  });
-
-                  return records.length > 0 ? records : [{
-                    label: new Date().toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase(),
-                    package: monthlyPkg,
-                    totalPaid: 0,
-                    remaining: monthlyPkg,
-                    payments: []
-                  }];
-                })()}
-              />
-
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-                    <DollarSign size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Package</p>
-                    <p className="text-xl font-black text-[#1a3a5c]">PKR {Number(patient.totalPkg).toLocaleString()}</p>
-                  </div>
-                </div>
+          <div className="space-y-8 mt-6">
+             <FinanceHistory 
+              patientName={patient.name}
+              records={(() => {
+                const records: MonthRecord[] = [];
+                const monthlyPkg = Number(patient.monthlyPackage || 40000);
                 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
-                    <TrendingUp size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Received</p>
-                    <p className="text-xl font-black text-green-700">PKR {Number(patient.overallReceived).toLocaleString()}</p>
-                  </div>
-                </div>
+                // Group payments by month
+                const groups: { [key: string]: PaymentType[] } = {};
+                payments.forEach(p => {
+                  const date = toDate(p.date);
+                  const monthLabel = date.toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase();
+                  if (!groups[monthLabel]) groups[monthLabel] = [];
+                  groups[monthLabel].push({
+                    date: date.toLocaleDateString('en-PK'),
+                    amount: Number(p.amount),
+                    receivedBy: "Admin Portal",
+                    verifiedByHQ: p.approved,
+                    status: p.approved ? "Approved" : "Pending"
+                  });
+                });
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-l-orange-500">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
-                    <Clock size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Due Till Today</p>
-                    <p className="text-xl font-black text-orange-600">PKR {Number(patient.remainingTillDate).toLocaleString()}</p>
-                  </div>
-                </div>
+                // Create MonthRecord from groups
+                Object.keys(groups).forEach(label => {
+                  const monthPayments = groups[label];
+                  const totalPaid = monthPayments.reduce((acc, curr) => acc + curr.amount, 0);
+                  records.push({
+                    label,
+                    package: monthlyPkg,
+                    totalPaid,
+                    remaining: Math.max(0, monthlyPkg - totalPaid),
+                    payments: monthPayments
+                  });
+                });
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center text-teal-600">
-                    <CheckCircle2 size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Final Remaining</p>
-                    <p className="text-xl font-black text-teal-700">PKR {Number(patient.overallRemaining).toLocaleString()}</p>
-                  </div>
+                return records.length > 0 ? records : [{
+                  label: new Date().toLocaleString('default', { month: 'short', year: 'numeric' }).toUpperCase(),
+                  package: monthlyPkg,
+                  totalPaid: 0,
+                  remaining: monthlyPkg,
+                  payments: []
+                }];
+              })()}
+            />
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <DollarSign size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Package</p>
+                  <p className="text-xl font-black text-[#1a3a5c]">PKR {Number(patient.totalPkg).toLocaleString()}</p>
+                </div>
+              </div>
+              
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
+                  <TrendingUp size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Received</p>
+                  <p className="text-xl font-black text-green-700">PKR {Number(patient.overallReceived).toLocaleString()}</p>
                 </div>
               </div>
 
-              {/* Detailed Log */}
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-xl font-bold text-[#1a3a5c] mb-6 flex items-center gap-2">
-                   <Clock size={20} className="text-blue-500" /> Payment Transaction Log
-                </h3>
-                <div className="overflow-x-auto">
-                   <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-gray-500 text-sm border-b border-gray-100">
-                        <th className="pb-4 font-medium">Date</th>
-                        <th className="pb-4 font-medium">Amount</th>
-                        <th className="pb-4 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {payments.map((payment) => (
-                        <tr key={payment.id} className="text-sm">
-                          <td className="py-4 text-gray-600">{toDate(payment.date).toLocaleDateString()}</td>
-                          <td className="py-4 font-bold text-[#1a3a5c]">PKR {Number(payment.amount).toLocaleString()}</td>
-                          <td className="py-4">
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${payment.approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                              {payment.approved ? 'APPROVED' : 'PENDING'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-l-orange-500">
+                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
+                  <Clock size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Due Till Today</p>
+                  <p className="text-xl font-black text-orange-600">PKR {Number(patient.remainingTillDate).toLocaleString()}</p>
                 </div>
               </div>
             </div>
+
+            {/* Audit Trail Table */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mt-8">
+              <h3 className="text-sm font-black text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
+                 <Clock size={16} className="text-teal-600" /> Audit Trail
+              </h3>
+              <div className="overflow-x-auto no-scrollbar">
+                 <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-gray-400 text-[10px] font-black uppercase tracking-widest border-b border-gray-100">
+                      <th className="pb-4">Date</th>
+                      <th className="pb-4">Amount</th>
+                      <th className="pb-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {payments.map((payment, idx) => (
+                      <tr key={payment.id || idx} className="text-xs">
+                        <td className="py-4 text-gray-500 font-medium">{toDate(payment.date).toLocaleDateString()}</td>
+                        <td className="py-4 font-black text-gray-900">₨{Number(payment.amount).toLocaleString()}</td>
+                        <td className="py-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${payment.approved || payment.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {payment.approved || payment.status === 'approved' ? 'APPROVED' : 'PENDING'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         )}
 
         {activeTab === 'visits' && (
@@ -439,7 +422,7 @@ export default function FamilyPatientViewPage() {
           <div className="space-y-6 mt-6">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <h2 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2"><Shield size={18} /> Health Status</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
                 {[
                   { label: 'HIV', value: healthStatus.hivStatus },
                   { label: 'HBsAg', value: healthStatus.hbsagStatus },

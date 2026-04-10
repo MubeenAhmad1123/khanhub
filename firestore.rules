@@ -242,8 +242,8 @@ service cloud.firestore {
     match /rehab_users/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid || isRehabAdminOrAbove());
-      allow create: if false;
-      allow delete: if false;
+      allow create: if isRehabSuperAdmin() || isHqSuperOrManager();
+      allow delete: if isRehabSuperAdmin() || isHqSuperAdmin();
       allow update: if request.auth != null
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data)
@@ -476,8 +476,8 @@ service cloud.firestore {
     match /spims_users/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid || isSpimsAdminOrAbove());
-      allow create: if false;
-      allow delete: if false;
+      allow create: if isSpimsSuperAdmin() || isHqSuperOrManager();
+      allow delete: if isSpimsSuperAdmin() || isHqSuperAdmin();
       allow update: if request.auth != null
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data)
@@ -1058,8 +1058,8 @@ service cloud.firestore {
     match /hospital_users/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid || isHospitalAdminOrAbove());
-      allow create: if false;
-      allow delete: if false;
+      allow create: if isHospitalSuperAdmin() || isHqSuperOrManager();
+      allow delete: if isHospitalSuperAdmin() || isHqSuperAdmin();
       allow update: if request.auth != null
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data)
@@ -1176,8 +1176,8 @@ service cloud.firestore {
     match /sukoon_users/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid || isSukoonAdminOrAbove());
-      allow create: if false;
-      allow delete: if false;
+      allow create: if isSukoonSuperAdmin() || isHqSuperOrManager();
+      allow delete: if isSukoonSuperAdmin() || isHqSuperAdmin();
       allow update: if request.auth != null
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data)
@@ -1294,8 +1294,8 @@ service cloud.firestore {
     match /welfare_users/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid || isWelfareAdminOrAbove());
-      allow create: if false;
-      allow delete: if false;
+      allow create: if isWelfareSuperAdmin() || isHqSuperOrManager();
+      allow delete: if isWelfareSuperAdmin() || isHqSuperAdmin();
       allow update: if request.auth != null
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data)
@@ -1412,8 +1412,8 @@ service cloud.firestore {
     match /job_center_users/{uid} {
       allow read: if request.auth != null
         && (request.auth.uid == uid || isJobCenterAdminOrAbove());
-      allow create: if false;
-      allow delete: if false;
+      allow create: if isJobCenterSuperAdmin() || isHqSuperOrManager();
+      allow delete: if isJobCenterSuperAdmin() || isHqSuperAdmin();
       allow update: if request.auth != null
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data)
