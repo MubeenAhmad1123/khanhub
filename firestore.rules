@@ -655,6 +655,21 @@ service cloud.firestore {
         );
     }
 
+    // dayCloseReports — stored daily financial summaries
+    match /dayCloseReports/{docId} {
+      allow read: if isHqSuperAdmin() || isHqCashier();
+      allow create: if isHqCashier();
+      allow update, delete: if isHqSuperAdmin();
+    }
+
+    // cashierTransactions — standardized global transaction log
+    match /cashierTransactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+      allow delete: if false;
+    }
+
     // hq_staff — global staff profiles across all departments 
     // Read: any HQ tier1 OR rehab/spims admin 
     // Write: superadmin or manager only 

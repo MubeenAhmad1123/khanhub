@@ -1,10 +1,10 @@
-// src/app/hq/dashboard/cashier/page.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where } from 'firebase/firestore';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, History, Loader2, Minus, Plus, Search, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X } from 'lucide-react';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, toDate } from '@/lib/utils';
@@ -502,9 +502,26 @@ export default function CashierStationPage() {
           <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center text-white shrink-0">
             <CreditCard size={20} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">Cashier Station</h1>
             <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Link 
+              href="/hq/dashboard/cashier/daily-report"
+              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+            >
+              <LayoutDashboard size={14} className="text-indigo-400" />
+              <span className="hidden md:inline">Daily Report</span>
+            </Link>
+            <Link 
+              href="/hq/dashboard/cashier/day-close"
+              className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-900/40 transition-all active:scale-95"
+            >
+              <Lock size={14} />
+              <span className="hidden md:inline">Day Close</span>
+            </Link>
           </div>
         </div>
       </div>
