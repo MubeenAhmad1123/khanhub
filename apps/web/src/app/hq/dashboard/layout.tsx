@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, Users, Shield, Eye, FileText,
   UserCog, CalendarCheck, CheckCircle, CreditCard, History,
   LogOut, Menu, X, ArrowLeft, Sun, Moon, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User,
-  Building2, GraduationCap, ChevronLeft, ExternalLink
+  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart
 } from 'lucide-react';
 import type { HqRole, HqSession } from '@/types/hq';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
@@ -61,13 +61,60 @@ const ROLE_LABELS: Record<HqRole, string> = {
 };
 
 // Dept label map for sidebar shortcuts
-const DEPT_LABELS: Record<string, { label: string; adminUrl: string; color: string }> = {
-  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-rose-500' },
-  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500' },
-  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500' },
-  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500' },
-  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500' },
-  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500' },
+const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string; icon: React.ReactNode }> = {
+  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-rose-500',   icon: <Heart size={16} /> },
+  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500',   icon: <GraduationCap size={16} /> },
+  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500', icon: <Heart size={16} /> },
+  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500',  icon: <Heart size={16} /> },
+  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500',   icon: <Building2 size={16} /> },
+  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500', icon: <User size={16} /> },
+};
+
+const DEPARTMENT_NAV: Record<string, NavItem[]> = {
+  rehab: [
+    { label: 'Rehab Overview', href: '/departments/rehab/dashboard/admin', icon: <LayoutDashboard size={16}/>, roles: ['superadmin'] },
+    { label: 'Patients', href: '/departments/rehab/dashboard/admin/patients', icon: <Heart size={16}/>, roles: ['superadmin'] },
+    { label: 'Staff', href: '/departments/rehab/dashboard/admin/staff', icon: <UserCog size={16}/>, roles: ['superadmin'] },
+    { label: 'Finance', href: '/departments/rehab/dashboard/admin/finance', icon: <TrendingUp size={16}/>, roles: ['superadmin'] },
+    { label: 'Credentials', href: '/departments/rehab/dashboard/admin/passwords', icon: <Shield size={16}/>, roles: ['superadmin'] },
+  ],
+  spims: [
+    { label: 'SPIMS Overview', href: '/departments/spims/dashboard/admin', icon: <LayoutDashboard size={16} />, roles: ['superadmin'] },
+    { label: 'Students', href: '/departments/spims/dashboard/admin/students', icon: <GraduationCap size={16} />, roles: ['superadmin'] },
+    { label: 'Staff', href: '/departments/spims/dashboard/admin/staff', icon: <UserCog size={16} />, roles: ['superadmin'] },
+    { label: 'Finance', href: '/departments/spims/dashboard/admin/finance', icon: <TrendingUp size={16} />, roles: ['superadmin'] },
+    { label: 'Attendance', href: '/departments/spims/dashboard/admin/attendance', icon: <CalendarCheck size={16} />, roles: ['superadmin'] },
+    { label: 'Tests', href: '/departments/spims/dashboard/admin/tests', icon: <FileText size={16} />, roles: ['superadmin'] },
+    { label: 'Credentials', href: '/departments/spims/dashboard/admin/passwords', icon: <Shield size={16} />, roles: ['superadmin'] },
+  ],
+  sukoon: [
+    { label: 'Sukoon Overview', href: '/departments/sukoon/dashboard/admin', icon: <LayoutDashboard size={16}/>, roles: ['superadmin'] },
+    { label: 'Clients', href: '/departments/sukoon/dashboard/admin/clients', icon: <Users size={16}/>, roles: ['superadmin'] },
+    { label: 'Staff', href: '/departments/sukoon/dashboard/admin/staff', icon: <UserCog size={16}/>, roles: ['superadmin'] },
+    { label: 'Finance', href: '/departments/sukoon/dashboard/admin/finance', icon: <TrendingUp size={16}/>, roles: ['superadmin'] },
+    { label: 'Credentials', href: '/departments/sukoon/dashboard/admin/passwords', icon: <Shield size={16}/>, roles: ['superadmin'] },
+  ],
+  welfare: [
+    { label: 'Welfare Overview', href: '/departments/welfare/dashboard/admin', icon: <LayoutDashboard size={16}/>, roles: ['superadmin'] },
+    { label: 'Children', href: '/departments/welfare/dashboard/admin/children', icon: <Users size={16}/>, roles: ['superadmin'] },
+    { label: 'Staff', href: '/departments/welfare/dashboard/admin/staff', icon: <UserCog size={16}/>, roles: ['superadmin'] },
+    { label: 'Finance', href: '/departments/welfare/dashboard/admin/finance', icon: <TrendingUp size={16}/>, roles: ['superadmin'] },
+    { label: 'Credentials', href: '/departments/welfare/dashboard/admin/passwords', icon: <Shield size={16}/>, roles: ['superadmin'] },
+  ],
+  hospital: [
+    { label: 'Hospital Overview', href: '/departments/hospital/dashboard/admin', icon: <LayoutDashboard size={16}/>, roles: ['superadmin'] },
+    { label: 'Patients', href: '/departments/hospital/dashboard/admin/patients', icon: <Heart size={16}/>, roles: ['superadmin'] },
+    { label: 'Staff', href: '/departments/hospital/dashboard/admin/staff', icon: <UserCog size={16}/>, roles: ['superadmin'] },
+    { label: 'Finance', href: '/departments/hospital/dashboard/admin/finance', icon: <TrendingUp size={16}/>, roles: ['superadmin'] },
+    { label: 'Credentials', href: '/departments/hospital/dashboard/admin/passwords', icon: <Shield size={16}/>, roles: ['superadmin'] },
+  ],
+  'job-center': [
+    { label: 'Job Center Overv.', href: '/departments/job-center/dashboard/admin', icon: <LayoutDashboard size={16}/>, roles: ['superadmin'] },
+    { label: 'Seekers', href: '/departments/job-center/dashboard/admin/seekers', icon: <Users size={16}/>, roles: ['superadmin'] },
+    { label: 'Staff', href: '/departments/job-center/dashboard/admin/staff', icon: <UserCog size={16}/>, roles: ['superadmin'] },
+    { label: 'Finance', href: '/departments/job-center/dashboard/admin/finance', icon: <TrendingUp size={16}/>, roles: ['superadmin'] },
+    { label: 'Credentials', href: '/departments/job-center/dashboard/admin/passwords', icon: <Shield size={16}/>, roles: ['superadmin'] },
+  ],
 };
 
 export default function HqDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -79,6 +126,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [activeDepts, setActiveDepts] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'hq' | string>('hq');
 
   const normalizeRole = (role: unknown): HqRole | null => {
     const r = String(role || '').trim().toLowerCase();
@@ -103,7 +151,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       setTimeout(() => setMounted(true), 50);
 
       // Detect any active dept sessions (from impersonation)
-      const depts = Object.keys(DEPT_LABELS).filter(d => {
+      const depts = Object.keys(DEPT_INFO).filter(d => {
         try { return !!localStorage.getItem(`${d}_session`); } catch { return false; }
       });
       setActiveDepts(depts);
@@ -150,7 +198,11 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   }
 
   const role = normalizeRole(user?.role) || 'cashier';
-  const navItems = NAV_ITEMS.filter(item => user && item.roles.includes(role));
+  
+  // Dynamic Nav Items based on viewMode
+  let navItems = viewMode === 'hq' 
+    ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
+    : DEPARTMENT_NAV[viewMode] || [];
 
   const handleSignOut = () => {
     localStorage.removeItem(SESSION_KEY);
@@ -169,8 +221,12 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <Shield size={18} />
           </div>
           <div>
-            <p className="font-black text-gray-900 text-sm leading-none">KhanHub HQ</p>
-            <p className="text-gray-400 text-[10px] font-semibold mt-0.5">Central Control</p>
+            <p className="font-black text-gray-900 text-sm leading-none">
+              {viewMode === 'hq' ? 'KhanHub HQ' : `${DEPT_INFO[viewMode]?.label} Mode`}
+            </p>
+            <p className="text-gray-400 text-[10px] font-semibold mt-0.5">
+              {viewMode === 'hq' ? 'Central Control' : 'Department View'}
+            </p>
           </div>
         </div>
       </div>
@@ -186,10 +242,18 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               <p className="text-gray-400 text-[10px] font-mono truncate">{user?.customId}</p>
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-3 flex items-center justify-between">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
               {ROLE_LABELS[role]}
             </span>
+            {viewMode !== 'hq' && (
+              <button 
+                onClick={() => setViewMode('hq')}
+                className="text-[10px] font-black text-teal-600 hover:text-teal-700 underline underline-offset-2 uppercase tracking-tighter"
+              >
+                Exit View
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -220,7 +284,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
               <span>{item.label}</span>
               <span className="ml-auto flex items-center gap-2 shrink-0">
-                {item.href === '/hq/dashboard/superadmin/approvals' && role === 'superadmin' ? (
+                {item.label === 'Approvals' && viewMode === 'hq' && role === 'superadmin' ? (
                   <HqSuperadminApprovalsNavBadge />
                 ) : null}
                 {isActive ? <span className="w-1.5 h-1.5 rounded-full bg-white/60" /> : null}
@@ -230,20 +294,54 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         })}
       </nav>
 
-      {/* Dept shortcut section — only shown when a dept session is active */}
-      {activeDepts.length > 0 && (
+      {/* Nav Mode Switcher — only for Superadmins with active dept sessions */}
+      {role === 'superadmin' && activeDepts.length > 0 && (
         <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-          <p className={`text-[10px] font-black uppercase tracking-widest mb-2 px-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Active Dept Views</p>
+          <p className={`text-[10px] font-black uppercase tracking-widest mb-3 px-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Switch Navigator</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+               onClick={() => setViewMode('hq')}
+               className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                 viewMode === 'hq' 
+                  ? 'bg-gray-900 text-white border-transparent' 
+                  : darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+               }`}
+            >
+              HQ
+            </button>
+            {activeDepts.map(dept => (
+              <button
+                key={dept}
+                onClick={() => setViewMode(dept)}
+                className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                  viewMode === dept 
+                   ? 'bg-teal-600 text-white border-transparent shadow-lg shadow-teal-500/20' 
+                   : darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {DEPT_INFO[dept]?.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Go to Dept Dashboard shortcut */}
+      {activeDepts.length > 0 && viewMode === 'hq' && (
+        <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+          <p className={`text-[10px] font-black uppercase tracking-widest mb-2 px-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Jump to Portal</p>
           {activeDepts.map(dept => {
-            const info = DEPT_LABELS[dept];
+            const info = DEPT_INFO[dept];
             return (
               <Link
                 key={dept}
                 href={info.adminUrl}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold mb-0.5 transition-all ${darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-50 text-gray-600'}`}
               >
-                <ExternalLink size={12} className={info.color} />
-                <span>View {info.label} Dashboard</span>
+                <div className={`p-1 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white shadow-sm'}`}>
+                  {React.cloneElement(info.icon as React.ReactElement, { size: 10, className: info.color })}
+                </div>
+                <span>{info.label} Dashboard</span>
               </Link>
             );
           })}
