@@ -66,7 +66,7 @@ const FinanceHistory: React.FC<FinanceHistoryProps> = ({ patientName, records })
   return (
     <div 
       ref={sectionRef}
-      className="w-full min-h-screen bg-[#f8fafc] py-8 sm:py-16 px-4 sm:px-8 overflow-hidden relative"
+      className="w-full bg-white dark:bg-gray-950 py-6 sm:py-10 px-0 sm:px-0 overflow-visible relative"
     >
       <style jsx>{`
         @keyframes fadeIn {

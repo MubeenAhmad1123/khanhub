@@ -811,7 +811,7 @@ export default function PatientDetailPage() {
   if (!patient) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-8 overflow-x-hidden w-full max-w-full">
+    <div className="w-full overflow-x-hidden pb-20 bg-gray-50/50">
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         
         {/* Top Link - Hidden on mobile if header is sticky */}
@@ -826,8 +826,8 @@ export default function PatientDetailPage() {
         </div>
         
         {/* Header Profile Summary - Optimized for mobile */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 w-full p-4 sm:p-6 md:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 sticky top-2 z-30 sm:relative sm:top-0">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 -z-0"></div>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 w-full p-4 sm:p-6 md:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 sticky top-[56px] z-10 sm:relative sm:top-0 overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 z-0"></div>
           
           <div className="relative z-10">
             {patient.photoUrl ? (
@@ -866,7 +866,8 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Tabs Navigation - Scrollable on mobile */}
-        <div className="sticky top-[100px] sm:static z-20 w-full -mx-2 px-2 sm:mx-0 sm:px-0">
+        {/* Tabs Navigation - Sticky under patient summary on mobile */}
+        <div className="sticky top-[56px] sm:static z-20 w-full overflow-hidden">
           <div className="flex overflow-x-auto no-scrollbar gap-1 border-b border-gray-100 bg-white rounded-t-xl sm:rounded-t-2xl p-1 shadow-sm">
             <button
               onClick={() => setActiveTab('profile')}

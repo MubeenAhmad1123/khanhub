@@ -292,7 +292,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       {/* Main content */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         {/* Mobile top bar */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+        <header className="lg:hidden sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
@@ -311,7 +311,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
         </header>
 
         {/* Desktop top bar */}
-        <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${
+        <header className={`hidden lg:flex sticky top-0 z-50 backdrop-blur border-b px-8 py-4 items-center justify-between ${
           darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
         }`}>
           <div className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
