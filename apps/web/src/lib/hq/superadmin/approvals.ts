@@ -58,7 +58,7 @@ function sortComparator(sort: SortOrder) {
     if (sort === 'highest') return bAmt - aAmt;
     if (sort === 'lowest') return aAmt - bAmt;
     if (sort === 'oldest') return aTime - bTime;
-    return bTime - aTime;
+    return bTime - aTime; // 'newest' or 'all'
   };
 }
 

@@ -47,9 +47,9 @@ import { db } from '@/lib/firebase';
 
 const DEFAULT_FILTERS: ApprovalsFilters & { txType: string; cashierName: string } = {
   dept: 'all',
-  datePreset: 'today',
+  datePreset: 'all',
   amountBucket: 'all',
-  sort: 'newest',
+  sort: 'all',
   proof: 'all',
   entityQuery: '',
   txType: 'all',
@@ -1317,10 +1317,10 @@ export default function HqApprovalsPage() {
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Date range</p>
                       <PillGroup
-                        options={['today', 'yesterday', 'this_week', 'custom'] as const}
+                        options={['all', 'today', 'yesterday', 'this_week', 'custom'] as const}
                         value={filters.datePreset}
                         onChange={(v) => setFilters((f) => ({ ...f, datePreset: v }))}
-                        labelMap={{ today: 'Today', yesterday: 'Yesterday', this_week: 'This Week', custom: 'Custom' }}
+                        labelMap={{ all: 'All', today: 'Today', yesterday: 'Yesterday', this_week: 'This Week', custom: 'Custom' }}
                       />
                       {filters.datePreset === 'custom' ? (
                         <div className="flex gap-2 mt-2 flex-wrap">
@@ -1349,6 +1349,7 @@ export default function HqApprovalsPage() {
                         onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ApprovalsFilters['sort'] }))}
                         className="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 dark:text-gray-100"
                       >
+                        <option value="all">All</option>
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
                         <option value="highest">Highest Amount</option>

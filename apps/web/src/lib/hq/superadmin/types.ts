@@ -5,7 +5,7 @@ export type TxStatusFilter = 'pending' | 'approved' | 'rejected' | 'history';
 
 export type AmountBucket = 'all' | 'under_1000' | '1000_5000' | '5000_20000' | 'over_20000';
 export type ProofFilter = 'all' | 'has_proof' | 'missing_proof';
-export type SortOrder = 'newest' | 'oldest' | 'highest' | 'lowest';
+export type SortOrder = 'all' | 'newest' | 'oldest' | 'highest' | 'lowest';
 
 export type AuditSource = 'hq' | 'rehab' | 'spims';
 export type AuditAction = 'created' | 'updated' | 'approved' | 'rejected' | 'login' | 'reset' | 'other';

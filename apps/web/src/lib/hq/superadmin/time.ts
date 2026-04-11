@@ -1,6 +1,6 @@
 // apps/web/src/lib/hq/superadmin/time.ts
 
-export type DateRangePreset = 'today' | 'yesterday' | 'this_week' | 'custom';
+export type DateRangePreset = 'all' | 'today' | 'yesterday' | 'this_week' | 'custom';
 
 export function startOfDay(d: Date) {
   const x = new Date(d);
@@ -16,6 +16,7 @@ export function endOfDay(d: Date) {
 
 export function getPresetRange(preset: DateRangePreset): { from: Date; to: Date } {
   const now = new Date();
+  if (preset === 'all') return { from: new Date(0), to: new Date(8640000000000000) };
   if (preset === 'today') return { from: startOfDay(now), to: endOfDay(now) };
   if (preset === 'yesterday') {
     const y = new Date(now);
