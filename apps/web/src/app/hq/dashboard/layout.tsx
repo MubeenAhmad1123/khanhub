@@ -12,6 +12,7 @@ import {
 import type { HqRole, HqSession } from '@/types/hq';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
+import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 43200000;
@@ -127,6 +128,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   const [darkMode, setDarkMode] = useState(false);
   const [activeDepts, setActiveDepts] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'hq' | string>('hq');
+
+  // Initialise FCM push notifications for the logged-in HQ user
+  useFcmNotifications(user);
 
   const normalizeRole = (role: unknown): HqRole | null => {
     const r = String(role || '').trim().toLowerCase();
