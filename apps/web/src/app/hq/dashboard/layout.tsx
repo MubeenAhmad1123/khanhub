@@ -397,7 +397,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
 
   return (
-    <div className={`min-h-screen flex ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen flex overflow-x-hidden ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <aside className={`hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
         <SidebarContent />
       </aside>
@@ -421,7 +421,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         <SidebarContent />
       </aside>
 
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
         <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between ${
           darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
         }`}>
@@ -483,7 +483,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <div className="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm">
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
-            <span className="text-gray-700 text-sm font-semibold">{user?.name}</span>
+            <span className="text-gray-700 text-sm font-semibold hidden xl:inline">{user?.name}</span>
           </div>
         </header>
 
@@ -497,7 +497,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             />
           )}
           <div className="p-4 lg:p-8">
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-6xl mx-auto w-full">
               {children}
             </div>
           </div>

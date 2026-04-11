@@ -868,10 +868,13 @@ export default function CashierStationPage() {
 
         <div className="hidden md:block bg-[#11151d] rounded-2xl border border-white/10 overflow-hidden">
           <div className="overflow-x-auto -mx-4 md:mx-0">
+            <div className="table-responsive">
+
             <table className="w-full min-w-[860px] text-left">
               <thead><tr className="bg-white/[0.02] border-b border-white/10"><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Department</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Entity</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Category</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Status</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Amount</th></tr></thead>
               <tbody>{historyLoading ? <tr><td colSpan={6} className="px-4 py-8 text-center"><Loader2 className="w-7 h-7 animate-spin text-teal-400 mx-auto" /></td></tr> : historyFiltered.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm font-bold text-gray-400">No transactions match your filters.</td></tr> : historyFiltered.map((tx) => (<tr key={tx.id} className="border-b border-white/5"><td className="px-4 py-3 text-sm font-black text-white">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td><td className="px-4 py-3 text-sm font-bold text-gray-300">{tx.departmentName || tx.departmentCode}</td><td className="px-4 py-3"><div className="text-sm font-black text-white">{tx.patientName || tx.staffName || '-'}</div><div className="text-[10px] font-bold text-gray-400">{tx.patientId || tx.staffId || '-'}</div></td><td className="px-4 py-3 text-sm font-bold text-gray-300">{tx.categoryName || tx.category}</td><td className="px-4 py-3"><span className={cn('px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider', tx.status === 'approved' ? 'bg-teal-500/10 text-teal-300' : tx.status === 'rejected' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300')}>{tx.status || 'pending'}</span></td><td className="px-4 py-3 text-right"><div className={cn('text-sm font-black flex items-center justify-end gap-2', tx.type === 'income' ? 'text-teal-400' : 'text-red-400')}>{tx.type === 'income' ? <Plus size={12} /> : <Minus size={12} />}Rs {Number(tx.amount || 0).toLocaleString()}</div></td></tr>))}</tbody>
             </table>
+              </div>
           </div>
         </div>
       </div>

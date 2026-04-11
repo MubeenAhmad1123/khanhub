@@ -279,6 +279,8 @@ export default function CashierHistoryPage() {
         <div className="space-y-4">
           <div className="hidden md:block bg-white/5 border border-white/8 rounded-3xl overflow-hidden backdrop-blur-sm">
             <div className="overflow-x-auto">
+              <div className="table-responsive">
+
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-white/[0.02] border-b border-white/10">
@@ -346,6 +348,7 @@ export default function CashierHistoryPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 

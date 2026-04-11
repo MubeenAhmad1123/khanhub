@@ -1466,6 +1466,8 @@ export default function ManagerUsersPage() {
 
             <div className="hidden md:block overflow-x-auto">
               <div className="overflow-x-auto pb-4">
+                <div className="table-responsive">
+
                 <table className="w-full text-left min-w-[800px]">
                   <thead>
                     <tr className={`text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-50'}`}>
@@ -1554,6 +1556,7 @@ export default function ManagerUsersPage() {
                     )}
                   </tbody>
                 </table>
+              </div>
               </div>
             </div>
           </div>

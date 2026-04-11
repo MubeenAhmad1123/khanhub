@@ -395,6 +395,77 @@
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
+
+  /* ─── Scrollbar hide helpers (aliases) ─── */
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* ─── Responsive Table Wrapper ─── */
+  /* Wrap any <table> in a div.table-responsive for horizontal scroll on mobile */
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ensure tables never cause page overflow globally */
+  table {
+    min-width: 100%;
+  }
+
+  /* ─── Responsive Tab Bar ─── */
+  /* Tab bars that overflow on small screens scroll horizontally */
+  .tabs-scrollable {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+  .tabs-scrollable::-webkit-scrollbar { display: none; }
+  .tabs-scrollable > * { flex-shrink: 0; }
+
+  /* ─── Responsive Card Stack ─── */
+  /* Use .card-grid for auto-stacking grids */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  @media (min-width: 640px) {
+    .card-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1024px) {
+    .card-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  /* ─── Responsive Filter Bar ─── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .filter-bar > * { flex-shrink: 0; }
+
+  /* ─── Safe touch targets ─── */
+  /* All buttons/links min 44px height for mobile tappability */
+  button, a[role="button"], [role="tab"] {
+    min-height: 36px;
+  }
+
+  /* ─── Prevent content overflow globally ─── */
+  .overflow-x-hidden { overflow-x: hidden; }
+
+  /* ─── Mobile-first font scaling ─── */
+  @media (max-width: 640px) {
+    h1 { font-size: clamp(1.5rem, 5vw, 2.25rem); }
+    h2 { font-size: clamp(1.25rem, 4vw, 1.875rem); }
+    h3 { font-size: clamp(1.1rem, 3.5vw, 1.5rem); }
+  }
 }
 
 @keyframes fade-in {

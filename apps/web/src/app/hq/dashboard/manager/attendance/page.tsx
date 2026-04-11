@@ -228,6 +228,8 @@ export default function ManagerAttendancePage() {
 
         {/* Staff Table */}
         <div className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden">
+          <div className="table-responsive">
+
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-50">
@@ -303,6 +305,7 @@ export default function ManagerAttendancePage() {
               )}
             </tbody>
           </table>
+              </div>
         </div>
       </div>
     </div>

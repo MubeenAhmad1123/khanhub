@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "cashierTransactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "rehab_daily_activities",
       "queryScope": "COLLECTION",
       "fields": [

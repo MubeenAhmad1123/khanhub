@@ -246,6 +246,8 @@ export default function SuperadminFinancePage() {
             <span className="rounded-full bg-amber-400/10 px-3 py-1 text-[10px] font-black text-amber-600 dark:text-amber-400">CRITICAL LIST</span>
           </div>
           <div className="overflow-x-auto">
+            <div className="table-responsive">
+
             <table className="w-full text-left">
               <thead>
                 <tr className="text-[10px] font-black uppercase tracking-widest text-gray-500">
@@ -280,6 +282,7 @@ export default function SuperadminFinancePage() {
                 ))}
               </tbody>
             </table>
+              </div>
           </div>
         </div>
       </div>

@@ -373,7 +373,7 @@ service cloud.firestore {
     // Client writes allowed for fire-and-forget audit entries
     // from authenticated rehab users only.
     match /rehab_audit/{docId} {
-      allow read: if isRehabSuperAdmin();
+      allow read: if isRehabSuperAdmin() || isHqSuperAdmin();
       allow create: if isRehabAuth();
       allow update, delete: if false;
     }
@@ -586,7 +586,7 @@ service cloud.firestore {
     }
 
     match /spims_audit/{docId} {
-      allow read: if isSpimsSuperAdmin();
+      allow read: if isSpimsSuperAdmin() || isHqSuperAdmin();
       allow create: if isSpimsAuth();
       allow update, delete: if false;
     }
@@ -1169,7 +1169,7 @@ service cloud.firestore {
     }
 
     match /hospital_audit/{docId} {
-      allow read: if isHospitalSuperAdmin();
+      allow read: if isHospitalSuperAdmin() || isHqSuperAdmin();
       allow create: if isHospitalAuth();
       allow update, delete: if false;
     }
@@ -1287,7 +1287,7 @@ service cloud.firestore {
     }
 
     match /sukoon_audit/{docId} {
-      allow read: if isSukoonSuperAdmin();
+      allow read: if isSukoonSuperAdmin() || isHqSuperAdmin();
       allow create: if isSukoonAuth();
       allow update, delete: if false;
     }
@@ -1405,7 +1405,7 @@ service cloud.firestore {
     }
 
     match /welfare_audit/{docId} {
-      allow read: if isWelfareSuperAdmin();
+      allow read: if isWelfareSuperAdmin() || isHqSuperAdmin();
       allow create: if isWelfareAuth();
       allow update, delete: if false;
     }
@@ -1523,7 +1523,7 @@ service cloud.firestore {
     }
 
     match /job_center_audit/{docId} {
-      allow read: if isJobCenterSuperAdmin();
+      allow read: if isJobCenterSuperAdmin() || isHqSuperAdmin();
       allow create: if isJobCenterAuth();
       allow update, delete: if false;
     }

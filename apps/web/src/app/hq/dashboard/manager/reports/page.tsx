@@ -92,6 +92,8 @@ export default function ManagerReportsPage() {
             <h3 className="text-white font-black text-xs uppercase tracking-widest">Performance Leaderboard</h3>
           </div>
           <div className="overflow-x-auto">
+            <div className="table-responsive">
+
             <table className="w-full">
               <thead>
                 <tr className="bg-white/5 border-b border-white/5">
@@ -133,6 +135,7 @@ export default function ManagerReportsPage() {
                 ))}
               </tbody>
             </table>
+              </div>
           </div>
         </div>
       </div>
