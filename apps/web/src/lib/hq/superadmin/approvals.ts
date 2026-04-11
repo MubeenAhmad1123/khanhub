@@ -17,6 +17,28 @@ import { toDate } from '@/lib/utils';
 import { getPresetRange, type DateRangePreset } from './time';
 import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
 
+// Tab-specific time filters (shown in the dropdown on each tab)
+export type TabTimePreset =
+  | 'all'        // all pending / all time
+  | 'today'
+  | 'this_week'
+  | 'this_month'
+  | 'this_year';
+
+export type TabTimeFilters = {
+  pending: TabTimePreset;
+  approved_today: TabTimePreset;
+  rejected_today: TabTimePreset;
+  history: TabTimePreset;
+};
+
+export const DEFAULT_TAB_TIME_FILTERS: TabTimeFilters = {
+  pending: 'all',
+  approved_today: 'all',
+  rejected_today: 'all',
+  history: 'all',
+};
+
 export type ApprovalsFilters = {
   dept: DeptFilter;
   datePreset: DateRangePreset;
@@ -135,25 +157,66 @@ function inDateRange(tx: UnifiedTx, from: Date, to: Date) {
   return t >= from && t <= to;
 }
 
-function isTodayPakistan(tx: UnifiedTx, kind: 'processed' | 'created') {
+/** Returns today 00:00:00 .. 23:59:59 in PKT (UTC+5) as UTC Date objects */
+function todayRangePKT(): { start: Date; end: Date } {
   const now = new Date();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
+  // Shift to PKT (+5h)
+  const pktMs = now.getTime() + 5 * 60 * 60 * 1000;
+  const pktDate = new Date(pktMs);
+  const y = pktDate.getUTCFullYear();
+  const m = pktDate.getUTCMonth();
+  const d = pktDate.getUTCDate();
+  // Start of PKT day expressed as UTC
+  const start = new Date(Date.UTC(y, m, d, 0, 0, 0) - 5 * 60 * 60 * 1000);
+  const end = new Date(Date.UTC(y, m, d, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+  return { start, end };
+}
 
-  let raw: unknown;
-  if (kind === 'processed') {
-    raw =
-      tx.processedAt ||
-      tx.approvedAt ||
-      tx.rejectedAt ||
-      tx.createdAt ||
-      tx.date ||
-      tx.transactionDate;
-  } else {
-    raw = tx.createdAt || tx.date || tx.transactionDate;
+function getTabTimeRange(preset: TabTimePreset): { from: Date; to: Date } {
+  const now = new Date();
+  if (preset === 'all') {
+    return { from: new Date(0), to: new Date(32503680000000) };
   }
+  if (preset === 'today') {
+    const { start, end } = todayRangePKT();
+    return { from: start, to: end };
+  }
+  if (preset === 'this_week') {
+    // Current week starting Monday
+    const d = new Date(now);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    return { from: monday, to: sunday };
+  }
+  if (preset === 'this_month') {
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { from: firstDay, to: lastDay };
+  }
+  if (preset === 'this_year') {
+    const firstDay = new Date(now.getFullYear(), 0, 1);
+    const lastDay = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { from: firstDay, to: lastDay };
+  }
+  return { from: new Date(0), to: new Date(32503680000000) };
+}
+
+function isApprovedToday(tx: UnifiedTx): boolean {
+  const { start, end } = todayRangePKT();
+  // prefer approvedAt / processedAt, fallback to updatedAt, createdAt
+  const raw = tx.approvedAt || tx.processedAt || tx.createdAt || tx.date || tx.transactionDate;
+  const t = toDate(raw);
+  return t >= start && t <= end;
+}
+
+function isRejectedToday(tx: UnifiedTx): boolean {
+  const { start, end } = todayRangePKT();
+  const raw = tx.rejectedAt || tx.processedAt || tx.createdAt || tx.date || tx.transactionDate;
   const t = toDate(raw);
   return t >= start && t <= end;
 }
@@ -193,9 +256,25 @@ function buildQueriesForTab(tab: ApprovalsTab, col: string) {
   return [query(collection(db, col), orderBy('createdAt', 'desc'), limit(800))];
 }
 
-function tabFilterClient(tab: ApprovalsTab, tx: UnifiedTx): boolean {
-  if (tab === 'approved_today') return isTodayPakistan(tx, 'processed');
-  if (tab === 'rejected_today') return isTodayPakistan(tx, 'processed');
+function tabFilterClient(
+  tab: ApprovalsTab,
+  tabTimePreset: TabTimePreset,
+  tx: UnifiedTx
+): boolean {
+  if (tab === 'approved_today') {
+    if (tabTimePreset === 'all' || tabTimePreset === 'today') return isApprovedToday(tx);
+    const { from, to } = getTabTimeRange(tabTimePreset);
+    const raw = tx.approvedAt || tx.processedAt || tx.createdAt || tx.date || tx.transactionDate;
+    const t = toDate(raw);
+    return t >= from && t <= to;
+  }
+  if (tab === 'rejected_today') {
+    if (tabTimePreset === 'all' || tabTimePreset === 'today') return isRejectedToday(tx);
+    const { from, to } = getTabTimeRange(tabTimePreset);
+    const raw = tx.rejectedAt || tx.processedAt || tx.createdAt || tx.date || tx.transactionDate;
+    const t = toDate(raw);
+    return t >= from && t <= to;
+  }
   return true;
 }
 
@@ -207,7 +286,8 @@ export function subscribeApprovalsFeed(
   filters: ApprovalsFilters,
   tab: ApprovalsTab,
   onData: (rows: UnifiedTx[]) => void,
-  onError?: (err: unknown) => void
+  onError?: (err: unknown) => void,
+  tabTimePreset: TabTimePreset = 'all'
 ) {
   const unsub: Array<() => void> = [];
   const buffers: Record<'rehab' | 'spims', UnifiedTx[]> = { rehab: [], spims: [] };
@@ -238,9 +318,18 @@ export function subscribeApprovalsFeed(
     };
 
     const dateOk = (tx: UnifiedTx) => {
-      if (tab === 'pending') return inDateRange(tx, from, to);
-      if (tab === 'approved_today' || tab === 'rejected_today') return tabFilterClient(tab, tx);
-      // history — respect date preset
+      if (tab === 'pending') {
+        if (filters.datePreset === 'all') return true; // no date filter unless user picks one
+        return inDateRange(tx, from, to);
+      }
+      if (tab === 'approved_today' || tab === 'rejected_today') {
+        return tabFilterClient(tab, tabTimePreset, tx);
+      }
+      // history — respect date preset from tab dropdown
+      if (tabTimePreset !== 'all') {
+        const ttr = getTabTimeRange(tabTimePreset);
+        return inDateRange(tx, ttr.from, ttr.to);
+      }
       return inDateRange(tx, from, to);
     };
 

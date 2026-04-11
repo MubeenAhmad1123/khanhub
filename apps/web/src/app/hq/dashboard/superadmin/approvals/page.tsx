@@ -36,6 +36,8 @@ import {
   type ApprovalsFilters,
   type ApprovalsTab,
   type EntityPick,
+  type TabTimeFilters,
+  DEFAULT_TAB_TIME_FILTERS,
 } from '@/lib/hq/superadmin/approvals';
 import { ErrorState } from '@/components/hq/superadmin/DataState';
 import { debounce, toDate } from '@/lib/utils';
@@ -427,7 +429,7 @@ function TxCard({
   hidden,
   phase,
   showSelect,
-  isPendingTab,
+  showActions,
 }: {
   tx: UnifiedTx;
   enrich?: EntityEnrich;
@@ -439,7 +441,7 @@ function TxCard({
   hidden: boolean;
   phase: CardPhase;
   showSelect: boolean;
-  isPendingTab: boolean;
+  showActions: boolean;
 }) {
   const [showProof, setShowProof] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -680,7 +682,7 @@ function TxCard({
 
         </div>
 
-        {isPendingTab && isPending && (onApprove || onReject) ? (
+        {showActions && isPending && (onApprove || onReject) ? (
           <div className="mt-5 grid grid-cols-1 gap-3">
             <button
               type="button"
@@ -716,6 +718,8 @@ export default function HqApprovalsPage() {
   const { session, loading: sessionLoading } = useHqSession();
 
   const [tab, setTab] = useState<ApprovalsTab>('pending');
+  const [tabTimeFilters, setTabTimeFilters] = useState<TabTimeFilters>(DEFAULT_TAB_TIME_FILTERS);
+  const [tabDropdownOpen, setTabDropdownOpen] = useState<ApprovalsTab | null>(null);
   const [filters, setFilters] = useState<ApprovalsFilters>(DEFAULT_FILTERS);
   const [rows, setRows] = useState<UnifiedTx[]>([]);
   const [loading, setLoading] = useState(true);
@@ -821,10 +825,11 @@ export default function HqApprovalsPage() {
       (err: unknown) => {
         setError(String((err as { message?: string })?.message ?? 'Failed to load'));
         setLoading(false);
-      }
+      },
+      tabTimeFilters[tab]
     );
     return () => unsub();
-  }, [session, tab, filtersForFeed, selectedEntity]);
+  }, [session, tab, filtersForFeed, selectedEntity, tabTimeFilters]);
 
   useEffect(() => {
     if (!session || session.role !== 'superadmin') return;
@@ -926,6 +931,10 @@ export default function HqApprovalsPage() {
   }, [rows]);
 
   const isPendingTab = tab === 'pending' && !selectedEntity;
+  // Cards can be selected on pending + history tabs
+  const isSelectableTab = (tab === 'pending' || tab === 'history') && !selectedEntity;
+  // Approve/reject action buttons show whenever the tx itself is pending (any tab)
+  const canActOnTx = !selectedEntity && (tab === 'pending' || tab === 'history');
 
   const cashierNames = useMemo(() => {
     const src = selectedEntity ? entityRows : rows;
@@ -1116,27 +1125,111 @@ export default function HqApprovalsPage() {
           </div>
         </div>
 
-        {/* 2 Tabs */}
+        {/* 2 Tabs — each has a time-filter dropdown */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {(
             [
-              { id: 'pending' as const, label: 'Pending' },
-              { id: 'approved_today' as const, label: 'Approved Today' },
-              { id: 'rejected_today' as const, label: 'Rejected Today' },
-              { id: 'history' as const, label: 'All History' },
+              {
+                id: 'pending' as const,
+                label: 'Pending',
+                options: [
+                  { value: 'all', label: 'All Pending' },
+                  { value: 'today', label: 'Today' },
+                  { value: 'this_week', label: 'This Week' },
+                  { value: 'this_month', label: 'This Month' },
+                ],
+              },
+              {
+                id: 'approved_today' as const,
+                label: 'Approved',
+                options: [
+                  { value: 'all', label: 'All Time' },
+                  { value: 'today', label: 'Today' },
+                  { value: 'this_week', label: 'This Week' },
+                  { value: 'this_month', label: 'This Month' },
+                  { value: 'this_year', label: 'This Year' },
+                ],
+              },
+              {
+                id: 'rejected_today' as const,
+                label: 'Rejected',
+                options: [
+                  { value: 'all', label: 'All Time' },
+                  { value: 'today', label: 'Today' },
+                  { value: 'this_week', label: 'This Week' },
+                  { value: 'this_month', label: 'This Month' },
+                  { value: 'this_year', label: 'This Year' },
+                ],
+              },
+              {
+                id: 'history' as const,
+                label: 'All History',
+                options: [
+                  { value: 'all', label: 'All Time' },
+                  { value: 'this_week', label: 'This Week' },
+                  { value: 'this_month', label: 'This Month' },
+                  { value: 'this_year', label: 'This Year' },
+                ],
+              },
             ] as const
-          ).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`py-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-widest transition border ${
-                tab === t.id ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-300 dark:border-white/20'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+          ).map((t) => {
+            const currentPreset = tabTimeFilters[t.id];
+            const currentOption = t.options.find((o) => o.value === currentPreset);
+            const isActive = tab === t.id;
+            const isOpen = tabDropdownOpen === t.id;
+            return (
+              <div key={t.id} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab(t.id);
+                    setTabDropdownOpen(isOpen ? null : t.id);
+                  }}
+                  className={`w-full py-2.5 px-2 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition border flex flex-col items-center gap-0.5 ${
+                    isActive
+                      ? 'bg-gray-900 text-white border-gray-900 shadow-md dark:bg-white dark:text-gray-900 dark:border-white'
+                      : 'bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-300'
+                  }`}
+                >
+                  <span>{t.label}</span>
+                  {currentOption && currentOption.value !== 'all' && (
+                    <span className={`text-[9px] font-semibold normal-case tracking-normal ${
+                      isActive ? 'text-white/70 dark:text-gray-900/70' : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {currentOption.label}
+                    </span>
+                  )}
+                </button>
+                {isOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-[50]"
+                      onClick={() => setTabDropdownOpen(null)}
+                    />
+                    <div className="absolute top-full left-0 right-0 mt-1 z-[51] bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
+                      {t.options.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setTabTimeFilters((prev) => ({ ...prev, [t.id]: opt.value }));
+                            setTabDropdownOpen(null);
+                          }}
+                          className={`w-full text-left px-3 py-2.5 text-xs font-bold transition ${
+                            currentPreset === opt.value
+                              ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                              : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {selectedEntity ? (
@@ -1476,7 +1569,7 @@ export default function HqApprovalsPage() {
             ) : null}
 
             {/* Bulk select row */}
-            {isPendingTab && !loading && filteredRows.length > 0 ? (
+            {isSelectableTab && !loading && filteredRows.length > 0 ? (
               <div className="flex items-center justify-end gap-3">
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 dark:text-gray-200">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} className="w-4 h-4 accent-gray-900" />
@@ -1523,13 +1616,13 @@ export default function HqApprovalsPage() {
                           return n;
                         })
                       }
-                      onApprove={isPendingTab ? runApprove : undefined}
-                      onReject={isPendingTab ? (t) => setRejectTx(t) : undefined}
+                      onApprove={canActOnTx ? runApprove : undefined}
+                      onReject={canActOnTx ? (t) => setRejectTx(t) : undefined}
                       busyId={busyId}
                       hidden={dismissed.has(tx.id)}
                       phase={cardPhase[tx.id] ?? 'idle'}
-                      showSelect={isPendingTab}
-                      isPendingTab={isPendingTab}
+                      showSelect={isSelectableTab}
+                      showActions={canActOnTx}
                     />
                   );
                 })
@@ -1552,7 +1645,7 @@ export default function HqApprovalsPage() {
         )}
       </div>
 
-      {selected.size > 0 && isPendingTab ? (
+      {selected.size > 0 && isSelectableTab ? (
         <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white dark:bg-[#111111] border-t border-gray-200 dark:border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-4 py-4 pb-6">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex-1 text-center sm:text-left">
@@ -1568,14 +1661,16 @@ export default function HqApprovalsPage() {
               >
                 Clear Selection
               </button>
-              <button
-                type="button"
-                onClick={() => setShowBulkConfirm(true)}
-                className="h-12 px-6 rounded-2xl bg-green-600 text-white text-sm font-black hover:bg-green-700 inline-flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Approve Selected
-              </button>
+              {isPendingTab && (
+                <button
+                  type="button"
+                  onClick={() => setShowBulkConfirm(true)}
+                  className="h-12 px-6 rounded-2xl bg-green-600 text-white text-sm font-black hover:bg-green-700 inline-flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Approve Selected
+                </button>
+              )}
             </div>
           </div>
         </div>
