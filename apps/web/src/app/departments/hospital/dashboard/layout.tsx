@@ -8,6 +8,7 @@ import {
   Banknote, FileBarChart, CreditCard, CalendarDays,
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -53,7 +54,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     let session = localStorage.getItem('hospital_session');
@@ -114,30 +115,16 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     };
 
     performAuthCheck();
-    
-    const saved = localStorage.getItem('hospital_dark_mode');
-    if (saved === 'true') {
-      setDarkMode(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setDarkMode(false);
-      document.documentElement.classList.remove('dark');
-    }
   }, [router]);
+    
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const darkMode = mounted && resolvedTheme === 'dark';
+  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
+  // Effect for mounting
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
-
-  const toggleDark = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem('hospital_dark_mode', String(next));
-  };
+    setMounted(true);
+  }, []);
 
   const handleSignOut = () => {
     // We do NOT clear hq_session, only local
@@ -159,7 +146,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading...</p>
@@ -289,18 +276,20 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       {/* Main content */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         {/* Mobile top bar */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+        <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between transition-colors duration-300 ${
+          darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
+        }`}>
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+            className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
           >
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-teal-500 rounded-lg flex items-center justify-center text-white">
+            <div className="w-7 h-7 bg-red-500 rounded-lg flex items-center justify-center text-white">
               <Shield size={14} />
             </div>
-            <span className="font-black text-gray-900 text-sm">Rehab Portal</span>
+            <span className={`font-black text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Hospital Portal</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>
             {role ? ROLE_LABELS[role] : ''}

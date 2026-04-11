@@ -34,71 +34,90 @@ export default function SuperadminDepartmentsPage() {
   }, [q]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-10 min-h-screen bg-transparent">
-      <div className="flex items-start justify-between gap-3">
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-10 min-h-screen bg-transparent">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Department Hubs</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Direct access to specialized departmental managers.</p>
-        </div>
-      </div>
-
-      <div className="mt-8 flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/5 focus-within:ring-2 focus-within:ring-teal-500/20 focus-within:border-teal-500 transition-all">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search departments..."
-            className="w-full bg-transparent text-sm font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
-          />
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+            Department <span className="text-teal-600 dark:text-teal-400">Hubs</span>
+          </h1>
+          <p className="text-base text-slate-600 dark:text-gray-400 font-medium max-w-lg leading-relaxed">
+            Access specialized management portals for each department. All global operations are unified at HQ.
+          </p>
         </div>
         <Link
           href="/hq/dashboard/superadmin/users"
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-3 text-sm font-black text-white dark:bg-white dark:text-gray-900 active:scale-95 hover:bg-gray-800 dark:hover:bg-gray-100 transition shadow-lg shadow-gray-900/10 dark:shadow-none"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-4 text-sm font-black text-white dark:bg-white dark:text-slate-900 active:scale-95 hover:bg-slate-800 dark:hover:bg-gray-100 transition-all shadow-xl shadow-slate-900/10 dark:shadow-none"
         >
           <Users2 className="h-4 w-4" />
-          <span>User Access Control</span>
+          <span>ACCESS CONTROL</span>
         </Link>
       </div>
 
-      <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div className="mt-10">
+        <div className="group relative max-w-2xl">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <div className="h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors">
+              <Building2 className="h-4 w-4" />
+            </div>
+          </div>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by department name or description..."
+            className="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 pl-11 pr-4 py-4 rounded-2xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/50 focus:ring-4 focus:ring-teal-500/10 transition-all shadow-sm"
+          />
+        </div>
+      </div>
+
+      <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2">
         {filtered.map((d) => (
           <button
             key={d.id}
             onClick={() => router.push(d.href)}
-            className="text-left rounded-[2rem] border border-gray-200 bg-white p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] dark:border-white/10 dark:bg-white/5 group relative overflow-hidden"
+            className="text-left rounded-[2.5rem] border-2 border-slate-50 bg-white p-8 shadow-sm hover:shadow-2xl hover:shadow-teal-900/5 hover:-translate-y-2 active:scale-[0.98] dark:border-white/5 dark:bg-slate-900 group relative overflow-hidden transition-all duration-500"
           >
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-               <d.icon className="h-24 w-24 text-gray-900 dark:text-white" />
-            </div>
+            {/* Ambient Background Glow */}
+            <div className="absolute -top-24 -right-24 h-48 w-48 bg-teal-50/50 dark:bg-teal-500/5 rounded-full blur-3xl transition-colors group-hover:bg-teal-100/50 dark:group-hover:bg-teal-500/10" />
             
-            <div className="flex flex-col gap-6 relative z-10">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-900 text-white transition-all group-hover:scale-110 dark:bg-white/10 dark:text-white dark:group-hover:bg-white dark:group-hover:text-gray-900">
+            <div className="flex flex-col gap-8 relative z-10">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-lg shadow-teal-600/20 transition-all duration-500 group-hover:scale-110 group-hover:bg-teal-500 dark:bg-teal-500/10 dark:text-teal-400 dark:group-hover:bg-teal-500 dark:group-hover:text-white">
                 <d.icon className="h-8 w-8" />
               </div>
-              <div className="min-w-0">
-                <p className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{d.name}</p>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400 font-medium">{d.description}</p>
+              
+              <div className="space-y-3">
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                  {d.name}
+                </h3>
+                <p className="text-sm leading-relaxed text-slate-500 dark:text-gray-400 font-semibold italic">
+                  "{d.description}"
+                </p>
               </div>
               
-              <div className="flex items-center text-xs font-black text-teal-600 dark:text-teal-400 group-hover:gap-2 transition-all uppercase tracking-widest">
-                <span>OPEN HUB</span>
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+              <div className="pt-4 border-t border-slate-50 dark:border-white/5 flex items-center justify-between">
+                <div className="flex items-center text-xs font-black text-teal-600 dark:text-teal-400 group-hover:gap-2 transition-all uppercase tracking-widest">
+                  <span>LAUNCH PORTAL</span>
+                  <span className="opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">→</span>
+                </div>
+                <div className="h-1.5 w-1.5 rounded-full bg-slate-200 dark:bg-white/10 group-hover:bg-teal-500 transition-colors" />
               </div>
             </div>
           </button>
         ))}
       </div>
 
-      <div className="mt-12 rounded-[2rem] border border-gray-100 bg-white/50 p-8 shadow-sm dark:border-white/10 dark:bg-white/5 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-teal-100 dark:bg-teal-900/20">
-            <Building2 className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+      <div className="mt-16 rounded-[2.5rem] border-2 border-dashed border-slate-100 bg-slate-50/50 p-10 dark:border-white/5 dark:bg-slate-900/30 backdrop-blur-sm relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+          <div className="h-20 w-20 shrink-0 flex items-center justify-center rounded-3xl bg-white dark:bg-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none text-teal-600 dark:text-teal-400">
+            <Building2 className="h-10 w-10" />
           </div>
-          <p className="text-sm font-black text-gray-900 dark:text-white">Centralized Management Notice</p>
+          <div className="text-center md:text-left">
+            <h4 className="text-lg font-black text-slate-900 dark:text-white mb-2">Centralized Command Structure</h4>
+            <p className="text-sm leading-relaxed text-slate-500 dark:text-gray-400 font-medium max-w-2xl">
+              KhanHub HQ operates as the primary authority for Approvals, Finance, and Global Audit. 
+              Departmental hubs are specialized execution layers for managing entity-specific data like patient records and student academics.
+            </p>
+          </div>
         </div>
-        <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-          Approvals, Finance, and Global Audit are unified at the HQ level. Departmental hubs provide access to specific internal entities like patient profiles and student academic records.
-        </p>
       </div>
     </div>
   );

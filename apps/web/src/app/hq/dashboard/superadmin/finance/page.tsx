@@ -83,37 +83,37 @@ export default function SuperadminFinancePage() {
 
   if (loading || !summary || !insights) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-950">
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
         <InlineLoading label="Constructing Financial Dashboard..." />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 bg-gray-950 min-h-screen text-white">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 min-h-screen text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <div className="rounded-xl bg-amber-400/10 p-2">
-              <BarChart3 className="h-6 w-6 text-amber-400" />
+              <BarChart3 className="h-6 w-6 text-amber-600 dark:text-amber-400" />
             </div>
             <h1 className="text-3xl font-black tracking-tight">Finance Command Center</h1>
           </div>
-          <p className="mt-2 text-sm font-medium text-gray-500">Real-time financial intelligence across all KhanHub portals.</p>
+          <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-400">Real-time financial intelligence across all KhanHub portals.</p>
         </div>
         
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => router.push('/hq/dashboard/superadmin/analytics')}
-            className="flex h-11 items-center gap-2 rounded-2xl bg-white/5 border border-white/10 px-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/10 active:scale-95"
+            className="flex h-11 items-center gap-2 rounded-2xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white transition hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95"
           >
             <LayoutDashboard size={16} />
             Analytics
           </button>
           <button
             onClick={() => setShowReportModal(true)}
-            className="flex h-11 items-center gap-2 rounded-2xl bg-orange-600 px-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-orange-700 active:scale-95"
+            className="flex h-11 items-center gap-2 rounded-2xl bg-orange-600 px-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-orange-700 active:scale-95 shadow-lg shadow-orange-600/20"
           >
             <FileText size={16} />
             <span className="hidden sm:inline">Detailed Report</span>
@@ -132,7 +132,7 @@ export default function SuperadminFinancePage() {
               "whitespace-nowrap rounded-2xl px-6 py-3 text-xs font-black uppercase tracking-widest transition-all",
               tab === t 
                 ? "bg-amber-400 text-black shadow-lg shadow-amber-400/20 scale-105" 
-                : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white"
+                : "bg-gray-100 text-gray-500 border border-transparent dark:bg-white/5 dark:text-gray-400 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
             )}
           >
             {t === 'combined' ? 'Universal Feed' : t}
@@ -153,10 +153,10 @@ export default function SuperadminFinancePage() {
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Revenue Overview Chart */}
-        <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+        <div className="lg:col-span-2 rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm backdrop-blur-sm">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-black uppercase tracking-widest text-amber-400">Revenue Stream</h2>
+              <h2 className="text-lg font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Revenue Stream</h2>
               <p className="text-xs font-bold text-gray-500 uppercase">Last 30 days performance</p>
             </div>
           </div>
@@ -173,11 +173,11 @@ export default function SuperadminFinancePage() {
                     <stop offset="95%" stopColor="#F87171" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888820" vertical={false} />
                 <XAxis dataKey="day" hide />
                 <YAxis hide />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#020617', borderRadius: '16px', border: '1px solid #ffffff10', color: '#fff' }}
+                  contentStyle={{ backgroundColor: 'var(--tooltip-bg, #fff)', borderRadius: '16px', border: '1px solid #88888820' }}
                   itemStyle={{ fontSize: '12px', fontWeight: '900' }}
                 />
                 <Area type="monotone" dataKey="income" stroke="#10B981" fillOpacity={1} fill="url(#colorInc)" strokeWidth={3} />
@@ -188,9 +188,9 @@ export default function SuperadminFinancePage() {
         </div>
 
         {/* Breakdown Pie Chart */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+        <div className="rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm backdrop-blur-sm">
           <div className="mb-6 flex items-center gap-2">
-            <PieChartIcon className="h-4 w-4 text-amber-400" />
+            <PieChartIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <h2 className="text-sm font-black uppercase tracking-widest">Type Breakdown</h2>
           </div>
           <div className="h-[250px] w-full">
@@ -209,7 +209,7 @@ export default function SuperadminFinancePage() {
                 </Pie>
                 <Tooltip 
                   formatter={(value: number) => formatPKR(value)}
-                  contentStyle={{ backgroundColor: '#020617', borderRadius: '16px', border: '1px solid #ffffff10' }}
+                  contentStyle={{ backgroundColor: 'var(--tooltip-bg, #fff)', borderRadius: '16px', border: '1px solid #88888820' }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }} />
               </PieChart>
@@ -220,17 +220,17 @@ export default function SuperadminFinancePage() {
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Weekly Growth Bar Chart */}
-        <div className="lg:col-span-4 rounded-3xl border border-white/10 bg-white/5 p-6">
-          <h2 className="mb-6 text-sm font-black uppercase tracking-widest">Week-over-Week</h2>
+        <div className="lg:col-span-4 rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm">
+          <h2 className="mb-6 text-sm font-black uppercase tracking-widest text-gray-900 dark:text-gray-100">Week-over-Week</h2>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={insights.weeks}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis dataKey="week" stroke="#ffffff50" fontSize={10} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888820" vertical={false} />
+                <XAxis dataKey="week" stroke="#88888850" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis hide />
                 <Tooltip 
-                  cursor={{ fill: '#ffffff05' }}
-                  contentStyle={{ backgroundColor: '#020617', borderRadius: '16px', border: '1px solid #ffffff10' }}
+                  cursor={{ fill: '#88888810' }}
+                  contentStyle={{ backgroundColor: 'var(--tooltip-bg, #fff)', borderRadius: '16px', border: '1px solid #88888820' }}
                 />
                 <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} barSize={12} />
                 <Bar dataKey="expense" fill="#F87171" radius={[4, 4, 0, 0]} barSize={12} />
@@ -240,10 +240,10 @@ export default function SuperadminFinancePage() {
         </div>
 
         {/* Top Pending Dues */}
-        <div className="lg:col-span-8 rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div className="lg:col-span-8 rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-sm font-black uppercase tracking-widest">Top Pending Dues</h2>
-            <span className="rounded-full bg-amber-400/10 px-3 py-1 text-[10px] font-black text-amber-400">CRITICAL LIST</span>
+            <h2 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-gray-100">Top Pending Dues</h2>
+            <span className="rounded-full bg-amber-400/10 px-3 py-1 text-[10px] font-black text-amber-600 dark:text-amber-400">CRITICAL LIST</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -256,26 +256,26 @@ export default function SuperadminFinancePage() {
                   <th className="pb-4">Last Payment</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {insights.topOutstanding.map((r, i) => (
-                  <tr key={r.id} className="group hover:bg-white/5 transition-colors">
-                    <td className="py-4 font-bold">{r.name}</td>
+                  <tr key={r.id} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                    <td className="py-4 font-bold text-gray-900 dark:text-gray-100">{r.name}</td>
                     <td className="py-4">
                       <span className={cn(
                         "rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-widest border",
-                        r.portal === 'rehab' ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20" : "bg-blue-400/10 text-blue-400 border-blue-400/20"
+                        r.portal === 'rehab' ? "bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 border-emerald-400/20" : "bg-blue-400/10 text-blue-600 dark:text-blue-400 border-blue-400/20"
                       )}>
                         {r.portal}
                       </span>
                     </td>
-                    <td className="py-4 font-black text-amber-400">{formatPKR(r.outstanding)}</td>
+                    <td className="py-4 font-black text-amber-600 dark:text-amber-400">{formatPKR(r.outstanding)}</td>
                     <td className="py-4">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">
-                        <AlertCircle size={14} className={r.daysOverdue > 30 ? "text-rose-500" : "text-gray-600"} />
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-400">
+                        <AlertCircle size={14} className={r.daysOverdue > 30 ? "text-rose-500" : "text-gray-400 dark:text-gray-600"} />
                         {r.daysOverdue} days
                       </div>
                     </td>
-                    <td className="py-4 text-xs font-medium text-gray-400">{r.lastPaymentDate || 'Never'}</td>
+                    <td className="py-4 text-xs font-medium text-gray-500 dark:text-gray-400">{r.lastPaymentDate || 'Never'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -286,28 +286,28 @@ export default function SuperadminFinancePage() {
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Daily Series Table */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <h2 className="mb-6 text-sm font-black uppercase tracking-widest border-l-4 border-amber-400 pl-3">Daily Performance</h2>
+        <div className="rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm">
+          <h2 className="mb-6 text-sm font-black uppercase tracking-widest border-l-4 border-amber-400 pl-3 text-gray-900 dark:text-gray-100">Daily Performance</h2>
           <div className="space-y-3">
             {insights.daily.slice(-7).reverse().map((p) => (
-              <div key={p.day} className="flex items-center justify-between rounded-2xl bg-white/5 p-4 border border-white/5 group hover:border-white/10 transition-all">
+              <div key={p.day} className="flex items-center justify-between rounded-2xl bg-gray-50 dark:bg-white/5 p-4 border border-gray-100 dark:border-white/5 group hover:border-gray-200 dark:hover:border-white/10 transition-all">
                 <div className="flex items-center gap-4">
                   <div className={cn(
                     "rounded-xl p-2",
-                    p.variance >= 0 ? "bg-emerald-400/10 text-emerald-400" : "bg-rose-400/10 text-rose-400"
+                    p.variance >= 0 ? "bg-emerald-400/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-400/10 text-rose-600 dark:text-rose-400"
                   )}>
                     {p.variance >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-white">{p.day}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white">{p.day}</p>
                     <p className="text-[10px] font-bold text-gray-500 uppercase">{p.count} transactions recorded</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-black text-white">{formatPKR(p.income)}</p>
+                  <p className="text-sm font-black text-gray-900 dark:text-white">{formatPKR(p.income)}</p>
                   <p className={cn(
                     "text-[10px] font-black uppercase tracking-widest",
-                    p.variance >= 0 ? "text-emerald-400" : "text-rose-400"
+                    p.variance >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                   )}>
                     {p.variance >= 0 ? '+' : ''}{formatPKR(p.variance)}
                   </p>
@@ -318,12 +318,12 @@ export default function SuperadminFinancePage() {
         </div>
 
         {/* Reconciliation Summary */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div className="rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-sm font-black uppercase tracking-widest">Recent Closings</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-gray-100">Recent Closings</h2>
             <button 
               onClick={() => router.push('/hq/dashboard/superadmin/reconciliation')}
-              className="group flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-amber-400"
+              className="group flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-amber-600 dark:hover:text-amber-400"
             >
               View All <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </button>
@@ -331,18 +331,18 @@ export default function SuperadminFinancePage() {
           <div className="space-y-3">
             {insights.recentReconciliations.map((r: any) => (
               <div key={r.id} className={cn(
-                "rounded-2xl bg-white/5 p-4 border-l-4 transition-all",
+                "rounded-2xl bg-gray-50 dark:bg-white/5 p-4 border-l-4 transition-all shadow-sm",
                 r.status === 'verified' ? "border-emerald-500" : r.status === 'flagged' ? "border-rose-500" : "border-amber-500"
               )}>
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                       <span className="text-xs font-black uppercase text-white">{r.date}</span>
+                       <span className="text-xs font-black uppercase text-gray-900 dark:text-white">{r.date}</span>
                        <span className={cn(
                          "rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-tighter",
-                         r.status === 'verified' ? "bg-emerald-400/20 text-emerald-400" : 
-                         r.status === 'flagged' ? "bg-rose-400/20 text-rose-400" : 
-                         "bg-amber-400/20 text-amber-400"
+                         r.status === 'verified' ? "bg-emerald-400/20 text-emerald-600 dark:text-emerald-400" : 
+                         r.status === 'flagged' ? "bg-rose-400/20 text-rose-600 dark:text-rose-400" : 
+                         "bg-amber-400/20 text-amber-600 dark:text-amber-400"
                        )}>
                          {r.status}
                        </span>
@@ -352,10 +352,10 @@ export default function SuperadminFinancePage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-black text-white">{formatPKR(r.actualClosing || r.actualCash || 0)}</p>
+                    <p className="text-xs font-black text-gray-900 dark:text-white">{formatPKR(r.actualClosing || r.actualCash || 0)}</p>
                     <p className={cn(
                       "text-[10px] font-black uppercase tracking-widest",
-                      (r.variance || r.difference) === 0 ? "text-gray-500" : "text-rose-400"
+                      (r.variance || r.difference) === 0 ? "text-gray-400 dark:text-gray-500" : "text-rose-600 dark:text-rose-400"
                     )}>
                       Var: {formatPKR(Math.abs(r.variance || r.difference || 0))}
                     </p>

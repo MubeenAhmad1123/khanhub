@@ -802,7 +802,7 @@ export default function PatientDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
         <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
       </div>
     );
@@ -811,149 +811,101 @@ export default function PatientDetailPage() {
   if (!patient) return null;
 
   return (
-    <div className="w-full overflow-x-hidden pb-20 bg-gray-50/50">
-      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+    <div className="w-full overflow-x-hidden pb-20 bg-slate-50 dark:bg-gray-950 transition-colors duration-300 min-h-screen">
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-1 lg:px-0">
         
-        {/* Top Link - Hidden on mobile if header is sticky */}
-        <div className="px-1 sm:px-0">
+        {/* Top Link - Back Navigation */}
+        <div className="px-4 sm:px-0 mt-4 leading-none">
           <Link 
             href="/departments/rehab/dashboard/admin/patients" 
-            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-black text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-all uppercase tracking-widest group"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Back to Patients
           </Link>
         </div>
         
-        {/* Header Profile Summary - Optimized for mobile */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 w-full p-4 sm:p-6 md:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 sticky top-[56px] z-10 sm:relative sm:top-0 overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 z-0"></div>
+        {/* Header Profile Summary - Premium Floating Card */}
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 dark:shadow-none border border-white dark:border-white/5 w-full p-5 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 sticky top-[64px] z-[50] sm:relative sm:top-0 transition-all duration-500 overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 dark:bg-teal-500/5 rounded-bl-full transition-colors group-hover:bg-teal-100 dark:group-hover:bg-teal-500/10 -mr-4 -mt-4"></div>
           
-          <div className="relative z-10">
+          <div className="relative z-10 shrink-0">
             {patient.photoUrl ? (
-              <img src={patient.photoUrl} alt={patient.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
+              <div className="relative">
+                <img src={patient.photoUrl} alt={patient.name} className="w-24 h-24 md:w-36 md:h-36 rounded-2xl sm:rounded-[2rem] object-cover border-4 border-white dark:border-gray-800 shadow-xl bg-gray-100 dark:bg-gray-800" />
+                <div className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-emerald-500 border-4 border-white dark:border-gray-900" />
+              </div>
             ) : (
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
-                {patient.name.charAt(0).toUpperCase()}
+              <div className="relative">
+                <div className="w-24 h-24 md:w-36 md:h-36 rounded-2xl sm:rounded-[2rem] bg-teal-600 text-white flex items-center justify-center font-black text-4xl sm:text-6xl border-4 border-white dark:border-gray-800 shadow-xl shadow-teal-600/20">
+                  {patient.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-emerald-500 border-4 border-white dark:border-gray-900" />
               </div>
             )}
           </div>
           
-          <div className="relative z-10 flex-1 text-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{patient.name}</h1>
-            <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
-              <span className="flex items-center justify-center gap-1">
-                <Calendar className="w-4 h-4" /> 
-                Admitted: {formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate)}
-              </span>
-              <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
-                PKR {patient.monthlyPackage?.toLocaleString() || patient.packageAmount?.toLocaleString()} / month
-              </span>
-              <span className="flex items-center justify-center gap-1 text-orange-700 font-bold bg-orange-50 px-3 py-1 rounded-full shadow-sm border border-orange-100 italic">
-                📅 {patient.durationFormatted}
-              </span>
-              <span className="flex items-center justify-center gap-1 text-blue-700 font-bold bg-blue-50 px-3 py-1 rounded-full shadow-sm border border-blue-100">
-                💰 Total Due: PKR {patient.dueTillDate?.toLocaleString()}
-              </span>
+          <div className="relative z-10 flex-1 text-center sm:text-left min-w-0">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate leading-tight">
+                  {patient.name}
+                </h1>
+                <button 
+                  onClick={() => setShowEditModal(true)}
+                  className="self-center sm:self-start p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-400 hover:text-teal-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-teal-900/20 dark:hover:text-teal-400 transition-all border border-slate-200/50 dark:border-white/5 active:scale-90"
+                  title="Edit Profile"
+                >
+                  <Pencil className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2 text-sm text-slate-500 dark:text-gray-400 font-medium">
+                <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-full border border-slate-200 dark:border-white/5">
+                  <Calendar className="w-3.5 h-3.5 text-teal-600" /> 
+                  <span className="font-bold">Admitted:</span> {formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate)}
+                </span>
+                
+                <span className="flex items-center gap-1.5 text-teal-700 dark:text-teal-400 font-black bg-teal-50 dark:bg-teal-900/20 px-3 py-1.5 rounded-full shadow-sm border border-teal-100 dark:border-teal-500/20">
+                  <DollarSign className="w-3.5 h-3.5" />
+                  {patient.monthlyPackage?.toLocaleString() || patient.packageAmount?.toLocaleString()} / month
+                </span>
+              </div>
+
+              <div className="flex flex-wrap justify-center sm:justify-start gap-4 mt-2">
+                <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-black bg-orange-50 dark:bg-orange-900/20 px-4 py-2 rounded-xl border border-orange-100 dark:border-orange-900/10 italic text-xs uppercase tracking-tight">
+                  <span className="text-sm">📅</span> {patient.durationFormatted}
+                </div>
+                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-black bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl border border-blue-100 dark:border-blue-900/10 text-xs uppercase tracking-tight">
+                  <span className="text-sm">💰</span> Total Due: PKR {patient.dueTillDate?.toLocaleString()}
+                </div>
+              </div>
             </div>
-            {patient.diagnosis && (
-              <p className="text-gray-600 max-w-2xl bg-gray-50 px-4 py-3 rounded-xl text-sm border border-gray-100">
-                <span className="font-bold text-gray-800">Diagnosis/Notes:</span><br/>
-                {patient.diagnosis}
-              </p>
-            )}
           </div>
         </div>
 
-        {/* Tabs Navigation - Scrollable on mobile */}
-        {/* Tabs Navigation - Sticky under patient summary on mobile */}
-        <div className="sticky top-[56px] sm:static z-20 w-full overflow-hidden">
-          <div className="flex overflow-x-auto no-scrollbar gap-1 border-b border-gray-100 bg-white rounded-t-xl sm:rounded-t-2xl p-1 shadow-sm">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'profile' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <User className="w-4 h-4" /> Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('admission')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'admission' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <ClipboardList className="w-4 h-4" /> Admission
-            </button>
-            <button
-              onClick={() => setActiveTab('daily')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'daily' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <Activity className="w-4 h-4" /> Daily Sheet
-            </button>
-            <button
-              onClick={() => setActiveTab('progress')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'progress' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <TrendingUp className="w-4 h-4" /> Progress
-            </button>
-            <button
-              onClick={() => setActiveTab('therapy')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'therapy' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <Brain className="w-4 h-4" /> Therapy
-            </button>
-            <button
-              onClick={() => setActiveTab('meds')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'meds' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <Pill className="w-4 h-4" /> Medication
-            </button>
-            <button
-              onClick={() => setActiveTab('fees')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'fees' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <DollarSign className="w-4 h-4" /> Fees
-            </button>
-            <button
-              onClick={() => setActiveTab('canteen')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'canteen' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <ShoppingCart className="w-4 h-4" /> Canteen
-            </button>
-            <button
-              onClick={() => setActiveTab('videos')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'videos' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <Video className="w-4 h-4" /> Videos
-            </button>
-            <button
-              onClick={() => setActiveTab('visits')}
-              className={`px-3 py-2.5 text-xs whitespace-nowrap font-semibold flex items-center gap-1.5 transition-all border-b-2 ${
-                activeTab === 'visits' ? 'border-teal-500 text-teal-700 bg-teal-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'
-              } rounded-lg`}
-            >
-              <Users className="w-4 h-4" /> Visits
-            </button>
+        {/* Tabs Navigation - Premium Glass Header */}
+        <div className="w-full px-2 sm:px-0 mt-6 mb-4">
+          <div className="flex overflow-x-auto no-scrollbar gap-1.5 border border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl p-1.5">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id as any)}
+                className={`px-5 py-3 text-xs sm:text-[11px] whitespace-nowrap font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all rounded-xl min-w-fit flex-1 ${
+                  activeTab === t.id 
+                    ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/30 active:scale-95' 
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
+                }`}
+              >
+                <t.icon className={`h-4 w-4 ${activeTab === t.id ? 'animate-pulse' : ''}`} />
+                <span>{t.label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Tab Content Areas */}
-        <div className="bg-white rounded-b-2xl shadow-sm border border-gray-100 border-t-0 w-full p-4 md:p-6 min-h-[400px]">
+        <div className="bg-white dark:bg-gray-900 rounded-b-2xl shadow-sm border border-gray-100 dark:border-white/10 border-t-0 w-full p-4 md:p-6 min-h-[400px] transition-colors duration-300">
           
           {/* TAB: PROFILE */}
           {activeTab === 'profile' && (
@@ -978,18 +930,18 @@ export default function PatientDetailPage() {
 
               {isEditing ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                    <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                    <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       Photo
                     </label>
                     <div className="flex items-center gap-4">
                       <div
                         onClick={() => photoInputRef.current?.click()}
-                        className="w-20 h-20 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 transition-all overflow-hidden flex-shrink-0"
+                        className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 dark:hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all overflow-hidden flex-shrink-0"
                       >
                         {photoPreview ? (
                           <img 
@@ -1020,15 +972,15 @@ export default function PatientDetailPage() {
                       />
                       <div>
                         {photoFile ? (
-                          <p className="text-xs text-green-600 font-semibold mb-1">
+                          <p className="text-xs text-green-600 dark:text-green-400 font-semibold mb-1">
                             ✓ New photo selected
                           </p>
                         ) : photoPreview ? (
-                          <p className="text-xs text-teal-600 font-medium">
+                          <p className="text-xs text-teal-600 dark:text-teal-400 font-medium">
                             Current photo
                           </p>
                         ) : (
-                          <p className="text-xs text-gray-500 font-medium">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                             Click to upload a photo
                           </p>
                         )}
@@ -1041,7 +993,7 @@ export default function PatientDetailPage() {
                               setPhotoPreview('');
                               setEditForm(prev => ({ ...prev, photoUrl: '' }));
                             }}
-                            className="text-[10px] text-red-400 hover:text-red-600 mt-1 font-semibold"
+                            className="text-[10px] text-red-400 hover:text-red-500 mt-1 font-semibold"
                           >
                             Remove
                           </button>
@@ -1050,36 +1002,36 @@ export default function PatientDetailPage() {
                     </div>
                   </div>
                   <div className="md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Package (PKR)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Package (PKR)</label>
                     <input
                       type="number"
                       value={editForm.packageAmount}
                       onChange={e => setEditForm({...editForm, packageAmount: Number(e.target.value)})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                      className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
                     />
                   </div>
                   <div className="md:col-span-2">
-                     <label className="block text-sm font-medium text-gray-700 mb-1">Admission Date</label>
+                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admission Date</label>
                      <input 
                        type="date" 
                        value={editForm.admissionDate} 
                        onChange={e => setEditForm({...editForm, admissionDate: e.target.value})} 
-                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                       className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white" 
                      />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis / Notes</label>
-                    <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Diagnosis / Notes</label>
+                    <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 dark:border-white/20 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none text-gray-900 dark:text-white" />
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
-                  <div className="bg-teal-50 border border-teal-100 w-full p-6 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2 shadow-sm">
-                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1">Total Stay Duration</p>
-                    <p className="text-4xl font-black text-teal-700">
+                  <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-800/50 w-full p-6 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2 shadow-sm">
+                    <p className="text-[10px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Total Stay Duration</p>
+                    <p className="text-4xl font-black text-teal-700 dark:text-teal-300">
                       {patient.daysAdmitted || 0} Days
                     </p>
-                    <p className="text-xs font-bold text-teal-500 mt-1 italic">
+                    <p className="text-xs font-bold text-teal-500 dark:text-teal-400/80 mt-1 italic">
                       {patient.durationFormatted}
                     </p>
                     {patient.isActive && (
@@ -1087,41 +1039,41 @@ export default function PatientDetailPage() {
                         type="button"
                         onClick={handleDischarge}
                         disabled={deactivating}
-                        className="mt-6 bg-white border border-teal-200 text-teal-600 hover:bg-teal-50 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-60"
+                        className="mt-6 bg-white dark:bg-gray-800 border border-teal-200 dark:border-teal-700 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-60"
                       >
                         {deactivating ? 'Discharging...' : 'Discharge Patient'}
                       </button>
                     )}
                   </div>
                   <div className="w-full">
-                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Current Balance Due</span>
-                    <span className="font-black text-red-700 border border-red-100 bg-red-50 px-3 py-1.5 rounded-lg inline-block text-sm">
+                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Current Balance Due</span>
+                    <span className="font-black text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-3 py-1.5 rounded-lg inline-block text-sm">
                       PKR {patient.overallRemaining?.toLocaleString()}
                     </span>
-                    <p className="text-[10px] text-gray-400 mt-1">Total Due till today: PKR {patient.dueTillDate?.toLocaleString()}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Total Due till today: PKR {patient.dueTillDate?.toLocaleString()}</p>
                   </div>
                   <div className="w-full">
-                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
-                    <span className="font-mono font-bold text-gray-900 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100">
+                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
+                    <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100 dark:border-white/5">
                       {patient.assignedStaffId || 'None'}
                     </span>
                   </div>
                   <div className="sm:col-span-2 pt-2 w-full">
-                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
-                    <span className="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg inline-block border border-gray-100 w-full break-all">
+                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
+                    <span className="text-sm font-mono text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg inline-block border border-gray-100 dark:border-white/5 w-full break-all">
                       {patient.id}
                     </span>
                   </div>
                 </div>
               )}
 
-              <div className="pt-8 border-t border-red-50 w-full">
-                <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
-                <p className="text-sm text-gray-500 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
+              <div className="pt-8 border-t border-red-50 dark:border-red-900/20 w-full">
+                <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
                 <button 
                   onClick={handleDeactivate} 
                   disabled={deactivating}
-                  className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
+                  className="bg-white dark:bg-gray-900 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
                 >
                   {deactivating ? 'Deactivating...' : 'Deactivate Patient'}
                 </button>
@@ -1204,11 +1156,11 @@ export default function PatientDetailPage() {
               />
 
               {/* Detailed Transaction Log */}
-              <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
+              <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-8 shadow-sm border border-gray-100 dark:border-white/10">
+                <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-white/10 pb-4">
                   <div>
-                    <h3 className="text-xl font-black text-[#1a3a5c] tracking-tight">Payment Transaction Log</h3>
-                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Full audit trail of all entries</p>
+                    <h3 className="text-xl font-black text-[#1a3a5c] dark:text-blue-400 tracking-tight">Payment Transaction Log</h3>
+                    <p className="text-gray-400 dark:text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Full audit trail of all entries</p>
                   </div>
                   {!isAdmin && (
                     <button 
@@ -1218,7 +1170,7 @@ export default function PatientDetailPage() {
                         setPaymentNote('');
                         setShowAddFeeModal(true);
                       }}
-                      className="bg-[#1a3a5c] text-white px-5 py-2.5 rounded-xl font-black text-sm hover:translate-y-[-2px] transition-all active:scale-95 shadow-lg shadow-blue-900/10 flex items-center gap-2"
+                      className="bg-[#1a3a5c] dark:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-sm hover:translate-y-[-2px] transition-all active:scale-95 shadow-lg shadow-blue-900/10 dark:shadow-none flex items-center gap-2"
                     >
                       <Plus size={16} /> Add Payment
                     </button>
@@ -1226,15 +1178,15 @@ export default function PatientDetailPage() {
                 </div>
 
                 {allPayments.length === 0 ? (
-                  <div className="text-center py-16 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+                  <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
                     <DollarSign size={48} className="mx-auto mb-4 opacity-10" />
-                    <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No transactions found</p>
+                    <p className="text-gray-400 dark:text-gray-500 font-bold uppercase text-xs tracking-widest">No transactions found</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full">
                       <thead>
-                        <tr className="text-left text-gray-500 text-[10px] uppercase font-black tracking-widest border-b border-gray-100">
+                        <tr className="text-left text-gray-500 dark:text-gray-400 text-[10px] uppercase font-black tracking-widest border-b border-gray-100 dark:border-white/10">
                           <th className="pb-4">Date</th>
                           <th className="pb-4">Amount</th>
                           <th className="pb-4">Method</th>
@@ -1243,27 +1195,27 @@ export default function PatientDetailPage() {
                           {session?.role === 'superadmin' && <th className="pb-4">Actions</th>}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                         {allPayments.map((p: any) => {
                           const dateObj = p.date?.toDate?.() ? p.date.toDate() : new Date(p.date || Date.now());
                           return (
-                          <tr key={p.id} className="group hover:bg-gray-50/80 transition-colors">
+                          <tr key={p.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
                             <td className="py-5">
-                              <p className="text-sm font-bold text-gray-800">{dateObj.toLocaleDateString()}</p>
-                              <p className="text-[10px] text-gray-400 uppercase font-bold">{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                              <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{dateObj.toLocaleDateString()}</p>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase">{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </td>
                             <td className="py-5">
-                              <span className="text-base font-black text-[#1a3a5c]">₨{Number(p.amount).toLocaleString()}</span>
+                              <span className="text-base font-black text-[#1a3a5c] dark:text-blue-400">₨{Number(p.amount).toLocaleString()}</span>
                             </td>
-                            <td className="py-5 font-bold text-xs text-gray-500">{p.method || 'Cash'}</td>
+                            <td className="py-5 font-bold text-xs text-gray-500 dark:text-gray-400">{p.method || 'Cash'}</td>
                             <td className="py-5">
-                              <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${p.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${p.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
                                 {p.status === 'approved' ? 'APPROVED' : 'PENDING'}
                               </span>
                             </td>
                             <td className="py-5">
-                              <p className="text-[10px] text-gray-400 font-medium">Verifier: {p.cashierId || 'Admin'}</p>
-                              {p.note && <p className="text-[10px] text-[#1a3a5c] font-black italic mt-0.5 truncate max-w-[150px]">{p.note}</p>}
+                              <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Verifier: {p.cashierId || 'Admin'}</p>
+                              {p.note && <p className="text-[10px] text-[#1a3a5c] dark:text-blue-400 font-black italic mt-0.5 truncate max-w-[150px]">{p.note}</p>}
                             </td>
                             {session?.role === 'superadmin' && (
                               <td className="py-5">
@@ -1272,7 +1224,7 @@ export default function PatientDetailPage() {
                                     setDeletingPayment(p);
                                     setShowDeleteModal(true);
                                   }}
-                                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                  className="p-2 text-rose-50 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                                   title="Delete Transaction"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1295,14 +1247,14 @@ export default function PatientDetailPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
                   <button onClick={() => changeCanteenMonth(-1)} 
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
+                    className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition">
                     <ChevronLeft size={20} className="text-gray-400" />
                   </button>
-                  <span className="font-black text-gray-900 text-lg min-w-[160px] text-center">
+                  <span className="font-black text-gray-900 dark:text-white text-lg min-w-[160px] text-center">
                     {formatDateDMY(new Date(canteenMonth + '-01'))}
                   </span>
                   <button onClick={() => changeCanteenMonth(1)}
-                    className="p-2 rounded-xl hover:bg-gray-100 transition">
+                    className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition">
                     <ChevronRight size={20} className="text-gray-400" />
                   </button>
                 </div>
@@ -1321,44 +1273,44 @@ export default function PatientDetailPage() {
               </div>
 
               {!canteenRecord ? (
-                <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-12 rounded-3xl text-center">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <ShoppingCart className="w-8 h-8 text-gray-300" />
+                <div className="bg-gray-50 dark:bg-gray-800/50 border-2 border-dashed border-gray-200 dark:border-white/10 p-12 rounded-3xl text-center">
+                  <div className="w-16 h-16 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                    <ShoppingCart className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                   </div>
-                  <h3 className="text-gray-900 font-bold mb-1">No canteen record for this month</h3>
-                  <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                  <h3 className="text-gray-900 dark:text-white font-bold mb-1">No canteen record for this month</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
                     Add a deposit or expense to get started with this month's wallet.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   {/* Balance Card */}
-                  <div className="text-center p-8 bg-gradient-to-br from-teal-50 to-teal-100 rounded-[2rem] border border-teal-200/50 shadow-sm">
-                    <p className="text-[10px] font-black text-teal-500 uppercase tracking-widest mb-1">Available Balance</p>
-                    <p className={`text-5xl font-black ${canteenRecord.balance >= 0 ? 'text-teal-700' : 'text-red-600'}`}>
+                  <div className="text-center p-8 bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-900/30 rounded-[2rem] border border-teal-200/50 dark:border-teal-800/50 shadow-sm">
+                    <p className="text-[10px] font-black text-teal-500 dark:text-teal-400 uppercase tracking-widest mb-1">Available Balance</p>
+                    <p className={`text-5xl font-black ${canteenRecord.balance >= 0 ? 'text-teal-700 dark:text-teal-300' : 'text-red-600 dark:text-red-400'}`}>
                       PKR {Number(canteenRecord.balance).toLocaleString('en-PK')}
                     </p>
                     <div className="flex justify-center gap-8 mt-6">
                       <div className="text-left">
-                        <p className="text-[10px] text-green-600 font-black uppercase tracking-widest">↑ Deposited</p>
-                        <p className="text-sm font-black text-green-700">PKR {Number(canteenRecord.totalDeposited).toLocaleString('en-PK')}</p>
+                        <p className="text-[10px] text-green-600 dark:text-green-400 font-black uppercase tracking-widest">↑ Deposited</p>
+                        <p className="text-sm font-black text-green-700 dark:text-green-300">PKR {Number(canteenRecord.totalDeposited).toLocaleString('en-PK')}</p>
                       </div>
-                      <div className="w-px h-8 bg-teal-200/50"></div>
+                      <div className="w-px h-8 bg-teal-200/50 dark:bg-teal-800/50"></div>
                       <div className="text-left">
-                        <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">↓ Spent</p>
-                        <p className="text-sm font-black text-red-600">PKR {Number(canteenRecord.totalSpent).toLocaleString('en-PK')}</p>
+                        <p className="text-[10px] text-red-500 dark:text-red-400 font-black uppercase tracking-widest">↓ Spent</p>
+                        <p className="text-sm font-black text-red-600 dark:text-red-400">PKR {Number(canteenRecord.totalSpent).toLocaleString('en-PK')}</p>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
-                       <h3 className="text-lg font-black text-gray-900">Transaction History</h3>
-                       <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{canteenRecord.transactions?.length || 0} Events</span>
+                    <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/10 pb-2">
+                       <h3 className="text-lg font-black text-gray-900 dark:text-white">Transaction History</h3>
+                       <span className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">{canteenRecord.transactions?.length || 0} Events</span>
                     </div>
                     
                     {!canteenRecord.transactions || canteenRecord.transactions.length === 0 ? (
-                      <p className="text-gray-500 text-sm text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">No transactions recorded.</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-10 bg-gray-50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">No transactions recorded.</p>
                     ) : (
                       <div className="grid grid-cols-1 gap-3">
                         {canteenRecord.transactions
@@ -1370,18 +1322,18 @@ export default function PatientDetailPage() {
                           .map((t: any) => (
                             <div key={t.id} className={`flex items-center justify-between p-4 rounded-2xl border-l-4 transition-all hover:translate-x-1 ${
                               t.type === 'deposit' 
-                                ? 'bg-green-50/50 border-l-green-400' 
-                                : 'bg-red-50/50 border-l-red-400'
+                                ? 'bg-green-50/50 dark:bg-green-900/10 border-l-green-400' 
+                                : 'bg-red-50/50 dark:bg-red-900/10 border-l-red-400'
                             }`}>
                               <div>
-                                <p className="text-sm font-black text-gray-900">{t.description}</p>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                                <p className="text-sm font-black text-gray-900 dark:text-white">{t.description}</p>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase mt-1">
                                   {formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}
                                   <span className="mx-2">•</span>
                                   Verifier: {t.cashierId}
                                 </p>
                               </div>
-                              <p className={`font-black text-base ${t.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+                              <p className={`font-black text-base ${t.type === 'deposit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {t.type === 'deposit' ? '+' : '-'} {Number(t.amount).toLocaleString('en-PK')}
                               </p>
                             </div>
@@ -1397,7 +1349,8 @@ export default function PatientDetailPage() {
           {/* TAB: VIDEOS */}
           {activeTab === 'videos' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between mb-2 border-b border-gray-100 pb-4">
+              <div className="flex items-center justify-between mb-2 border-b border-gray-100 dark:border-white/10 pb-4">
+der-b border-gray-100 pb-4">
                 <div className="flex items-center gap-3">
                   <Video className="w-6 h-6 text-teal-600" />
                   <h2 className="text-xl font-bold text-gray-800">Files & Progress</h2>

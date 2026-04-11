@@ -5,6 +5,7 @@ import '@/styles/globals.css'
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import ConditionalShell from '@/components/layout/ConditionalShell'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
 
 // ─── Viewport ────────────────────────────────────────────────────────────────
 export const viewport: Viewport = {
@@ -158,14 +159,21 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${sora.variable} ${dmSans.variable}`}>
+    <html lang="en" className={`${sora.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <body className="antialiased selection:bg-primary-100 selection:text-primary-900">
-        <ConditionalShell>
-          {children}
-        </ConditionalShell>
-        <Toaster position="bottom-right" />
-        <Analytics />
-        <SpeedInsights />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ConditionalShell>
+            {children}
+          </ConditionalShell>
+          <Toaster position="bottom-right" />
+          <Analytics />
+          <SpeedInsights />
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -9,6 +9,7 @@ import {
   LogOut, Menu, X, ArrowLeft, Sun, Moon, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User,
   Building2, GraduationCap, ChevronLeft, ExternalLink, Heart
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import type { HqRole, HqSession } from '@/types/hq';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
@@ -126,7 +127,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   const [user, setUser] = useState<HqSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [activeDepts, setActiveDepts] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'hq' | string>('hq');
 
@@ -168,34 +169,17 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     }
   }, [router]);
 
-  const toggleDark = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem('hq_dark_mode', String(next));
-  };
+  const darkMode = mounted && resolvedTheme === 'dark';
+  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
+  // Effect for mounting
   useEffect(() => {
-    const saved = localStorage.getItem('hq_dark_mode');
-    if (saved === 'true') {
-      setDarkMode(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setDarkMode(false);
-      document.documentElement.classList.remove('dark');
-    }
+    setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
 
   if (isChecking) {
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="relative">
           <div className="w-16 h-16 border-4 border-teal-500/20 border-t-teal-500 rounded-full animate-spin" />
           <div className="absolute inset-0 flex items-center justify-center">
