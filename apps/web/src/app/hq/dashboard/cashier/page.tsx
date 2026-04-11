@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
-import { sendHqNotification } from '@/lib/hqNotifications';
+import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
 
 type TxnType = 'income' | 'expense';
 type DateMode = 'today' | 'all' | 'range';
@@ -290,13 +290,14 @@ export default function CashierStationPage() {
         await updateDoc(doc(db, 'spims_fees', forwardModalTx.feePaymentId), { status: 'pending' });
       }
 
-      await sendHqNotification({
+      await sendHqPushNotification({
         recipientId: superadminRecipient,
         recipientRole: 'superadmin',
         type: 'tx_forwarded',
         title: 'New Transaction Pending Approval',
         body: `Cashier ${session?.name || 'HQ Cashier'} forwarded a Rs ${Number(forwardModalTx?.amount || 0).toLocaleString()} ${forwardModalTx?.type || 'income'} transaction for approval.`,
         relatedId: txId,
+        actionUrl: '/hq/dashboard/superadmin/approvals',
       });
 
       setMessage({ type: 'success', text: 'Request sent to superadmin approvals.' });
@@ -459,7 +460,19 @@ export default function CashierStationPage() {
       const missingReason = proofReason.trim();
       if (!proofUrl && missingReason) createPayload.proofMissingReason = missingReason;
 
-      await addDoc(collection(db, activeDepartment.txCollection), createPayload);
+      const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
+
+      // Notify superadmin of new transaction pending approval
+      void sendHqPushNotification({
+        recipientId: superadminRecipient,
+        recipientRole: 'superadmin',
+        type: 'tx_forwarded', // Use existing type for notifications
+        title: 'New Transaction Submitted',
+        body: `${session?.name || 'Cashier'} submitted a Rs ${Number(amount).toLocaleString()} transaction for ${selectedEntity.name}.`,
+        relatedId: txRef.id,
+        actionUrl: '/hq/dashboard/superadmin/approvals',
+      });
+
       setMessage({ type: 'success', text: 'Transaction sent for superadmin approval.' });
       setAmount('');
       setDescription('');

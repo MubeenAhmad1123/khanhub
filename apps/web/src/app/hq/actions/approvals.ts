@@ -4,6 +4,7 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireHqSuperadmin } from './auth';
+import { sendHqPushServer } from '@/lib/hqNotificationsServer';
 
 type Dept = 'rehab' | 'spims';
 type Decision = 'approved' | 'rejected';
@@ -138,6 +139,31 @@ export async function decideTransaction(params: {
       performedBy: 'hq_superadmin',
     });
 
+    // Notify the cashier who created the transaction
+    if (data.createdBy) {
+      void (async () => {
+        try {
+          const userSnap = await adminDb.collection('hq_users').doc(data.createdBy).get();
+          if (userSnap.exists) {
+            const cashierData = userSnap.data();
+            const recipientId = String(cashierData?.customId || '').toUpperCase();
+            if (recipientId) {
+              await sendHqPushServer({
+                recipientId,
+                type: params.decision === 'approved' ? 'tx_approved' : 'tx_rejected',
+                title: params.decision === 'approved' ? 'Transaction Approved' : 'Transaction Rejected',
+                body: `Your transaction of Rs ${Number(data.amount).toLocaleString()} for ${data.patientName || data.studentName || 'Patient/Student'} has been ${params.decision}.`,
+                actionUrl: '/hq/dashboard/cashier',
+                relatedId: params.txId,
+              });
+            }
+          }
+        } catch (warn) {
+          console.warn('[Approvals] Notification failed:', warn);
+        }
+      })();
+    }
+
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed.' };
@@ -200,6 +226,31 @@ export async function bulkDecideTransactions(params: {
       createdAt: new Date(),
       performedBy: 'hq_superadmin',
     });
+
+    // Notify creators (simplified for bulk - unique creators)
+    const creators = Array.from(new Set(validSnaps.map(s => s.data()?.createdBy).filter(Boolean)));
+    for (const uid of creators) {
+      void (async () => {
+        try {
+          const userSnap = await adminDb.collection('hq_users').doc(uid as string).get();
+          if (userSnap.exists) {
+            const cashierData = userSnap.data();
+            const recipientId = String(cashierData?.customId || '').toUpperCase();
+            if (recipientId) {
+              await sendHqPushServer({
+                recipientId,
+                type: 'tx_bulk_processed',
+                title: 'Transactions Processed',
+                body: `The superadmin has ${params.decision} ${validSnaps.filter(s => s.data()?.createdBy === uid).length} of your pending transactions.`,
+                actionUrl: '/hq/dashboard/cashier',
+              });
+            }
+          }
+        } catch (warn) {
+          console.warn('[Approvals] Bulk notification failed:', warn);
+        }
+      })();
+    }
 
     return { success: true, processed };
   } catch (err: any) {

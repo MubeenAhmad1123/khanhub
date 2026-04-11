@@ -26,6 +26,8 @@ export type ApprovalsFilters = {
   sort: SortOrder;
   proof: ProofFilter;
   entityQuery: string;
+  txTypes?: string[];
+  cashierName?: string;
 };
 
 export type ApprovalsTab = 'pending' | 'approved_today' | 'rejected_today' | 'history';
@@ -103,6 +105,21 @@ function normalizeTx(dept: 'rehab' | 'spims', id: string, data: Record<string, u
     rejectedReason: rejectionReason,
     rejectionReason,
   };
+}
+
+export function typeLabel(tx: UnifiedTx): string {
+  const raw = String(tx.categoryName || tx.category || tx.type || 'Transaction');
+  if (raw.toLowerCase().includes('fee') || raw.toLowerCase().includes('month')) return 'Monthly Fee';
+  return raw;
+}
+
+export function mapTxToTypeOption(tx: UnifiedTx): string {
+  const t = typeLabel(tx).toLowerCase();
+  if (t.includes('month') || t.includes('fee')) return 'Monthly Fee';
+  if (t.includes('admission')) return 'Admission';
+  if (t.includes('registration')) return 'Registration';
+  if (t.includes('exam')) return 'Examination';
+  return 'Other';
 }
 
 function pickRange(filters: ApprovalsFilters): { from: Date; to: Date } {
@@ -186,17 +203,12 @@ function tabFilterClient(tab: ApprovalsTab, tx: UnifiedTx): boolean {
  * Main feed: real-time merged rehab + spims transactions.
  * Server-side: status (+ orderBy) only; everything else is client-side.
  */
-export function subscribeApprovalsFeed({
-  tab,
-  filters,
-  onData,
-  onError,
-}: {
-  tab: ApprovalsTab;
-  filters: ApprovalsFilters;
-  onData: (rows: UnifiedTx[]) => void;
-  onError?: (err: unknown) => void;
-}) {
+export function subscribeApprovalsFeed(
+  filters: ApprovalsFilters,
+  tab: ApprovalsTab,
+  onData: (rows: UnifiedTx[]) => void,
+  onError?: (err: unknown) => void
+) {
   const unsub: Array<() => void> = [];
   const buffers: Record<'rehab' | 'spims', UnifiedTx[]> = { rehab: [], spims: [] };
 
@@ -218,6 +230,13 @@ export function subscribeApprovalsFeed({
       return name.includes(entityQ);
     };
 
+    const txTypeOk = (tx: UnifiedTx) => {
+      const types = filters.txTypes || [];
+      if (types.length === 0 || types.includes('All')) return true;
+      const mapped = mapTxToTypeOption(tx);
+      return types.includes(mapped);
+    };
+
     const dateOk = (tx: UnifiedTx) => {
       if (tab === 'pending') return inDateRange(tx, from, to);
       if (tab === 'approved_today' || tab === 'rejected_today') return tabFilterClient(tab, tx);
@@ -230,6 +249,11 @@ export function subscribeApprovalsFeed({
       .filter((tx) => amtOk(Number(tx.amount || 0)))
       .filter(proofOk)
       .filter(entityOk)
+      .filter(txTypeOk)
+      .filter((tx) => {
+        if (!filters.cashierName || filters.cashierName === 'all') return true;
+        return (tx.cashierName || '') === filters.cashierName;
+      })
       .sort(sortComparator(filters.sort));
 
     onData(filtered);

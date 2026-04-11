@@ -42,17 +42,18 @@ import { debounce, toDate } from '@/lib/utils';
 import { decideTransaction, bulkDecideTransactions } from '@/app/hq/actions/approvals';
 import type { UnifiedTx } from '@/lib/hq/superadmin/types';
 import { db } from '@/lib/firebase';
+import { typeLabel, mapTxToTypeOption } from '@/lib/hq/superadmin/approvals';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DEFAULT_FILTERS: ApprovalsFilters & { txType: string; cashierName: string } = {
+const DEFAULT_FILTERS: ApprovalsFilters = {
   dept: 'all',
   datePreset: 'all',
   amountBucket: 'all',
   sort: 'all',
   proof: 'all',
   entityQuery: '',
-  txType: 'all',
+  txTypes: [] as string[],
   cashierName: 'all',
 };
 
@@ -120,20 +121,7 @@ function entityId(tx: UnifiedTx): string | undefined {
   return (tx.studentId || tx.patientId) ?? undefined;
 }
 
-function typeLabel(tx: UnifiedTx): string {
-  const raw = String(tx.categoryName || tx.category || tx.type || 'Transaction');
-  if (raw.toLowerCase().includes('fee') || raw.toLowerCase().includes('month')) return 'Monthly Fee';
-  return raw;
-}
 
-function mapTxToTypeOption(tx: UnifiedTx): string {
-  const t = typeLabel(tx).toLowerCase();
-  if (t.includes('month') || t.includes('fee')) return 'Monthly Fee';
-  if (t.includes('admission')) return 'Admission';
-  if (t.includes('registration')) return 'Registration';
-  if (t.includes('exam')) return 'Examination';
-  return 'Other';
-}
 
 function statusLabel(s: string): string {
   if (s === 'pending_cashier') return 'Pending';
@@ -772,7 +760,7 @@ export default function HqApprovalsPage() {
   const { session, loading: sessionLoading } = useHqSession();
 
   const [tab, setTab] = useState<ApprovalsTab>('pending');
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<ApprovalsFilters>(DEFAULT_FILTERS);
   const [rows, setRows] = useState<UnifiedTx[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -867,18 +855,18 @@ export default function HqApprovalsPage() {
     if (selectedEntity) return;
     setLoading(true);
     setError(null);
-    const unsub = subscribeApprovalsFeed({
+    const unsub = subscribeApprovalsFeed(
+      filtersForFeed,
       tab,
-      filters: filtersForFeed,
-      onData: (r) => {
+      (r) => {
         setRows(r);
         setLoading(false);
       },
-      onError: (err: unknown) => {
+      (err: unknown) => {
         setError(String((err as { message?: string })?.message ?? 'Failed to load'));
         setLoading(false);
-      },
-    });
+      }
+    );
     return () => unsub();
   }, [session, tab, filtersForFeed, selectedEntity]);
 
@@ -961,21 +949,16 @@ export default function HqApprovalsPage() {
 
     if (selectedEntity) {
       return r.sort((a, b) => {
+        if (filters.sort === 'highest') return (b.amount || 0) - (a.amount || 0);
+        if (filters.sort === 'lowest') return (a.amount || 0) - (b.amount || 0);
         const ta = toDate(a.createdAt || a.date).getTime();
         const tb = toDate(b.createdAt || b.date).getTime();
         return filters.sort === 'oldest' ? ta - tb : tb - ta;
       });
     }
 
-    if (filters.txType !== 'all') {
-      const want = filters.txType;
-      r = r.filter((tx) => mapTxToTypeOption(tx) === want);
-    }
-    if (filters.cashierName !== 'all') {
-      r = r.filter((tx) => (tx.cashierName || '') === filters.cashierName);
-    }
     return r;
-  }, [selectedEntity, entityRows, rows, dismissed, filters.txType, filters.cashierName, filters.sort]);
+  }, [selectedEntity, entityRows, rows, dismissed, filters.sort]);
 
   const visibleRows = useMemo(() => filteredRows.slice(0, visibleLimit), [filteredRows, visibleLimit]);
 
@@ -1000,8 +983,8 @@ export default function HqApprovalsPage() {
   const activeFilterChips = useMemo(() => {
     const chips: { key: string; label: string }[] = [];
     if (filters.dept !== 'all') chips.push({ key: 'dept', label: `Department: ${filters.dept.toUpperCase()}` });
-    if (filters.datePreset !== 'today') {
-      const labels: Record<string, string> = { yesterday: 'Yesterday', this_week: 'This Week', custom: 'Custom' };
+    if (filters.datePreset !== 'all') {
+      const labels: Record<string, string> = { today: 'Today', yesterday: 'Yesterday', this_week: 'This Week', custom: 'Custom' };
       chips.push({ key: 'datePreset', label: `Date: ${labels[filters.datePreset] ?? filters.datePreset}` });
     }
     if (filters.amountBucket !== 'all') {
@@ -1017,7 +1000,11 @@ export default function HqApprovalsPage() {
       chips.push({ key: 'proof', label: filters.proof === 'has_proof' ? 'Has Proof' : 'Missing Proof' });
     }
     if (entityQueryDebounced.trim()) chips.push({ key: 'entityQuery', label: `Search: ${entityQueryDebounced.trim()}` });
-    if (filters.txType !== 'all') chips.push({ key: 'txType', label: `Type: ${filters.txType}` });
+    if (filters.txTypes && filters.txTypes.length > 0 && !filters.txTypes.includes('All')) {
+      filters.txTypes.forEach(t => {
+        chips.push({ key: `txType_${t}`, label: `Type: ${t}` });
+      });
+    }
     if (filters.cashierName !== 'all') chips.push({ key: 'cashierName', label: `Cashier: ${filters.cashierName}` });
     if (selectedEntity) chips.push({ key: 'entity', label: `${selectedEntity.dept === 'spims' ? 'Student' : 'Patient'}: ${selectedEntity.name}` });
     return chips;
@@ -1027,14 +1014,17 @@ export default function HqApprovalsPage() {
 
   const removeChip = (key: string) => {
     if (key === 'dept') setFilters((f) => ({ ...f, dept: 'all' }));
-    else if (key === 'datePreset') setFilters((f) => ({ ...f, datePreset: 'today' }));
+    else if (key === 'datePreset') setFilters((f) => ({ ...f, datePreset: 'all' }));
     else if (key === 'amountBucket') setFilters((f) => ({ ...f, amountBucket: 'all' }));
     else if (key === 'proof') setFilters((f) => ({ ...f, proof: 'all' }));
     else if (key === 'entityQuery') {
       setSearchDraft('');
       setEntityQueryDebounced('');
     }
-    else if (key === 'txType') setFilters((f) => ({ ...f, txType: 'all' }));
+    else if (key.startsWith('txType_')) {
+      const typeToRemove = key.replace('txType_', '');
+      setFilters((f) => ({ ...f, txTypes: (f.txTypes || []).filter(t => t !== typeToRemove) }));
+    }
     else if (key === 'cashierName') setFilters((f) => ({ ...f, cashierName: 'all' }));
     else if (key === 'entity') setSelectedEntity(null);
   };
@@ -1447,20 +1437,32 @@ export default function HqApprovalsPage() {
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Transaction type</p>
                         <div className="flex flex-wrap gap-2">
-                          {TRANSACTION_TYPE_OPTIONS.map((t) => (
-                            <button
-                              key={t}
-                              type="button"
-                              onClick={() => setFilters((f) => ({ ...f, txType: t === 'All' ? 'all' : t }))}
-                              className={`px-2.5 py-1.5 rounded-full text-[10px] font-black border ${
-                                (t === 'All' ? filters.txType === 'all' : filters.txType === t)
-                                  ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900'
-                                  : 'bg-white text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
-                              }`}
-                            >
-                              {t}
-                            </button>
-                          ))}
+                          {TRANSACTION_TYPE_OPTIONS.map((t) => {
+                            const isSelected = (filters.txTypes || []).includes(t) || (t === 'All' && (filters.txTypes || []).length === 0);
+                            return (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => {
+                                  setFilters((f) => {
+                                    const current = f.txTypes || [];
+                                    if (t === 'All') return { ...f, txTypes: [] };
+                                    const next = current.includes(t) 
+                                      ? current.filter(x => x !== t) 
+                                      : [...current.filter(x => x !== 'All'), t];
+                                    return { ...f, txTypes: next };
+                                  });
+                                }}
+                                className={`px-2.5 py-1.5 rounded-full text-[10px] font-black border transition ${
+                                  isSelected
+                                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900'
+                                    : 'bg-white text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 hover:border-gray-400'
+                                }`}
+                              >
+                                {t}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>

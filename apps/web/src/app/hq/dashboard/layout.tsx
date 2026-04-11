@@ -195,10 +195,20 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading...</p>
+      <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-teal-500/20 border-t-teal-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Shield size={24} className="text-teal-500 animate-pulse" />
+          </div>
+        </div>
+        <div className="mt-6 text-center">
+          <p className={`text-sm font-black uppercase tracking-[0.3em] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>KhanHub HQ</p>
+          <div className="mt-2 flex items-center gap-1 justify-center">
+            <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce" />
+          </div>
         </div>
       </div>
     );
@@ -216,163 +226,191 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     router.push('/hq/login');
   };
 
-  const SidebarContent = () => (
-    <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-      <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-        <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-teal-600 text-xs font-semibold mb-4 transition-colors group">
-          <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
-          Back to KhanHub
-        </Link>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center text-white shadow-lg">
-            <Shield size={18} />
-          </div>
-          <div>
-            <p className="font-black text-gray-900 text-sm leading-none">
-              {viewMode === 'hq' ? 'KhanHub HQ' : `${DEPT_INFO[viewMode]?.label} Mode`}
-            </p>
-            <p className="text-gray-400 text-[10px] font-semibold mt-0.5">
-              {viewMode === 'hq' ? 'Central Control' : 'Department View'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className={`px-4 py-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4`}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm shadow-sm">
-              {user?.name?.[0]?.toUpperCase() || '?'}
+  const SidebarContent = () => {
+    const [portalOpen, setPortalOpen] = useState(false);
+    
+    return (
+      <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        {/* Header / Branding */}
+        <div className={`px-6 pt-7 pb-6 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-xl rotate-3 transition-transform hover:rotate-0 ${darkMode ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/20' : 'bg-gradient-to-br from-teal-500 to-emerald-600 shadow-teal-500/20'}`}>
+              <Shield size={22} strokeWidth={2.5} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className={`font-bold text-sm truncate ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{user?.name}</p>
-              <p className="text-gray-400 text-[10px] font-mono truncate">{user?.customId}</p>
+            <div>
+              <p className={`font-black tracking-tight text-base leading-none ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {viewMode === 'hq' ? 'KhanHub HQ' : DEPT_INFO[viewMode]?.label}
+              </p>
+              <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                {viewMode === 'hq' ? 'Central Console' : 'Management'}
+              </p>
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-between">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
-              {ROLE_LABELS[role]}
-            </span>
-            {viewMode !== 'hq' && (
-              <button 
-                onClick={() => setViewMode('hq')}
-                className="text-[10px] font-black text-teal-600 hover:text-teal-700 underline underline-offset-2 uppercase tracking-tighter"
-              >
-                Exit View
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map((item, i) => {
-          // Find the longest match to ensure only the most specific route is highlighted
-          const matches = navItems
-            .filter(ni => pathname.startsWith(ni.href))
-            .sort((a, b) => b.href.length - a.href.length);
-          
-          const isActive = matches[0]?.href === item.href;
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              style={{ animationDelay: `${i * 40}ms` }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                isActive
-                  ? 'bg-gray-800 text-white shadow-md'
-                  : darkMode
-                    ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-100 hover:translate-x-1'
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
-              }`}
-            >
-              <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
-              <span>{item.label}</span>
-              <span className="ml-auto flex items-center gap-2 shrink-0">
-                {item.label === 'Approvals' && viewMode === 'hq' && role === 'superadmin' ? (
-                  <HqSuperadminApprovalsNavBadge />
-                ) : null}
-                {isActive ? <span className="w-1.5 h-1.5 rounded-full bg-white/60" /> : null}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Nav Mode Switcher — only for Superadmins with active dept sessions */}
-      {role === 'superadmin' && activeDepts.length > 0 && (
-        <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-          <p className={`text-[10px] font-black uppercase tracking-widest mb-3 px-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Switch Navigator</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-               onClick={() => setViewMode('hq')}
-               className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl border text-[10px] font-black uppercase transition-all ${
-                 viewMode === 'hq' 
-                  ? 'bg-gray-900 text-white border-transparent' 
-                  : darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-               }`}
-            >
-              HQ
-            </button>
-            {activeDepts.map(dept => (
+          {/* Jump to Portal Dropdown - Only for Superadmins */}
+          {role === 'superadmin' && (
+            <div className="relative">
               <button
-                key={dept}
-                onClick={() => setViewMode(dept)}
-                className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl border text-[10px] font-black uppercase transition-all ${
-                  viewMode === dept 
-                   ? 'bg-teal-600 text-white border-transparent shadow-lg shadow-teal-500/20' 
-                   : darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                onClick={() => setPortalOpen(!portalOpen)}
+                className={`w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border ${
+                  darkMode 
+                    ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-800' 
+                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
                 }`}
               >
-                {DEPT_INFO[dept]?.label}
+                <div className="flex items-center gap-2">
+                  <ExternalLink size={14} className="text-teal-500" />
+                  <span>Jump to Portal</span>
+                </div>
+                <ChevronLeft size={14} className={`transition-transform duration-200 ${portalOpen ? '-rotate-90' : 'rotate-0'}`} />
               </button>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Go to Dept Dashboard shortcut */}
-      {role === 'superadmin' && viewMode === 'hq' && (
-        <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-          <p className={`text-[10px] font-black uppercase tracking-widest mb-2 px-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Jump to Portal</p>
-          {Object.keys(DEPT_INFO).map(dept => {
-            const info = DEPT_INFO[dept];
+              {portalOpen && (
+                <div className={`absolute top-full left-0 right-0 mt-2 p-2 rounded-2xl border shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 ${
+                  darkMode ? 'bg-gray-800 border-gray-700 shadow-black/40' : 'bg-white border-gray-100 shadow-gray-200/50'
+                }`}>
+                  {Object.keys(DEPT_INFO).map(dept => {
+                    const info = DEPT_INFO[dept];
+                    return (
+                      <Link
+                        key={dept}
+                        href={info.adminUrl}
+                        onClick={() => setPortalOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-teal-50 text-gray-600 hover:text-teal-700'
+                        }`}
+                      >
+                        <div className={`p-1.5 rounded-lg ${darkMode ? 'bg-gray-900' : 'bg-white shadow-sm'}`}>
+                          {React.cloneElement(info.icon as React.ReactElement, { size: 12, className: info.color })}
+                        </div>
+                        <span>{info.label} Dashboard</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Mode Switcher - Modernized Pill */}
+        {role === 'superadmin' && activeDepts.length > 0 && (
+          <div className={`px-4 pt-5 pb-2`}>
+            <div className={`p-1 rounded-2xl flex items-center gap-1 ${darkMode ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
+              <button
+                onClick={() => setViewMode('hq')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                  viewMode === 'hq'
+                    ? darkMode ? 'bg-gray-700 text-white shadow-lg' : 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                HQ Navigator
+              </button>
+              {activeDepts.map(dept => (
+                <button
+                  key={dept}
+                  onClick={() => setViewMode(dept)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                    viewMode === dept
+                      ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/20'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {DEPT_INFO[dept]?.label} View
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Main Navigation */}
+        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto scrollbar-hide">
+          <p className={`px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+            Menu
+          </p>
+          {navItems.map((item, i) => {
+            const matches = navItems
+              .filter(ni => pathname.startsWith(ni.href))
+              .sort((a, b) => b.href.length - a.href.length);
+            const isActive = matches[0]?.href === item.href;
+
             return (
               <Link
-                key={dept}
-                href={info.adminUrl}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold mb-0.5 transition-all ${darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-50 text-gray-600'}`}
+                key={item.href}
+                href={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all group ${
+                  isActive
+                    ? darkMode 
+                      ? 'bg-gradient-to-r from-gray-800 to-gray-800/50 text-white shadow-lg' 
+                      : 'bg-white text-teal-600 shadow-xl shadow-gray-200/50'
+                    : darkMode
+                      ? 'text-gray-500 hover:bg-gray-800/80 hover:text-gray-200'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                }`}
               >
-                <div className={`p-1 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white shadow-sm'}`}>
-                  {React.cloneElement(info.icon as React.ReactElement, { size: 10, className: info.color })}
+                <div className={`p-1 rounded-lg transition-colors ${isActive ? (darkMode ? 'text-teal-400' : 'text-teal-600') : 'group-hover:text-teal-500'}`}>
+                  {React.cloneElement(item.icon as React.ReactElement, { size: 18, strokeWidth: isActive ? 2.5 : 2 })}
                 </div>
-                <span>{info.label} Dashboard</span>
+                <span className="flex-1">{item.label}</span>
+                {item.label === 'Approvals' && viewMode === 'hq' && role === 'superadmin' && (
+                  <HqSuperadminApprovalsNavBadge />
+                )}
+                {isActive && (
+                  <div className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-teal-500' : 'bg-teal-600'} animate-pulse`} />
+                )}
               </Link>
             );
           })}
-        </div>
-      )}
+        </nav>
 
-      <div className={`px-4 pb-6 pt-2 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-        <button
-          onClick={toggleDark}
-          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold mb-1 transition-all ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
-        >
-          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          {darkMode ? 'Light Mode' : 'Dark Mode'}
-        </button>
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all group"
-        >
-          <LogOut size={16} className="group-hover:translate-x-0.5 transition-transform" />
-          Sign Out
-        </button>
+        {/* Bottom Section: Profile & Logout */}
+        <div className={`px-4 py-6 mt-auto border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+          <div className={`mb-4 p-3 rounded-2xl flex items-center gap-3 ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-600'}`}>
+              {user?.name?.[0]?.toUpperCase() || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs font-bold truncate ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{user?.name}</p>
+              <p className={`text-[9px] font-black uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{ROLE_LABELS[role]}</p>
+            </div>
+            <button 
+              onClick={handleSignOut}
+              className={`p-2 rounded-lg transition-all ${darkMode ? 'text-gray-500 hover:text-red-400 hover:bg-red-500/10' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'}`}
+              title="Sign Out"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={toggleDark}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                darkMode 
+                  ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
+                  : 'bg-white border border-gray-100 text-gray-500 hover:bg-gray-50 shadow-sm'
+              }`}
+            >
+              {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+              {darkMode ? 'Light' : 'Dark'}
+            </button>
+            <Link 
+              href="/"
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                darkMode ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-white border border-gray-100 text-gray-500 hover:bg-gray-50 shadow-sm'
+              }`}
+            >
+              <ArrowLeft size={14} />
+              Portal
+            </Link>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
 
   return (
     <div className={`min-h-screen flex ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
