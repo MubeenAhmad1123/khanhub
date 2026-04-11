@@ -494,8 +494,12 @@ function TxCard({
 
   return (
     <div
-      className={`relative rounded-3xl border bg-white dark:bg-[#111111] shadow-md transition-all duration-300 overflow-hidden max-w-[680px] mx-auto w-full ${
-        phase === 'success' ? 'border-green-500 ring-2 ring-green-400/40' : phase === 'fail' ? 'border-red-500 ring-2 ring-red-400/40' : 'border-gray-100 dark:border-white/10'
+      className={`relative rounded-2xl border transition-all duration-300 overflow-hidden max-w-[680px] mx-auto w-full mb-4 ${
+        phase === 'success' 
+          ? 'border-green-500 ring-2 ring-green-400/40 bg-white dark:bg-gray-900' 
+          : phase === 'fail' 
+            ? 'border-red-500 ring-2 ring-red-400/40 bg-white dark:bg-gray-900' 
+            : 'border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900'
       } ${phase === 'idle' ? '' : 'tx-card-exit'}`}
     >
       {phase === 'success' ? (
@@ -547,16 +551,16 @@ function TxCard({
             <div className="flex gap-2 text-sm">
               <span aria-hidden>👤</span>
               <div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Student / Patient</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{name}</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Student / Patient</p>
+                <p className="text-lg font-bold text-gray-800 dark:text-gray-200">{name}</p>
               </div>
             </div>
             {tx.dept === 'spims' && (enrich?.course || enrich?.session) ? (
               <div className="flex gap-2 text-sm text-gray-800 dark:text-gray-100">
                 <span aria-hidden>🎓</span>
                 <div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Course · Session</p>
-                  <p className="text-sm font-medium">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Course · Session</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     {enrich?.course || '—'} · {enrich?.session || '—'}
                   </p>
                 </div>
@@ -566,8 +570,8 @@ function TxCard({
               <div className="flex gap-2 text-sm text-gray-800 dark:text-gray-100">
                 <span aria-hidden>🏥</span>
                 <div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Department</p>
-                  <p className="text-sm font-medium">Rehab Center</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Department</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Rehab Center</p>
                 </div>
               </div>
             ) : null}

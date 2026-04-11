@@ -35,10 +35,11 @@ function getAdminApp(): App {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { recipientId, title, body: notifBody, type, actionUrl } = body;
+    const { recipientId, recipientUid, title, body: notifBody, type, actionUrl } = body;
+    const targetUserId = recipientUid || recipientId;
 
-    if (!recipientId || !title || !notifBody) {
-      return NextResponse.json({ error: 'Missing required fields: recipientId, title, body' }, { status: 400 });
+    if (!targetUserId || !title || !notifBody) {
+      return NextResponse.json({ error: 'Missing required fields: recipientId/recipientUid, title, body' }, { status: 400 });
     }
 
     const app = getAdminApp();
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     const messaging = getMessaging(app);
 
     // Fetch all registered FCM tokens for this HQ user
-    const tokensSnap = await adminDb.collection(`hq_users/${recipientId}/fcmTokens`).get();
+    const tokensSnap = await adminDb.collection(`hq_users/${targetUserId}/fcmTokens`).get();
     const tokens = tokensSnap.docs.map((d) => d.id);
 
     if (tokens.length === 0) {
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
     if (staleTokens.length > 0) {
       const batch = adminDb.batch();
       staleTokens.forEach((token) => {
-        batch.delete(adminDb.doc(`hq_users/${recipientId}/fcmTokens/${token}`));
+        batch.delete(adminDb.doc(`hq_users/${targetUserId}/fcmTokens/${token}`));
       });
       await batch.commit();
     }

@@ -47,6 +47,7 @@ export async function sendHqPushNotification(params: {
   body: string;
   relatedId?: string;
   actionUrl?: string;
+  recipientUid?: string;
 }) {
   // Always write to Firestore first (notification bell source)
   await sendHqNotification({
@@ -64,7 +65,7 @@ export async function sendHqPushNotification(params: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        recipientId: params.recipientId,
+        recipientId: params.recipientUid || params.recipientId,
         title: params.title,
         body: params.body,
         type: params.type,

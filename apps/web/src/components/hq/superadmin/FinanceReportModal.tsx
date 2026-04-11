@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Printer, Download, Filter, TrendingUp, TrendingDown, Package, User } from 'lucide-react';
+import { toast } from 'sonner';
 import { FinanceReport, fetchFinanceReport, FinanceTab } from '@/lib/hq/superadmin/finance';
 import { formatPKR } from '@/lib/hq/superadmin/format';
 import { toDate } from '@/lib/utils';
@@ -25,6 +26,11 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
   }, [dateRange, tab]);
 
   async function loadReport() {
+    if (dateRange.start > dateRange.end) {
+      toast.error("Invalid range! Swapping dates...", { duration: 2000 });
+      setDateRange({ start: dateRange.end, end: dateRange.start });
+      return;
+    }
     setLoading(true);
     try {
       const data = await fetchFinanceReport(tab, dateRange.start, dateRange.end);

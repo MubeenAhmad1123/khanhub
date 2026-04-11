@@ -37,10 +37,10 @@ export default function SuperadminDepartmentsPage() {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-10 min-h-screen bg-transparent">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+          <h1 className="text-4xl font-black tracking-tight text-gray-900 dark:text-white mb-2">
             Department <span className="text-teal-600 dark:text-teal-400">Hubs</span>
           </h1>
-          <p className="text-base text-slate-600 dark:text-gray-400 font-medium max-w-lg leading-relaxed">
+          <p className="text-base text-gray-600 dark:text-gray-400 font-medium max-w-lg leading-relaxed">
             Access specialized management portals for each department. All global operations are unified at HQ.
           </p>
         </div>
@@ -88,7 +88,7 @@ export default function SuperadminDepartmentsPage() {
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
                   {d.name}
                 </h3>
-                <p className="text-sm leading-relaxed text-slate-500 dark:text-gray-400 font-semibold italic">
+                <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400 font-semibold italic">
                   "{d.description}"
                 </p>
               </div>
@@ -112,7 +112,7 @@ export default function SuperadminDepartmentsPage() {
           </div>
           <div className="text-center md:text-left">
             <h4 className="text-lg font-black text-slate-900 dark:text-white mb-2">Centralized Command Structure</h4>
-            <p className="text-sm leading-relaxed text-slate-500 dark:text-gray-400 font-medium max-w-2xl">
+            <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400 font-medium max-w-2xl">
               KhanHub HQ operates as the primary authority for Approvals, Finance, and Global Audit. 
               Departmental hubs are specialized execution layers for managing entity-specific data like patient records and student academics.
             </p>

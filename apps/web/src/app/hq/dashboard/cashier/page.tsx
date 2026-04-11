@@ -60,7 +60,7 @@ export default function CashierStationPage() {
   const [rejectModalTx, setRejectModalTx] = useState<any | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
-  const [superadminRecipient, setSuperadminRecipient] = useState('SUPERADMIN');
+  const [superadminRecipient, setSuperadminRecipient] = useState<{ id: string; customId: string }>({ id: '', customId: 'SUPERADMIN' });
 
   const [departmentCode, setDepartmentCode] = useState('rehab');
   const [searchQuery, setSearchQuery] = useState('');
@@ -291,7 +291,8 @@ export default function CashierStationPage() {
       }
 
       await sendHqPushNotification({
-        recipientId: superadminRecipient,
+        recipientId: superadminRecipient.customId,
+        recipientUid: superadminRecipient.id,
         recipientRole: 'superadmin',
         type: 'tx_forwarded',
         title: 'New Transaction Pending Approval',
@@ -343,10 +344,13 @@ export default function CashierStationPage() {
         const usersSnap = await getDocs(
           query(collection(db, 'hq_users'), where('role', '==', 'superadmin'))
         );
-        const first = usersSnap.docs[0]?.data() as any;
-        if (first?.customId) setSuperadminRecipient(first.customId);
+        const firstDoc = usersSnap.docs[0];
+        if (firstDoc) {
+          const data = firstDoc.data();
+          setSuperadminRecipient({ id: firstDoc.id, customId: data.customId || 'SUPERADMIN' });
+        }
       } catch {
-        setSuperadminRecipient('SUPERADMIN');
+        setSuperadminRecipient({ id: '', customId: 'SUPERADMIN' });
       }
     };
     void loadSuperadminRecipient();
@@ -464,7 +468,8 @@ export default function CashierStationPage() {
 
       // Notify superadmin of new transaction pending approval
       void sendHqPushNotification({
-        recipientId: superadminRecipient,
+        recipientId: superadminRecipient.customId,
+        recipientUid: superadminRecipient.id,
         recipientRole: 'superadmin',
         type: 'tx_forwarded', // Use existing type for notifications
         title: 'New Transaction Submitted',

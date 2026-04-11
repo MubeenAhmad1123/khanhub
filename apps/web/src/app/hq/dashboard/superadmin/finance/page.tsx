@@ -18,7 +18,9 @@ import {
   ArrowRight, 
   History,
   AlertCircle,
-  LayoutDashboard
+  LayoutDashboard,
+  User,
+  ExternalLink
 } from 'lucide-react';
 import { FinanceReportModal } from '@/components/hq/superadmin/FinanceReportModal';
 import { 
@@ -253,15 +255,19 @@ export default function SuperadminFinancePage() {
                 <tr className="text-[10px] font-black uppercase tracking-widest text-gray-500">
                   <th className="pb-4">Patient / Student</th>
                   <th className="pb-4">Portal</th>
-                  <th className="pb-4">Outstanding</th>
+                  <th className="pb-4">Breakdown</th>
                   <th className="pb-4">Days Overdue</th>
                   <th className="pb-4">Last Payment</th>
+                  <th className="pb-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {insights.topOutstanding.map((r, i) => (
                   <tr key={r.id} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                    <td className="py-4 font-bold text-gray-900 dark:text-gray-100">{r.name}</td>
+                    <td className="py-4">
+                      <p className="font-bold text-gray-900 dark:text-gray-100">{r.name}</p>
+                      <p className="text-[10px] text-gray-500 uppercase font-medium">{r.id.slice(0, 8)}</p>
+                    </td>
                     <td className="py-4">
                       <span className={cn(
                         "rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-widest border",
@@ -270,7 +276,14 @@ export default function SuperadminFinancePage() {
                         {r.portal}
                       </span>
                     </td>
-                    <td className="py-4 font-black text-amber-600 dark:text-amber-400">{formatPKR(r.outstanding)}</td>
+                    <td className="py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-amber-600 dark:text-amber-400">{formatPKR(r.outstanding)}</span>
+                        <div className="flex gap-2 mt-0.5">
+                          <span className="text-[9px] font-bold text-gray-400 uppercase">PKG: {formatPKR(r.totalDue || 0)}</span>
+                        </div>
+                      </div>
+                    </td>
                     <td className="py-4">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-400">
                         <AlertCircle size={14} className={r.daysOverdue > 30 ? "text-rose-500" : "text-gray-400 dark:text-gray-600"} />
@@ -278,6 +291,15 @@ export default function SuperadminFinancePage() {
                       </div>
                     </td>
                     <td className="py-4 text-xs font-medium text-gray-500 dark:text-gray-400">{r.lastPaymentDate || 'Never'}</td>
+                    <td className="py-4 text-right">
+                      <button 
+                         onClick={() => router.push(`/hq/dashboard/superadmin/${r.portal}/users/${r.id}`)}
+                         className="p-2 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-amber-400 hover:text-black transition-all group-hover:scale-110 flex items-center justify-center ml-auto"
+                         title="View Profile"
+                      >
+                        <ExternalLink size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

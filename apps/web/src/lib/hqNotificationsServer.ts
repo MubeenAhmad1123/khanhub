@@ -32,6 +32,7 @@ function getAdminApp(): App {
 
 export async function sendHqPushServer(params: {
   recipientId: string;
+  recipientUid?: string;
   type: string;
   title: string;
   body: string;
@@ -54,8 +55,9 @@ export async function sendHqPushServer(params: {
       createdAt: new Date().toISOString(),
     });
 
-    // 2. Fetch FCM tokens
-    const tokensSnap = await adminDb.collection(`hq_users/${params.recipientId}/fcmTokens`).get();
+    // 2. Fetch FCM tokens - Use recipientUid if provided, otherwise fallback to recipientId (for backward compatibility if IDs match)
+    const tokenPathId = params.recipientUid || params.recipientId;
+    const tokensSnap = await adminDb.collection(`hq_users/${tokenPathId}/fcmTokens`).get();
     const tokens = tokensSnap.docs.map((d) => d.id);
 
     if (tokens.length === 0) return;

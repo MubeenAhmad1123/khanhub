@@ -35,7 +35,7 @@ export function useFcmNotifications(session: HqSession | null) {
 
     const silentRegister = async () => {
       try {
-        const token = await requestNotificationPermission(session.customId);
+        const token = await requestNotificationPermission(session.uid);
         if (token) setFcmToken(token);
       } catch (e) {
         console.warn('[FCM] Silent token registration failed', e);

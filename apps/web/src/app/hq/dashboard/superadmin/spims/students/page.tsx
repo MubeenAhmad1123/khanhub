@@ -98,7 +98,6 @@ export default function SuperadminSpimsStudentsListPage() {
                     <div className="text-xs font-black text-amber-700 dark:text-amber-300">
                       Remaining: PKR {Number(r.remaining || 0).toLocaleString('en-PK')}
                     </div>
-                    <div className="mt-1 text-[10px] text-gray-400">Tap to open</div>
                   </div>
                 </div>
               </Link>

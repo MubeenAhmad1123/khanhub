@@ -150,6 +150,7 @@ export async function decideTransaction(params: {
             if (recipientId) {
               await sendHqPushServer({
                 recipientId,
+                recipientUid: data.createdBy,
                 type: params.decision === 'approved' ? 'tx_approved' : 'tx_rejected',
                 title: params.decision === 'approved' ? 'Transaction Approved' : 'Transaction Rejected',
                 body: `Your transaction of Rs ${Number(data.amount).toLocaleString()} for ${data.patientName || data.studentName || 'Patient/Student'} has been ${params.decision}.`,
@@ -239,6 +240,7 @@ export async function bulkDecideTransactions(params: {
             if (recipientId) {
               await sendHqPushServer({
                 recipientId,
+                recipientUid: uid as string,
                 type: 'tx_bulk_processed',
                 title: 'Transactions Processed',
                 body: `The superadmin has ${params.decision} ${validSnaps.filter(s => s.data()?.createdBy === uid).length} of your pending transactions.`,

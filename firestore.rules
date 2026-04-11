@@ -373,7 +373,7 @@ service cloud.firestore {
     // Client writes allowed for fire-and-forget audit entries
     // from authenticated rehab users only.
     match /rehab_audit/{docId} {
-      allow read: if isRehabSuperAdmin() || isHqSuperAdmin();
+      allow read: if isRehabSuperAdmin() || isHqSuperOrManager();
       allow create: if isRehabAuth();
       allow update, delete: if false;
     }
@@ -586,7 +586,7 @@ service cloud.firestore {
     }
 
     match /spims_audit/{docId} {
-      allow read: if isSpimsSuperAdmin() || isHqSuperAdmin();
+      allow read: if isSpimsSuperAdmin() || isHqSuperOrManager();
       allow create: if isSpimsAuth();
       allow update, delete: if false;
     }
@@ -662,6 +662,10 @@ service cloud.firestore {
               .affectedKeys()
               .hasOnly(['photoUrl', 'name', 'phone'])
         );
+
+      match /fcmTokens/{tokenId} {
+        allow read, write: if isHqAuth() && request.auth.uid == docId;
+      }
     }
 
     // hq_reconciliation — stored daily financial summaries (Day-Close)
@@ -785,7 +789,7 @@ service cloud.firestore {
 
     // hq_audit — cross-system audit log 
     match /hq_audit/{docId} { 
-      allow read: if isHqSuperAdmin(); 
+      allow read: if isHqSuperOrManager(); 
       allow create: if isHqAuth(); 
     } 
 
@@ -1169,7 +1173,7 @@ service cloud.firestore {
     }
 
     match /hospital_audit/{docId} {
-      allow read: if isHospitalSuperAdmin() || isHqSuperAdmin();
+      allow read: if isHospitalSuperAdmin() || isHqSuperOrManager();
       allow create: if isHospitalAuth();
       allow update, delete: if false;
     }
@@ -1287,7 +1291,7 @@ service cloud.firestore {
     }
 
     match /sukoon_audit/{docId} {
-      allow read: if isSukoonSuperAdmin() || isHqSuperAdmin();
+      allow read: if isSukoonSuperAdmin() || isHqSuperOrManager();
       allow create: if isSukoonAuth();
       allow update, delete: if false;
     }
@@ -1405,7 +1409,7 @@ service cloud.firestore {
     }
 
     match /welfare_audit/{docId} {
-      allow read: if isWelfareSuperAdmin() || isHqSuperAdmin();
+      allow read: if isWelfareSuperAdmin() || isHqSuperOrManager();
       allow create: if isWelfareAuth();
       allow update, delete: if false;
     }
@@ -1523,7 +1527,7 @@ service cloud.firestore {
     }
 
     match /job_center_audit/{docId} {
-      allow read: if isJobCenterSuperAdmin() || isHqSuperAdmin();
+      allow read: if isJobCenterSuperAdmin() || isHqSuperOrManager();
       allow create: if isJobCenterAuth();
       allow update, delete: if false;
     }

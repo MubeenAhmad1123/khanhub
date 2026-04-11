@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Shield, Eye, FileText,
   UserCog, CalendarCheck, CheckCircle, CreditCard, History,
   LogOut, Menu, X, ArrowLeft, Sun, Moon, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User,
-  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart
+  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { HqRole, HqSession } from '@/types/hq';
@@ -36,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Staff', href: '/hq/dashboard/superadmin/staff', icon: <UserCog size={16} />, roles: ['superadmin'] },
   { label: 'Audit Log', href: '/hq/dashboard/superadmin/audit', icon: <FileText size={16} />, roles: ['superadmin'] },
   { label: 'Reconciliation', href: '/hq/dashboard/superadmin/reconciliation', icon: <Calculator size={16} />, roles: ['superadmin'] },
+  { label: 'Passwords', href: '/hq/dashboard/superadmin/passwords', icon: <KeyRound size={16} />, roles: ['superadmin'] },
   { label: 'Settings', href: '/hq/dashboard/superadmin/settings', icon: <User size={16} />, roles: ['superadmin'] },
   { label: 'Overview', href: '/hq/dashboard/manager', icon: <LayoutDashboard size={16} />, roles: ['manager'] },
   { label: 'Staff Roster', href: '/hq/dashboard/manager/staff', icon: <UserCog size={16} />, roles: ['manager'] },
@@ -310,7 +311,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
         {/* Main Navigation */}
         <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto scrollbar-hide">
-          <p className={`px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+          <p className={`px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
             Menu
           </p>
           {navItems.map((item, i) => {
