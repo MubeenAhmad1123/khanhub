@@ -227,7 +227,9 @@ function PillGroup<T extends string>({
           type="button"
           onClick={() => onChange(opt)}
           className={`px-3 py-1.5 rounded-full text-xs font-bold transition border ${
-            value === opt ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+            value === opt 
+              ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900' 
+              : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500'
           }`}
         >
           {labelMap?.[opt] ?? opt}
@@ -1287,11 +1289,11 @@ export default function HqApprovalsPage() {
         ) : (
           <>
             {/* 3 Filters */}
-            <div className="lg:sticky lg:top-0 lg:z-30 mb-6">
-              <div className="rounded-3xl bg-white shadow-md border border-gray-100 overflow-hidden">
+            <div className="lg:sticky lg:top-0 lg:z-10 mb-6">
+              <div className="rounded-3xl bg-white dark:bg-gray-800 shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
                 <button
                   type="button"
-                  className="lg:hidden w-full flex items-center justify-between px-4 py-3 text-sm font-black text-gray-800 bg-[color:var(--filter-bg,#f8fafc)]"
+                  className="lg:hidden w-full flex items-center justify-between px-4 py-3 text-sm font-black text-gray-800 dark:text-gray-100 bg-[color:var(--filter-bg,#f8fafc)] dark:bg-gray-900"
                   onClick={() => setFiltersPanelOpen((v) => !v)}
                 >
                   <span className="flex items-center gap-2">
@@ -1326,13 +1328,13 @@ export default function HqApprovalsPage() {
                             type="date"
                             value={filters.customFrom ?? ''}
                             onChange={(e) => setFilters((f) => ({ ...f, customFrom: e.target.value }))}
-                            className="flex-1 min-w-[140px] rounded-xl border border-gray-200 px-3 py-2 text-xs"
+                            className="flex-1 min-w-[140px] rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs bg-white dark:bg-gray-900 dark:text-gray-100"
                           />
                           <input
                             type="date"
                             value={filters.customTo ?? ''}
                             onChange={(e) => setFilters((f) => ({ ...f, customTo: e.target.value }))}
-                            className="flex-1 min-w-[140px] rounded-xl border border-gray-200 px-3 py-2 text-xs"
+                            className="flex-1 min-w-[140px] rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs bg-white dark:bg-gray-900 dark:text-gray-100"
                           />
                         </div>
                       ) : null}
@@ -1345,7 +1347,7 @@ export default function HqApprovalsPage() {
                       <select
                         value={filters.sort}
                         onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ApprovalsFilters['sort'] }))}
-                        className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white"
+                        className="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 dark:text-gray-100"
                       >
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
@@ -1358,7 +1360,7 @@ export default function HqApprovalsPage() {
                       <select
                         value={filters.amountBucket}
                         onChange={(e) => setFilters((f) => ({ ...f, amountBucket: e.target.value as ApprovalsFilters['amountBucket'] }))}
-                        className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white"
+                        className="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 dark:text-gray-100"
                       >
                         <option value="all">All</option>
                         <option value="under_1000">Under 1,000</option>
@@ -1382,23 +1384,23 @@ export default function HqApprovalsPage() {
                           }}
                           onFocus={() => setSearchOpen(true)}
                           placeholder="Search patient / student name..."
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:border-purple-400 dark:bg-gray-900 dark:text-gray-100"
                         />
                       </div>
                       {searchOpen && searchHits.length > 0 ? (
-                        <ul className="absolute z-50 mt-1 w-full rounded-2xl border border-gray-100 bg-white shadow-xl max-h-56 overflow-y-auto">
+                        <ul className="absolute z-50 mt-1 w-full rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl max-h-56 overflow-y-auto">
                           {searchHits.map((h) => (
                             <li key={`${h.dept}_${h.id}`}>
                               <button
                                 type="button"
-                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex justify-between gap-2"
+                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between gap-2"
                                 onClick={() => {
                                   setSelectedEntity({ id: h.id, dept: h.dept, name: h.name });
                                   setSearchDraft(h.name);
                                   setSearchOpen(false);
                                 }}
                               >
-                                <span className="font-semibold text-gray-900 truncate">{h.name}</span>
+                                <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{h.name}</span>
                                 <span className="text-[10px] font-black uppercase text-gray-400 shrink-0">{h.dept}</span>
                               </button>
                             </li>
@@ -1432,7 +1434,7 @@ export default function HqApprovalsPage() {
                         <select
                           value={filters.cashierName}
                           onChange={(e) => setFilters((f) => ({ ...f, cashierName: e.target.value }))}
-                          className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white"
+                          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 dark:text-gray-100"
                         >
                           {cashierNames.map((n) => (
                             <option key={n} value={n}>
@@ -1451,8 +1453,8 @@ export default function HqApprovalsPage() {
                               onClick={() => setFilters((f) => ({ ...f, txType: t === 'All' ? 'all' : t }))}
                               className={`px-2.5 py-1.5 rounded-full text-[10px] font-black border ${
                                 (t === 'All' ? filters.txType === 'all' : filters.txType === t)
-                                  ? 'bg-gray-900 text-white border-gray-900'
-                                  : 'bg-white text-gray-600 border-gray-200'
+                                  ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900'
+                                  : 'bg-white text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
                               }`}
                             >
                               {t}
@@ -1464,7 +1466,7 @@ export default function HqApprovalsPage() {
                   </div>
 
                   {activeFilterChips.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
                       {activeFilterChips.map((c) => (
                         <span
                           key={c.key}
