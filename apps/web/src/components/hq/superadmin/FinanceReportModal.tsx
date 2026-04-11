@@ -155,7 +155,7 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                      {report.transactions.map((tx, idx) => {
+                      {report.transactions.map((tx: any, idx: number) => {
                         const isExp = tx.type === 'expense' || String(tx.categoryName || tx.category || '').toLowerCase().includes('expense');
                         return (
                           <tr key={tx.id || idx} className="group hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
@@ -199,17 +199,17 @@ export function FinanceReportModal({ tab, onClose }: FinanceReportModalProps) {
                   <h4 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 border-b border-gray-100 pb-2 dark:border-white/5">Spending by Category</h4>
                   <div className="space-y-4">
                     {Object.entries(report.categories)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([name, val]) => (
+                      .sort((a: [string, any], b: [string, any]) => (b[1] as number) - (a[1] as number))
+                      .map(([name, val]: [string, any]) => (
                         <div key={name} className="flex items-center justify-between">
                           <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{name}</span>
                           <div className="flex items-center gap-4 flex-1 mx-8 h-1 bg-gray-100 rounded-full dark:bg-white/5">
                             <div 
                               className="h-full bg-orange-500 rounded-full" 
-                              style={{ width: `${Math.min(100, (val / Math.max(report.income, report.expense)) * 100)}%` }}
+                              style={{ width: `${Math.min(100, ((val as number) / Math.max(report.income, report.expense)) * 100)}%` }}
                             />
                           </div>
-                          <span className="text-xs font-black text-gray-900 dark:text-white">{formatPKR(val)}</span>
+                          <span className="text-xs font-black text-gray-900 dark:text-white">{formatPKR(val as number)}</span>
                         </div>
                       ))}
                   </div>

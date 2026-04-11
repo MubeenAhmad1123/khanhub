@@ -664,11 +664,12 @@ service cloud.firestore {
         );
     }
 
-    // dayCloseReports — stored daily financial summaries
-    match /dayCloseReports/{docId} {
+    // hq_reconciliation — stored daily financial summaries (Day-Close)
+    match /hq_reconciliation/{docId} {
       allow read: if isHqSuperAdmin() || isHqCashier();
       allow create: if isHqCashier();
-      allow update, delete: if isHqSuperAdmin();
+      allow update: if isHqSuperAdmin();
+      allow delete: if isHqSuperAdmin();
     }
 
     // cashierTransactions — standardized global transaction log
@@ -677,6 +678,13 @@ service cloud.firestore {
       allow create: if isHqCashier() || isHqSuperOrManager();
       allow update: if isHqSuperOrManager();
       allow delete: if false;
+    }
+
+    // hq_fees — global fee records (direct HQ collections)
+    match /hq_fees/{docId} {
+      allow read: if isHqSuperOrManager() || isHqCashier();
+      allow create, update: if isHqCashier() || isHqSuperAdmin();
+      allow delete: if isHqSuperAdmin();
     }
 
     // hq_staff — global staff profiles across all departments 

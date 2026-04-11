@@ -1,3 +1,4 @@
+// apps/web/src/app/hq/dashboard/cashier/day-close/page.tsx
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -17,39 +18,26 @@ import {
   CheckCircle2, 
   AlertCircle,
   Loader2, 
-  Lock, 
   Calculator, 
   Coins, 
   Save, 
   History,
-  FileText
+  TrendingDown,
+  TrendingUp,
+  Receipt
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, toDate } from '@/lib/utils';
-
-type DayReport = {
-  id?: string;
-  date?: string;
-  expectedBalance: number;
-  actualCash: number;
-  difference: number;
-  note: string;
-  cashierId: string;
-  cashierName: string;
-  createdAt: any;
-  incomeTotal?: number;
-  expenseTotal?: number;
-};
+import { formatPKR } from '@/lib/hq/superadmin/format';
 
 export default function DayClosePage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
   
-  const [reportDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [history, setHistory] = useState<DayReport[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<any[]>([]);
   
   // Form State
   const [actualCash, setActualCash] = useState('');
@@ -68,53 +56,68 @@ export default function DayClosePage() {
   }, [sessionLoading, session]);
 
   async function fetchData() {
-    setLoading(true);
+    setDataLoading(true);
     try {
       const todayStr = formatDateDMY(new Date());
       
-      // Fetch today's transactions to calculate expected balance
-      const qTx = query(
-        collection(db, 'cashierTransactions'),
-        where('dateStr', '==', todayStr),
-        where('paymentMethod', '==', 'cash') // Only cash affects physical box
-      );
-      const snapTx = await getDocs(qTx);
-      const txs = snapTx.docs.map(d => d.data());
-      setTransactions(txs);
+      // Fetch across all relevant collections for this cashier
+      const [hqTxs, rehabTxs, spimsTxs] = await Promise.all([
+        getDocs(query(collection(db, 'cashierTransactions'), where('cashierId', '==', session?.customId), where('status', '==', 'approved'))),
+        getDocs(query(collection(db, 'rehab_transactions'), where('cashierId', '==', session?.customId), where('status', '==', 'approved'))),
+        getDocs(query(collection(db, 'spims_transactions'), where('cashierId', '==', session?.customId), where('status', '==', 'approved')))
+      ]);
 
-      // Fetch recent close history
-      const qHist = query(
+      const normalizeDate = (v: any) => {
+        const d = toDate(v);
+        return d ? formatDateDMY(d) : '';
+      };
+
+      const all = [
+        ...hqTxs.docs.map(d => ({ ...d.data(), _source: 'hq' })),
+        ...rehabTxs.docs.map(d => ({ ...d.data(), _source: 'rehab' })),
+        ...spimsTxs.docs.map(d => ({ ...d.data(), _source: 'spims' }))
+      ].filter((t: any) => normalizeDate(t.createdAt || t.date || t.transactionDate) === todayStr);
+
+      setTransactions(all);
+
+      // Fetch history
+      const prev = await getDocs(query(
         collection(db, 'hq_reconciliation'),
-        where('cashierId', '==', session?.customId || session?.uid),
+        where('cashierId', '==', session?.customId),
         orderBy('createdAt', 'desc'),
-        limit(10)
-      );
-      const snapHist = await getDocs(qHist);
-      setHistory(snapHist.docs.map(d => ({ id: d.id, ...d.data() }) as DayReport));
+        limit(5)
+      ));
+      setHistory(prev.docs.map(d => ({ id: d.id, ...d.data() })));
 
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('Fetch error:', err);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   }
 
   const totals = useMemo(() => {
     let income = 0;
     let expense = 0;
+    const byType: Record<string, number> = {};
+
     transactions.forEach(tx => {
       const amt = Number(tx.amount) || 0;
-      if (tx.type === 'income') income += amt;
-      else expense += amt;
+      const t = tx.type || 'income';
+      if (t === 'income') income += amt; else expense += amt;
+
+      const cat = tx.category || tx.categoryName || 'other';
+      byType[cat] = (byType[cat] || 0) + amt;
     });
-    return { income, expense, net: income - expense };
+
+    return { income, expense, net: income - expense, byType };
   }, [transactions]);
 
   const differenceValue = Number(actualCash || 0) - totals.net;
 
   async function handleCloseDay() {
     if (!actualCash) {
-      setError('Please enter the actual cash amount in hand.');
+      setError('Actual cash amount is required.');
       return;
     }
 
@@ -124,229 +127,234 @@ export default function DayClosePage() {
       const report = {
         date: formatDateDMY(new Date()),
         expectedBalance: totals.net,
-        actualCash: Number(actualCash),
-        difference: differenceValue,
+        actualClosing: Number(actualCash),
+        variance: differenceValue,
         note: note.trim(),
-        cashierId: session?.customId || session?.uid || 'Unknown',
-        cashierName: session?.displayName || 'Cashier',
+        cashierId: session?.customId,
+        cashierName: session?.name || 'Cashier',
         status: 'pending',
         createdAt: Timestamp.now(),
-        // Breakdown for easier aggregation later
+        submittedAt: Timestamp.now(),
         incomeTotal: totals.income,
         expenseTotal: totals.expense,
+        typeBreakdown: totals.byType,
+        totalTransactions: transactions.length,
+        portal: session?.portal || 'hq', // Primary portal
+        reviewedAt: null,
+        reviewedBy: null
       };
 
       await addDoc(collection(db, 'hq_reconciliation'), report);
+      
+      // Audit log
+      await addDoc(collection(db, 'hq_audit'), {
+        action: 'day_close',
+        actorName: session?.name || 'Cashier',
+        actorId: session?.customId,
+        message: `Day closed for ${report.date}. Net: ${totals.net}, Actual: ${actualCash}, Var: ${differenceValue}`,
+        source: 'hq',
+        createdAt: Timestamp.now()
+      });
+
       setSuccess(true);
       setTimeout(() => router.push('/hq/dashboard/cashier'), 2000);
     } catch (err: any) {
-      console.error('Error closing day:', err);
-      setError(err.message || 'Failed to save day close report.');
+      setError(err.message || 'Submission failed.');
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (sessionLoading || loading) {
+  if (sessionLoading || dataLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 text-amber-400 animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Auditing Daily Ledger...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      <header className="bg-white border-b border-slate-200 px-4 py-6 md:px-8">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <button 
-            onClick={() => router.back()}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Lock className="w-6 h-6 text-indigo-600" />
-              Day Close & Cash Audit
-            </h1>
-            <p className="text-sm text-slate-500 font-medium">Finalize today's accounts for {formatDateDMY(new Date())}</p>
+    <div className="min-h-screen bg-gray-950 text-white font-sans selection:bg-amber-400 selection:text-black">
+      <header className="border-b border-white/5 bg-white/5 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.back()} className="p-2 hover:bg-white/5 rounded-full transition-all">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black uppercase tracking-tight">Full Cash Audit</h1>
+              <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">{formatDateDMY(new Date())}</p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+             <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Node Status</span>
+             <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-400">
+               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+               SECURED
+             </span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-10 md:px-8">
+      <main className="max-w-4xl mx-auto px-6 py-10">
         {success ? (
-          <div className="bg-white p-12 rounded-[2.5rem] border border-emerald-100 shadow-2xl shadow-emerald-50 text-center animate-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+          <div className="bg-emerald-400/5 rounded-3xl border border-emerald-400/20 p-16 text-center animate-in zoom-in-95 duration-500">
+            <div className="w-20 h-20 bg-emerald-400/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-400/20">
+              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
             </div>
-            <h2 className="text-2xl font-black text-slate-900 mb-2">Day Closed Successfully!</h2>
-            <p className="text-slate-500 font-medium">The daily financial report has been archived and secured.</p>
-            <p className="text-sm text-slate-400 mt-4">Redirecting back to dashboard...</p>
+            <h2 className="text-2xl font-black uppercase mb-2">Audit Completed</h2>
+            <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">Reports archived. Node standby.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Form Side */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full -mr-16 -mt-16 blur-3xl" />
-                
-                <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                  <Calculator className="w-5 h-5 text-indigo-500" />
-                  Audit Summary (Cash Only)
-                </h2>
-
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
-                    <p className="text-[10px] uppercase tracking-wider font-black text-emerald-600/70 mb-1">Total Income</p>
-                    <p className="text-xl font-black text-emerald-700">PKR {totals.income.toLocaleString()}</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100">
-                    <p className="text-[10px] uppercase tracking-wider font-black text-rose-600/70 mb-1">Total Expense</p>
-                    <p className="text-xl font-black text-rose-700">PKR {totals.expense.toLocaleString()}</p>
-                  </div>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/5 rounded-2xl border border-white/5 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-3 h-3 text-emerald-500" /> Income
+                  </p>
+                  <p className="text-xl font-black text-white">{formatPKR(totals.income)}</p>
                 </div>
+                <div className="bg-white/5 rounded-2xl border border-white/5 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2 mb-2">
+                    <TrendingDown className="w-3 h-3 text-rose-500" /> Expense
+                  </p>
+                  <p className="text-xl font-black text-white">{formatPKR(totals.expense)}</p>
+                </div>
+              </div>
 
-                <div className="space-y-6 border-t border-slate-100 pt-6">
-                  <div>
-                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">
-                      Expected Cash in Hand
-                    </label>
-                    <div className="text-3xl font-black text-slate-900 bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-200 text-center">
-                      PKR {totals.net.toLocaleString()}
-                    </div>
-                  </div>
+              {/* Main Audit Box */}
+              <div className="bg-white/5 rounded-3xl border border-white/10 p-8 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/5 rounded-full -mr-24 -mt-24 blur-3xl transition-all group-hover:bg-amber-400/10" />
+                
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-8 flex items-center gap-2">
+                  <Calculator size={16} className="text-amber-400" /> Reconciliation Schema
+                </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
-                        Actual Cash in Hand
-                      </label>
-                      <div className="relative group">
-                        <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-within:text-indigo-500 transition-colors" />
-                        <input 
-                          type="number"
-                          value={actualCash}
-                          onChange={(e) => setActualCash(e.target.value)}
-                          placeholder="Enter physical cash..."
-                          className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-100 focus:border-indigo-500 rounded-2xl outline-none transition-all font-bold text-lg"
-                        />
-                      </div>
-                    </div>
+                <div className="space-y-8">
+                   <div>
+                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-4">Calculated Target Balance</span>
+                     <div className="bg-black/40 rounded-2xl p-8 border-2 border-dashed border-white/10 text-center group-hover:border-amber-400/20 transition-all">
+                       <p className="text-4xl font-black text-amber-400 tracking-tighter">{formatPKR(totals.net)}</p>
+                       <p className="text-[10px] font-black text-gray-600 uppercase mt-2">Based on {transactions.length} verified operations</p>
+                     </div>
+                   </div>
 
-                    <div className={cn(
-                      "p-5 rounded-2xl flex flex-col justify-center",
-                      differenceValue === 0 ? "bg-emerald-50 border border-emerald-100" :
-                      differenceValue > 0 ? "bg-blue-50 border border-blue-100" :
-                      "bg-rose-50 border border-rose-100"
-                    )}>
-                      <p className="text-[10px] uppercase font-black text-slate-400 mb-1">Difference / Discrepancy</p>
-                      <p className={cn(
-                        "text-xl font-black",
-                        differenceValue === 0 ? "text-emerald-600" :
-                        differenceValue > 0 ? "text-blue-600" : 
-                        "text-rose-600"
-                      )}>
-                        {differenceValue > 0 ? '+' : ''}{differenceValue.toLocaleString()} PKR
-                      </p>
-                    </div>
-                  </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div>
+                       <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3">Actual Cash Count</label>
+                       <div className="relative">
+                          <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                          <input 
+                            type="number"
+                            value={actualCash}
+                            onChange={(e) => setActualCash(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full bg-white/5 border border-white/10 focus:border-amber-400/50 rounded-2xl pl-12 pr-4 py-4 font-black text-lg outline-none transition-all placeholder:text-white/10"
+                          />
+                       </div>
+                     </div>
 
-                  <div>
-                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
-                      Closing Note / Remark
-                    </label>
-                    <textarea 
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="Add any details about shortages or excess..."
-                      className="w-full p-4 bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 rounded-2xl outline-none transition-all text-sm font-medium min-h-[100px]"
-                    />
-                  </div>
+                     <div className={cn(
+                       "rounded-2xl flex flex-col justify-center p-5 border transition-all",
+                       differenceValue === 0 ? "bg-emerald-400/5 border-emerald-400/20" : "bg-rose-400/5 border-rose-400/20"
+                     )}>
+                        <p className="text-[10px] font-black text-gray-500 uppercase mb-1">Audit Variance</p>
+                        <p className={cn(
+                          "text-xl font-black tracking-tighter",
+                          differenceValue === 0 ? "text-emerald-400" : "text-rose-400"
+                        )}>
+                          {differenceValue > 0 ? '+' : ''}{formatPKR(differenceValue)}
+                        </p>
+                     </div>
+                   </div>
+
+                   <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3">Discrepancy Log / Note</label>
+                      <textarea 
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder="Detail any shortages or surplus detected during count..."
+                        className="w-full bg-white/5 border border-white/10 focus:border-amber-400/50 rounded-2xl p-4 text-sm font-bold min-h-[100px] outline-none transition-all"
+                      />
+                   </div>
                 </div>
 
                 {error && (
-                  <div className="mt-6 flex items-center gap-2 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-700 text-sm font-bold animate-shake">
-                    <AlertCircle className="w-5 h-5 shrink-0" />
-                    <span>{error}</span>
+                  <div className="mt-6 p-4 rounded-xl bg-rose-400/10 border border-rose-400/20 flex items-center gap-3 text-rose-400 text-xs font-black uppercase">
+                    <AlertCircle size={16} />
+                    {error}
                   </div>
                 )}
 
                 <button 
                   onClick={handleCloseDay}
                   disabled={submitting}
-                  className="w-full mt-8 py-4 bg-slate-950 hover:bg-slate-900 text-white rounded-2xl font-black shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95"
+                  className="w-full mt-10 py-5 bg-amber-400 hover:bg-amber-300 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-amber-400/10 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                 >
-                  {submitting ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      SUBMIT & CLOSE DAY
-                    </>
-                  )}
+                  {submitting ? <Loader2 className="animate-spin" /> : <Save size={18} />}
+                  Execute Audit Submission
                 </button>
+              </div>
+
+              {/* Type breakdown display */}
+              <div className="bg-white/5 rounded-3xl border border-white/5 p-6">
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6">Sector Breakdown</h4>
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Object.entries(totals.byType).map(([cat, amt]) => (
+                      <div key={cat} className="p-3 bg-white/5 rounded-xl border border-white/5">
+                        <p className="text-[9px] font-black uppercase text-gray-500 mb-1">{cat}</p>
+                        <p className="text-xs font-black">{formatPKR(amt)}</p>
+                      </div>
+                    ))}
+                 </div>
               </div>
             </div>
 
-            {/* History Side */}
+            {/* History Column */}
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <History className="w-4 h-4 text-slate-400" />
-                  Recent Closings
-                </h3>
-                
-                <div className="space-y-4">
-                  {history.map((item, idx) => (
-                    <div key={(item as any).id || idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:border-indigo-200 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <p className="text-xs font-black text-slate-900">{(item as any).date || (item as any).dateStr}</p>
-                        <span className={cn(
-                          "text-[10px] font-black uppercase px-2 py-0.5 rounded-full",
-                          item.difference === 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                        )}>
-                          {item.difference === 0 ? 'Balanced' : 'Discrepancy'}
-                        </span>
+               <div className="bg-white/5 rounded-3xl border border-white/10 p-6">
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                   <History size={14} /> Audit History
+                 </h4>
+                 <div className="space-y-3">
+                    {history.map(item => (
+                      <div key={item.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 group hover:border-amber-400/20 transition-all">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-[10px] font-black text-white">{item.date}</span>
+                          <span className={cn(
+                             "text-[8px] font-black uppercase px-2 py-0.5 rounded border",
+                             Math.abs(item.variance || 0) < 1 ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20" : "bg-rose-400/10 text-rose-400 border-rose-400/20"
+                          )}>
+                            {Math.abs(item.variance || 0) < 1 ? 'BALANCED' : 'VARIANCE'}
+                          </span>
+                        </div>
+                        <p className="text-xs font-black text-gray-400">{formatPKR(item.actualClosing || item.actualCash)}</p>
                       </div>
-                      <div className="flex justify-between items-end">
-                        <p className="text-sm font-bold text-slate-600">PKR {item.actualCash.toLocaleString()}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">By {item.cashierName}</p>
+                    ))}
+                    {!history.length && (
+                      <div className="text-center py-8">
+                         <Receipt className="w-8 h-8 mx-auto text-white/10 mb-2" />
+                         <p className="text-[10px] font-black uppercase text-gray-600">No archives found</p>
                       </div>
-                    </div>
-                  ))}
-                  {history.length === 0 && (
-                    <div className="text-center py-10 opacity-50">
-                      <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                      <p className="text-xs font-bold text-slate-400">No closing history found.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+                    )}
+                 </div>
+               </div>
 
-              <div className="bg-indigo-600 p-6 rounded-[2rem] text-white overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl" />
-                <h3 className="text-xs font-black uppercase tracking-widest mb-2 opacity-80">Security Note</h3>
-                <p className="text-xs font-bold leading-relaxed">
-                  Daily closing is an irreversible action. Ensure physical cash exactly matches your reported amount. Discrepancies will be flagged for superadmin audit.
-                </p>
-              </div>
+               <div className="bg-white/5 rounded-3xl border border-white/10 p-6 h-fit bg-gradient-to-br from-white/5 to-amber-400/[0.02]">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-3 flex items-center gap-2">
+                    <AlertCircle size={14} /> Operational Directive
+                  </h4>
+                  <p className="text-[10px] font-bold text-gray-400 leading-relaxed uppercase">
+                    Submission locks the daily ledger. All values must be physically verified. Node variances are flagged for superadmin oversight automatically.
+                  </p>
+               </div>
             </div>
           </div>
         )}
       </main>
-
-      <style jsx global>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
-        }
-        .animate-shake {
-          animation: shake 0.2s ease-in-out 0s 2;
-        }
-      `}</style>
     </div>
   );
 }

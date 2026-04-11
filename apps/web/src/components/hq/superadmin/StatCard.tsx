@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import type { LucideIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react';
 
 export function StatCard({
   title,
@@ -12,6 +12,7 @@ export function StatCard({
   href,
   icon: Icon,
   badge,
+  trend,
   tone = 'neutral',
   format,
   loading,
@@ -22,6 +23,7 @@ export function StatCard({
   href?: string;
   icon?: LucideIcon;
   badge?: { label: string; tone?: 'danger' | 'warning' | 'info' | 'success' };
+  trend?: { value: number; isUp: boolean };
   tone?: 'neutral' | 'rehab' | 'spims' | 'hq' | 'primary' | 'warning' | 'danger';
   format?: 'pkr';
   loading?: boolean;
@@ -64,6 +66,12 @@ export function StatCard({
       <div className="min-w-0">
         <div className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300">{title}</div>
         <div className="mt-2 text-3xl font-black text-gray-900 dark:text-white break-words">{displayValue}</div>
+        {trend && (
+          <div className={`mt-1 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {trend.isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {Math.abs(trend.value).toFixed(1)}%
+          </div>
+        )}
         {subtitle ? <div className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{subtitle}</div> : null}
       </div>
       {Icon ? (

@@ -1,38 +1,27 @@
+// apps/web/src/app/hq/dashboard/cashier/reconciliation/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { addDoc, collection, getDocs, query, where, limit, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, CheckCircle, AlertTriangle, Calculator } from 'lucide-react';
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function normDate(v: any): string {
-  if (!v) return '';
-  if (typeof v === 'string') return v.slice(0, 10);
-  if (v?.seconds) return new Date(v.seconds * 1000).toISOString().slice(0, 10);
-  if (typeof v?.toDate === 'function') return v.toDate().toISOString().slice(0, 10);
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
-}
+import { Loader2, CheckCircle, AlertTriangle, Calculator, ArrowLeft, History, Zap } from 'lucide-react';
+import { cn, formatDateDMY, toDate } from '@/lib/utils';
+import { formatPKR } from '@/lib/hq/superadmin/format';
 
 export default function CashierReconciliationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
 
-  const [date] = useState(todayISO());
-  const [openingBalance, setOpeningBalance] = useState('');
+  const [date] = useState(formatDateDMY(new Date()));
   const [actualClosing, setActualClosing] = useState('');
   const [varianceNote, setVarianceNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [todayTotals, setTodayTotals] = useState({ inflow: 0, outflow: 0 });
-  const [pastRecords, setPastRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [pastRecords, setPastRecords] = useState<any[]>([]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -46,26 +35,21 @@ export default function CashierReconciliationPage() {
 
     const fetchData = async () => {
       try {
-        const [rehabSnap, spimsSnap] = await Promise.all([
+        const [hqSnap, rehabSnap, spimsSnap, pastSnap] = await Promise.all([
+          getDocs(query(collection(db, 'cashierTransactions'), where('cashierId', '==', session.customId), where('status', '==', 'approved'))),
           getDocs(query(collection(db, 'rehab_transactions'), where('cashierId', '==', session.customId), where('status', '==', 'approved'))),
           getDocs(query(collection(db, 'spims_transactions'), where('cashierId', '==', session.customId), where('status', '==', 'approved'))),
+          getDocs(query(collection(db, 'hq_reconciliation'), where('cashierId', '==', session.customId), orderBy('createdAt', 'desc'), limit(5)))
         ]);
 
-        const allTx = [
-          ...rehabSnap.docs.map((d) => d.data()),
-          ...spimsSnap.docs.map((d) => d.data()),
-        ].filter((t: any) => normDate(t.date) === date);
+        const all = [
+          ...hqSnap.docs.map(d => ({ ...d.data(), id: d.id, _source: 'hq' })),
+          ...rehabSnap.docs.map(d => ({ ...d.data(), id: d.id, _source: 'rehab' })),
+          ...spimsSnap.docs.map(d => ({ ...d.data(), id: d.id, _source: 'spims' }))
+        ].filter((t: any) => formatDateDMY(toDate(t.createdAt || t.date || t.dateStr)) === date);
 
-        const inflow = allTx.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + (t.amount || 0), 0);
-        const outflow = allTx.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + (t.amount || 0), 0);
-        setTodayTotals({ inflow, outflow });
-
-        const pastSnap = await getDocs(
-          query(collection(db, 'hq_reconciliation'), where('cashierId', '==', session.customId), limit(10))
-        );
-        const past = pastSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        past.sort((a: any, b: any) => (b.date > a.date ? 1 : -1));
-        setPastRecords(past);
+        setTransactions(all);
+        setPastRecords(pastSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
         console.error(err);
       } finally {
@@ -76,31 +60,56 @@ export default function CashierReconciliationPage() {
     void fetchData();
   }, [session, date]);
 
-  const opening = parseFloat(openingBalance) || 0;
-  const expectedClosing = opening + todayTotals.inflow - todayTotals.outflow;
+  const totals = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    transactions.forEach(t => {
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'expense') expense += amt; else income += amt;
+    });
+    return { income, expense, net: income - expense };
+  }, [transactions]);
+
   const actual = parseFloat(actualClosing) || 0;
-  const variance = actual - expectedClosing;
+  const variance = actual - totals.net;
 
   const handleSubmit = async () => {
-    if (!openingBalance || !actualClosing) return;
+    if (!actualClosing) return;
     if (variance !== 0 && !varianceNote.trim()) return;
+    
     setSubmitting(true);
     try {
-      await addDoc(collection(db, 'hq_reconciliation'), {
+      const payload = {
         date,
         cashierId: session!.customId,
         cashierName: session!.name,
-        openingBalance: opening,
-        totalInflow: todayTotals.inflow,
-        totalOutflow: todayTotals.outflow,
-        expectedClosing,
+        incomeTotal: totals.income,
+        expenseTotal: totals.expense,
+        expectedBalance: totals.net,
         actualClosing: actual,
         variance,
         varianceNote: varianceNote.trim() || null,
-        status: 'submitted',
-        createdAt: new Date().toISOString(),
+        status: 'pending',
+        createdAt: Timestamp.now(),
+        submittedAt: Timestamp.now(),
+        totalTransactions: transactions.length,
+        portal: session?.portal || 'hq'
+      };
+
+      await addDoc(collection(db, 'hq_reconciliation'), payload);
+
+      // Audit Log
+      await addDoc(collection(db, 'hq_audit'), {
+        action: 'day_close',
+        actorName: session!.name,
+        actorId: session!.customId,
+        message: `Quick reconciliation for ${date}. Var: ${variance}`,
+        source: 'hq',
+        createdAt: Timestamp.now()
       });
+
       setSubmitted(true);
+      setTimeout(() => router.push('/hq/dashboard/cashier'), 2000);
     } catch (err) {
       console.error(err);
     } finally {
@@ -110,147 +119,145 @@ export default function CashierReconciliationPage() {
 
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
+        <p className="text-[10px] font-black uppercase tracking-widest text-gray-700">Synchronizing Ledger</p>
       </div>
     );
   }
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-4 p-4">
-        <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-          <CheckCircle className="text-emerald-500" size={40} />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 gap-6 p-4 text-center">
+        <div className="w-24 h-24 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center animate-bounce">
+          <CheckCircle className="text-emerald-500" size={48} />
         </div>
-        <h2 className="text-white font-black text-2xl uppercase tracking-widest">Submitted!</h2>
-        <p className="text-gray-500 text-sm font-bold uppercase tracking-widest">Daily close for {date} sent for verification</p>
-        <button onClick={() => router.push('/hq/dashboard/cashier')} className="mt-4 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-widest px-8 py-3 rounded-2xl transition-all">
-          Back to Dashboard
-        </button>
+        <div>
+          <h2 className="text-white font-black text-3xl uppercase tracking-tighter">Transmission Successful</h2>
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Daily Audit Node: {date}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4 md:p-8 pb-24">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Daily Close</h1>
-          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">{date}</p>
+    <div className="min-h-screen bg-gray-950 p-4 md:p-8 text-white selection:bg-amber-400 selection:text-black">
+      <div className="max-w-xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
+           <div>
+             <h1 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-2">
+               <Zap className="text-amber-400 fill-amber-400/20" size={24} />
+               Fast Close
+             </h1>
+             <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">Audit Point: {date}</p>
+           </div>
+           <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+             <ArrowLeft size={18} />
+           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
-            <p className="text-emerald-500 text-xl font-black">Rs{todayTotals.inflow.toLocaleString()}</p>
-            <p className="text-emerald-500/50 text-[10px] font-black uppercase tracking-widest mt-1">Today Inflow</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 mb-1">Inflow</p>
+            <p className="text-2xl font-black text-emerald-400">{formatPKR(totals.income)}</p>
           </div>
-          <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-4">
-            <p className="text-rose-500 text-xl font-black">Rs{todayTotals.outflow.toLocaleString()}</p>
-            <p className="text-rose-500/50 text-[10px] font-black uppercase tracking-widest mt-1">Today Outflow</p>
+          <div className="bg-rose-500/5 border border-rose-500/20 rounded-3xl p-5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-rose-500/50 mb-1">Outflow</p>
+            <p className="text-2xl font-black text-rose-400">{formatPKR(totals.expense)}</p>
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/8 rounded-3xl p-6 space-y-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Calculator className="text-amber-500" size={18} />
-            <h2 className="text-white font-black text-sm uppercase tracking-widest">Cash Count</h2>
+        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+          
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Ledger Validation</h2>
+          </div>
+
+          <div className="bg-black/20 border border-white/5 rounded-2xl p-6">
+            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+               <span>Target Balance</span>
+               <span>{transactions.length} Records</span>
+            </div>
+            <p className="text-3xl font-black text-amber-400 tracking-tighter">{formatPKR(totals.net)}</p>
           </div>
 
           <div>
-            <label className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-2">Opening Balance (Rs)</label>
-            <input
-              type="number"
-              value={openingBalance}
-              onChange={e => setOpeningBalance(e.target.value)}
-              placeholder="0"
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all [appearance:textfield]"
-            />
-          </div>
-
-          <div className="bg-gray-900 border border-white/5 rounded-2xl p-4 space-y-2">
-            <div className="flex justify-between text-xs font-bold">
-              <span className="text-gray-500 uppercase tracking-widest">Opening</span>
-              <span className="text-white">Rs{opening.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-xs font-bold">
-              <span className="text-emerald-500/70 uppercase tracking-widest">+ Inflow</span>
-              <span className="text-emerald-500">Rs{todayTotals.inflow.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-xs font-bold">
-              <span className="text-rose-500/70 uppercase tracking-widest">- Outflow</span>
-              <span className="text-rose-500">Rs{todayTotals.outflow.toLocaleString()}</span>
-            </div>
-            <div className="border-t border-white/5 pt-2 flex justify-between text-sm font-black">
-              <span className="text-amber-500 uppercase tracking-widest">Expected Closing</span>
-              <span className="text-amber-500">Rs{expectedClosing.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-2">Actual Cash in Hand (Rs)</label>
+            <label className="text-gray-500 text-[10px] font-black uppercase tracking-widest block mb-3 pl-1">Actual Physical Count</label>
             <input
               type="number"
               value={actualClosing}
               onChange={e => setActualClosing(e.target.value)}
-              placeholder="0"
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all [appearance:textfield]"
+              placeholder="0.00"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white text-xl font-black outline-none focus:border-amber-400/50 transition-all placeholder:text-white/5"
             />
           </div>
 
           {actualClosing && (
-            <div className={`rounded-2xl p-4 flex items-center gap-3 ${variance === 0 ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-rose-500/10 border border-rose-500/20'}`}>
-              {variance === 0
-                ? <CheckCircle className="text-emerald-500 flex-shrink-0" size={18} />
-                : <AlertTriangle className="text-rose-500 flex-shrink-0" size={18} />}
+            <div className={cn(
+               "rounded-2xl p-5 flex items-center gap-4 border transition-all animate-in slide-in-from-top-2",
+               variance === 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'
+            )}>
+              <div className={cn(
+                "h-10 w-10 rounded-xl flex items-center justify-center",
+                variance === 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+              )}>
+                {variance === 0 ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
+              </div>
               <div>
-                <p className={`text-sm font-black ${variance === 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                  {variance === 0 ? 'Balanced!' : `Variance: Rs${Math.abs(variance).toLocaleString()} ${variance > 0 ? 'surplus' : 'shortage'}`}
+                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Audit Result</p>
+                <p className={cn("text-sm font-black uppercase", variance === 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                  {variance === 0 ? 'Perfect Match' : `Variance: ${formatPKR(Math.abs(variance))} detected`}
                 </p>
               </div>
             </div>
           )}
 
           {variance !== 0 && actualClosing && (
-            <div>
-              <label className="text-rose-500 text-[10px] font-black uppercase tracking-widest block mb-2">Variance Reason (Required) *</label>
+            <div className="animate-in fade-in duration-300">
+              <label className="text-rose-500/70 text-[10px] font-black uppercase tracking-widest block mb-3 pl-1">Reason for Variance *</label>
               <textarea
                 value={varianceNote}
                 onChange={e => setVarianceNote(e.target.value)}
-                placeholder="Explain the variance..."
-                rows={3}
-                className="w-full bg-white/5 border border-rose-500/30 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-rose-500/60 transition-all resize-none"
+                placeholder="Required documentation for discrepancies..."
+                className="w-full bg-white/5 border border-rose-500/20 rounded-2xl px-5 py-4 text-white text-sm font-bold outline-none focus:border-rose-500/50 transition-all resize-none h-24"
               />
             </div>
           )}
 
           <button
-            disabled={!openingBalance || !actualClosing || (variance !== 0 && !varianceNote.trim()) || submitting}
+            disabled={!actualClosing || (variance !== 0 && !varianceNote.trim()) || submitting}
             onClick={handleSubmit}
-            className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 text-black font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all duration-200 shadow-lg shadow-amber-500/20"
+            className="w-full bg-amber-400 hover:bg-amber-300 disabled:opacity-30 disabled:grayscale disabled:scale-100 active:scale-95 text-black font-black text-xs uppercase tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl shadow-amber-400/10"
           >
-            {submitting ? <Loader2 className="animate-spin mx-auto" size={18} /> : 'Submit Daily Close'}
+            {submitting ? <Loader2 className="animate-spin mx-auto" /> : 'Confirm Audit Transmission'}
           </button>
         </div>
 
         {pastRecords.length > 0 && (
-          <div className="bg-white/5 border border-white/8 rounded-3xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/5">
-              <h3 className="text-white font-black text-xs uppercase tracking-widest">Past Reconciliations</h3>
+          <div className="bg-white/5 border border-white/5 rounded-[2rem] overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/5 flex items-center gap-2">
+              <History size={14} className="text-gray-500" />
+              <h3 className="text-gray-500 font-black text-[10px] uppercase tracking-widest">Archived Submissions</h3>
             </div>
             <div className="divide-y divide-white/5">
               {pastRecords.map((r: any) => (
-                <div key={r.id} className="flex items-center justify-between px-5 py-4">
+                <div key={r.id} className="flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors">
                   <div>
-                    <p className="text-white text-sm font-bold">{r.date}</p>
-                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-0.5">
-                      Variance: {r.variance === 0 ? '—' : `Rs${Math.abs(r.variance).toLocaleString()}`}
+                    <p className="text-white text-xs font-black">{r.date}</p>
+                    <p className="text-gray-600 text-[9px] font-black uppercase tracking-widest mt-1">
+                      Balance: {formatPKR(r.actualClosing || 0)}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                    r.status === 'verified' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                    r.status === 'flagged' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                  }`}>{r.status}</span>
+                  <div className={cn(
+                    "rounded-md px-2 py-1 text-[8px] font-black uppercase tracking-widest border",
+                    r.status === 'verified' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                    r.status === 'flagged' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
+                    "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                  )}>
+                    {r.status}
+                  </div>
                 </div>
               ))}
             </div>

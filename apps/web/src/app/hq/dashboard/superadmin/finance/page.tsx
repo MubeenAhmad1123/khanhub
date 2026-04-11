@@ -9,14 +9,41 @@ import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { CsvExportButton } from '@/components/hq/superadmin/CsvExportButton';
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
 import { formatPKR } from '@/lib/hq/superadmin/format';
-import { FileText } from 'lucide-react';
+import { 
+  FileText, 
+  TrendingUp, 
+  TrendingDown, 
+  BarChart3, 
+  PieChart as PieChartIcon, 
+  ArrowRight, 
+  History,
+  AlertCircle,
+  LayoutDashboard
+} from 'lucide-react';
 import { FinanceReportModal } from '@/components/hq/superadmin/FinanceReportModal';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  BarChart,
+  Bar
+} from 'recharts';
+import { cn } from '@/lib/utils';
 
 export default function SuperadminFinancePage() {
   const router = useRouter();
   const sp = useSearchParams();
   const { session, loading: sessionLoading } = useHqSession();
   const initialTab = (sp.get('tab') as FinanceTab) || 'combined';
+  
   const [tab, setTab] = useState<FinanceTab>(initialTab);
   const [summary, setSummary] = useState<null | Awaited<ReturnType<typeof fetchFinanceSummary>>>(null);
   const [insights, setInsights] = useState<null | Awaited<ReturnType<typeof fetchFinanceInsights>>>(null);
@@ -39,29 +66,51 @@ export default function SuperadminFinancePage() {
         setInsights(i);
       })
       .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [session, tab]);
 
   const csvRows = useMemo(() => {
     const top = insights?.topOutstanding || [];
     return top.map((r) => ({
       name: r.name,
+      portal: r.portal,
       outstanding: r.outstanding,
-      totalReceived: r.totalReceived ?? '',
-      totalDue: r.totalDue ?? '',
+      received: r.totalReceived,
+      due: r.totalDue,
+      overdue_days: r.daysOverdue
     }));
   }, [insights]);
 
+  if (loading || !summary || !insights) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-950">
+        <InlineLoading label="Constructing Financial Dashboard..." />
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 bg-gray-950 min-h-screen text-white">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">Finance</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Summary + trends + dues.</p>
+          <div className="flex items-center gap-2">
+            <div className="rounded-xl bg-amber-400/10 p-2">
+              <BarChart3 className="h-6 w-6 text-amber-400" />
+            </div>
+            <h1 className="text-3xl font-black tracking-tight">Finance Command Center</h1>
+          </div>
+          <p className="mt-2 text-sm font-medium text-gray-500">Real-time financial intelligence across all KhanHub portals.</p>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => router.push('/hq/dashboard/superadmin/analytics')}
+            className="flex h-11 items-center gap-2 rounded-2xl bg-white/5 border border-white/10 px-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/10 active:scale-95"
+          >
+            <LayoutDashboard size={16} />
+            Analytics
+          </button>
           <button
             onClick={() => setShowReportModal(true)}
             className="flex h-11 items-center gap-2 rounded-2xl bg-orange-600 px-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-orange-700 active:scale-95"
@@ -69,106 +118,254 @@ export default function SuperadminFinancePage() {
             <FileText size={16} />
             <span className="hidden sm:inline">Detailed Report</span>
           </button>
-          <CsvExportButton filename={`top_pending_${tab}.csv`} rows={csvRows} />
+          <CsvExportButton filename={`fin_data_${tab}.csv`} rows={csvRows} />
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 sm:max-w-md">
-        {(['combined', 'rehab', 'spims'] as const).map((t) => (
+      {/* Portal Tabs */}
+      <div className="mt-8 flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        {(['combined', 'rehab', 'spims', 'hq'] as const).map((t) => (
           <button
             key={t}
-            type="button"
             onClick={() => setTab(t)}
-            className={`h-11 rounded-2xl text-xs font-black uppercase tracking-widest transition ${
-              tab === t ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-50 text-gray-700 dark:bg-white/5 dark:text-gray-200'
-            }`}
+            className={cn(
+              "whitespace-nowrap rounded-2xl px-6 py-3 text-xs font-black uppercase tracking-widest transition-all",
+              tab === t 
+                ? "bg-amber-400 text-black shadow-lg shadow-amber-400/20 scale-105" 
+                : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white"
+            )}
           >
-            {t}
+            {t === 'combined' ? 'Universal Feed' : t}
           </button>
         ))}
       </div>
 
-      {loading || !summary || !insights ? (
-        <div className="mt-6">
-          <InlineLoading label="Loading finance…" />
+      {/* KPI Stats */}
+      <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <StatCard title="Collected Today" value={summary.collectedToday} tone="primary" format="pkr" 
+          trend={{ value: summary.collectedDailyTrend, isUp: summary.collectedDailyTrend >= 0 }} />
+        <StatCard title="This Month" value={summary.collectedThisMonth} tone="neutral" format="pkr" />
+        <StatCard title="Total Outstanding" value={summary.outstandingTotal} tone="warning" format="pkr" />
+        <StatCard title="Pending Approvals" value={summary.pendingApprovals} tone="danger" subtitle="Action Needed" />
+        <StatCard title="Daily Close Count" value={summary.pendingReconciliations} tone="neutral" subtitle="Pending Review" />
+        <StatCard title="Total TX Count" value={summary.totalTransactionsToday} tone="primary" subtitle="Daily Volume" />
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Revenue Overview Chart */}
+        <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-black uppercase tracking-widest text-amber-400">Revenue Stream</h2>
+              <p className="text-xs font-bold text-gray-500 uppercase">Last 30 days performance</p>
+            </div>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={insights.daily}>
+                <defs>
+                  <linearGradient id="colorInc" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#F87171" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#F87171" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                <XAxis dataKey="day" hide />
+                <YAxis hide />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#020617', borderRadius: '16px', border: '1px solid #ffffff10', color: '#fff' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: '900' }}
+                />
+                <Area type="monotone" dataKey="income" stroke="#10B981" fillOpacity={1} fill="url(#colorInc)" strokeWidth={3} />
+                <Area type="monotone" dataKey="expense" stroke="#F87171" fillOpacity={1} fill="url(#colorExp)" strokeWidth={3} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      ) : (
-        <>
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard title="Collected today" value={summary.collectedToday} subtitle="Approved" tone="primary" format="pkr" />
-            <StatCard title="This month" value={summary.collectedThisMonth} subtitle="Approved" tone="neutral" format="pkr" />
-            <StatCard title="Total Dues" value={summary.outstandingTotal} subtitle="Total" tone="warning" format="pkr" />
-            <StatCard title="Pending approvals" value={summary.pendingApprovals} subtitle="Needs action" tone="danger" />
+
+        {/* Breakdown Pie Chart */}
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+          <div className="mb-6 flex items-center gap-2">
+            <PieChartIcon className="h-4 w-4 text-amber-400" />
+            <h2 className="text-sm font-black uppercase tracking-widest">Type Breakdown</h2>
           </div>
-
-          <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-              <h2 className="text-sm font-black text-gray-900 dark:text-white">30-day daily series</h2>
-              <div className="mt-3 space-y-2">
-                {insights.daily.slice(-10).map((p) => (
-                  <div key={p.day} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/5">
-                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{p.day}</span>
-                    <span className="text-xs font-black text-gray-900 dark:text-white">{formatPKR(p.amount)}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Showing last 10 points (full chart can be added next).</p>
-            </div>
-
-            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-              <h2 className="text-sm font-black text-gray-900 dark:text-white">Type breakdown (30 days)</h2>
-              <div className="mt-3 space-y-2">
-                {insights.types
-                  .filter((t) => t.amount > 0)
-                  .sort((a, b) => b.amount - a.amount)
-                  .map((t) => (
-                    <div key={t.type} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/5">
-                      <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{t.type}</span>
-                      <span className="text-xs font-black text-gray-900 dark:text-white">{formatPKR(t.amount)}</span>
-                    </div>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={insights.types}
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="amount"
+                >
+                  {insights.types.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
-              </div>
-            </div>
+                </Pie>
+                <Tooltip 
+                  formatter={(value: number) => formatPKR(value)}
+                  contentStyle={{ backgroundColor: '#020617', borderRadius: '16px', border: '1px solid #ffffff10' }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
+        </div>
+      </div>
 
-          <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-black text-gray-900 dark:text-white">Top pending</h2>
-              <div className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                Total rows: {insights.topOutstanding.length}
-              </div>
-            </div>
-            {!insights.topOutstanding.length ? (
-              <div className="mt-4">
-                <EmptyState title="No pending balances" message="Looks clean right now." />
-              </div>
-            ) : (
-              <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-xs uppercase tracking-widest text-gray-400">
-                      <th className="py-2 pr-4">Name</th>
-                      <th className="py-2 pr-4">Pending</th>
-                      <th className="py-2 pr-4">Received</th>
-                      <th className="py-2">Due</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {insights.topOutstanding.map((r) => (
-                      <tr key={r.id} className="border-t border-gray-100 dark:border-white/10">
-                        <td className="py-3 pr-4 font-bold text-gray-900 dark:text-white">{r.name}</td>
-                        <td className="py-3 pr-4 font-black text-amber-600 dark:text-amber-300">{formatPKR(r.outstanding)}</td>
-                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-300">{r.totalReceived ? formatPKR(Number(r.totalReceived)) : '—'}</td>
-                        <td className="py-3 text-gray-600 dark:text-gray-300">{r.totalDue ? formatPKR(Number(r.totalDue)) : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Weekly Growth Bar Chart */}
+        <div className="lg:col-span-4 rounded-3xl border border-white/10 bg-white/5 p-6">
+          <h2 className="mb-6 text-sm font-black uppercase tracking-widest">Week-over-Week</h2>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={insights.weeks}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                <XAxis dataKey="week" stroke="#ffffff50" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis hide />
+                <Tooltip 
+                  cursor={{ fill: '#ffffff05' }}
+                  contentStyle={{ backgroundColor: '#020617', borderRadius: '16px', border: '1px solid #ffffff10' }}
+                />
+                <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} barSize={12} />
+                <Bar dataKey="expense" fill="#F87171" radius={[4, 4, 0, 0]} barSize={12} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        </>
-      )}
+        </div>
+
+        {/* Top Pending Dues */}
+        <div className="lg:col-span-8 rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-sm font-black uppercase tracking-widest">Top Pending Dues</h2>
+            <span className="rounded-full bg-amber-400/10 px-3 py-1 text-[10px] font-black text-amber-400">CRITICAL LIST</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                  <th className="pb-4">Patient / Student</th>
+                  <th className="pb-4">Portal</th>
+                  <th className="pb-4">Outstanding</th>
+                  <th className="pb-4">Days Overdue</th>
+                  <th className="pb-4">Last Payment</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {insights.topOutstanding.map((r, i) => (
+                  <tr key={r.id} className="group hover:bg-white/5 transition-colors">
+                    <td className="py-4 font-bold">{r.name}</td>
+                    <td className="py-4">
+                      <span className={cn(
+                        "rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-widest border",
+                        r.portal === 'rehab' ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20" : "bg-blue-400/10 text-blue-400 border-blue-400/20"
+                      )}>
+                        {r.portal}
+                      </span>
+                    </td>
+                    <td className="py-4 font-black text-amber-400">{formatPKR(r.outstanding)}</td>
+                    <td className="py-4">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">
+                        <AlertCircle size={14} className={r.daysOverdue > 30 ? "text-rose-500" : "text-gray-600"} />
+                        {r.daysOverdue} days
+                      </div>
+                    </td>
+                    <td className="py-4 text-xs font-medium text-gray-400">{r.lastPaymentDate || 'Never'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Daily Series Table */}
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <h2 className="mb-6 text-sm font-black uppercase tracking-widest border-l-4 border-amber-400 pl-3">Daily Performance</h2>
+          <div className="space-y-3">
+            {insights.daily.slice(-7).reverse().map((p) => (
+              <div key={p.day} className="flex items-center justify-between rounded-2xl bg-white/5 p-4 border border-white/5 group hover:border-white/10 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "rounded-xl p-2",
+                    p.variance >= 0 ? "bg-emerald-400/10 text-emerald-400" : "bg-rose-400/10 text-rose-400"
+                  )}>
+                    {p.variance >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-white">{p.day}</p>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase">{p.count} transactions recorded</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-black text-white">{formatPKR(p.income)}</p>
+                  <p className={cn(
+                    "text-[10px] font-black uppercase tracking-widest",
+                    p.variance >= 0 ? "text-emerald-400" : "text-rose-400"
+                  )}>
+                    {p.variance >= 0 ? '+' : ''}{formatPKR(p.variance)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Reconciliation Summary */}
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-sm font-black uppercase tracking-widest">Recent Closings</h2>
+            <button 
+              onClick={() => router.push('/hq/dashboard/superadmin/reconciliation')}
+              className="group flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-amber-400"
+            >
+              View All <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            {insights.recentReconciliations.map((r: any) => (
+              <div key={r.id} className={cn(
+                "rounded-2xl bg-white/5 p-4 border-l-4 transition-all",
+                r.status === 'verified' ? "border-emerald-500" : r.status === 'flagged' ? "border-rose-500" : "border-amber-500"
+              )}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                       <span className="text-xs font-black uppercase text-white">{r.date}</span>
+                       <span className={cn(
+                         "rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-tighter",
+                         r.status === 'verified' ? "bg-emerald-400/20 text-emerald-400" : 
+                         r.status === 'flagged' ? "bg-rose-400/20 text-rose-400" : 
+                         "bg-amber-400/20 text-amber-400"
+                       )}>
+                         {r.status}
+                       </span>
+                    </div>
+                    <p className="mt-1 text-[10px] font-bold text-gray-500 uppercase">
+                      Cashier: {r.cashierName} • Total TX: {r.totalTransactions || 0}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-white">{formatPKR(r.actualClosing || r.actualCash || 0)}</p>
+                    <p className={cn(
+                      "text-[10px] font-black uppercase tracking-widest",
+                      (r.variance || r.difference) === 0 ? "text-gray-500" : "text-rose-400"
+                    )}>
+                      Var: {formatPKR(Math.abs(r.variance || r.difference || 0))}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {showReportModal && (
         <FinanceReportModal
@@ -179,4 +376,3 @@ export default function SuperadminFinancePage() {
     </div>
   );
 }
-
