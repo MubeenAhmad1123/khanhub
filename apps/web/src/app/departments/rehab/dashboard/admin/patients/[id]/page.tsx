@@ -24,6 +24,19 @@ import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
 
+const TABS = [
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'admission', label: 'Admission', icon: FileText },
+  { id: 'daily', label: 'Daily Sheets', icon: ClipboardList },
+  { id: 'progress', label: 'Progress', icon: TrendingUp },
+  { id: 'therapy', label: 'Therapy', icon: Activity },
+  { id: 'meds', label: 'Medication', icon: Pill },
+  { id: 'fees', label: 'Financials', icon: DollarSign },
+  { id: 'canteen', label: 'Canteen', icon: ShoppingCart },
+  { id: 'videos', label: 'Files', icon: Video },
+  { id: 'visits', label: 'Visits', icon: Users },
+];
+
 export default function PatientDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -852,11 +865,14 @@ export default function PatientDetailPage() {
                   {patient.name}
                 </h1>
                 <button 
-                  onClick={() => setShowEditModal(true)}
+                  onClick={() => {
+                    setActiveTab('profile');
+                    setIsEditing(true);
+                  }}
                   className="self-center sm:self-start p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-400 hover:text-teal-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-teal-900/20 dark:hover:text-teal-400 transition-all border border-slate-200/50 dark:border-white/5 active:scale-90"
                   title="Edit Profile"
                 >
-                  <Pencil className="h-5 w-5" />
+                  <Edit3 className="h-5 w-5" />
                 </button>
               </div>
               
@@ -1350,7 +1366,6 @@ export default function PatientDetailPage() {
           {activeTab === 'videos' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between mb-2 border-b border-gray-100 dark:border-white/10 pb-4">
-der-b border-gray-100 pb-4">
                 <div className="flex items-center gap-3">
                   <Video className="w-6 h-6 text-teal-600" />
                   <h2 className="text-xl font-bold text-gray-800">Files & Progress</h2>
