@@ -1,15 +1,16 @@
-// src/app/departments/rehab/dashboard/layout.tsx
+// src/app/departments/hospital/dashboard/layout.tsx
 'use client';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, Users, CheckCircle, Heart, UserCog,
   Banknote, FileBarChart, CreditCard, CalendarDays,
-  User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon
+  User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon,
+  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type RehabRole = 'admin' | 'staff' | 'family' | 'superadmin';
@@ -22,12 +23,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  // Admin nav — patients only (admin cannot manage staff)
   { label: 'Overview',      href: '/departments/hospital/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
   { label: 'Patients',      href: '/departments/hospital/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
   { label: 'Credentials',   href: '/departments/hospital/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin', 'superadmin'] },
-
-  // Self-service nav (all roles)
   { label: 'My Attendance', href: '/departments/hospital/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'My Patient',    href: '/departments/hospital/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
   { label: 'My Profile',    href: '/departments/hospital/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },
@@ -47,24 +45,49 @@ const ROLE_LABELS: Record<RehabRole, string> = {
   superadmin: 'HQ Admin',
 };
 
-export default function RehabDashboardLayout({ children }: { children: React.ReactNode }) {
+const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string; icon: React.ReactNode }> = {
+  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-rose-500',   icon: <Heart size={16} /> },
+  hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500',   icon: <Building2 size={16} /> },
+  spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500',   icon: <GraduationCap size={16} /> },
+  sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500', icon: <Heart size={16} /> },
+  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500',  icon: <Heart size={16} /> },
+  'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500', icon: <User size={16} /> },
+};
+
+const HQ_NAV_ITEMS = [
+  { label: 'HQ Overview', href: '/hq/dashboard/superadmin', icon: <LayoutDashboard size={16} /> },
+  { label: 'Approvals', href: '/hq/dashboard/superadmin/approvals', icon: <CheckCircle size={16} /> },
+  { label: 'Finance', href: '/hq/dashboard/superadmin/finance', icon: <TrendingUp size={16} /> },
+  { label: 'All Users', href: '/hq/dashboard/superadmin/users', icon: <Users size={16} /> },
+  { label: 'Departments', href: '/hq/dashboard/superadmin/departments', icon: <Building2 size={16} /> },
+  { label: 'Audit Log', href: '/hq/dashboard/superadmin/audit', icon: <FileText size={16} /> },
+  { label: 'Reconciliation', href: '/hq/dashboard/superadmin/reconciliation', icon: <Calculator size={16} /> },
+];
+
+export default function HospitalDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  
   const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const [isHqAdmin, setIsHqAdmin] = useState(false);
+  const [viewMode, setViewMode] = useState<'dept' | 'hq'>('dept');
+
+  const darkMode = mounted && resolvedTheme === 'dark';
+  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
+    setMounted(true);
     let session = localStorage.getItem('hospital_session');
     const hqSessionStr = localStorage.getItem('hq_session');
     
-    // Auto-inject session for HQ superadmin
     if (hqSessionStr) {
       try {
         const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession && hqSession.role === 'superadmin') {
+        if (hqSession?.role === 'superadmin') {
           const syncSession = {
             uid: hqSession.uid,
             customId: hqSession.customId || hqSession.email || 'HQ-USER',
@@ -74,6 +97,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
           localStorage.setItem('hospital_session', JSON.stringify(syncSession));
           localStorage.setItem('hospital_login_time', Date.now().toString());
           session = JSON.stringify(syncSession);
+          setIsHqAdmin(true);
         }
       } catch (e) {}
     }
@@ -83,20 +107,14 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
     const performAuthCheck = async () => {
       try {
         const parsed = JSON.parse(session!);
-        if (!parsed.uid || !parsed.role) { throw new Error('Invalid session'); }
+        if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
 
-        // 1. Session Timeout Check (12 Hours)
         const loginTime = localStorage.getItem('hospital_login_time');
-        if (loginTime) {
-          const hoursElapsed = (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60);
-          if (hoursElapsed > 12) {
-            handleSignOut();
-            return;
-          }
+        if (loginTime && (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60) > 12) {
+          handleSignOut();
+          return;
         }
 
-        // 2. Background Verification (Role & Active Status)
-        // Skip for superadmin because they authenticate via HQ
         if (parsed.role !== 'superadmin') {
           const userDoc = await getDoc(doc(db, 'hospital_users', parsed.uid));
           if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
@@ -107,35 +125,21 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
 
         setUser(parsed);
         setIsChecking(false);
-        setTimeout(() => setMounted(true), 50);
       } catch (err) {
-        console.error('Auth check error:', err);
         handleSignOut();
       }
     };
 
     performAuthCheck();
   }, [router]);
-    
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const darkMode = mounted && resolvedTheme === 'dark';
-  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
-
-  // Effect for mounting
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleSignOut = () => {
-    // We do NOT clear hq_session, only local
     localStorage.removeItem('hospital_session');
-    
-    // Redirect logic
     const hqSessionStr = localStorage.getItem('hq_session');
     if (hqSessionStr) {
       try {
         const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession && hqSession.role === 'superadmin') {
+        if (hqSession?.role === 'superadmin') {
            router.push('/hq/dashboard/superadmin');
            return;
         }
@@ -156,172 +160,200 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   }
 
   const role = user?.role as RehabRole;
-  const navItems = NAV_ITEMS.filter(item => user && item.roles.includes(role));
+  const navItems = viewMode === 'dept'
+    ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
+    : HQ_NAV_ITEMS;
 
-  const SidebarContent = () => (
-    <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-      {/* Logo + Back */}
-      <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-        <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-teal-600 text-xs font-semibold mb-4 transition-colors group">
-          <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
-          Back to KhanHub
-        </Link>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-200">
-            <Shield size={18} />
+  const SidebarContent = () => {
+    const [portalOpen, setPortalOpen] = useState(false);
+
+    return (
+      <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
+        {/* Header */}
+        <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+          <Link 
+            href={viewMode === 'hq' ? "/hq/dashboard/superadmin" : "/"} 
+            className="flex items-center gap-2 text-gray-400 hover:text-teal-600 text-[10px] font-bold mb-4 transition-colors group uppercase tracking-widest"
+          >
+            <ArrowLeft size={10} className="group-hover:-translate-x-1 transition-transform" />
+            {viewMode === 'hq' ? 'Back to HQ' : 'Back to Home'}
+          </Link>
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
+              viewMode === 'hq' ? 'bg-indigo-600 shadow-indigo-200' : 'bg-teal-500 shadow-teal-200'
+            }`}>
+              {viewMode === 'hq' ? <Shield size={20} /> : <Building2 size={20} />}
+            </div>
+            <div>
+              <p className="font-black text-sm leading-none tracking-tight">
+                {viewMode === 'hq' ? 'HQ Navigator' : 'Hospital Portal'}
+              </p>
+              <p className="text-gray-400 text-[10px] font-bold mt-1 uppercase tracking-widest">
+                {viewMode === 'hq' ? 'Central' : 'Department'}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-black text-gray-900 text-sm leading-none">Rehab Portal</p>
-            <p className="text-gray-400 text-[10px] font-semibold mt-0.5">KhanHub</p>
-          </div>
+
+          {/* Jump Portal */}
+          {isHqAdmin && (
+            <div className="relative mb-4">
+              <button
+                onClick={() => setPortalOpen(!portalOpen)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
+                  darkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-gray-50 border-gray-200 hover:bg-white hover:border-teal-200'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <ExternalLink size={14} className="text-teal-500" />
+                  <span className="text-[11px] font-black uppercase tracking-tight">Jump to Portal</span>
+                </div>
+                <ChevronLeft size={14} className={`text-gray-400 transition-transform ${portalOpen ? '-rotate-90' : ''}`} />
+              </button>
+
+              {portalOpen && (
+                <div className={`absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl border shadow-2xl p-2 animate-in fade-in zoom-in-95 ${
+                  darkMode ? 'bg-gray-800 border-white/10' : 'bg-white border-gray-100'
+                }`}>
+                  <div className="grid grid-cols-1 gap-1">
+                    {Object.entries(DEPT_INFO).map(([key, info]) => (
+                      <Link
+                        key={key}
+                        href={info.adminUrl}
+                        onClick={() => setPortalOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all group ${
+                          pathname.includes(key)
+                            ? (darkMode ? 'bg-white/10 text-white' : 'bg-teal-50 text-teal-700')
+                            : (darkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-50 text-gray-600 hover:text-teal-600')
+                        }`}
+                      >
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                          pathname.includes(key) ? 'bg-teal-500 text-white' : (darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100')
+                        }`}>
+                          {React.cloneElement(info.icon as React.ReactElement, { size: 14 })}
+                        </div>
+                        <span className="text-xs font-bold">{info.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Nav Switcher */}
+          {isHqAdmin && (
+            <div className={`flex p-1 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-gray-100'}`}>
+              <button
+                onClick={() => setViewMode('dept')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
+                  viewMode === 'dept' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-white text-teal-600 shadow-sm') : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                DEPT
+              </button>
+              <button
+                onClick={() => setViewMode('hq')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
+                  viewMode === 'hq' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-white text-teal-600 shadow-sm') : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                HQ
+              </button>
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* User Role Badge */}
-      <div className={`px-4 py-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4`}>
+        {/* User */}
+        <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm shadow-sm">
-              {user?.displayName?.[0]?.toUpperCase() || '?'}
+            <div className="w-9 h-9 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-xl flex items-center justify-center text-gray-500 font-black text-xs">
+              {user?.displayName?.[0]?.toUpperCase()}
             </div>
-            <div className="flex-1 min-w-0">
-                <p className={`font-bold text-sm truncate ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{user?.displayName}</p>
-                <p className="text-gray-400 text-[10px] font-mono truncate">{user?.customId}</p>
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold truncate">{user?.displayName}</p>
+              <p className="text-[10px] font-medium text-gray-400 truncate">{user?.customId}</p>
             </div>
           </div>
-          <div className="mt-3">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
+          <div className="mt-3 flex">
+            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
               {role ? ROLE_LABELS[role] : ''}
             </span>
           </div>
         </div>
-      </div>
 
-      {/* Nav Items */}
-      <nav className="flex-1 px-4 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map((item, i) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              style={{ animationDelay: `${i * 40}ms` }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                isActive
-                  ? 'bg-teal-500 text-white shadow-md shadow-teal-200'
-                  : darkMode
-                    ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-100 hover:translate-x-1'
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
-              }`}
-            >
-              <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
-              <span>{item.label}</span>
-              {isActive ? (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />
-              ) : null}
-            </Link>
-          );
-        })}
-      </nav>
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar font-bold">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all group ${
+                  isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20' : (darkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-50 text-gray-500 hover:text-teal-600')
+                }`}
+              >
+                {item.icon}
+                <span className="flex-1">{item.label}</span>
+                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse" />}
+              </Link>
+            );
+          })}
+        </nav>
 
-      {/* Sign out */}
-      <div className={`px-4 pb-6 pt-2 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-        <button
-          onClick={toggleDark}
-          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold mb-1 transition-all ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
-        >
-          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          {darkMode ? 'Light Mode' : 'Dark Mode'}
-        </button>
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all group"
-        >
-          <LogOut size={16} className="group-hover:translate-x-0.5 transition-transform" />
-          Sign Out
-        </button>
+        {/* Bottom */}
+        <div className={`p-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+          <button onClick={toggleDark} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold mb-1 ${darkMode ? 'text-yellow-400' : 'text-gray-500 hover:bg-gray-100'}`}>
+            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            {darkMode ? 'Light' : 'Dark'}
+          </button>
+          <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50">
+            <LogOut size={16} />
+            Sign Out
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className={`min-h-screen flex ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
-      {/* Desktop Sidebar */}
+    <div className={`min-h-screen flex ${darkMode ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       <aside className={`hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
         <SidebarContent />
       </aside>
 
-      {/* Mobile Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden transition-opacity"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      {/* Mobile Sidebar Drawer */}
-      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-        <button
-          onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors"
-        >
+      <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100">
           <X size={16} />
         </button>
         <SidebarContent />
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        {/* Mobile top bar */}
-        <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between transition-colors duration-300 ${
-          darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
-        }`}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
-          >
-            <Menu size={20} />
-          </button>
+        <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
+          <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-400"><Menu size={20} /></button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-red-500 rounded-lg flex items-center justify-center text-white">
-              <Shield size={14} />
-            </div>
-            <span className={`font-black text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Hospital Portal</span>
+            <div className="w-7 h-7 bg-teal-500 rounded-lg flex items-center justify-center text-white"><Shield size={14} /></div>
+            <span className="font-black text-sm">Hospital</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>
-            {role ? ROLE_LABELS[role] : ''}
-          </span>
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
         </header>
 
-        {/* Desktop top bar */}
-        <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${
-          darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
-        }`}>
-          <div className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            KhanHub Rehab Portal
-          </div>
+        <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">KhanHub Hospital Portal</div>
           <div className="flex items-center gap-3">
-            <button onClick={toggleDark} className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-400 hover:bg-gray-100'}`} title="Toggle dark mode">
-              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
-              {role ? ROLE_LABELS[role] : ''}
-            </span>
-            <div className="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm">
-              {user?.displayName?.[0]?.toUpperCase() || '?'}
-            </div>
-            <span className="text-gray-700 text-sm font-semibold">{user?.displayName}</span>
+             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
+             <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>
+             <span className="text-sm font-bold">{user?.displayName}</span>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className={`flex-1 p-4 lg:p-8 overflow-x-hidden transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="max-w-6xl mx-auto">
-            {children}
-          </div>
+        <main className={`flex-1 p-4 lg:p-8 transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="max-w-6xl mx-auto">{children}</div>
         </main>
       </div>
     </div>
