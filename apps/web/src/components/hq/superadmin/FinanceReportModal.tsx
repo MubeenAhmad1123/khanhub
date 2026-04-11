@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Printer, Download, Filter, TrendingUp, TrendingDown, Package, User } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import { FinanceReport, fetchFinanceReport, FinanceTab } from '@/lib/hq/superadmin/finance';
 import { formatPKR } from '@/lib/hq/superadmin/format';
 import { toDate } from '@/lib/utils';
