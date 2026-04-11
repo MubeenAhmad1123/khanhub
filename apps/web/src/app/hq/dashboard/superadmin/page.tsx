@@ -140,27 +140,27 @@ export default function HqSuperadminPage() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
+        <div className="rounded-2xl border border-gray-300 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-black text-gray-900 dark:text-white">Quick actions</h2>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm font-bold text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-white" href="/hq/dashboard/superadmin/users">
+            <Link className="flex items-center justify-center rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 text-sm font-bold text-gray-900 hover:bg-gray-200 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/users">
               Manage users
             </Link>
-            <Link className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm font-bold text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-white" href="/hq/dashboard/superadmin/settings">
+            <Link className="flex items-center justify-center rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 text-sm font-bold text-gray-900 hover:bg-gray-200 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/settings">
               Settings
             </Link>
-            <Link className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm font-bold text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-white" href="/hq/dashboard/superadmin/departments">
+            <Link className="flex items-center justify-center rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 text-sm font-bold text-gray-900 hover:bg-gray-200 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/departments">
               Departments hub
             </Link>
-            <Link className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm font-bold text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-white" href="/hq/dashboard/superadmin/audit">
+            <Link className="flex items-center justify-center rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 text-sm font-bold text-gray-900 hover:bg-gray-200 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/audit">
               Audit logs
             </Link>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
+        <div className="rounded-2xl border border-gray-300 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-black text-gray-900 dark:text-white">Recent activity</h2>
           </div>
@@ -171,12 +171,12 @@ export default function HqSuperadminPage() {
           ) : (
             <div className="mt-3 space-y-2">
               {activity.slice(0, 8).map((a) => (
-                <div key={a.id} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+                <div key={a.id} className="rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 dark:border-white/10 dark:bg-white/5">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{a.msg}</p>
-                    <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{a.when}</span>
+                    <span className="shrink-0 text-xs font-semibold text-gray-600 dark:text-gray-400">{a.when}</span>
                   </div>
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">by {a.who}</p>
+                  <p className="mt-1 text-xs font-medium text-gray-600 dark:text-gray-400">by {a.who}</p>
                 </div>
               ))}
             </div>

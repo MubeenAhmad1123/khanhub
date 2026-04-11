@@ -327,10 +327,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       )}
 
       {/* Go to Dept Dashboard shortcut */}
-      {activeDepts.length > 0 && viewMode === 'hq' && (
+      {role === 'superadmin' && viewMode === 'hq' && (
         <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
           <p className={`text-[10px] font-black uppercase tracking-widest mb-2 px-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Jump to Portal</p>
-          {activeDepts.map(dept => {
+          {Object.keys(DEPT_INFO).map(dept => {
             const info = DEPT_INFO[dept];
             return (
               <Link

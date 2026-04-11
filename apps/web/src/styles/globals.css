@@ -202,7 +202,7 @@
   input,
   textarea,
   select {
-    @apply font-body;
+    @apply font-body text-neutral-900 bg-white dark:bg-gray-800 dark:text-white;
   }
 }
 

@@ -35,6 +35,16 @@ function slugify(v: string) {
   return v.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
+function getLocalDateString(val: any): string {
+  if (!val) return '';
+  const d = toDate(val);
+  if (isNaN(d.getTime())) return '';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function CashierStationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -467,15 +477,22 @@ export default function CashierStationPage() {
     }
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const fromDate = historyFrom ? new Date(`${historyFrom}T00:00:00`) : null;
-  const toDateValue = historyTo ? new Date(`${historyTo}T23:59:59.999`) : null;
+  const todayStr = getLocalDateString(new Date());
   const historyFiltered = historyTxns.filter((tx) => {
-    const d = toDate(tx.transactionDate || tx.date || tx.createdAt);
-    if (!d) return false;
-    if (historyDateMode === 'today' && d.toISOString().split('T')[0] !== todayStr) return false;
-    if (historyDateMode === 'range' && fromDate && toDateValue && (d < fromDate || d > toDateValue)) return false;
-    if (historyStatus !== 'all' && tx.status !== historyStatus) return false;
+    const txDateStr = getLocalDateString(tx.transactionDate || tx.date || tx.createdAt);
+    if (!txDateStr) return false;
+    if (historyDateMode === 'today' && txDateStr !== todayStr) return false;
+    if (historyDateMode === 'range') {
+      if (historyFrom && txDateStr < historyFrom) return false;
+      if (historyTo && txDateStr > historyTo) return false;
+    }
+    if (historyStatus !== 'all') {
+      if (historyStatus === 'pending') {
+        if (!tx.status?.includes('pending')) return false;
+      } else if (tx.status !== historyStatus) {
+        return false;
+      }
+    }
     if (historyType !== 'all' && tx.type !== historyType) return false;
     if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
     return !searchQuery.trim() || `${tx.patientName || ''} ${tx.patientId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase().includes(searchQuery.toLowerCase());
@@ -809,7 +826,7 @@ export default function CashierStationPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
           <div className="border-l-4 border-l-emerald-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Income</p><p className="text-xl md:text-2xl font-black text-white">Rs {totals.income.toLocaleString()}</p></div>
           <div className="border-l-4 border-l-rose-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Expense</p><p className="text-xl md:text-2xl font-black text-white">Rs {totals.expense.toLocaleString()}</p></div>
-          <div className="border-l-4 border-l-amber-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Pending</p><p className="text-xl md:text-2xl font-black text-white">{historyFiltered.filter((x) => x.status === 'pending').length}</p></div>
+          <div className="border-l-4 border-l-amber-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Pending</p><p className="text-xl md:text-2xl font-black text-white">{historyFiltered.filter((x) => x.status === 'pending' || x.status === 'pending_cashier').length}</p></div>
           <div className="border-l-4 border-l-blue-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Total</p><p className="text-xl md:text-2xl font-black text-white">Rs {totals.net.toLocaleString()}</p></div>
         </div>
 
