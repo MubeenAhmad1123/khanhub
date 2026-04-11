@@ -13,6 +13,7 @@ import type { HqRole, HqSession } from '@/types/hq';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
+import { HqNotificationPermissionBanner } from '@/components/hq/HqNotificationPermissionBanner';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 43200000;
@@ -129,8 +130,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   const [activeDepts, setActiveDepts] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'hq' | string>('hq');
 
-  // Initialise FCM push notifications for the logged-in HQ user
-  useFcmNotifications(user);
+  // FCM push notifications
+  const { permission, isRequesting, requestPermission } = useFcmNotifications(user);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const showNotifBanner = mounted && !bannerDismissed && permission === 'default' && !!user;
 
   const normalizeRole = (role: unknown): HqRole | null => {
     const r = String(role || '').trim().toLowerCase();
@@ -462,9 +465,19 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <main className={`flex-1 p-4 lg:p-8 overflow-x-hidden transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="max-w-6xl mx-auto">
-            {children}
+        <main className={`flex-1 overflow-x-hidden transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+          {/* Notification permission banner — only when permission not yet decided */}
+          {showNotifBanner && (
+            <HqNotificationPermissionBanner
+              isRequesting={isRequesting}
+              onAllow={requestPermission}
+              onDismiss={() => setBannerDismissed(true)}
+            />
+          )}
+          <div className="p-4 lg:p-8">
+            <div className="max-w-6xl mx-auto">
+              {children}
+            </div>
           </div>
         </main>
       </div>
