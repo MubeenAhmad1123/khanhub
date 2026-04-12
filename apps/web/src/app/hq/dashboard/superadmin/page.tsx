@@ -7,6 +7,8 @@ import { Activity, BadgeCheck, Building2, ClipboardList, CreditCard, Users2 } fr
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { fetchOverviewStats } from '@/lib/hq/superadmin/stats';
 import { subscribeUnifiedAuditFeed } from '@/lib/hq/superadmin/audit';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { InlineLoading } from '@/components/hq/superadmin/DataState';
 
@@ -141,7 +143,7 @@ const KNOWN_FIELDS = new Set([
   'createdByName', 'message', 'title', 'details', 'summary', 'text',
   'createdAt', 'timestamp', 'time', 'at', 'entityLabel', 'entityName',
   'patientName', 'studentName', 'entityId', 'departmentCode', 'dept',
-  'by', 'createdBy', 'userName',
+  'by', 'createdBy', 'userName', 'performedBy'
 ]);
 
 function MoreDetailsSection({ raw }: { raw: any }) {
@@ -191,6 +193,11 @@ export default function HqSuperadminPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [activity, setActivity] = useState<any[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<any | null>(null);
+  
+  // Profile loading state for the detail modal
+  const [profileData, setProfileData] = useState<any | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const profileCache = useRef<Record<string, any>>({});
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -214,6 +221,76 @@ export default function HqSuperadminPage() {
       onData: (rows) => { setActivity(rows); },
     });
   }, [session]);
+
+  // Dynamic Full Profile Fetcher
+  useEffect(() => {
+    if (!selectedAudit) {
+      setProfileData(null);
+      return;
+    }
+
+    const fetchProfile = async () => {
+      const details = selectedAudit._raw?.details || {};
+      const customId = details.customId || details.userId || selectedAudit._raw?.customId || selectedAudit._raw?.userId || selectedAudit._raw?.staffId || selectedAudit.entityId;
+      
+      if (!customId) {
+        setProfileData('not_found');
+        return;
+      }
+
+      if (profileCache.current[customId]) {
+        setProfileData(profileCache.current[customId]);
+        return;
+      }
+
+      setProfileLoading(true);
+      try {
+        const src = (selectedAudit.source || '').replace('-', '_');
+        const collectionsToCheck = [
+          `${src}_users`,
+          `${src}_patients`,
+          `${src}_seekers`,
+          `${src}_students`,
+          `${src}_children`,
+          `${src}_clients`,
+          `${src}_staff`,
+          `${src}_admins`,
+          'users',
+          'staff',
+          'patients',
+          'students',
+          'accounts'
+        ];
+
+        for (const colName of collectionsToCheck) {
+          const colRef = collection(db, colName);
+          const fieldsToSearch = ['customId', 'uid', 'userId', 'id', 'clientId', 'studentId', 'patientId', 'seekerId', 'staffId'];
+          
+          for (const field of fieldsToSearch) {
+            const q = query(colRef, where(field, '==', customId), limit(1));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              const data = snap.docs[0].data();
+              profileCache.current[customId] = data;
+              setProfileData(data);
+              setProfileLoading(false);
+              return;
+            }
+          }
+        }
+        
+        profileCache.current[customId] = 'not_found';
+        setProfileData('not_found');
+      } catch (err) {
+        console.error("Profile fetch error:", err);
+        setProfileData('not_found');
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [selectedAudit]);
 
   const cards = useMemo(
     () => [
@@ -314,9 +391,9 @@ export default function HqSuperadminPage() {
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">User Details</p>
                 </div>
                 <div className="divide-y divide-white/[0.04]">
-                  <DetailRow label="Full Name"   value={selectedAudit._raw?.name || selectedAudit._raw?.displayName || selectedAudit.entityLabel} />
-                  <DetailRow label="Role"        value={selectedAudit._raw?.role || selectedAudit._raw?.type} capitalize />
-                  <DetailRow label="Custom ID"   value={selectedAudit._raw?.customId || selectedAudit._raw?.userId || selectedAudit._raw?.staffId || selectedAudit._raw?.patientId || selectedAudit._raw?.clientId} mono />
+                  <DetailRow label="Full Name"   value={selectedAudit._raw?.details?.displayName || selectedAudit._raw?.details?.name || selectedAudit._raw?.name || selectedAudit._raw?.displayName || selectedAudit.entityLabel} />
+                  <DetailRow label="Role"        value={selectedAudit._raw?.details?.role || selectedAudit._raw?.details?.type || selectedAudit._raw?.role || selectedAudit._raw?.type} capitalize />
+                  <DetailRow label="Custom ID"   value={selectedAudit._raw?.details?.customId || selectedAudit._raw?.details?.userId || selectedAudit._raw?.customId || selectedAudit._raw?.userId || selectedAudit._raw?.staffId || selectedAudit._raw?.patientId || selectedAudit._raw?.clientId} mono />
                   <DetailRow label="Department"  value={DEPT_LABELS[selectedAudit.source] || selectedAudit.source} last />
                 </div>
               </div>
@@ -328,7 +405,7 @@ export default function HqSuperadminPage() {
                 </div>
                 <div className="divide-y divide-white/[0.04]">
                   <DetailRow label="Action Type"   value={formatAction(selectedAudit.action)} badge actionColor={selectedAudit.action} />
-                  <DetailRow label="Performed By"  value={!selectedAudit.actorName || selectedAudit.actorName === 'System' ? 'System (Automated)' : selectedAudit.actorName} />
+                  <DetailRow label="Performed By"  value={!selectedAudit.actorName || selectedAudit.actorName === 'System' || selectedAudit.actorName === 'server_action' ? 'System (Automated)' : selectedAudit.actorName} />
                   <DetailRow label="Timestamp"     value={formatTimestamp(selectedAudit.whenMs)} />
                   <DetailRow label="Time Ago"      value={getRelativeTimeFull(selectedAudit.whenMs)} last />
                 </div>
@@ -336,7 +413,45 @@ export default function HqSuperadminPage() {
 
               {/* Section 4 — More Details (auto-rendered extra fields) */}
               <div className="p-5 space-y-3">
-                <MoreDetailsSection raw={selectedAudit._raw} />
+                <MoreDetailsSection raw={selectedAudit._raw?.details || selectedAudit._raw} />
+              </div>
+
+              {/* Section 5 — Full Profile (Dynamic) */}
+              <div className="p-5">
+                <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-indigo-500/10 bg-indigo-500/10 flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-400">Full Profile Record</p>
+                    {profileLoading && <span className="w-3 h-3 border-2 border-indigo-500/30 border-t-indigo-400 rounded-full animate-spin"></span>}
+                  </div>
+                  <div className="divide-y divide-white/[0.04]">
+                    {profileLoading && (
+                      <div className="px-4 py-6 text-center text-xs font-semibold text-gray-500 tracking-wider uppercase">Searching database...</div>
+                    )}
+                    {!profileLoading && profileData === 'not_found' && (
+                      <div className="px-4 py-6 text-center text-[11px] font-bold text-gray-500">No additional profile data found for this user.</div>
+                    )}
+                    {!profileLoading && profileData && profileData !== 'not_found' && Object.entries(profileData)
+                      .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([key, val], i, arr) => {
+                        const label = key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+                        let display = '';
+                        if (typeof val === 'boolean') display = val ? 'Yes' : 'No';
+                        else if (typeof val === 'object' && !Array.isArray(val) && 'seconds' in val) display = formatTimestamp((val as any).seconds * 1000);
+                        else if (typeof val === 'object') display = JSON.stringify(val);
+                        else display = String(val);
+
+                        return (
+                          <DetailRow
+                            key={key}
+                            label={label}
+                            value={display}
+                            last={i === arr.length - 1}
+                          />
+                        );
+                    })}
+                  </div>
+                </div>
               </div>
 
             </div>
