@@ -64,20 +64,20 @@ export function StatCard({
   const Card = (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <div className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300">{title}</div>
-        <div className="mt-2 text-3xl font-black text-gray-900 dark:text-white break-words">{displayValue}</div>
+        <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#374151] dark:text-gray-300">{title}</div>
+        <div className="mt-2 text-3xl font-black text-[#111827] dark:text-white break-words">{displayValue}</div>
         {trend && (
           <div className={`mt-1 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
             {trend.isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {Math.abs(trend.value).toFixed(1)}%
           </div>
         )}
-        {subtitle ? <div className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{subtitle}</div> : null}
+        {subtitle ? <div className="mt-1 text-sm font-semibold text-[#6B7280] dark:text-gray-300">{subtitle}</div> : null}
       </div>
       {Icon ? (
         <div className="shrink-0">
           <div className="w-11 h-11 rounded-2xl bg-white/70 dark:bg-white/10 border border-gray-100 dark:border-white/10 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-gray-700 dark:text-gray-100" />
+            <Icon className="w-5 h-5 text-[#374151] dark:text-gray-100" />
           </div>
           {badge ? (
             <div className={`mt-2 inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${badgeStyles(badge.tone)}`}>
@@ -89,7 +89,7 @@ export function StatCard({
     </div>
   );
 
-  const className = `block rounded-3xl border bg-gradient-to-br ${toneStyles} bg-white dark:bg-gray-950 p-5 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all`;
+  const className = `block rounded-3xl border bg-gradient-to-br ${toneStyles} bg-[#F3F4F6] dark:bg-gray-950 p-5 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all`;
 
   return href ? (
     <Link href={href} className={className}>

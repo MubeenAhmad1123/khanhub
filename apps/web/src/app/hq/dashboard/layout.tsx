@@ -226,7 +226,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               <p className={`font-black tracking-tight text-base leading-none ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 {viewMode === 'hq' ? 'KhanHub HQ' : DEPT_INFO[viewMode]?.label}
               </p>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 ${darkMode ? 'text-gray-500' : 'text-[#6B7280]'}`}>
                 {viewMode === 'hq' ? 'Central Console' : 'Management'}
               </p>
             </div>
@@ -311,7 +311,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
         {/* Main Navigation */}
         <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto scrollbar-hide">
-          <p className={`px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
+          <p className={`px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ${darkMode ? 'text-gray-600' : 'text-[#374151]'}`}>
             Menu
           </p>
           {navItems.map((item, i) => {
@@ -332,10 +332,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                       : 'bg-white text-teal-600 shadow-xl shadow-gray-200/50'
                     : darkMode
                       ? 'text-gray-500 hover:bg-gray-800/80 hover:text-gray-200'
-                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                      : 'text-[#374151] hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <div className={`p-1 rounded-lg transition-colors ${isActive ? (darkMode ? 'text-teal-400' : 'text-teal-600') : 'group-hover:text-teal-500'}`}>
+                <div className={`p-1 rounded-lg transition-colors ${isActive ? (darkMode ? 'text-teal-400' : 'text-teal-600') : (darkMode ? 'text-gray-500' : 'text-[#9CA3AF] group-hover:text-teal-500')}`}>
                   {React.cloneElement(item.icon as React.ReactElement, { size: 18, strokeWidth: isActive ? 2.5 : 2 })}
                 </div>
                 <span className="flex-1">{item.label}</span>
@@ -358,7 +358,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             </div>
             <div className="flex-1 min-w-0">
               <p className={`text-xs font-bold truncate ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{user?.name}</p>
-              <p className={`text-[9px] font-black uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{ROLE_LABELS[role]}</p>
+              <p className={`text-[9px] font-black uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-[#6B7280]'}`}>{ROLE_LABELS[role]}</p>
             </div>
             <button 
               onClick={handleSignOut}
@@ -469,7 +469,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               <ChevronLeft size={15} />
               Back
             </button>
-            <span className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            <span className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-[#9CA3AF]'}`}>
               KhanHub HQ Portal
             </span>
           </div>

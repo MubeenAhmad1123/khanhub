@@ -110,8 +110,8 @@ export default function HqSuperadminPage() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">HQ Superadmin</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Everything in one place. Tap a card to drill in.</p>
+          <h1 className="text-xl font-black tracking-tight text-[#111827] dark:text-white">HQ Superadmin</h1>
+          <p className="mt-1 text-sm text-[#6B7280] dark:text-gray-400">Everything in one place. Tap a card to drill in.</p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -142,19 +142,19 @@ export default function HqSuperadminPage() {
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-300 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-black text-gray-900 dark:text-white">Quick actions</h2>
+            <h2 className="text-sm font-black text-[#111827] dark:text-white">Quick actions</h2>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link className="flex items-center justify-center rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 text-sm font-bold text-gray-900 hover:bg-gray-200 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/users">
+            <Link className="flex items-center justify-center rounded-xl border border-[#D1D5DB] bg-[#F9FAFB] px-3 py-3 text-sm font-bold text-[#111827] hover:bg-[#F3F4F6] transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/users">
               Manage users
             </Link>
-            <Link className="flex items-center justify-center rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 text-sm font-bold text-gray-900 hover:bg-gray-200 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/settings">
+            <Link className="flex items-center justify-center rounded-xl border border-[#D1D5DB] bg-[#F9FAFB] px-3 py-3 text-sm font-bold text-[#111827] hover:bg-[#F3F4F6] transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/settings">
               Settings
             </Link>
-            <Link className="flex items-center justify-center rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 text-sm font-bold text-gray-900 hover:bg-gray-200 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/departments">
+            <Link className="flex items-center justify-center rounded-xl border border-[#D1D5DB] bg-[#F9FAFB] px-3 py-3 text-sm font-bold text-[#111827] hover:bg-[#F3F4F6] transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/departments">
               Departments hub
             </Link>
-            <Link className="flex items-center justify-center rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 text-sm font-bold text-gray-900 hover:bg-gray-200 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/audit">
+            <Link className="flex items-center justify-center rounded-xl border border-[#D1D5DB] bg-[#F9FAFB] px-3 py-3 text-sm font-bold text-[#111827] hover:bg-[#F3F4F6] transition-colors dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10" href="/hq/dashboard/superadmin/audit">
               Audit logs
             </Link>
           </div>
@@ -162,7 +162,7 @@ export default function HqSuperadminPage() {
 
         <div className="rounded-2xl border border-gray-300 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-black text-gray-900 dark:text-white">Recent activity</h2>
+            <h2 className="text-sm font-black text-[#111827] dark:text-white">Recent activity</h2>
           </div>
           {!activity.length ? (
             <div className="mt-4">
@@ -171,12 +171,12 @@ export default function HqSuperadminPage() {
           ) : (
             <div className="mt-3 space-y-2">
               {activity.slice(0, 8).map((a) => (
-                <div key={a.id} className="rounded-xl border border-gray-300 bg-gray-100 px-3 py-3 dark:border-white/10 dark:bg-white/5">
+                <div key={a.id} className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-3 dark:border-white/10 dark:bg-white/5">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{a.msg}</p>
-                    <span className="shrink-0 text-xs font-semibold text-gray-600 dark:text-gray-400">{a.when}</span>
+                    <p className="text-sm font-bold text-[#111827] dark:text-white line-clamp-1">{a.msg}</p>
+                    <span className="shrink-0 text-xs font-semibold text-[#6B7280] dark:text-gray-400">{a.when}</span>
                   </div>
-                  <p className="mt-1 text-xs font-medium text-gray-600 dark:text-gray-400">by {a.who}</p>
+                  <p className="mt-1 text-xs font-medium text-[#6B7280] dark:text-gray-400">by {a.who}</p>
                 </div>
               ))}
             </div>

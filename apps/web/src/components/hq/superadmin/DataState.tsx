@@ -66,7 +66,7 @@ export function EmptyState({
         <Inbox className="w-6 h-6 text-gray-400" />
       </div>
       <div className="mt-4 text-base font-black text-gray-900 dark:text-white">{title}</div>
-      <div className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{message}</div>
+      <div className="mt-1 text-sm font-semibold text-[#6B7280] dark:text-gray-300">{message}</div>
       {actionLabel && onAction ? (
         <button
           onClick={onAction}
@@ -81,7 +81,7 @@ export function EmptyState({
 
 export function InlineLoading({ label = 'Loading…' }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-300 text-sm font-semibold">
+    <div className="flex items-center gap-2 text-[#6B7280] dark:text-gray-300 text-sm font-semibold">
       <Loader2 className="w-4 h-4 animate-spin" />
       <span>{label}</span>
     </div>
