@@ -163,8 +163,8 @@ export default function RootLayout({
       <body className="antialiased selection:bg-primary-100 selection:text-primary-900">
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <ConditionalShell>
