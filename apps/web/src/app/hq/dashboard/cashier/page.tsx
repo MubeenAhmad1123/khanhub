@@ -127,15 +127,14 @@ export default function CashierStationPage() {
     setIncomingError(null);
     try {
       const cashierCustomId = String(session.customId || '').trim().toUpperCase();
-      let rehabRows: any[] = [];
-      let spimsRows: any[] = [];
+      let rowsMap: Record<string, any[]> = {};
+      DEPARTMENTS.forEach(d => rowsMap[d.txCollection] = []);
 
       const merge = () => {
-        const all = [
-          ...rehabRows.map((tx) => ({ ...tx, _txCollection: 'rehab_transactions' })),
-          ...spimsRows.map((tx) => ({ ...tx, _txCollection: 'spims_transactions' })),
-        ];
-        const visible = all.filter((tx: any) => {
+        const allTx = DEPARTMENTS.flatMap((dept) =>
+          rowsMap[dept.txCollection].map((tx: any) => ({ ...tx, _txCollection: dept.txCollection }))
+        );
+        const visible = allTx.filter((tx: any) => {
           const txCashier = String(tx.cashierId || '').trim();
           if (!txCashier) return true;
           return txCashier.toUpperCase() === cashierCustomId;
@@ -160,37 +159,24 @@ export default function CashierStationPage() {
         setIncomingLoading(false);
       };
 
-      const qRehab = query(
-        collection(db, 'rehab_transactions'),
-        where('status', '==', 'pending_cashier'),
-        orderBy('createdAt', 'desc')
-      );
-      const qSpims = query(
-        collection(db, 'spims_transactions'),
-        where('status', '==', 'pending_cashier'),
-        orderBy('createdAt', 'desc')
-      );
-
-      const unsubRehab = onSnapshot(
-        qRehab,
-        (snap) => {
-          rehabRows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          merge();
-        },
-        onErr
-      );
-      const unsubSpims = onSnapshot(
-        qSpims,
-        (snap) => {
-          spimsRows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          merge();
-        },
-        onErr
-      );
+      const unsubs = DEPARTMENTS.map(dept => {
+        const qDept = query(
+          collection(db, dept.txCollection),
+          where('status', '==', 'pending_cashier'),
+          orderBy('createdAt', 'desc')
+        );
+        return onSnapshot(
+          qDept,
+          (snap) => {
+            rowsMap[dept.txCollection] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+            merge();
+          },
+          onErr
+        );
+      });
 
       return () => {
-        unsubRehab();
-        unsubSpims();
+        unsubs.forEach(u => u());
       };
     } catch (err) {
       console.error('[HQ Cashier] subscribeIncoming setup error:', err);
@@ -223,11 +209,8 @@ export default function CashierStationPage() {
     setRejecting(true);
     setMessage(null);
     try {
-      const col =
-        rejectModalTx._txCollection ||
-        (String(rejectModalTx.departmentCode || '').toLowerCase() === 'spims'
-          ? 'spims_transactions'
-          : 'rehab_transactions');
+      const dCode = String(rejectModalTx.departmentCode || '').toLowerCase();
+      const col = rejectModalTx._txCollection || DEPARTMENTS.find(d => d.code === dCode)?.txCollection || 'rehab_transactions';
       await updateDoc(doc(db, col, rejectModalTx.id), {
         status: 'rejected_cashier',
         cashierRejectedAt: Timestamp.now(),
@@ -283,11 +266,8 @@ export default function CashierStationPage() {
       if (proofUrl) updatePayload.proofUrl = proofUrl;
       if (!proofUrl && reason) updatePayload.proofMissingReason = reason;
 
-      const col =
-        forwardModalTx._txCollection ||
-        (String(forwardModalTx.departmentCode || '').toLowerCase() === 'spims'
-          ? 'spims_transactions'
-          : 'rehab_transactions');
+      const dCode = String(forwardModalTx.departmentCode || '').toLowerCase();
+      const col = forwardModalTx._txCollection || DEPARTMENTS.find(d => d.code === dCode)?.txCollection || 'rehab_transactions';
       await updateDoc(doc(db, col, txId), updatePayload);
 
       if (forwardModalTx.feePaymentId && col === 'spims_transactions') {
