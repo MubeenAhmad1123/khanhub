@@ -437,8 +437,8 @@ export default function HqSuperadminPage() {
                         const label = key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
                         let display = '';
                         if (typeof val === 'boolean') display = val ? 'Yes' : 'No';
-                        else if (typeof val === 'object' && !Array.isArray(val) && 'seconds' in val) display = formatTimestamp((val as any).seconds * 1000);
-                        else if (typeof val === 'object') display = JSON.stringify(val);
+                        else if (val && typeof val === 'object' && !Array.isArray(val) && 'seconds' in val) display = formatTimestamp((val as any).seconds * 1000);
+                        else if (val && typeof val === 'object') display = JSON.stringify(val);
                         else display = String(val);
 
                         return (
