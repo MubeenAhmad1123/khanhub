@@ -967,27 +967,27 @@ export default function SeekerDetailPage() {
 
           {/* TAB: ADMISSION */}
           {activeTab === 'admission' && (
-            <AdmissionTab patient={seeker} onUpdate={(updated) => setSeeker({...seeker, ...updated})} />
+            <AdmissionTab seeker={seeker} onUpdate={(updated) => setSeeker({...seeker, ...updated})} />
           )}
 
           {/* TAB: DAILY SHEET */}
           {activeTab === 'daily' && (
-            <DailySheetTab patientId={seekerId} session={session} />
+            <DailySheetTab seekerId={seekerId} session={session} />
           )}
 
           {/* TAB: PROGRESS */}
           {activeTab === 'progress' && (
-            <ProgressTab patientId={seekerId} session={session} />
+            <ProgressTab seekerId={seekerId} session={session} />
           )}
 
           {/* TAB: THERAPY */}
           {activeTab === 'therapy' && (
-            <TherapyTab patientId={seekerId} session={session} />
+            <TherapyTab seekerId={seekerId} session={session} />
           )}
 
           {/* TAB: MEDICATION */}
           {activeTab === 'meds' && (
-            <MedicationTab patientId={seekerId} session={session} />
+            <MedicationTab seekerId={seekerId} session={session} />
           )}
 
           {/* TAB: FEES */}

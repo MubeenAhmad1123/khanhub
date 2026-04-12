@@ -67,12 +67,12 @@ import toast from 'react-hot-toast';
 type TabType = 'admin' | 'staff' | 'client';
 
 const DEPARTMENTS = [
-  { id: 'rehab', name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', collection: 'rehab_users', staffCollection: 'rehab_staff', prefix: 'REHAB' },
-  { id: 'spims', name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', collection: 'spims_users', staffCollection: 'spims_staff', prefix: 'SPIMS' },
-  { id: 'hospital', name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.khanhub', collection: 'hospital_users', staffCollection: 'hospital_staff', prefix: 'HOSP' },
-  { id: 'sukoon-center', name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', collection: 'sukoon_users', staffCollection: 'sukoon_staff', prefix: 'SUK' },
-  { id: 'welfare', name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.khanhub', collection: 'welfare_users', staffCollection: 'welfare_staff', prefix: 'WEL' },
-  { id: 'job-center', name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@jobcenter.khanhub', collection: 'job_center_users', staffCollection: 'job_center_staff', prefix: 'JOB' },
+  { id: 'rehab', name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', collection: 'rehab_users', staffCollection: 'rehab_staff', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
+  { id: 'spims', name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', collection: 'spims_users', staffCollection: 'spims_staff', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
+  { id: 'hospital', name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.khanhub', collection: 'hospital_users', staffCollection: 'hospital_staff', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
+  { id: 'sukoon-center', name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', collection: 'sukoon_users', staffCollection: 'sukoon_staff', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
+  { id: 'welfare', name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.khanhub', collection: 'welfare_users', staffCollection: 'welfare_staff', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
+  { id: 'job-center', name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.khanhub', collection: 'jobcenter_users', staffCollection: 'jobcenter_staff', prefix: 'JOB', clientCollection: 'jobcenter_seekers', clientLabel: 'Seeker' },
   { id: 'social-media', name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.khanhub', collection: 'media_users', staffCollection: 'media_staff', prefix: 'MED' },
   { id: 'it', name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.khanhub', collection: 'it_users', staffCollection: 'it_staff', prefix: 'IT' },
   { id: 'hq', name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@khanhub.io', collection: 'hq_users', staffCollection: 'hq_staff', prefix: 'HQ' },
@@ -470,8 +470,9 @@ export default function ManagerUsersPage() {
 
     try {
       // Determine client collection and ID field name
-      const clientCollection = formData.department === 'welfare' ? 'welfare_children' : 'rehab_patients';
-      const idLabel = formData.department === 'welfare' ? 'Child ID' : 'Patient ID';
+      const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
+      const clientCollection = deptDetails.clientCollection || 'rehab_patients';
+      const idLabel = `${deptDetails.clientLabel || 'Patient'} ID`;
 
       // Validate Client ID exists
       const q = query(collection(db, clientCollection), where('customId', '==', formData.patientId));
@@ -480,7 +481,6 @@ export default function ManagerUsersPage() {
         throw new Error(`${idLabel} ${formData.patientId} not found in ${formData.department}.`);
       }
 
-      const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
       const res = await createRehabUserServer(
         formData.customId,
         formData.password,
@@ -618,7 +618,7 @@ export default function ManagerUsersPage() {
                   <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                     {activeTab === 'admin' ? 'Strategic administrative oversight credentials' :
                       activeTab === 'staff' ? 'Operational and clinical personnel management' :
-                        'Patient family and guardian portal access'}
+                        `${DEPARTMENTS.find(d => d.id === formData.department)?.clientLabel || 'Client'} family and guardian portal access`}
                   </p>
                 </div>
               </div>
@@ -728,7 +728,7 @@ export default function ManagerUsersPage() {
                     {activeTab === 'client' && (
                       <div className="space-y-2">
                         <label className="text-[11px] font-black uppercase tracking-widest text-gray-500 ml-1">
-                          {formData.department === 'welfare' ? 'Child ID' : 'Patient ID'} Link
+                          {DEPARTMENTS.find(d => d.id === formData.department)?.clientLabel || 'Patient'} ID Link
                         </label>
                         <div className="relative group">
                           <TrendingUp className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />

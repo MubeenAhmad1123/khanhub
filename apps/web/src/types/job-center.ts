@@ -2,7 +2,7 @@
 
 import { Timestamp } from 'firebase/firestore';
 
-export type JobCenterRole = 'admin' | 'staff' | 'family' | 'cashier' | 'superadmin';
+export type JobCenterRole = 'admin' | 'staff' | 'family' | 'cashier' | 'superadmin' | 'seeker';
 
 // ─── JOBCENTER USER (Auth) ───────────────────────────────────────────────────────
 

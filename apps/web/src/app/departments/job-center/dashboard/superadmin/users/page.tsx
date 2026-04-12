@@ -118,6 +118,7 @@ export default function SuperAdminUserManagement() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* SECTION A: Admin Creation */}
         <section className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
+          <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
             <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-xl shadow-sm">🛡️</div>
             <div>
               <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Provision Admin</h2>
@@ -144,7 +145,7 @@ export default function SuperAdminUserManagement() {
                  />
                </div>
             </div>
-            <button disabled={actionLoading} className="w-full bg-orange-600 text-white py-5 rounded-[1.5rem] font-black shadow-xl shadow-orange-600/20 hover:scale-[1.02] transition-all disabled:opacity-50 uppercase tracking-widest text-sm">Create Admin Account</button>button>
+            <button disabled={actionLoading} className="w-full bg-orange-600 text-white py-5 rounded-[1.5rem] font-black shadow-xl shadow-orange-600/20 hover:scale-[1.02] transition-all disabled:opacity-50 uppercase tracking-widest text-sm">Create Admin Account</button>
           </form>
         </section>
 
