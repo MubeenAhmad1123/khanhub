@@ -1,11 +1,11 @@
-// src/components/sukoon/patient-profile/MedicationTab.tsx
+// src/components/sukoon/client-profile/MedicationTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { MedicationRecord } from '@/types/sukoon';
 import { getMedicationRecords, addMedicationRecord } from '@/lib/sukoon/clients';
 import { Loader2, Plus, Calendar, Pill } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function MedicationTab({ patientId, session }: { patientId: string, session: any }) {
+export default function MedicationTab({ clientId, session }: { clientId: string, session: any }) {
   const [records, setRecords] = useState<MedicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -22,7 +22,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
   const fetchRecords = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getMedicationRecords(patientId);
+      const data = await getMedicationRecords(clientId);
       setRecords(data);
     } catch (error) {
       console.error("Error fetching medication records", error);
@@ -30,7 +30,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
     } finally {
       setLoading(false);
     }
-  }, [patientId]);
+  }, [clientId]);
 
   useEffect(() => {
     fetchRecords();
@@ -47,7 +47,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
       setSaving(true);
       const newRecord: MedicationRecord = {
         id: '', 
-        patientId,
+        clientId,
         date,
         timing,
         medications,
@@ -73,7 +73,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
   };
 
   if (loading) {
-    return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>;
+    return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-purple-600" /></div>;
   }
 
   return (
@@ -82,7 +82,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
         <h2 className="text-xl font-black text-gray-900">Medication Assisted Therapy</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
+          className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-900/10 active:scale-95 transition-all"
         >
           <Plus size={16} /> Add Record
         </button>
@@ -100,10 +100,10 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
             <div key={r.id} className="rounded-2xl border border-gray-100 shadow-sm bg-white p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 font-bold text-gray-900 text-sm">
-                  <Calendar size={14} className="text-teal-500" />
+                  <Calendar size={14} className="text-purple-500" />
                   <span>{r.date}</span>
                 </div>
-                <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
+                <span className="text-[10px] font-black bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
                   {r.timing}
                 </span>
               </div>
@@ -145,13 +145,13 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
             </thead>
             <tbody className="divide-y divide-gray-100">
               {records.map(r => (
-                <tr key={r.id} className="hover:bg-teal-50/30 transition-colors">
+                <tr key={r.id} className="hover:bg-purple-50/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 font-bold text-gray-900 mb-1">
-                      <Calendar size={14} className="text-teal-500" />
+                      <Calendar size={14} className="text-purple-500" />
                       {r.date}
                     </div>
-                    <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
+                    <span className="text-[10px] font-black bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
                       {r.timing}
                     </span>
                   </td>
@@ -204,11 +204,11 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Date *</label>
-                  <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" />
                 </div>
                 <div>
                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Timing *</label>
-                   <select value={timing} onChange={e => setTiming(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none appearance-none">
+                   <select value={timing} onChange={e => setTiming(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none appearance-none">
                      <option value="Morning">Morning</option>
                      <option value="Afternoon">Afternoon</option>
                      <option value="Night">Night</option>
@@ -218,26 +218,26 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
               
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Medications *</label>
-                <textarea required rows={2} value={medications} onChange={e => setMedications(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="List medications..."></textarea>
+                <textarea required rows={2} value={medications} onChange={e => setMedications(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none resize-none" placeholder="List medications..."></textarea>
               </div>
 
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Notes (Optional)</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Special instructions..." />
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Special instructions..." />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">M.O. Signature (Name)</label>
-                  <input value={medicalOfficerSig} onChange={e => setMedicalOfficerSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Name" />
+                  <input value={medicalOfficerSig} onChange={e => setMedicalOfficerSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Name" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Dispenser Signature (Name)</label>
-                  <input value={dispenserSig} onChange={e => setDispenserSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Name" />
+                  <input value={dispenserSig} onChange={e => setDispenserSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Name" />
                 </div>
               </div>
 
-              <button type="submit" disabled={saving} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70 mt-4">
+              <button type="submit" disabled={saving} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-purple-100 disabled:opacity-70 mt-4">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus size={18} />}
                 {saving ? 'Saving...' : 'Save Record'}
               </button>

@@ -1,11 +1,11 @@
-// src/components/job-center/patient-profile/MedicationTab.tsx
+// src/components/job-center/seeker-profile/MedicationTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { MedicationRecord } from '@/types/job-center';
 import { getMedicationRecords, addMedicationRecord } from '@/lib/job-center/seekers';
 import { Loader2, Plus, Calendar, Pill } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function MedicationTab({ patientId, session }: { patientId: string, session: any }) {
+export default function MedicationTab({ seekerId, session }: { seekerId: string, session: any }) {
   const [records, setRecords] = useState<MedicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -22,7 +22,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
   const fetchRecords = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getMedicationRecords(patientId);
+      const data = await getMedicationRecords(seekerId);
       setRecords(data);
     } catch (error) {
       console.error("Error fetching medication records", error);
@@ -30,7 +30,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
     } finally {
       setLoading(false);
     }
-  }, [patientId]);
+  }, [seekerId]);
 
   useEffect(() => {
     fetchRecords();
@@ -47,7 +47,7 @@ export default function MedicationTab({ patientId, session }: { patientId: strin
       setSaving(true);
       const newRecord: MedicationRecord = {
         id: '', 
-        patientId,
+        seekerId,
         date,
         timing,
         medications,

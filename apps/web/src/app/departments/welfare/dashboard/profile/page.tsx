@@ -24,7 +24,7 @@ export default function ProfilePage() {
   // Profile Data
   const [profile, setProfile] = useState<any>(null);
   const [staffDoc, setStaffDoc] = useState<any>(null);
-  const [patientDoc, setPatientDoc] = useState<any>(null);
+  const [childDoc, setChildDoc] = useState<any>(null);
   
   // Tabs for Admin/Staff
   const [activeTab, setActiveTab] = useState<'attendance'|'duties'|'dress'|'contributions'>('attendance');
@@ -105,9 +105,9 @@ export default function ProfilePage() {
             setStaffDoc({ id: sSnap.docs[0].id, ...sd });
             fetchMetrics(sSnap.docs[0].id, sd.department || 'welfare');
           }
-        } else if (parsed.role === 'family' && uData.patientId) {
-          const pSnap = await getDoc(doc(db, 'welfare_children', uData.patientId));
-          if (pSnap.exists()) setPatientDoc({ id: pSnap.id, ...pSnap.data() });
+        } else if (parsed.role === 'family' && uData.childId) {
+          const pSnap = await getDoc(doc(db, 'welfare_children', uData.childId));
+          if (pSnap.exists()) setChildDoc({ id: pSnap.id, ...pSnap.data() });
         }
       } catch (err) {
         console.error(err);
@@ -207,27 +207,27 @@ export default function ProfilePage() {
         {session?.role === 'family' ? (
           <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-green-100 w-full">
             <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
-              <Heart className="text-green-500" /> Linked Patient Information
+              <Heart className="text-green-500" /> Linked Child Information
             </h3>
-            {patientDoc ? (
+            {childDoc ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="p-4 md:p-6 bg-green-50 rounded-2xl border border-green-100/50">
                   <p className="text-[9px] font-black text-green-600 uppercase tracking-widest mb-1">Name</p>
-                  <p className="text-sm font-bold text-gray-900">{patientDoc.name}</p>
+                  <p className="text-sm font-bold text-gray-900">{childDoc.name}</p>
                 </div>
                 <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Date</p>
-                  <p className="text-sm font-bold text-gray-900">{formatDateDMY(patientDoc.admissionDate)}</p>
+                  <p className="text-sm font-bold text-gray-900">{formatDateDMY(childDoc.admissionDate)}</p>
                 </div>
                 <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-start gap-1">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
                   <span className="px-3 py-1 bg-green-100 text-green-700 rounded-xl text-[9px] font-black uppercase tracking-widest">
-                    {patientDoc.isActive ? 'Active' : 'Inactive'}
+                    {childDoc.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-400 font-medium italic">No patient linked to this account.</p>
+              <p className="text-sm text-gray-400 font-medium italic">No child linked to this account.</p>
             )}
           </div>
         ) : (
@@ -391,7 +391,7 @@ export default function ProfilePage() {
                         </div>
                         <input 
                            type="text" 
-                           placeholder="Title (e.g. Extra Patient Care)" 
+                           placeholder="Title (e.g. Extra Child Care)" 
                            className="w-full px-4 py-3 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-teal-500 outline-none text-gray-900"
                            value={newContrib.title}
                            onChange={e => setNewContrib({...newContrib, title: e.target.value})}

@@ -114,8 +114,8 @@ export default function SuperAdminReportsPage() {
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
       // === PATIENTS ===
-      const activePatientsSnap = await getDocs(query(collection(db, 'welfare_children'), where('isActive', '==', true)));
-      const totalActivePatients = activePatientsSnap.size;
+      const activeChildrenSnap = await getDocs(query(collection(db, 'welfare_children'), where('isActive', '==', true)));
+      const totalActiveChildren = activeChildrenSnap.size;
 
       const newAdmissionsSnap = await getDocs(query(
         collection(db, 'welfare_children'),
@@ -133,7 +133,7 @@ export default function SuperAdminReportsPage() {
         pendingCount,
         staffSalaries,
         totalPayroll,
-        totalActivePatients,
+        totalActiveChildren,
         newAdmissions,
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
@@ -215,13 +215,13 @@ export default function SuperAdminReportsPage() {
               </div>
             )}
 
-            {/* Patients Summary */}
+            {/* Children Summary */}
             <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-teal-500" /> Patient Summary</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-teal-500" /> Child Summary</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                  <div className="text-3xl font-black text-teal-800">{reportData.totalActivePatients}</div>
-                  <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">Active Patients</div>
+                  <div className="text-3xl font-black text-teal-800">{reportData.totalActiveChildren}</div>
+                  <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">Active Children</div>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
                   <div className="text-3xl font-black text-blue-800">{reportData.newAdmissions}</div>

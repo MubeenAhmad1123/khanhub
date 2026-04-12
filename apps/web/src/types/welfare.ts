@@ -13,14 +13,14 @@ export interface WelfareUser {
   displayName?: string;
   role: WelfareRole;
   isActive: boolean;
-  patientId?: string;
+  childId?: string;
   createdAt?: Timestamp | Date;
 }
 
 export interface Transaction {
   id: string;
-  patientId?: string;
-  patientName?: string;
+  childId?: string;
+  childName?: string;
   staffId?: string;
   staffName?: string;
   amount: number;
@@ -70,11 +70,11 @@ export interface StaffContribution {
 
 // ─── PATIENT (Full Admission Form Data) ─────────────────────────────────────
 
-export interface Patient {
+export interface Child {
   id: string;
 
   // Basic Identity
-  inpatientNumber: string;         // e.g. "WELFARE-058"
+  admissionNumber: string;         // e.g. "WELFARE-058"
   serialNumber: number;            // 58, 60, 61 etc from records
   name: string;
   fatherName: string;
@@ -183,7 +183,7 @@ export interface Patient {
 }
 
 // ─── DAILY ACTIVITY RECORD ───────────────────────────────────────────────────
-// One document per patient per date
+// One document per child per date
 // Collection: welfare_daily_activities
 
 export const DAILY_ACTIVITIES = [
@@ -214,7 +214,7 @@ export type ActivityStatus = 'done' | 'not_done' | 'na';
 
 export interface DailyActivityRecord {
   id: string;
-  patientId: string;
+  childId: string;
   date: string;                    // "YYYY-MM-DD"
   activities: {
     activityId: number;
@@ -233,13 +233,13 @@ export interface DailyActivityRecord {
 
 export interface TherapySession {
   id: string;
-  patientId: string;
+  childId: string;
   sessionNumber: number;           // 1, 2, 3, 4, 5, 6, 7...
   date: string;                    // "YYYY-MM-DD"
   therapistName?: string;
   clinicalPsychologist?: string;
   sessionNotes: string;            // main text area — what happened in session
-  patientMood?: string;
+  childMood?: string;
   progressRating?: 1 | 2 | 3 | 4; // 1=Static, 2=Slow, 3=Good, 4=Max
   createdBy: string;               // admin uid
   createdAt: Timestamp | Date;
@@ -250,7 +250,7 @@ export interface TherapySession {
 
 export interface MedicationRecord {
   id: string;
-  patientId: string;
+  childId: string;
   date: string;                    // "YYYY-MM-DD"
   timing: string;                  // "Morning", "Afternoon", "Night"
   medications: string;             // list of meds as text
@@ -266,7 +266,7 @@ export interface MedicationRecord {
 
 export interface WeeklyProgress {
   id: string;
-  patientId: string;
+  childId: string;
   weekNumber: number;              // 1, 2, 3, 4...
   weekStartDate: string;           // "YYYY-MM-DD"
   weekEndDate: string;             // "YYYY-MM-DD"
@@ -281,7 +281,7 @@ export interface WeeklyProgress {
 
 export interface FeeRecord {
   id: string;
-  patientId: string;
+  childId: string;
   month: string;                   // "2025-01"
   packageAmount: number;           // monthly fee
   amountPaid: number;
@@ -304,7 +304,7 @@ export interface Payment {
 
 export interface CanteenRecord {
   id: string;
-  patientId: string;
+  childId: string;
   month: string;                   // "2025-01"
   totalDeposited: number;
   totalSpent: number;

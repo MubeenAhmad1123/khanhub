@@ -1,4 +1,4 @@
-// src/components/sukoon/patient-profile/ProgressTab.tsx
+// src/components/sukoon/client-profile/ProgressTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { WeeklyProgress } from '@/types/sukoon';
 import { getWeeklyProgress, addWeeklyProgress } from '@/lib/sukoon/clients';
@@ -8,7 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
-export default function ProgressTab({ patientId, session }: { patientId: string, session: any }) {
+export default function ProgressTab({ clientId, session }: { clientId: string, session: any }) {
   const [progress, setProgress] = useState<WeeklyProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -28,7 +28,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
   const fetchProgress = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getWeeklyProgress(patientId);
+      const data = await getWeeklyProgress(clientId);
       // Sort by week number ASC
       data.sort((a, b) => a.weekNumber - b.weekNumber);
       setProgress(data);
@@ -41,7 +41,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
     } finally {
       setLoading(false);
     }
-  }, [patientId]);
+  }, [clientId]);
 
   useEffect(() => {
     fetchProgress();
@@ -53,7 +53,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
       setSaving(true);
       const newProgress: WeeklyProgress = {
         id: '',
-        patientId,
+        clientId,
         weekNumber: weekNum,
         weekStartDate: startDate,
         weekEndDate: endDate,
@@ -85,7 +85,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
   }));
 
   if (loading) {
-    return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>;
+    return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-purple-600" /></div>;
   }
 
   return (
@@ -94,7 +94,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
         <h2 className="text-xl font-black text-gray-900">Weekly Progress Tracking</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
+          className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-900/10 active:scale-95 transition-all"
         >
           <Plus size={16} /> Add Progress
         </button>
@@ -121,9 +121,9 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
                 <Line 
                   type="monotone" 
                   dataKey="score" 
-                  stroke="#0d9488" 
+                  stroke="#9333ea" 
                   strokeWidth={3} 
-                  dot={{ r: 6, fill: '#0d9488', strokeWidth: 2, stroke: '#fff' }} 
+                  dot={{ r: 6, fill: '#9333ea', strokeWidth: 2, stroke: '#fff' }} 
                   activeDot={{ r: 8 }} 
                 />
               </LineChart>
@@ -133,12 +133,12 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
           {/* Records List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {progress.map(p => (
-              <div key={p.id} className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:border-teal-200 transition-colors">
+              <div key={p.id} className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:border-purple-200 transition-colors">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
                   <h3 className="font-black text-gray-900">Week {p.weekNumber}</h3>
                   <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest break-words ${
                     p.score === 4 ? 'bg-green-100 text-green-700' :
-                    p.score === 3 ? 'bg-teal-100 text-teal-700' :
+                    p.score === 3 ? 'bg-purple-100 text-purple-700' :
                     p.score === 2 ? 'bg-yellow-100 text-yellow-700' :
                     'bg-red-100 text-red-700'
                   }`}>
@@ -171,11 +171,11 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Week Number</label>
-                  <input type="number" required value={weekNum} onChange={e => setWeekNum(parseInt(e.target.value))} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" min={1} />
+                  <input type="number" required value={weekNum} onChange={e => setWeekNum(parseInt(e.target.value))} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" min={1} />
                 </div>
                 <div>
                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Progress Score *</label>
-                   <select value={score} onChange={e => setScore(Number(e.target.value) as 1|2|3|4)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none appearance-none">
+                   <select value={score} onChange={e => setScore(Number(e.target.value) as 1|2|3|4)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none appearance-none">
                      <option value={1}>1 - Static</option>
                      <option value={2}>2 - Slow Progress</option>
                      <option value={3}>3 - Good Progress</option>
@@ -187,20 +187,20 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Start Date *</label>
-                  <input type="date" required value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input type="date" required value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">End Date *</label>
-                  <input type="date" required value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input type="date" required value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Review Notes</label>
-                <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="Overall progress observations..."></textarea>
+                <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none resize-none" placeholder="Overall progress observations..."></textarea>
               </div>
 
-              <button type="submit" disabled={saving} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70 mt-4">
+              <button type="submit" disabled={saving} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-purple-100 disabled:opacity-70 mt-4">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus size={18} />}
                 {saving ? 'Saving...' : 'Save Progress'}
               </button>

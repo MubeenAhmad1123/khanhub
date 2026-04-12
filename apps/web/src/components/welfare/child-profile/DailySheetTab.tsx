@@ -1,11 +1,11 @@
-// src/components/welfare/patient-profile/DailySheetTab.tsx
+// src/components/welfare/child-profile/DailySheetTab.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/welfare';
 import { getDailyActivities, saveDailyActivity } from '@/lib/welfare/children';
 import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function DailySheetTab({ patientId, session, readOnly = false }: { patientId: string, session: any, readOnly?: boolean }) {
+export default function DailySheetTab({ childId, session, readOnly = false }: { childId: string, session: any, readOnly?: boolean }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -32,7 +32,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
   const fetchRecords = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getDailyActivities(patientId, currentMonth);
+      const data = await getDailyActivities(childId, currentMonth);
       const indexed: Record<string, DailyActivityRecord> = {};
       data.forEach(r => { indexed[r.date] = r; });
       setRecords(indexed);
@@ -42,7 +42,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
     } finally {
       setLoading(false);
     }
-  }, [patientId, currentMonth]);
+  }, [childId, currentMonth]);
 
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
@@ -72,7 +72,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
         else newActivities.push({ activityId, status: 'done' });
         setRecords(prev => ({
           ...prev,
-          [dateStr]: { ...prev[dateStr], date: dateStr, patientId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
+          [dateStr]: { ...prev[dateStr], date: dateStr, childId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
         }));
       }
       return;
@@ -96,12 +96,12 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
 
     setRecords(prev => ({
       ...prev,
-      [dateStr]: { ...prev[dateStr], date: dateStr, patientId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
+      [dateStr]: { ...prev[dateStr], date: dateStr, childId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
     }));
 
     try {
       setPendingSaves(prev => new Set(prev).add(key));
-      await saveDailyActivity(patientId, dateStr, newActivities, session.uid);
+      await saveDailyActivity(childId, dateStr, newActivities, session.uid);
     } catch (error) {
       console.error("Error saving activity cell", error);
       toast.error('Failed to save activity');
@@ -120,7 +120,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
       const currentActivities = currentRecord?.activities || [];
       const counsellingNotes = noteModal.type === 'counselling' ? noteModal.value : (currentRecord?.counsellingSessionNotes || '');
       const vitalNotes = noteModal.type === 'vital' ? noteModal.value : (currentRecord?.vitalSignNotes || '');
-      await saveDailyActivity(patientId, dateStr, currentActivities, session.uid, { counsellingNotes, vitalNotes });
+      await saveDailyActivity(childId, dateStr, currentActivities, session.uid, { counsellingNotes, vitalNotes });
       setRecords(prev => ({
         ...prev,
         [dateStr]: { ...prev[dateStr], counsellingSessionNotes: counsellingNotes, vitalSignNotes: vitalNotes } as DailyActivityRecord

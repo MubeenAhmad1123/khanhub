@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createRehabUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
+import { createWelfareUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
@@ -32,7 +32,7 @@ export default function UserManagementPage() {
   const [fullName, setFullName] = useState('');
   const [customId, setCustomId] = useState('');
   const [password, setPassword] = useState('');
-  const [patientId, setPatientId] = useState('');
+  const [childId, setChildId] = useState('');
   const [modalError, setModalError] = useState('');
 
   useEffect(() => {
@@ -76,19 +76,19 @@ export default function UserManagementPage() {
     e.preventDefault();
     setModalError('');
 
-    if (!fullName || !customId || !password || !patientId) {
+    if (!fullName || !customId || !password || !childId) {
       setModalError('All fields are required');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const result = await createRehabUserServer(
+      const result = await createWelfareUserServer(
         customId.toUpperCase(),
         password,
         'family',
         fullName,
-        patientId
+        childId
       );
 
       if (result.success) {
@@ -98,7 +98,7 @@ export default function UserManagementPage() {
         setFullName('');
         setCustomId('');
         setPassword('');
-        setPatientId('');
+        setChildId('');
         // Refresh list
         fetchUsers();
       } else {
@@ -301,7 +301,7 @@ export default function UserManagementPage() {
                     value={customId}
                     onChange={e => setCustomId(e.target.value.toUpperCase())}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white font-mono uppercase"
-                    placeholder="e.g. REHAB-FAM-001"
+                    placeholder="e.g. WELFARE-FAM-001"
                     required
                   />
                 </div>
@@ -328,16 +328,16 @@ export default function UserManagementPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Patient ID *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Child ID *</label>
                   <input
                     type="text"
-                    value={patientId}
-                    onChange={e => setPatientId(e.target.value)}
+                    value={childId}
+                    onChange={e => setChildId(e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white font-mono"
-                    placeholder="Paste from Patients list"
+                    placeholder="Paste from Children list"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">Find the patient doc ID from the Patients page</p>
+                  <p className="text-xs text-gray-500 mt-1">Find the child doc ID from the Children page</p>
                 </div>
 
                 <div className="pt-4 flex gap-3">

@@ -1,23 +1,23 @@
-// src/components/welfare/patient-profile/AdmissionTab.tsx
+// src/components/welfare/child-profile/AdmissionTab.tsx
 import React, { useState } from 'react';
-import { Patient } from '@/types/welfare';
+import { Child } from '@/types/welfare';
 import { Edit3, Save, Loader2, User, Heart, Brain, Phone, Shield } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
 
 export default function AdmissionTab({ 
-  patient, 
+  child, 
   onUpdate 
 }: { 
-  patient: Patient; 
-  onUpdate: (updatedPatient: Partial<Patient>) => void 
+  child: Child; 
+  onUpdate: (updatedChild: Partial<Child>) => void 
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<Partial<Patient>>({ ...patient });
+  const [form, setForm] = useState<Partial<Child>>({ ...child });
 
-  const handleChange = (field: keyof Patient | string, value: any) => {
+  const handleChange = (field: keyof Child | string, value: any) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setForm((prev: any) => ({
@@ -35,14 +35,14 @@ export default function AdmissionTab({
   const handleSave = async () => {
     try {
       setSaving(true);
-      await updateDoc(doc(db, 'welfare_patients', patient.id), {
+      await updateDoc(doc(db, 'welfare_children', child.id), {
         ...form
       });
       onUpdate(form);
       setIsEditing(false);
-      toast.success('Patient admission details updated');
+      toast.success('Child admission details updated');
     } catch (error) {
-      console.error("Error updating patient", error);
+      console.error("Error updating child", error);
       toast.error('Failed to update details');
     } finally {
       setSaving(false);
@@ -148,7 +148,7 @@ export default function AdmissionTab({
           <div className="flex gap-2">
             <button 
               onClick={() => {
-                setForm({ ...patient });
+                setForm({ ...child });
                 setIsEditing(false);
               }} 
               className="bg-white border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-black text-sm hover:bg-gray-50 transition-all"
@@ -169,7 +169,7 @@ export default function AdmissionTab({
 
       <div className="space-y-6">
         <SectionCard title="1. Identity & Demographics" icon={User}>
-          <Field label="Inpatient Number" value={form.inpatientNumber} fieldKey="inpatientNumber" />
+          <Field label="Admission Number" value={form.admissionNumber} fieldKey="admissionNumber" />
           <Field label="Name" value={form.name} fieldKey="name" />
           <Field label="Father/Husband Name" value={form.fatherName} fieldKey="fatherName" />
           <Field label="Date of Birth" value={form.dateOfBirth} type="date" fieldKey="dateOfBirth" />

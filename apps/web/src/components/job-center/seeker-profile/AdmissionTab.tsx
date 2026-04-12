@@ -1,23 +1,23 @@
-// src/components/job-center/patient-profile/AdmissionTab.tsx
+// src/components/job-center/seeker-profile/AdmissionTab.tsx
 import React, { useState } from 'react';
-import { Patient } from '@/types/job-center';
+import { Seeker } from '@/types/job-center';
 import { Edit3, Save, Loader2, User, Heart, Brain, Phone, Shield } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
 
 export default function AdmissionTab({ 
-  patient, 
+  seeker, 
   onUpdate 
 }: { 
-  patient: Patient; 
-  onUpdate: (updatedPatient: Partial<Patient>) => void 
+  seeker: Seeker; 
+  onUpdate: (updatedSeeker: Partial<Seeker>) => void 
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<Partial<Patient>>({ ...patient });
+  const [form, setForm] = useState<Partial<Seeker>>({ ...seeker });
 
-  const handleChange = (field: keyof Patient | string, value: any) => {
+  const handleChange = (field: keyof Seeker | string, value: any) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setForm((prev: any) => ({
@@ -35,14 +35,14 @@ export default function AdmissionTab({
   const handleSave = async () => {
     try {
       setSaving(true);
-      await updateDoc(doc(db, 'job-center_patients', patient.id), {
+      await updateDoc(doc(db, 'job-center_seekers', seeker.id), {
         ...form
       });
       onUpdate(form);
       setIsEditing(false);
-      toast.success('Patient admission details updated');
+      toast.success('Seeker admission details updated');
     } catch (error) {
-      console.error("Error updating patient", error);
+      console.error("Error updating seeker", error);
       toast.error('Failed to update details');
     } finally {
       setSaving(false);
@@ -148,7 +148,7 @@ export default function AdmissionTab({
           <div className="flex gap-2">
             <button 
               onClick={() => {
-                setForm({ ...patient });
+                setForm({ ...seeker });
                 setIsEditing(false);
               }} 
               className="bg-white border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-black text-sm hover:bg-gray-50 transition-all"

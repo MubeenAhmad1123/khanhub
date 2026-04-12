@@ -7,15 +7,15 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: 'income' as 'income' | 'expense',
-    category: 'patient_fee',
+    category: 'child_fee',
     amount: '',
     description: '',
-    patientId: '',
+    childId: '',
     date: new Date().toISOString().split('T')[0]
   });
 
   const categories = {
-    income: ['patient_fee', 'canteen_deposit'],
+    income: ['child_fee', 'canteen_deposit'],
     expense: ['rent', 'electricity', 'medicine', 'staff_salary', 'miscellaneous']
   };
 
@@ -29,10 +29,10 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
         amount: parseFloat(formData.amount),
         txnDescription: formData.description,
         cashierId,
-        patientId: formData.patientId || undefined,
+        childId: formData.childId || undefined,
         date: new Date(formData.date)
       });
-      setFormData({ ...formData, amount: '', description: '', patientId: '' });
+      setFormData({ ...formData, amount: '', description: '', childId: '' });
       onSuccess();
     } catch (err) {
       alert('Error creating transaction');
@@ -48,7 +48,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
       <div className="flex gap-4 p-1 bg-gray-50 rounded-2xl border border-gray-100">
         <button
           type="button"
-          onClick={() => setFormData({ ...formData, type: 'income', category: 'patient_fee' })}
+          onClick={() => setFormData({ ...formData, type: 'income', category: 'child_fee' })}
           className={`flex-1 py-3 rounded-xl font-bold transition-all ${formData.type === 'income' ? 'bg-[#1D9E75] text-white shadow-md shadow-[#1D9E75]/20' : 'text-gray-500'}`}
         >
           Income
@@ -98,16 +98,16 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
         />
       </div>
 
-      {(formData.category === 'patient_fee' || formData.category === 'canteen_deposit') && (
+      {(formData.category === 'child_fee' || formData.category === 'canteen_deposit') && (
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Patient ID</label>
+          <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Child ID</label>
           <input
             type="text"
             required
             placeholder="e.g. PAT-001"
             className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-medium focus:ring-2 focus:ring-[#1D9E75]/20 outline-none"
-            value={formData.patientId}
-            onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
+            value={formData.childId}
+            onChange={(e) => setFormData({ ...formData, childId: e.target.value })}
           />
         </div>
       )}

@@ -6,7 +6,7 @@ export interface WelfareSession {
   customId: string;
   role: string;
   displayName: string;
-  patientId?: string | null;
+  childId?: string | null;
 }
 
 export function useWelfareSession() {

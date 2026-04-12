@@ -58,8 +58,7 @@ import {
   Crosshair,
   Activity,
   BookOpen,
-  Heart,
-  HandHeart
+  Heart
 } from 'lucide-react';
 import { createRehabUserServer, createStaffMemberServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
@@ -470,11 +469,15 @@ export default function ManagerUsersPage() {
     setMessage(null);
 
     try {
-      // Validate Patient ID exists
-      const q = query(collection(db, 'rehab_patients'), where('customId', '==', formData.patientId));
+      // Determine client collection and ID field name
+      const clientCollection = formData.department === 'welfare' ? 'welfare_children' : 'rehab_patients';
+      const idLabel = formData.department === 'welfare' ? 'Child ID' : 'Patient ID';
+
+      // Validate Client ID exists
+      const q = query(collection(db, clientCollection), where('customId', '==', formData.patientId));
       const snap = await getDocs(q);
       if (snap.empty) {
-        throw new Error(`Patient ID ${formData.patientId} not found.`);
+        throw new Error(`${idLabel} ${formData.patientId} not found in ${formData.department}.`);
       }
 
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
@@ -724,7 +727,9 @@ export default function ManagerUsersPage() {
 
                     {activeTab === 'client' && (
                       <div className="space-y-2">
-                        <label className="text-[11px] font-black uppercase tracking-widest text-gray-500 ml-1">Patient ID Link</label>
+                        <label className="text-[11px] font-black uppercase tracking-widest text-gray-500 ml-1">
+                          {formData.department === 'welfare' ? 'Child ID' : 'Patient ID'} Link
+                        </label>
                         <div className="relative group">
                           <TrendingUp className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
                           <input

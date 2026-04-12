@@ -24,10 +24,10 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview',      href: '/departments/welfare/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
-  { label: 'Patients',      href: '/departments/welfare/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
+  { label: 'Children',      href: '/departments/welfare/dashboard/admin/children', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
   { label: 'Credentials',   href: '/departments/welfare/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/welfare/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
-  { label: 'My Patient',    href: '/departments/welfare/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
+  { label: 'My Child',    href: '/departments/welfare/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
   { label: 'My Profile',    href: '/departments/welfare/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },
 ];
 
@@ -50,7 +50,6 @@ const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string
   hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500',   icon: <Building2 size={16} /> },
   spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500',   icon: <GraduationCap size={16} /> },
   sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500', icon: <Heart size={16} /> },
-  welfare:      { label: 'Welfare',    adminUrl: '/departments/welfare/dashboard/admin',     color: 'text-amber-500',  icon: <Heart size={16} /> },
   'job-center': { label: 'Job Center', adminUrl: '/departments/job-center/dashboard/admin',  color: 'text-orange-500', icon: <User size={16} /> },
 };
 
@@ -70,7 +69,7 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
   const { theme, setTheme, resolvedTheme } = useTheme();
   
   const [isChecking, setIsChecking] = useState(true);
-  const [user, setUser] = useState<{ role: WelfareRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
+  const [user, setUser] = useState<{ role: WelfareRole; displayName: string; customId: string; uid: string; childId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isHqAdmin, setIsHqAdmin] = useState(false);
@@ -159,7 +158,7 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
     );
   }
 
-  const role = user?.role as RehabRole;
+  const role = user?.role as WelfareRole;
   const navItems = viewMode === 'dept'
     ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
     : HQ_NAV_ITEMS;
@@ -276,8 +275,8 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
             </div>
           </div>
           <div className="mt-3 flex">
-            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>
-              {role ? ROLE_LABELS[role] : ''}
+            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${role && ROLE_COLORS[role] ? ROLE_COLORS[role] : ''}`}>
+              {role && ROLE_LABELS[role] ? ROLE_LABELS[role] : ''}
             </span>
           </div>
         </div>
@@ -340,13 +339,13 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
             <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center text-white"><Shield size={14} /></div>
             <span className="font-black text-sm">Welfare Portal</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${role && ROLE_COLORS[role] ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
         </header>
 
         <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'}`}>
           <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">KhanHub Welfare Portal</div>
           <div className="flex items-center gap-3">
-             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
+             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${role && ROLE_COLORS[role] ? ROLE_COLORS[role] : ''}`}>{role && ROLE_LABELS[role]}</span>
              <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-500 font-black text-sm">{user?.displayName?.[0]}</div>
              <span className="text-sm font-bold">{user?.displayName}</span>
           </div>

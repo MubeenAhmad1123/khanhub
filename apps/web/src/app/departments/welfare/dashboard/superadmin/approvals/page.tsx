@@ -60,8 +60,8 @@ export default function ApprovalsPage() {
             amount: Number(data.amount) || 0,
             status: data.status || 'pending',
             cashierId: data.cashierId || '',
-            patientId: data.patientId || null,
-            patientName: data.patientName || null,
+            childId: data.childId || null,
+            childName: data.childName || null,
             date: data.date,  // keep as Firestore Timestamp for display
             createdAt: data.createdAt,
           }
@@ -122,8 +122,8 @@ export default function ApprovalsPage() {
             approvedBy: data.approvedBy || '',
             rejectedBy: data.rejectedBy || '',
             rejectReason: data.rejectReason || '',
-            patientId: data.patientId || null,
-            patientName: data.patientName || null,
+            childId: data.childId || null,
+            childName: data.childName || null,
             createdAt,
             approvedAt,
             date: txDate,
@@ -160,31 +160,31 @@ export default function ApprovalsPage() {
       // ── SYNC TO PATIENT RECORDS AFTER APPROVAL ──
       const allTransactions = [...pendingTransactions, ...historyTransactions];
       const tx = allTransactions.find((t: any) => t.id === txId);
-      if (tx && tx.patientId) {
+      if (tx && tx.childId) {
         try {
           const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
           const month = txDate.toISOString().slice(0, 7); // "2026-03"
 
-          if (tx.category === 'patient_fee') {
-            // Find or CREATE the fee record for this patient+month
+          if (tx.category === 'child_fee') {
+            // Find or CREATE the fee record for this child+month
             const feesQ = query(
               collection(db, 'welfare_fees'),
-              where('patientId', '==', tx.patientId),
+              where('childId', '==', tx.childId),
               where('month', '==', month)
             );
             const feesSnap = await getDocs(feesQ);
 
             if (feesSnap.empty) {
-              // Auto-create fee record — fetch patient package amount first
-              const patientSnap = await getDoc(doc(db, 'welfare_children', tx.patientId));
-              const packageAmount = patientSnap.exists()
-                ? (patientSnap.data().packageAmount || 60000)
+              // Auto-create fee record — fetch child package amount first
+              const childSnap = await getDoc(doc(db, 'welfare_children', tx.childId));
+              const packageAmount = childSnap.exists()
+                ? (childSnap.data().packageAmount || 60000)
                 : 60000;
               const amountPaid = tx.amount;
               const amountRemaining = Math.max(0, packageAmount - amountPaid);
               await addDoc(collection(db, 'welfare_fees'), {
-                patientId: tx.patientId,
-                patientName: tx.patientName || '',
+                childId: tx.childId,
+                childName: tx.childName || '',
                 month,
                 packageAmount,
                 amountPaid,
@@ -224,7 +224,7 @@ export default function ApprovalsPage() {
           if (tx.category === 'canteen_deposit') {
             const canteenQ = query(
               collection(db, 'welfare_canteen'),
-              where('patientId', '==', tx.patientId),
+              where('childId', '==', tx.childId),
               where('month', '==', month)
             );
             const canteenSnap = await getDocs(canteenQ);
@@ -232,8 +232,8 @@ export default function ApprovalsPage() {
             if (canteenSnap.empty) {
               // Auto-create canteen record
               await addDoc(collection(db, 'welfare_canteen'), {
-                patientId: tx.patientId,
-                patientName: tx.patientName || '',
+                childId: tx.childId,
+                childName: tx.childName || '',
                 month,
                 totalDeposited: tx.amount,
                 totalSpent: 0,
@@ -257,7 +257,7 @@ export default function ApprovalsPage() {
           if (tx.category === 'canteen_expense') {
             const canteenQ = query(
               collection(db, 'welfare_canteen'),
-              where('patientId', '==', tx.patientId),
+              where('childId', '==', tx.childId),
               where('month', '==', month)
             );
             const canteenSnap = await getDocs(canteenQ);
@@ -343,7 +343,7 @@ export default function ApprovalsPage() {
 
   const formatCategory = (cat: string) => {
     const map: Record<string, string> = {
-      patient_fee: 'Patient Monthly Fee',
+      child_fee: 'Child Monthly Fee',
       canteen_deposit: 'Canteen Deposit',
       donation: 'Donation',
       government_grant: 'Government Grant',
@@ -361,7 +361,7 @@ export default function ApprovalsPage() {
       equipment: 'Equipment Purchase',
       security: 'Security Services',
       cleaning: 'Cleaning Supplies',
-      patient_welfare: 'Patient Welfare',
+      child_welfare: 'Child Welfare',
       office_supplies: 'Office Supplies',
       other_expense: 'Other Expense',
     };
@@ -406,9 +406,9 @@ export default function ApprovalsPage() {
             </div>
             <div className="text-2xl font-black text-gray-900 mb-1 tracking-tight">
               {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>
-              {tx.patientName && (
+              {tx.childName && (
                 <span className="ml-3 text-sm font-black text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg uppercase tracking-widest">
-                  Patient: {tx.patientName}
+                  Child: {tx.childName}
                 </span>
               )}
             </div>

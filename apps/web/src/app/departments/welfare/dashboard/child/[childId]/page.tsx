@@ -10,10 +10,10 @@ import {
   Shield, Pill, TrendingUp, Activity, ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
-import DailySheetTab from '@/components/welfare/patient-profile/DailySheetTab';
-import ProgressTab from '@/components/welfare/patient-profile/ProgressTab';
-import TherapyTab from '@/components/welfare/patient-profile/TherapyTab';
-import MedicationTab from '@/components/welfare/patient-profile/MedicationTab';
+import DailySheetTab from '@/components/welfare/child-profile/DailySheetTab';
+import ProgressTab from '@/components/welfare/child-profile/ProgressTab';
+import TherapyTab from '@/components/welfare/child-profile/TherapyTab';
+import MedicationTab from '@/components/welfare/child-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
 
 function toDate(val: any): Date {
@@ -23,21 +23,21 @@ function toDate(val: any): Date {
   return new Date(val);
 }
 
-export default function FamilyPatientViewPage() {
+export default function FamilyChildViewPage() {
   const router = useRouter();
   const params = useParams();
-  const patientId = params.patientId as string;
+  const childId = params.childId as string;
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [patient, setPatient] = useState<any>(null);
+  const [child, setChild] = useState<any>(null);
   const [feeRecord, setFeeRecord] = useState<any>(null);
   const [canteenRecord, setCanteenRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'daily' | 'therapy' | 'meds' | 'progress'>('overview');
 
-  const fetchPatientData = useCallback(async () => {
+  const fetchChildData = useCallback(async () => {
     try {
-      const pDoc = await getDoc(doc(db, 'welfare_children', patientId));
+      const pDoc = await getDoc(doc(db, 'welfare_children', childId));
       if (!pDoc.exists()) { router.push('/departments/welfare/login'); return; }
       const data = pDoc.data();
       
@@ -50,8 +50,8 @@ export default function FamilyPatientViewPage() {
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       const [feesSnap, canteenSnap] = await Promise.all([
-        getDocs(query(collection(db, 'welfare_fees'), where('patientId', '==', patientId))),
-        getDocs(query(collection(db, 'welfare_canteen'), where('patientId', '==', patientId))),
+        getDocs(query(collection(db, 'welfare_fees'), where('childId', '==', childId))),
+        getDocs(query(collection(db, 'welfare_canteen'), where('childId', '==', childId))),
       ]);
 
       let totalReceived = 0;
@@ -72,7 +72,7 @@ export default function FamilyPatientViewPage() {
         totalCanteenSpent += cData.totalSpent || 0;
       });
 
-      setPatient({ 
+      setChild({ 
         id: pDoc.id, 
         ...data, 
         admissionDate, 
@@ -88,48 +88,48 @@ export default function FamilyPatientViewPage() {
         canteenSpent: totalCanteenSpent,
       });
     } catch (error) {
-      console.error("Error fetching patient data:", error);
+      console.error("Error fetching child data:", error);
     } finally {
       setLoading(false);
     }
-  }, [patientId, router]);
+  }, [childId, router]);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) { router.push('/departments/welfare/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'family' || parsed.patientId !== patientId) {
+    if (parsed.role !== 'family' || parsed.childId !== childId) {
       setLoading(false);
       return;
     }
     setSession(parsed);
-    fetchPatientData();
-  }, [router, patientId, fetchPatientData]);
+    fetchChildData();
+  }, [router, childId, fetchChildData]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Loading patient profile...</p>
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Loading child profile...</p>
         </div>
       </div>
     );
   }
 
-  if (!session || !patient) {
+  if (!session || !child) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-xl font-black text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-500 text-sm">You can only view your assigned patient's profile.</p>
+          <p className="text-gray-500 text-sm">You can only view your assigned child's profile.</p>
         </div>
       </div>
     );
   }
 
-  const healthStatus = patient.healthStatus || {};
+  const healthStatus = child.healthStatus || {};
   const statusColor = (status: string) => {
     if (status === 'positive') return 'bg-red-100 text-red-700';
     if (status === 'negative') return 'bg-green-100 text-green-700';
@@ -147,41 +147,41 @@ export default function FamilyPatientViewPage() {
           <div className="flex flex-col items-start gap-3 p-2 sm:p-4">
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 flex items-center justify-center text-teal-700 font-black text-3xl border border-teal-200/50 flex-shrink-0 overflow-hidden">
-                {patient.photoUrl ? (
-                  <img src={patient.photoUrl} alt={patient.name} className="w-full h-full object-cover rounded-2xl" />
+                {child.photoUrl ? (
+                  <img src={child.photoUrl} alt={child.name} className="w-full h-full object-cover rounded-2xl" />
                 ) : (
-                  patient.name.charAt(0).toUpperCase()
+                  child.name.charAt(0).toUpperCase()
                 )}
               </div>
               <div>
-                <h1 className="text-xl font-black text-gray-900">{patient.name}</h1>
-                <p className="text-gray-500 text-sm mt-0.5">S/o {patient.fatherName}</p>
+                <h1 className="text-xl font-black text-gray-900">{child.name}</h1>
+                <p className="text-gray-500 text-sm mt-0.5">S/o {child.fatherName}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${patient.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {patient.isActive ? 'Active' : 'Discharged'}
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${child.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {child.isActive ? 'Active' : 'Discharged'}
               </span>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-black uppercase tracking-widest">
-                <Calendar size={10} /> {formatDateDMY(patient.admissionDate)}
+                <Calendar size={10} /> {formatDateDMY(child.admissionDate)}
               </span>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                <Clock size={10} /> {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)} {(patient.remainingDays || 0) > 0 ? 'days remaining' : 'days admitted'}
+                <Clock size={10} /> {(child.remainingDays || 0) > 0 ? child.remainingDays : (child.daysAdmitted || 0)} {(child.remainingDays || 0) > 0 ? 'days remaining' : 'days admitted'}
               </span>
-              {patient.substanceOfAddiction && (
+              {child.substanceOfAddiction && (
                 <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                  {patient.substanceOfAddiction}
+                  {child.substanceOfAddiction}
                 </span>
               )}
             </div>
             <div className="flex flex-wrap gap-2 mt-1 w-full sm:w-auto">
-              {patient.contactNumber && (
-                <a href={`tel:${patient.contactNumber}`} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 active:scale-95 transition-all w-full sm:w-auto">
+              {child.contactNumber && (
+                <a href={`tel:${child.contactNumber}`} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 active:scale-95 transition-all w-full sm:w-auto">
                   <Phone size={14} /> Call
                 </a>
               )}
-              {patient.whatsappNumber && (
-                <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 text-xs font-black hover:bg-green-100 active:scale-95 transition-all w-full sm:w-auto">
+              {child.whatsappNumber && (
+                <a href={`https://wa.me/${child.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 text-xs font-black hover:bg-green-100 active:scale-95 transition-all w-full sm:w-auto">
                   <MessageCircle size={14} /> WhatsApp
                 </a>
               )}
@@ -196,19 +196,19 @@ export default function FamilyPatientViewPage() {
           <p className="text-teal-600 text-[9px] font-black uppercase tracking-widest mb-3">Financial Summary</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.totalDues?.toLocaleString() || '0'}</span>
+              <span className="text-lg font-black text-teal-700">₨{child.totalDues?.toLocaleString() || '0'}</span>
               <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Total Package</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.totalReceived?.toLocaleString() || '0'}</span>
+              <span className="text-lg font-black text-teal-700">₨{child.totalReceived?.toLocaleString() || '0'}</span>
               <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Received</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className={`text-lg font-black ${(patient.remaining || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{patient.remaining?.toLocaleString() || '0'}</span>
+              <span className={`text-lg font-black ${(child.remaining || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{child.remaining?.toLocaleString() || '0'}</span>
               <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Remaining</span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-lg font-black text-teal-700">₨{patient.canteenBalance?.toLocaleString() || '0'}</span>
+              <span className="text-lg font-black text-teal-700">₨{child.canteenBalance?.toLocaleString() || '0'}</span>
               <span className="text-[9px] uppercase tracking-widest opacity-80 text-teal-600">Canteen Balance</span>
             </div>
           </div>
@@ -267,20 +267,20 @@ export default function FamilyPatientViewPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Name</p>
-                  <p className="font-bold text-gray-900 mt-1">{patient.guardianName || '—'}</p>
+                  <p className="font-bold text-gray-900 mt-1">{child.guardianName || '—'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Relationship</p>
-                  <p className="font-bold text-gray-900 mt-1">{patient.guardianRelationship || '—'}</p>
+                  <p className="font-bold text-gray-900 mt-1">{child.guardianRelationship || '—'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Phone</p>
-                  <a href={`tel:${patient.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{patient.contactNumber || '—'}</a>
+                  <a href={`tel:${child.contactNumber}`} className="font-bold text-teal-600 hover:underline mt-1 block">{child.contactNumber || '—'}</a>
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">WhatsApp</p>
-                  {patient.whatsappNumber ? (
-                    <a href={`https://wa.me/${patient.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{patient.whatsappNumber}</a>
+                  {child.whatsappNumber ? (
+                    <a href={`https://wa.me/${child.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-bold text-green-600 hover:underline mt-1 block">{child.whatsappNumber}</a>
                   ) : <p className="font-bold text-gray-400 mt-1">—</p>}
                 </div>
               </div>
@@ -289,24 +289,24 @@ export default function FamilyPatientViewPage() {
         )}
 
         {activeTab === 'daily' && session && (
-          <DailySheetTab patientId={patientId} session={session} readOnly />
+          <DailySheetTab childId={childId} session={session} readOnly />
         )}
 
         {activeTab === 'therapy' && session && (
           <div className="pointer-events-none">
-            <TherapyTab patientId={patientId} session={session} />
+            <TherapyTab childId={childId} session={session} />
           </div>
         )}
 
         {activeTab === 'meds' && session && (
           <div className="pointer-events-none">
-            <MedicationTab patientId={patientId} session={session} />
+            <MedicationTab childId={childId} session={session} />
           </div>
         )}
 
         {activeTab === 'progress' && session && (
           <div className="pointer-events-none">
-            <ProgressTab patientId={patientId} session={session} />
+            <ProgressTab childId={childId} session={session} />
           </div>
         )}
       </div>

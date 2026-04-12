@@ -8,13 +8,13 @@ import { db } from '@/lib/firebase';
 import { Loader2, Search, Eye, EyeOff, Copy, Check, ArrowLeft, Shield } from 'lucide-react';
 import { resetWelfarePassword } from '@/app/departments/welfare/actions/createWelfareUser';
 
-type RehabPatientCredential = {
+type RehabChildCredential = {
   id: string;
   displayName?: string;
   customId?: string;
   password?: string;
   role?: string;
-  patientId?: string;
+  childId?: string;
   isActive?: boolean;
 };
 
@@ -22,7 +22,7 @@ export default function RehabAdminPasswordsPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<RehabPatientCredential[]>([]);
+  const [users, setUsers] = useState<RehabChildCredential[]>([]);
   const [search, setSearch] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export default function RehabAdminPasswordsPage() {
   useEffect(() => {
     if (!session) return;
 
-    const fetchPatientCredentials = async () => {
+    const fetchChildCredentials = async () => {
       try {
         setLoading(true);
         const q = query(
@@ -54,7 +54,7 @@ export default function RehabAdminPasswordsPage() {
           orderBy('displayName', 'asc'),
         );
         const snap = await getDocs(q);
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RehabPatientCredential));
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RehabChildCredential));
 
         list.sort((a, b) => {
           const aName = (a.displayName || '').toLowerCase();
@@ -69,14 +69,14 @@ export default function RehabAdminPasswordsPage() {
       }
     };
 
-    void fetchPatientCredentials();
+    void fetchChildCredentials();
   }, [session]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
     return users.filter((u) =>
-      `${u.displayName || ''} ${u.customId || ''} ${u.patientId || ''}`.toLowerCase().includes(q),
+      `${u.displayName || ''} ${u.customId || ''} ${u.childId || ''}`.toLowerCase().includes(q),
     );
   }, [users, search]);
 
@@ -84,14 +84,14 @@ export default function RehabAdminPasswordsPage() {
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const copyCredentials = (u: RehabPatientCredential) => {
+  const copyCredentials = (u: RehabChildCredential) => {
     const text = `ID: ${u.customId || '-'} | Password: ${u.password || '-'}`;
     void navigator.clipboard.writeText(text);
     setCopiedId(u.id);
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleResetPassword = async (u: RehabPatientCredential) => {
+  const handleResetPassword = async (u: RehabChildCredential) => {
     const next = window.prompt(`Enter new password for ${u.customId || u.displayName || 'user'} (min 6 chars):`);
     if (!next) return;
     if (next.length < 6) {
@@ -137,9 +137,9 @@ export default function RehabAdminPasswordsPage() {
             <Shield size={18} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-gray-900">Patient Login Credentials</h1>
+            <h1 className="text-xl md:text-2xl font-black text-gray-900">Child Login Credentials</h1>
             <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
-              Rehab patients only (family accounts)
+              Rehab children only (family accounts)
             </p>
           </div>
         </div>
@@ -151,7 +151,7 @@ export default function RehabAdminPasswordsPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, login ID, or patient ID"
+            placeholder="Search by name, login ID, or child ID"
             className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold outline-none focus:border-teal-400"
           />
         </div>
@@ -163,7 +163,7 @@ export default function RehabAdminPasswordsPage() {
             <div key={u.id} className="p-4 space-y-3">
               <div>
                 <p className="text-sm font-bold text-gray-900">{u.displayName || '-'}</p>
-                <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black mt-1">Patient</p>
+                <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black mt-1">Child</p>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <div className="bg-gray-50 rounded-xl p-3">
@@ -171,8 +171,8 @@ export default function RehabAdminPasswordsPage() {
                   <p className="text-xs font-mono font-black text-gray-700 mt-1 break-all">{u.customId || '-'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Patient ID</p>
-                  <p className="text-xs font-mono font-black text-gray-500 mt-1 break-all">{u.patientId || '-'}</p>
+                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Child ID</p>
+                  <p className="text-xs font-mono font-black text-gray-500 mt-1 break-all">{u.childId || '-'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[9px] uppercase tracking-widest text-gray-400 font-black">Password</p>
@@ -213,7 +213,7 @@ export default function RehabAdminPasswordsPage() {
               <tr>
                 <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Name</th>
                 <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Login ID</th>
-                <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Patient ID</th>
+                <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Child ID</th>
                 <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black">Password</th>
                 <th className="px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-black text-right">Action</th>
               </tr>
@@ -223,7 +223,7 @@ export default function RehabAdminPasswordsPage() {
                 <tr key={u.id}>
                   <td className="px-4 py-3 text-sm font-bold text-gray-900">{u.displayName || '-'}</td>
                   <td className="px-4 py-3 text-xs font-mono font-black text-gray-700">{u.customId || '-'}</td>
-                  <td className="px-4 py-3 text-xs font-mono font-black text-gray-500">{u.patientId || '-'}</td>
+                  <td className="px-4 py-3 text-xs font-mono font-black text-gray-500">{u.childId || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="inline-flex items-center gap-2">
                       <span className="font-mono text-sm font-bold text-gray-800">
@@ -260,7 +260,7 @@ export default function RehabAdminPasswordsPage() {
         </div>
 
         {filtered.length === 0 && (
-          <div className="p-10 text-center text-gray-500 text-sm font-semibold">No patient credential records found.</div>
+          <div className="p-10 text-center text-gray-500 text-sm font-semibold">No child credential records found.</div>
         )}
       </div>
     </div>

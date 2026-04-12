@@ -30,7 +30,7 @@ export async function createWelfareUserServer(
   password: string,
   role: string,
   displayName: string,
-  patientId?: string,
+  childId?: string,
   emailDomain: string = DOMAIN,
   userCollection: string = 'welfare_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
@@ -54,7 +54,7 @@ export async function createWelfareUserServer(
           if (incoming && (incoming === reservedSuper || incoming === reservedCashier)) {
             return {
               success: false,
-              error: 'This Login ID is reserved. Please choose a different Patient Login ID.',
+              error: 'This Login ID is reserved. Please choose a different Child Login ID.',
             };
           }
         }
@@ -68,14 +68,14 @@ export async function createWelfareUserServer(
     try {
       const existingUser = await adminAuth.getUserByEmail(email);
       const existingProfileSnap = await adminDb.collection(userCollection).doc(existingUser.uid).get();
-      const nextPatientId = patientId || null;
+      const nextChildId = childId || null;
 
       // Repair missing Firestore profile (but never guess a family user into an admin slot).
       if (!existingProfileSnap.exists) {
         if (role === 'family') {
           return {
             success: false,
-            error: 'Login ID already exists. Please use a different Patient Login ID.',
+            error: 'Login ID already exists. Please use a different Child Login ID.',
           };
         }
         await adminDb.collection(userCollection).doc(existingUser.uid).set({
@@ -83,7 +83,7 @@ export async function createWelfareUserServer(
           role,
           displayName,
           password,
-          patientId: nextPatientId,
+          childId: nextChildId,
           isActive: true,
           createdAt: FieldValue.serverTimestamp(),
         });
@@ -100,17 +100,17 @@ export async function createWelfareUserServer(
         };
       }
 
-      // Prevent reassigning family login to a different patient.
-      if (role === 'family' && existingProfile?.patientId && existingProfile.patientId !== nextPatientId) {
+      // Prevent reassigning family login to a different child.
+      if (role === 'family' && existingProfile?.childId && existingProfile.childId !== nextChildId) {
         return {
           success: false,
-          error: 'This Patient Login ID is already assigned to another patient.',
+          error: 'This Child Login ID is already assigned to another child.',
         };
       }
 
       // Safe update.
       await adminDb.collection(userCollection).doc(existingUser.uid).set(
-        { customId, role, displayName, password, patientId: nextPatientId, isActive: true },
+        { customId, role, displayName, password, childId: nextChildId, isActive: true },
         { merge: true }
       );
       return { success: true, uid: existingUser.uid };
@@ -124,7 +124,7 @@ export async function createWelfareUserServer(
       role,
       displayName,
       password,
-      patientId: patientId || null,
+      childId: childId || null,
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
     });

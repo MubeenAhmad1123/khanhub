@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWelfareSession } from '@/hooks/welfare/useWelfareSession';
-import { createRehabUserServer, deactivateRehabUser, resetRehabPassword } from '../../../actions/createWelfareUser';
+import { createWelfareUserServer, deactivateWelfareUser, resetWelfarePassword } from '../../../actions/createWelfareUser';
 import EyePasswordInput from '@/components/welfare/EyePasswordInput';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -12,15 +12,15 @@ import type { WelfareUser } from '@/types/welfare';
 export default function SuperAdminUserManagement() {
   const router = useRouter();
   const { session: user, loading: sessionLoading } = useWelfareSession();
-  const [admins, setAdmins] = useState<RehabUser[]>([]);
-  const [cashier, setCashier] = useState<RehabUser | null>(null);
+  const [admins, setAdmins] = useState<WelfareUser[]>([]);
+  const [cashier, setCashier] = useState<WelfareUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Form states
-  const [adminForm, setAdminForm] = useState({ name: '', id: 'REHAB-ADM-001', pass: '' });
-  const [cashierForm, setCashierForm] = useState({ id: 'REHAB-CSH-001', pass: '' });
+  const [adminForm, setAdminForm] = useState({ name: '', id: 'WELFARE-ADM-001', pass: '' });
+  const [cashierForm, setCashierForm] = useState({ id: 'WELFARE-CSH-001', pass: '' });
 
   const fetchData = async () => {
     try {
@@ -29,8 +29,8 @@ export default function SuperAdminUserManagement() {
       
       const [snapAdmins, snapCashier] = await Promise.all([getDocs(qAdmins), getDocs(qCashier)]);
       
-      setAdmins(snapAdmins.docs.map(doc => ({ uid: doc.id, ...doc.data() } as RehabUser)));
-      setCashier(snapCashier.docs.length > 0 ? ({ uid: snapCashier.docs[0].id, ...snapCashier.docs[0].data() } as RehabUser) : null);
+      setAdmins(snapAdmins.docs.map(doc => ({ uid: doc.id, ...doc.data() } as WelfareUser)));
+      setCashier(snapCashier.docs.length > 0 ? ({ uid: snapCashier.docs[0].id, ...snapCashier.docs[0].data() } as WelfareUser) : null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -51,10 +51,10 @@ export default function SuperAdminUserManagement() {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
-    const res = await createRehabUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
+    const res = await createWelfareUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
     if (res.success) {
       setMessage({ type: 'success', text: `Admin ${adminForm.id} created!` });
-      setAdminForm({ name: '', id: 'REHAB-ADM-001', pass: '' });
+      setAdminForm({ name: '', id: 'WELFARE-ADM-001', pass: '' });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create admin' });
@@ -66,10 +66,10 @@ export default function SuperAdminUserManagement() {
     e.preventDefault();
     if (cashier) return;
     setActionLoading(true);
-    const res = await createRehabUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
+    const res = await createWelfareUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
     if (res.success) {
       setMessage({ type: 'success', text: 'Cashier created successfully!' });
-      setCashierForm({ id: 'REHAB-CSH-001', pass: '' });
+      setCashierForm({ id: 'WELFARE-CSH-001', pass: '' });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create cashier' });

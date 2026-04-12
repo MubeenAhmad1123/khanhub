@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
+import { createWelfareUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { 
   ArrowLeft, Heart, Save, Loader2, User, Upload, 
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function AdmitPatientPage() {
+export default function AdmitChildPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   
@@ -30,7 +30,7 @@ export default function AdmitPatientPage() {
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // SECTION 2: Patient Information
+  // SECTION 2: Child Information
   const [name, setName] = useState('');
   const [fatherName, setFatherName] = useState('');
   const [age, setAge] = useState('');
@@ -117,9 +117,9 @@ export default function AdmitPatientPage() {
         photoUrl = await uploadToCloudinary(photoFile, 'khanhub/welfare/children');
       }
 
-      // 2. Create patient document in Firestore
-      setSubmitStatus('Creating patient record...');
-      const patientRef = await addDoc(collection(db, 'welfare_children'), {
+      // 2. Create child document in Firestore
+      setSubmitStatus('Creating child record...');
+      const childRef = await addDoc(collection(db, 'welfare_children'), {
         name,
         fatherName,
         age: Number(age),
@@ -150,32 +150,32 @@ export default function AdmitPatientPage() {
         createdAt: Timestamp.now(),
       });
 
-      // 3. Create family login account linked to this patient
+      // 3. Create family login account linked to this child
       setSubmitStatus('Creating family login...');
-      const result = await createRehabUserServer(
+      const result = await createWelfareUserServer(
         loginId.toUpperCase(),
         loginPassword,
         'family',
         name,
-        patientRef.id
+        childRef.id
       );
 
       if (!result.success) {
-        // Roll back the patient doc if the login account could not be created.
+        // Roll back the child doc if the login account could not be created.
         // This prevents "half-created" records from confusing future logins.
         try {
-          await deleteDoc(doc(db, 'welfare_children', patientRef.id));
+          await deleteDoc(doc(db, 'welfare_children', childRef.id));
         } catch {}
 
-        setError(`Patient admission failed: ${result.error}. Please choose a different Patient Login ID.`);
+        setError(`Child admission failed: ${result.error}. Please choose a different Child Login ID.`);
         toast.error('Login account creation failed');
         setSubmitting(false);
         return;
       }
 
       setSubmitStatus('Done!');
-      toast.success('Patient admitted successfully ✓');
-      router.push(`/departments/welfare/dashboard/admin/patients/${patientRef.id}`);
+      toast.success('Child admitted successfully ✓');
+      router.push(`/departments/welfare/dashboard/admin/children/${childRef.id}`);
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Something went wrong');
@@ -209,16 +209,16 @@ export default function AdmitPatientPage() {
         
         {/* Header */}
         <div className="flex flex-col gap-4">
-          <Link href="/departments/welfare/dashboard/admin/patients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit">
+          <Link href="/departments/welfare/dashboard/admin/children" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit">
             <ArrowLeft className="w-4 h-4" />
-            Back to Patients
+            Back to Children
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Plus className="w-6 h-6 text-teal-600" />
-              Admit New Patient
+              Admit New Child
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Register a new patient and set up family access.</p>
+            <p className="text-sm text-gray-500 mt-1">Register a new child and set up family access.</p>
           </div>
         </div>
 
@@ -231,7 +231,7 @@ export default function AdmitPatientPage() {
               <SectionHeader icon={Shield} title="Login Credentials" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient Login ID *</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Child Login ID *</label>
                   <input required placeholder="e.g. WEL-CHI-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
@@ -244,12 +244,12 @@ export default function AdmitPatientPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 italic px-1">Family will use these to log in and view this patient's profile</p>
+              <p className="text-[10px] text-gray-400 italic px-1">Family will use these to log in and view this child's profile</p>
             </div>
 
-            {/* SECTION 2: Patient Information */}
+            {/* SECTION 2: Child Information */}
             <div className="space-y-4 mt-8">
-              <SectionHeader icon={User} title="Patient Information" />
+              <SectionHeader icon={User} title="Child Information" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Full Name *</label>
@@ -340,7 +340,7 @@ export default function AdmitPatientPage() {
                   setPhotoPreview(URL.createObjectURL(file));
                 }} />
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">Patient Photo</p>
+                  <p className="text-sm font-semibold text-gray-700">Child Photo</p>
                   <p className="text-xs text-gray-400 mt-0.5">JPG, PNG up to 5MB</p>
                   {photoPreview && (
                     <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview('') }} className="text-xs text-red-400 mt-1 hover:text-red-600 font-semibold">Remove</button>
@@ -476,11 +476,11 @@ export default function AdmitPatientPage() {
                 ) : (
                   <>
                     <Save size={18} className="group-hover:scale-110 transition-transform" />
-                    Admit Patient
+                    Admit Child
                   </>
                 )}
               </button>
-              <Link href="/departments/welfare/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
+              <Link href="/departments/welfare/dashboard/admin/children" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
                 Cancel Registration
               </Link>
             </div>

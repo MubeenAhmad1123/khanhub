@@ -41,7 +41,7 @@ export default function WelfareLoginPage() {
         customId: userData.customId,
         role: userData.role,
         displayName: userData.displayName,
-        patientId: userData.patientId || null
+        childId: userData.childId || null
       };
 
       localStorage.setItem('welfare_session', JSON.stringify(session));
@@ -49,7 +49,7 @@ export default function WelfareLoginPage() {
       console.log('Redirecting to role:', userData.role);
 
       if (userData.role === 'family') {
-        router.push(`/departments/welfare/dashboard/family/${userData.patientId}`);
+        router.push(`/departments/welfare/dashboard/family/${userData.childId}`);
       } else if (userData.role === 'staff') {
         router.push('/departments/welfare/dashboard/staff');
       } else if (userData.role === 'cashier') {

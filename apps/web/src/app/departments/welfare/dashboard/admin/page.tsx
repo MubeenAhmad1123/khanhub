@@ -27,8 +27,8 @@ export default function AdminDashboardPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const [totalPatients, setTotalPatients] = useState(0);
-  const [activePatients, setActivePatients] = useState<any[]>([]);
+  const [totalChildren, setTotalChildren] = useState(0);
+  const [activeChildren, setActiveChildren] = useState<any[]>([]);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('welfare_session');
@@ -47,14 +47,14 @@ export default function AdminDashboardPage() {
 
   const loadDashboard = async () => {
     try {
-      const patientsSnap = await getDocs(query(
+      const childrenSnap = await getDocs(query(
         collection(db, 'welfare_children'), 
         where('isActive', '==', true),
         orderBy('name', 'asc')
       ));
 
-      setTotalPatients(patientsSnap.size);
-      setActivePatients(patientsSnap.docs.map(d => ({
+      setTotalChildren(childrenSnap.size);
+      setActiveChildren(childrenSnap.docs.map(d => ({
         id: d.id,
         ...d.data()
       })).slice(0, 5));
@@ -89,10 +89,10 @@ export default function AdminDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link 
-            href="/departments/welfare/dashboard/admin/patients/new"
+            href="/departments/welfare/dashboard/admin/children/new"
             className="flex items-center gap-2 px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-black hover:bg-teal-700 transition-all shadow-lg shadow-teal-100 whitespace-nowrap"
           >
-            <Plus size={16} /> Add Patient
+            <Plus size={16} /> Add Child
           </Link>
         </div>
       </div>
@@ -104,8 +104,8 @@ export default function AdminDashboardPage() {
             <Heart className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <div className="text-2xl md:text-4xl font-black text-gray-900">{totalPatients}</div>
-            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Active Patients</div>
+            <div className="text-2xl md:text-4xl font-black text-gray-900">{totalChildren}</div>
+            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Active Children</div>
           </div>
         </div>
 
@@ -114,7 +114,7 @@ export default function AdminDashboardPage() {
             <Users className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <div className="text-xl md:text-4xl font-black text-gray-900">Patient Focus</div>
+            <div className="text-xl md:text-4xl font-black text-gray-900">Child Focus</div>
             <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Management Mode</div>
           </div>
         </div>
@@ -131,37 +131,37 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-        {/* Recent Patients */}
+        {/* Recent Children */}
         <div className="lg:col-span-2 bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-4 md:p-8 border-b border-gray-50 flex items-center justify-between">
             <h2 className="font-black text-gray-900 flex items-center gap-3 text-sm md:text-base">
-              <Activity className="w-5 h-5 text-teal-500" /> Recent Patients
+              <Activity className="w-5 h-5 text-teal-500" /> Recent Children
             </h2>
-            <Link href="/departments/welfare/dashboard/admin/patients" className="text-[9px] md:text-xs font-black text-teal-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform whitespace-nowrap">
+            <Link href="/departments/welfare/dashboard/admin/children" className="text-[9px] md:text-xs font-black text-teal-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform whitespace-nowrap">
               View All <ChevronRight size={12} />
             </Link>
           </div>
           <div className="p-3 md:p-4">
-            {activePatients.length === 0 ? (
+            {activeChildren.length === 0 ? (
               <div className="text-center py-10">
-                <p className="text-gray-400 text-sm font-medium">No active patients found.</p>
-                <Link href="/departments/welfare/dashboard/admin/patients/new" className="text-teal-600 text-sm font-bold mt-2 inline-block">Add your first patient</Link>
+                <p className="text-gray-400 text-sm font-medium">No active children found.</p>
+                <Link href="/departments/welfare/dashboard/admin/children/new" className="text-teal-600 text-sm font-bold mt-2 inline-block">Add your first child</Link>
               </div>
             ) : (
                 <div className="grid grid-cols-1 gap-2">
-                  {activePatients.map(patient => (
+                  {activeChildren.map(child => (
                     <Link 
-                      key={patient.id} 
-                      href={`/departments/welfare/dashboard/admin/patients/${patient.id}`}
+                      key={child.id} 
+                      href={`/departments/welfare/dashboard/admin/children/${child.id}`}
                       className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 transition-colors group active:bg-gray-100"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 font-black text-sm group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors flex-shrink-0">
-                          {patient.name?.[0]?.toUpperCase()}
+                          {child.name?.[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900 text-sm">{patient.name}</p>
-                          <p className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">{patient.customId || patient.id}</p>
+                          <p className="font-bold text-gray-900 text-sm">{child.name}</p>
+                          <p className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">{child.customId || child.id}</p>
                         </div>
                       </div>
                       <ChevronRight size={16} className="text-gray-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
             <Link 
-              href="/departments/welfare/dashboard/admin/patients/new"
+              href="/departments/welfare/dashboard/admin/children/new"
               className="flex items-center gap-3 p-4 rounded-2xl bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors group active:scale-95"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
@@ -189,13 +189,13 @@ export default function AdminDashboardPage() {
             </Link>
             
             <Link 
-              href="/departments/welfare/dashboard/admin/patients"
+              href="/departments/welfare/dashboard/admin/children"
               className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors group active:scale-95"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
                 <Users size={18} />
               </div>
-              <span className="font-bold text-sm">Patient Registry</span>
+              <span className="font-bold text-sm">Child Registry</span>
             </Link>
 
             <Link 

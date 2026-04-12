@@ -24,7 +24,7 @@ export default function WelfareRootPage() {
 
       // Redirect based on role to the last known dashboard
       const role = user.role;
-      if (role === 'child') {
+      if (role === 'family') {
         router.push(`/departments/welfare/dashboard/child/${user.childId}`);
       } else if (role === 'staff') {
         router.push('/departments/welfare/dashboard/staff');

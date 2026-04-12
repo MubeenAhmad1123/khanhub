@@ -16,14 +16,14 @@ const navItems: NavItem[] = [
   { label: 'Staff Dashboard', href: '/departments/welfare/dashboard/staff', roles: ['staff'] },
   { label: 'Cashier Dashboard', href: '/departments/welfare/dashboard/cashier', roles: ['cashier', 'superadmin'] },
   { label: 'Admin Overview', href: '/departments/welfare/dashboard/admin', roles: ['admin', 'superadmin'] },
-  { label: 'Patients', href: '/departments/welfare/dashboard/admin/patients', roles: ['admin', 'superadmin'] },
+  { label: 'Children', href: '/departments/welfare/dashboard/admin/children', roles: ['admin', 'superadmin'] },
   { label: 'Staff Management', href: '/departments/welfare/dashboard/admin/staff', roles: ['admin', 'superadmin'] },
   { label: 'Finance', href: '/departments/welfare/dashboard/admin/finance', roles: ['admin', 'superadmin'] },
   { label: 'Reports', href: '/departments/welfare/dashboard/admin/reports', roles: ['admin', 'superadmin'] },
   { label: 'Approvals', href: '/departments/welfare/dashboard/superadmin/approvals', roles: ['superadmin'] },
 ];
 
-export default function WelfareSidebar({ role, patientId }: { role: WelfareRole, patientId?: string }) {
+export default function WelfareSidebar({ role, childId }: { role: WelfareRole, childId?: string }) {
   const pathname = usePathname();
 
   const filteredNav = navItems.filter(item => item.roles.includes(role));
@@ -37,8 +37,8 @@ export default function WelfareSidebar({ role, patientId }: { role: WelfareRole,
       <nav className="flex-1 p-4 space-y-1">
         {filteredNav.map((item) => {
           let href = item.href;
-          if (item.label === 'Family View' && patientId) {
-            href = `${item.href}/${patientId}`;
+          if (item.label === 'Family View' && childId) {
+            href = `${item.href}/${childId}`;
           }
           const isActive = pathname === href;
           return (

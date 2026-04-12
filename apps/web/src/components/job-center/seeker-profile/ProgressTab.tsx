@@ -1,14 +1,14 @@
-// src/components/job-center/patient-profile/ProgressTab.tsx
+// src/components/job-center/seeker-profile/ProgressTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { WeeklyProgress } from '@/types/job-center';
 import { getWeeklyProgress, addWeeklyProgress } from '@/lib/job-center/seekers';
-import { Loader2, Plus, TrendingUp, LineChart as LineChartIcon } from 'lucide-react';
+import { Loader2, Plus, TrendingUp } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
-export default function ProgressTab({ patientId, session }: { patientId: string, session: any }) {
+export default function ProgressTab({ seekerId, session }: { seekerId: string, session: any }) {
   const [progress, setProgress] = useState<WeeklyProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -28,7 +28,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
   const fetchProgress = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getWeeklyProgress(patientId);
+      const data = await getWeeklyProgress(seekerId);
       // Sort by week number ASC
       data.sort((a, b) => a.weekNumber - b.weekNumber);
       setProgress(data);
@@ -41,7 +41,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
     } finally {
       setLoading(false);
     }
-  }, [patientId]);
+  }, [seekerId]);
 
   useEffect(() => {
     fetchProgress();
@@ -53,7 +53,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
       setSaving(true);
       const newProgress: WeeklyProgress = {
         id: '',
-        patientId,
+        seekerId,
         weekNumber: weekNum,
         weekStartDate: startDate,
         weekEndDate: endDate,

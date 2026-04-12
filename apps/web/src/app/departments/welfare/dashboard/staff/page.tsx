@@ -392,7 +392,7 @@ export default function StaffSelfPage() {
           <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the welfare program.</p>
           <textarea
             rows={3}
-            placeholder="e.g. Completed morning rounds, cleaned all patient rooms, suggested new shift handover system..."
+            placeholder="e.g. Completed morning rounds, cleaned all child rooms, suggested new shift handover system..."
             className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
             value={contributionText}
             onChange={e => setContributionText(e.target.value)}

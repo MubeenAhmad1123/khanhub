@@ -14,9 +14,9 @@ export default function FamilyDashboardIndex() {
     if (!loading) {
       if (!session) {
         router.push('/departments/welfare/login');
-      } else if (session.role === 'family' && session.patientId) {
-        // Automatically redirect family members to their specific patient
-        router.push(`/departments/welfare/dashboard/family/${session.patientId}`);
+      } else if (session.role === 'family' && session.childId) {
+        // Automatically redirect family members to their specific child
+        router.push(`/departments/welfare/dashboard/family/${session.childId}`);
       }
     }
   }, [session, loading, router]);
@@ -26,13 +26,13 @@ export default function FamilyDashboardIndex() {
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-teal-600" />
         <p className="text-gray-400 text-sm font-black uppercase tracking-widest animate-pulse">
-          Link to Patient...
+          Link to Child...
         </p>
       </div>
     );
   }
 
-  // If we reach here, either the user is not a family role or they don't have a patientId
+  // If we reach here, either the user is not a family role or they don't have a childId
   return (
     <div className="min-h-[70vh] flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl shadow-teal-900/5 border border-gray-100 p-8 md:p-12 text-center relative overflow-hidden">
@@ -49,23 +49,23 @@ export default function FamilyDashboardIndex() {
           </div>
 
           <h1 className="text-2xl font-black text-gray-900 mb-4 uppercase tracking-tight">
-            {session?.role === 'family' ? 'No Patient Linked' : 'Role Access'}
+            {session?.role === 'family' ? 'No Child Linked' : 'Role Access'}
           </h1>
 
           <p className="text-gray-500 text-sm leading-relaxed mb-10">
             {session?.role === 'family' 
-              ? "Your account is not currently linked to a specific patient. Please contact administration to update your profile permissions."
-              : `You are logged in as "${session?.role?.toUpperCase()}". To view a patient dashboard, please select one from the patients list.`
+              ? "Your account is not currently linked to a specific child. Please contact administration to update your profile permissions."
+              : `You are logged in as "${session?.role?.toUpperCase()}". To view a child dashboard, please select one from the children list.`
             }
           </p>
 
           <div className="space-y-3">
             {session?.role !== 'family' && (
               <Link 
-                href="/departments/welfare/dashboard/admin/patients"
+                href="/departments/welfare/dashboard/admin/children"
                 className="flex items-center justify-center gap-2 w-full bg-teal-600 hover:bg-teal-700 text-white rounded-2xl py-4 font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-teal-200 active:scale-95 group"
               >
-                Go to Patients List
+                Go to Children List
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             )}

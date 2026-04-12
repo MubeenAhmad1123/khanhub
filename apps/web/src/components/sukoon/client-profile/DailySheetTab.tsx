@@ -1,11 +1,11 @@
-// src/components/sukoon/patient-profile/DailySheetTab.tsx
+// src/components/sukoon/client-profile/DailySheetTab.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/sukoon';
 import { getDailyActivities, saveDailyActivity } from '@/lib/sukoon/clients';
 import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function DailySheetTab({ patientId, session, readOnly = false }: { patientId: string, session: any, readOnly?: boolean }) {
+export default function DailySheetTab({ clientId, session, readOnly = false }: { clientId: string, session: any, readOnly?: boolean }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -32,7 +32,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
   const fetchRecords = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getDailyActivities(patientId, currentMonth);
+      const data = await getDailyActivities(clientId, currentMonth);
       const indexed: Record<string, DailyActivityRecord> = {};
       data.forEach(r => { indexed[r.date] = r; });
       setRecords(indexed);
@@ -42,7 +42,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
     } finally {
       setLoading(false);
     }
-  }, [patientId, currentMonth]);
+  }, [clientId, currentMonth]);
 
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
@@ -72,7 +72,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
         else newActivities.push({ activityId, status: 'done' });
         setRecords(prev => ({
           ...prev,
-          [dateStr]: { ...prev[dateStr], date: dateStr, patientId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
+          [dateStr]: { ...prev[dateStr], date: dateStr, clientId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
         }));
       }
       return;
@@ -96,12 +96,12 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
 
     setRecords(prev => ({
       ...prev,
-      [dateStr]: { ...prev[dateStr], date: dateStr, patientId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
+      [dateStr]: { ...prev[dateStr], date: dateStr, clientId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
     }));
 
     try {
       setPendingSaves(prev => new Set(prev).add(key));
-      await saveDailyActivity(patientId, dateStr, newActivities, session.uid);
+      await saveDailyActivity(clientId, dateStr, newActivities, session.uid);
     } catch (error) {
       console.error("Error saving activity cell", error);
       toast.error('Failed to save activity');
@@ -120,7 +120,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
       const currentActivities = currentRecord?.activities || [];
       const counsellingNotes = noteModal.type === 'counselling' ? noteModal.value : (currentRecord?.counsellingSessionNotes || '');
       const vitalNotes = noteModal.type === 'vital' ? noteModal.value : (currentRecord?.vitalSignNotes || '');
-      await saveDailyActivity(patientId, dateStr, currentActivities, session.uid, { counsellingNotes, vitalNotes });
+      await saveDailyActivity(clientId, dateStr, currentActivities, session.uid, { counsellingNotes, vitalNotes });
       setRecords(prev => ({
         ...prev,
         [dateStr]: { ...prev[dateStr], counsellingSessionNotes: counsellingNotes, vitalSignNotes: vitalNotes } as DailyActivityRecord
@@ -244,7 +244,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
                 <div key={activity.id} className="p-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">
-                      <span className="text-teal-600 font-black mr-1">{activity.id}.</span>{activity.name}
+                      <span className="text-purple-600 font-black mr-1">{activity.id}.</span>{activity.name}
                     </p>
                   </div>
                   <button
@@ -254,7 +254,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
                       readOnly ? 'cursor-default' : 'hover:bg-gray-50'
                     }`}
                   >
-                    {isSaving ? <Loader2 className="w-4 h-4 text-teal-600 animate-spin" /> : getCellIcon(existing?.status, activity.id, selectedDateStr)}
+                    {isSaving ? <Loader2 className="w-4 h-4 text-purple-600 animate-spin" /> : getCellIcon(existing?.status, activity.id, selectedDateStr)}
                   </button>
                 </div>
               );
@@ -285,9 +285,9 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
                 {DAILY_ACTIVITIES.map(activity => {
                   const pct = getRowCompletion(activity.id);
                   return (
-                    <tr key={activity.id} className="hover:bg-teal-50/20 transition-colors group">
-                      <td className="px-5 py-3 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-teal-50/20 z-10 transition-colors font-semibold text-gray-800 text-xs">
-                        <span className="text-[10px] text-teal-600 w-5 inline-block font-black">{activity.id}.</span> 
+                    <tr key={activity.id} className="hover:bg-purple-50/20 transition-colors group">
+                      <td className="px-5 py-3 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-purple-50/20 z-10 transition-colors font-semibold text-gray-800 text-xs">
+                        <span className="text-[10px] text-purple-600 w-5 inline-block font-black">{activity.id}.</span> 
                         {activity.name}
                       </td>
                       {daysArray.map(day => {
@@ -308,7 +308,7 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
                               title={`${activity.name} — ${dateStr}`}
                             >
                               {isSaving ? (
-                                <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />
+                                <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
                               ) : (
                                 getCellIcon(existing?.status, activity.id, dateStr)
                               )}
@@ -365,12 +365,12 @@ export default function DailySheetTab({ patientId, session, readOnly = false }: 
                 value={noteModal.value}
                 onChange={e => setNoteModal({ ...noteModal, value: e.target.value })}
                 rows={6}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none resize-none"
                 placeholder={noteModal.type === 'counselling' ? 'Write counselling session notes...' : 'Write vital sign observations...'}
               />
               <div className="flex gap-2">
                 <button onClick={() => setNoteModal(null)} className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-xs font-black uppercase tracking-widest">Cancel</button>
-                <button onClick={handleSaveNote} disabled={noteSaving} className="flex-1 bg-teal-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50">
+                <button onClick={handleSaveNote} disabled={noteSaving} className="flex-1 bg-purple-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50">
                   {noteSaving ? 'Saving...' : 'Save Notes'}
                 </button>
               </div>

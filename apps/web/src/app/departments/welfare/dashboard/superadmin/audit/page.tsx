@@ -13,7 +13,7 @@ const ACTION_TYPES = [
   { value: '', label: 'All Actions' },
   { value: 'user_created', label: 'User Created' },
   { value: 'staff_created', label: 'Staff Created' },
-  { value: 'patient_added', label: 'Patient Added' },
+  { value: 'child_added', label: 'Child Added' },
   { value: 'transaction_approved', label: 'Transaction Approved' },
   { value: 'transaction_rejected', label: 'Transaction Rejected' },
   { value: 'attendance_overridden', label: 'Attendance Overridden' },
@@ -26,7 +26,7 @@ function getActionIcon(action: string) {
   switch (action) {
     case 'user_created': return <UserPlus className={`${cls} text-blue-500`} />;
     case 'staff_created': return <UserCog className={`${cls} text-teal-500`} />;
-    case 'patient_added': return <Heart className={`${cls} text-teal-600`} />;
+    case 'child_added': return <Heart className={`${cls} text-teal-600`} />;
     case 'transaction_approved': return <CheckCircle className={`${cls} text-green-500`} />;
     case 'transaction_rejected': return <XCircle className={`${cls} text-red-500`} />;
     case 'attendance_overridden': return <Calendar className={`${cls} text-amber-500`} />;
@@ -40,7 +40,7 @@ function getActionColor(action: string) {
   switch (action) {
     case 'user_created': return 'bg-blue-50 border-blue-200';
     case 'staff_created': return 'bg-teal-50 border-teal-200';
-    case 'patient_added': return 'bg-teal-50 border-teal-200';
+    case 'child_added': return 'bg-teal-50 border-teal-200';
     case 'transaction_approved': return 'bg-green-50 border-green-200';
     case 'transaction_rejected': return 'bg-red-50 border-red-200';
     case 'attendance_overridden': return 'bg-amber-50 border-amber-200';

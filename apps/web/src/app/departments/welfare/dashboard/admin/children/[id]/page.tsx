@@ -17,23 +17,23 @@ import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY } from '@/lib/utils';
 
-import DailySheetTab from '@/components/welfare/patient-profile/DailySheetTab';
-import ProgressTab from '@/components/welfare/patient-profile/ProgressTab';
-import TherapyTab from '@/components/welfare/patient-profile/TherapyTab';
-import MedicationTab from '@/components/welfare/patient-profile/MedicationTab';
-import AdmissionTab from '@/components/welfare/patient-profile/AdmissionTab';
+import DailySheetTab from '@/components/welfare/child-profile/DailySheetTab';
+import ProgressTab from '@/components/welfare/child-profile/ProgressTab';
+import TherapyTab from '@/components/welfare/child-profile/TherapyTab';
+import MedicationTab from '@/components/welfare/child-profile/MedicationTab';
+import AdmissionTab from '@/components/welfare/child-profile/AdmissionTab';
 
-export default function PatientDetailPage() {
+export default function ChildDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const patientId = params.id as string;
+  const childId = params.id as string;
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const isAdmin = session?.role === 'admin';
   
   // Data
-  const [patient, setPatient] = useState<any>(null);
+  const [child, setChild] = useState<any>(null);
   const [feeRecord, setFeeRecord] = useState<any>(null);
   const [canteenRecord, setCanteenRecord] = useState<any>(null);
   const [videos, setVideos] = useState<any[]>([]);
@@ -122,11 +122,11 @@ export default function PatientDetailPage() {
     try {
       setLoading(true);
 
-      // 1. Patient Profile
-      const pDoc = await getDoc(doc(db, 'welfare_children', patientId));
+      // 1. Child Profile
+      const pDoc = await getDoc(doc(db, 'welfare_children', childId));
       if (!pDoc.exists()) {
-        toast.error('Patient not found');
-        router.push('/departments/welfare/dashboard/admin/patients');
+        toast.error('Child not found');
+        router.push('/departments/welfare/dashboard/admin/children');
         return;
       }
       const data = pDoc.data();
@@ -142,7 +142,7 @@ export default function PatientDetailPage() {
         remainingDays = Math.max(0, 100 - daysAdmitted);
       }
 
-      setPatient({ id: pDoc.id, ...data, remainingDays, daysAdmitted });
+      setChild({ id: pDoc.id, ...data, remainingDays, daysAdmitted });
       setEditForm({
         name: data.name || '',
         diagnosis: data.diagnosis || '',
@@ -157,7 +157,7 @@ export default function PatientDetailPage() {
       // 2. Fees (Initial current month)
       const feesQ = query(
         collection(db, 'welfare_fees'),
-        where('patientId', '==', patientId),
+        where('childId', '==', childId),
         where('month', '==', monthStr)
       );
       const feeSnap = await getDocs(feesQ);
@@ -170,7 +170,7 @@ export default function PatientDetailPage() {
       // 3. Canteen (Initial current month)
       const canteenQ = query(
         collection(db, 'welfare_canteen'),
-        where('patientId', '==', patientId),
+        where('childId', '==', childId),
         where('month', '==', monthStr)
       );
       const canteenSnap = await getDocs(canteenQ);
@@ -183,7 +183,7 @@ export default function PatientDetailPage() {
       // 4. Videos
       const videosQ = query(
         collection(db, 'welfare_videos'),
-        where('patientId', '==', patientId),
+        where('childId', '==', childId),
         orderBy('createdAt', 'desc')
       );
       const vidSnap = await getDocs(videosQ);
@@ -192,7 +192,7 @@ export default function PatientDetailPage() {
       // 5. Visits
       const visitsQ = query(
         collection(db, 'welfare_visits'),
-        where('patientId', '==', patientId),
+        where('childId', '==', childId),
         orderBy('date', 'desc')
       );
       const visitSnap = await getDocs(visitsQ);
@@ -200,24 +200,24 @@ export default function PatientDetailPage() {
 
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast.error('Failed to load patient data');
+      toast.error('Failed to load child data');
     } finally {
       setLoading(false);
     }
-  }, [patientId, router]);
+  }, [childId, router]);
 
   useEffect(() => {
-    if (!session || !patientId) return;
+    if (!session || !childId) return;
     fetchData();
-  }, [session, patientId, fetchData]);
+  }, [session, childId, fetchData]);
 
   useEffect(() => {
-    if (!patientId || !session) return;
+    if (!childId || !session) return;
     fetchFeeRecord();
   }, [feeMonth]);
 
   useEffect(() => {
-    if (!patientId || !session) return;
+    if (!childId || !session) return;
     fetchCanteenRecord();
   }, [canteenMonth]);
 
@@ -226,7 +226,7 @@ export default function PatientDetailPage() {
       const snap = await getDocs(
         query(
           collection(db, 'welfare_fees'),
-          where('patientId', '==', patientId),
+          where('childId', '==', childId),
           where('month', '==', feeMonth)
         )
       );
@@ -281,8 +281,8 @@ export default function PatientDetailPage() {
         categoryName: 'Admission / Fees',
         departmentCode: 'welfare',
         departmentName: 'Welfare Foundation',
-        patientId: patientId,
-        patientName: patient?.name || '',
+        childId: childId,
+        childName: child?.name || '',
         status: 'pending_cashier',
         cashierId: cashierCustomId,
         proofRequired: true,
@@ -331,8 +331,8 @@ export default function PatientDetailPage() {
         categoryName: 'Admission / Fees',
         departmentCode: 'welfare',
         departmentName: 'Welfare Foundation',
-        patientId: patientId,
-        patientName: patient?.name || '',
+        childId: childId,
+        childName: child?.name || '',
         status: 'pending_cashier',
         cashierId: cashierCustomId,
         proofRequired: true,
@@ -359,7 +359,7 @@ export default function PatientDetailPage() {
       const snap = await getDocs(
         query(
           collection(db, 'welfare_canteen'),
-          where('patientId', '==', patientId),
+          where('childId', '==', childId),
           where('month', '==', canteenMonth)
         )
       );
@@ -397,7 +397,7 @@ export default function PatientDetailPage() {
 
       if (!canteenRecord) {
         await addDoc(collection(db, 'welfare_canteen'), {
-          patientId: patientId,
+          childId: childId,
           month: canteenMonth,
           totalDeposited: canteenModal === 'deposit' ? Number(canteenAmt) : 0,
           totalSpent: canteenModal === 'expense' ? Number(canteenAmt) : 0,
@@ -453,14 +453,14 @@ export default function PatientDetailPage() {
         setPhotoUploading(false);
       }
 
-      await updateDoc(doc(db, 'welfare_children', patientId), {
+      await updateDoc(doc(db, 'welfare_children', childId), {
         name: editForm.name,
         diagnosis: editForm.diagnosis,
         packageAmount: Number(editForm.packageAmount),
         photoUrl: photoUrl || null
       });
 
-      setPatient((prev: any) => ({ 
+      setChild((prev: any) => ({ 
         ...prev, 
         name: editForm.name,
         diagnosis: editForm.diagnosis,
@@ -480,12 +480,12 @@ export default function PatientDetailPage() {
   };
 
   const handleDeactivate = async () => {
-    if (!window.confirm("Are you sure you want to deactivate this patient?")) return;
+    if (!window.confirm("Are you sure you want to deactivate this child?")) return;
     try {
       setDeactivating(true);
-      await updateDoc(doc(db, 'welfare_children', patientId), { isActive: false });
-      toast.success('Patient deactivated');
-      router.push('/departments/welfare/dashboard/admin/patients');
+      await updateDoc(doc(db, 'welfare_children', childId), { isActive: false });
+      toast.success('Child deactivated');
+      router.push('/departments/welfare/dashboard/admin/children');
     } catch (error) {
       console.error("Deactivate error", error);
       toast.error('Deactivation failed');
@@ -494,16 +494,16 @@ export default function PatientDetailPage() {
   };
 
   const handleDischarge = async () => {
-    if (!window.confirm("Are you sure you want to discharge this patient?")) return;
+    if (!window.confirm("Are you sure you want to discharge this child?")) return;
     try {
       setDeactivating(true);
-      await updateDoc(doc(db, 'welfare_children', patientId), {
+      await updateDoc(doc(db, 'welfare_children', childId), {
         isActive: false,
         dischargeDate: Timestamp.now(),
         dischargeReason: null
       });
-      toast.success('Patient discharged');
-      router.push('/departments/welfare/dashboard/admin/patients');
+      toast.success('Child discharged');
+      router.push('/departments/welfare/dashboard/admin/children');
     } catch (error) {
       console.error("Discharge error", error);
       toast.error('Discharge failed');
@@ -523,7 +523,7 @@ export default function PatientDetailPage() {
       const secureUrl = await uploadToCloudinary(selectedFile, 'khanhub/welfare/children');
       
       await addDoc(collection(db, 'welfare_videos'), {
-        patientId: patientId,
+        childId: childId,
         title: videoTitle,
         url: secureUrl,
         fileType: selectedFile.type,
@@ -536,7 +536,7 @@ export default function PatientDetailPage() {
       setVideoTitle('');
       setSelectedFile(null);
       // Refresh videos
-      const videosQ = query(collection(db, 'welfare_videos'), where('patientId', '==', patientId), orderBy('createdAt', 'desc'));
+      const videosQ = query(collection(db, 'welfare_videos'), where('childId', '==', childId), orderBy('createdAt', 'desc'));
       const vidSnap = await getDocs(videosQ);
       setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
       
@@ -570,7 +570,7 @@ export default function PatientDetailPage() {
     try {
       setIsSavingVisit(true);
       const visitData = {
-        patientId,
+        childId,
         visitorName: vName,
         relation: vRelation,
         phone: vPhone,
@@ -596,7 +596,7 @@ export default function PatientDetailPage() {
       setVDate(new Date().toISOString().split('T')[0]);
 
       // Refresh visits
-      const visitsQ = query(collection(db, 'welfare_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitsQ = query(collection(db, 'welfare_visits'), where('childId', '==', childId), orderBy('date', 'desc'));
       const visitSnap = await getDocs(visitsQ);
       setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
 
@@ -645,7 +645,7 @@ export default function PatientDetailPage() {
 
       toast.success('Visit updated ✓');
       setEditVisitModal(null);
-      const visitsQ = query(collection(db, 'welfare_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitsQ = query(collection(db, 'welfare_visits'), where('childId', '==', childId), orderBy('date', 'desc'));
       const visitSnap = await getDocs(visitsQ);
       setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
     } catch (error) {
@@ -664,7 +664,7 @@ export default function PatientDetailPage() {
     );
   }
 
-  if (!patient) return null;
+  if (!child) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 overflow-x-hidden w-full max-w-full">
@@ -672,11 +672,11 @@ export default function PatientDetailPage() {
         
         {/* Top Link */}
         <Link 
-          href="/departments/welfare/dashboard/admin/patients" 
+          href="/departments/welfare/dashboard/admin/children" 
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Patients
+          Back to Children
         </Link>
         
         {/* Header Profile Summary */}
@@ -684,33 +684,33 @@ export default function PatientDetailPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 -z-0"></div>
           
           <div className="relative z-10">
-            {patient.photoUrl ? (
-              <img src={patient.photoUrl} alt={patient.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
+            {child.photoUrl ? (
+              <img src={child.photoUrl} alt={child.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
             ) : (
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
-                {patient.name.charAt(0).toUpperCase()}
+                {child.name.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
           
           <div className="relative z-10 flex-1 text-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{patient.name}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{child.name}</h1>
             <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
               <span className="flex items-center justify-center gap-1">
                 <Calendar className="w-4 h-4" /> 
-                Admitted: {formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate)}
+                Admitted: {formatDateDMY(child.admissionDate?.toDate?.() || child.admissionDate)}
               </span>
               <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
-                PKR {patient.packageAmount?.toLocaleString()} / m
+                PKR {child.packageAmount?.toLocaleString()} / m
               </span>
               <span className="flex items-center justify-center gap-1 text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full animate-pulse shadow-sm border border-orange-100">
-                ⏳ {patient.remainingDays} Days Left
+                ⏳ {child.remainingDays} Days Left
               </span>
             </div>
-            {patient.diagnosis && (
+            {child.diagnosis && (
               <p className="text-gray-600 max-w-2xl bg-gray-50 px-4 py-3 rounded-xl text-sm border border-gray-100">
                 <span className="font-bold text-gray-800">Diagnosis/Notes:</span><br/>
-                {patient.diagnosis}
+                {child.diagnosis}
               </p>
             )}
           </div>
@@ -909,44 +909,44 @@ export default function PatientDetailPage() {
                   <div className="bg-orange-50 border border-orange-100 w-full p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
                     <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Discharge Countdown</p>
                     <p className="text-4xl font-black text-orange-700">
-                      {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)}
+                      {(child.remainingDays || 0) > 0 ? child.remainingDays : (child.daysAdmitted || 0)}
                     </p>
                     <p className="text-xs font-bold text-orange-500 mt-1">
-                      {(patient.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in welfare program'}
+                      {(child.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in welfare program'}
                     </p>
                     <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
                       <div 
                         className="bg-orange-500 h-full transition-all duration-1000" 
-                        style={{ width: `${Math.min(100, (100 - (patient.remainingDays || 0)))}%` }}
+                        style={{ width: `${Math.min(100, (100 - (child.remainingDays || 0)))}%` }}
                       ></div>
                     </div>
-                    {patient.isActive && (
+                    {child.isActive && (
                       <button
                         type="button"
                         onClick={handleDischarge}
                         disabled={deactivating}
                         className="mt-4 bg-white border border-orange-200 text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-60"
                       >
-                        {deactivating ? 'Discharging...' : 'Discharge Patient'}
+                        {deactivating ? 'Discharging...' : 'Discharge Child'}
                       </button>
                     )}
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Package</span>
                     <span className="font-black text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
-                      PKR {patient.packageAmount?.toLocaleString()}
+                      PKR {child.packageAmount?.toLocaleString()}
                     </span>
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
                     <span className="font-mono font-bold text-gray-900 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100">
-                      {patient.assignedStaffId || 'None'}
+                      {child.assignedStaffId || 'None'}
                     </span>
                   </div>
                   <div className="sm:col-span-2 pt-2 w-full">
-                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Child Doc ID</span>
                     <span className="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg inline-block border border-gray-100 w-full break-all">
-                      {patient.id}
+                      {child.id}
                     </span>
                   </div>
                 </div>
@@ -954,13 +954,13 @@ export default function PatientDetailPage() {
 
               <div className="pt-8 border-t border-red-50 w-full">
                 <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
-                <p className="text-sm text-gray-500 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
+                <p className="text-sm text-gray-500 mb-4">Deactivating a child hides them from the active list. Data remains intact.</p>
                 <button 
                   onClick={handleDeactivate} 
                   disabled={deactivating}
                   className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
                 >
-                  {deactivating ? 'Deactivating...' : 'Deactivate Patient'}
+                  {deactivating ? 'Deactivating...' : 'Deactivate Child'}
                 </button>
               </div>
             </div>
@@ -968,27 +968,27 @@ export default function PatientDetailPage() {
 
           {/* TAB: ADMISSION */}
           {activeTab === 'admission' && (
-            <AdmissionTab patient={patient} onUpdate={(updated) => setPatient({...patient, ...updated})} />
+            <AdmissionTab child={child} onUpdate={(updated) => setChild({...child, ...updated})} />
           )}
 
           {/* TAB: DAILY SHEET */}
           {activeTab === 'daily' && (
-            <DailySheetTab patientId={patientId} session={session} />
+            <DailySheetTab childId={childId} session={session} />
           )}
 
           {/* TAB: PROGRESS */}
           {activeTab === 'progress' && (
-            <ProgressTab patientId={patientId} session={session} />
+            <ProgressTab childId={childId} session={session} />
           )}
 
           {/* TAB: THERAPY */}
           {activeTab === 'therapy' && (
-            <TherapyTab patientId={patientId} session={session} />
+            <TherapyTab childId={childId} session={session} />
           )}
 
           {/* TAB: MEDICATION */}
           {activeTab === 'meds' && (
-            <MedicationTab patientId={patientId} session={session} />
+            <MedicationTab childId={childId} session={session} />
           )}
 
           {/* TAB: FEES */}
@@ -1030,12 +1030,12 @@ export default function PatientDetailPage() {
                   </div>
                   <h3 className="text-gray-900 font-bold mb-1">No fee record for this month</h3>
                   <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                    You can initialize a fee record manually with the patient's base package amount.
+                    You can initialize a fee record manually with the child's base package amount.
                   </p>
                   {!isAdmin && (
                   <button 
                     onClick={() => {
-                      setPackageAmt(patient.packageAmount?.toString() || '');
+                      setPackageAmt(child.packageAmount?.toString() || '');
                       setInitialPayment('');
                       setPaymentNote('');
                       setShowAddFeeModal(true);

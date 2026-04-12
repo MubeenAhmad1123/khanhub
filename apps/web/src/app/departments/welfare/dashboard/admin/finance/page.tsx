@@ -112,7 +112,7 @@ export default function FinanceLogPage() {
 
   const formatCategory = (cat: string) => {
     const map: Record<string, string> = {
-      patient_fee: 'Patient Monthly Fee',
+      child_fee: 'Child Monthly Fee',
       canteen_deposit: 'Canteen Deposit',
       donation: 'Donation',
       government_grant: 'Government Grant',
@@ -130,7 +130,7 @@ export default function FinanceLogPage() {
       equipment: 'Equipment Purchase',
       security: 'Security Services',
       cleaning: 'Cleaning Supplies',
-      patient_welfare: 'Patient Welfare',
+      child_welfare: 'Child Welfare',
       office_supplies: 'Office Supplies',
       other_expense: 'Other Expense',
     };
@@ -146,10 +146,10 @@ export default function FinanceLogPage() {
   }
 
   const allCategories = [
-    'patient_fee', 'canteen_deposit', 'donation', 'government_grant', 'other_income',
+    'child_fee', 'canteen_deposit', 'donation', 'government_grant', 'other_income',
     'staff_salary', 'rent', 'electricity', 'gas', 'water', 'medicine', 'food',
     'canteen_expense', 'maintenance', 'transport', 'equipment', 'security',
-    'cleaning', 'patient_welfare', 'office_supplies', 'other_expense'
+    'cleaning', 'child_welfare', 'office_supplies', 'other_expense'
   ];
 
   return (

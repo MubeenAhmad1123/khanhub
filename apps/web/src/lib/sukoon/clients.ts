@@ -1,4 +1,4 @@
-// src/lib/sukoon/patients.ts
+// src/lib/sukoon/clients.ts
 
 import { 
   collection, 
@@ -17,7 +17,7 @@ import {
 import { db } from '../firebase';
 import { toDate } from '../utils';
 import type { 
-  Patient, 
+  Client, 
   FeeRecord, 
   CanteenRecord, 
   DailyActivityRecord, 
@@ -26,8 +26,8 @@ import type {
   WeeklyProgress 
 } from '@/types/sukoon';
 
-export interface PatientFinanceSummary {
-  patientId: string;
+export interface ClientFinanceSummary {
+  clientId: string;
   serialNumber: number;
   name: string;
   inpatientNumber: string;
@@ -46,10 +46,10 @@ export interface PatientFinanceSummary {
   isActive: boolean;
 }
 
-// ─── PATIENT BASIC ───────────────────────────────────────────────────────────
+// ─── CLIENT BASIC ───────────────────────────────────────────────────────────
 
-export async function getPatient(id: string): Promise<Patient | null> {
-  const snap = await getDoc(doc(db, 'sukoon_patients', id));
+export async function getClient(id: string): Promise<Client | null> {
+  const snap = await getDoc(doc(db, 'sukoon_clients', id));
   if (!snap.exists()) return null;
   const data = snap.data();
   return { 
@@ -58,11 +58,11 @@ export async function getPatient(id: string): Promise<Patient | null> {
     admissionDate: toDate(data.admissionDate),
     createdAt: toDate(data.createdAt),
     dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
-  } as Patient;
+  } as Client;
 }
 
-export async function getPatients(): Promise<Patient[]> {
-  const q = query(collection(db, 'sukoon_patients'), orderBy('serialNumber', 'desc'));
+export async function getClients(): Promise<Client[]> {
+  const q = query(collection(db, 'sukoon_clients'), orderBy('serialNumber', 'desc'));
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
     const data = doc.data();
@@ -72,12 +72,12 @@ export async function getPatients(): Promise<Patient[]> {
       admissionDate: toDate(data.admissionDate),
       createdAt: toDate(data.createdAt),
       dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
-    } as Patient;
+    } as Client;
   });
 }
 
-export async function createPatient(data: Omit<Patient, 'id' | 'createdAt'>): Promise<string> {
-  const res = await addDoc(collection(db, 'sukoon_patients'), {
+export async function createClient(data: Omit<Client, 'id' | 'createdAt'>): Promise<string> {
+  const res = await addDoc(collection(db, 'sukoon_clients'), {
     ...data,
     admissionDate: Timestamp.fromDate(toDate(data.admissionDate)),
     createdAt: Timestamp.now(),
@@ -86,7 +86,7 @@ export async function createPatient(data: Omit<Patient, 'id' | 'createdAt'>): Pr
   return res.id;
 }
 
-export async function updatePatient(id: string, data: Partial<Patient>): Promise<void> {
+export async function updateClient(id: string, data: Partial<Client>): Promise<void> {
   const updateData = { ...data };
   if (data.admissionDate) {
     updateData.admissionDate = Timestamp.fromDate(toDate(data.admissionDate)) as any;
@@ -94,20 +94,20 @@ export async function updatePatient(id: string, data: Partial<Patient>): Promise
   if (data.dischargeDate) {
     updateData.dischargeDate = Timestamp.fromDate(toDate(data.dischargeDate)) as any;
   }
-  await updateDoc(doc(db, 'sukoon_patients', id), updateData);
+  await updateDoc(doc(db, 'sukoon_clients', id), updateData);
 }
 
 // ─── DAILY ACTIVITIES ────────────────────────────────────────────────────────
 
-// Get daily activities for a patient for a given month
-export async function getDailyActivities(patientId: string, yearMonth: string): Promise<DailyActivityRecord[]> {
+// Get daily activities for a client for a given month
+export async function getDailyActivities(clientId: string, yearMonth: string): Promise<DailyActivityRecord[]> {
   // yearMonth = "2025-01"
   const start = `${yearMonth}-01`;
   const end = `${yearMonth}-31`;
   
   const q = query(
     collection(db, 'sukoon_daily_activities'),
-    where('patientId', '==', patientId),
+    where('clientId', '==', clientId),
     where('date', '>=', start),
     where('date', '<=', end)
   );
@@ -126,16 +126,16 @@ export async function getDailyActivities(patientId: string, yearMonth: string): 
 
 // Save/update a single day's activity record
 export async function saveDailyActivity(
-  patientId: string,
+  clientId: string,
   date: string,
   activities: DailyActivityRecord['activities'],
   markedBy: string,
   extra?: { counsellingNotes?: string; vitalNotes?: string }
 ): Promise<void> {
-  // Check if doc exists for this patientId+date
+  // Check if doc exists for this clientId+date
   const q = query(
     collection(db, 'sukoon_daily_activities'),
-    where('patientId', '==', patientId),
+    where('clientId', '==', clientId),
     where('date', '==', date),
     limit(1)
   );
@@ -153,7 +153,7 @@ export async function saveDailyActivity(
     });
   } else {
     await addDoc(collection(db, 'sukoon_daily_activities'), {
-      patientId,
+      clientId,
       date,
       activities,
       markedBy,
@@ -166,10 +166,10 @@ export async function saveDailyActivity(
 
 // ─── THERAPY SESSIONS ──────────────────────────────────────────────────────────
 
-export async function getTherapySessions(patientId: string): Promise<TherapySession[]> {
+export async function getTherapySessions(clientId: string): Promise<TherapySession[]> {
   const q = query(
     collection(db, 'sukoon_therapy_sessions'),
-    where('patientId', '==', patientId)
+    where('clientId', '==', clientId)
   );
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
@@ -192,10 +192,10 @@ export async function addTherapySession(data: Omit<TherapySession, 'id' | 'creat
 
 // ─── MEDICATION RECORDS ──────────────────────────────────────────────────────
 
-export async function getMedicationRecords(patientId: string): Promise<MedicationRecord[]> {
+export async function getMedicationRecords(clientId: string): Promise<MedicationRecord[]> {
   const q = query(
     collection(db, 'sukoon_medication_records'),
-    where('patientId', '==', patientId)
+    where('clientId', '==', clientId)
   );
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
@@ -218,10 +218,10 @@ export async function addMedicationRecord(data: Omit<MedicationRecord, 'id' | 'c
 
 // ─── WEEKLY PROGRESS ──────────────────────────────────────────────────────────
 
-export async function getWeeklyProgress(patientId: string): Promise<WeeklyProgress[]> {
+export async function getWeeklyProgress(clientId: string): Promise<WeeklyProgress[]> {
   const q = query(
     collection(db, 'sukoon_weekly_progress'),
-    where('patientId', '==', patientId)
+    where('clientId', '==', clientId)
   );
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
@@ -244,10 +244,10 @@ export async function addWeeklyProgress(data: Omit<WeeklyProgress, 'id' | 'creat
 
 // ─── FINANCE HQ VIEW ──────────────────────────────────────────────────────────
 
-export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinanceSummary[]> {
-  // Load all active patients
-  const patientsSnap = await getDocs(query(collection(db, 'sukoon_patients'), where('isActive', '==', true)));
-  const patients = patientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
+export async function getAllClientsWithFinanceSummary(): Promise<ClientFinanceSummary[]> {
+  // Load all active clients
+  const clientsSnap = await getDocs(query(collection(db, 'sukoon_clients'), where('isActive', '==', true)));
+  const clients = clientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client));
   
   // Load ALL fees
   const feesSnap = await getDocs(collection(db, 'sukoon_fees'));
@@ -257,22 +257,22 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
   const canteenSnap = await getDocs(collection(db, 'sukoon_canteen'));
   const allCanteen = canteenSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CanteenRecord));
   
-  // Map fees/canteen by patientId
-  const feesByPatient: Record<string, FeeRecord[]> = {};
+  // Map fees/canteen by clientId
+  const feesByClient: Record<string, FeeRecord[]> = {};
   allFees.forEach(f => {
-    if (!feesByPatient[f.patientId]) feesByPatient[f.patientId] = [];
-    feesByPatient[f.patientId].push(f);
+    if (!feesByClient[f.clientId]) feesByClient[f.clientId] = [];
+    feesByClient[f.clientId].push(f);
   });
   
-  const canteenByPatient: Record<string, CanteenRecord[]> = {};
+  const canteenByClient: Record<string, CanteenRecord[]> = {};
   allCanteen.forEach(c => {
-    if (!canteenByPatient[c.patientId]) canteenByPatient[c.patientId] = [];
-    canteenByPatient[c.patientId].push(c);
+    if (!canteenByClient[c.clientId]) canteenByClient[c.clientId] = [];
+    canteenByClient[c.clientId].push(c);
   });
   
-  return patients.map(p => {
-    const pFees = feesByPatient[p.id] || [];
-    const pCanteen = canteenByPatient[p.id] || [];
+  return clients.map(p => {
+    const pFees = feesByClient[p.id] || [];
+    const pCanteen = canteenByClient[p.id] || [];
     
     const totalFees = (p.packageAmount || 0) * (p.durationMonths || 1);
     const otherExpenses = p.otherExpenses || 0;
@@ -288,7 +288,7 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
     const canteenBalance = totalCanteenDeposited - totalCanteenSpent;
     
     return {
-      patientId: p.id,
+      clientId: p.id,
       serialNumber: p.serialNumber,
       name: p.name,
       inpatientNumber: p.inpatientNumber,
@@ -311,15 +311,15 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 
-export async function getPatientFeeRecords(patientId: string): Promise<FeeRecord[]> {
-  const q = query(collection(db, 'sukoon_fees'), where('patientId', '==', patientId));
+export async function getClientFeeRecords(clientId: string): Promise<FeeRecord[]> {
+  const q = query(collection(db, 'sukoon_fees'), where('clientId', '==', clientId));
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
     const data = doc.data();
     return { 
       id: doc.id, 
       ...data,
-      payments: data.payments.map((p: any) => ({ ...p, date: toDate(p.date) }))
+      payments: (data.payments || []).map((p: any) => ({ ...p, date: toDate(p.date) }))
     } as FeeRecord;
   });
 }

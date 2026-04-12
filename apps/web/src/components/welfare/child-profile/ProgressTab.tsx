@@ -1,4 +1,4 @@
-// src/components/welfare/patient-profile/ProgressTab.tsx
+// src/components/welfare/child-profile/ProgressTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { WeeklyProgress } from '@/types/welfare';
 import { getWeeklyProgress, addWeeklyProgress } from '@/lib/welfare/children';
@@ -8,7 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
-export default function ProgressTab({ patientId, session }: { patientId: string, session: any }) {
+export default function ProgressTab({ childId, session }: { childId: string, session: any }) {
   const [progress, setProgress] = useState<WeeklyProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -28,7 +28,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
   const fetchProgress = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getWeeklyProgress(patientId);
+      const data = await getWeeklyProgress(childId);
       // Sort by week number ASC
       data.sort((a, b) => a.weekNumber - b.weekNumber);
       setProgress(data);
@@ -41,7 +41,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
     } finally {
       setLoading(false);
     }
-  }, [patientId]);
+  }, [childId]);
 
   useEffect(() => {
     fetchProgress();
@@ -53,7 +53,7 @@ export default function ProgressTab({ patientId, session }: { patientId: string,
       setSaving(true);
       const newProgress: WeeklyProgress = {
         id: '',
-        patientId,
+        childId,
         weekNumber: weekNum,
         weekStartDate: startDate,
         weekEndDate: endDate,
