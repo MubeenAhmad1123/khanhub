@@ -455,21 +455,23 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                darkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-100' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-              }`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
               title="Go back"
             >
               <ChevronLeft size={15} />
               Back
             </button>
-            <span className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-gray-500' : 'text-[#9CA3AF]'}`}>
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#9CA3AF] dark:text-gray-500">
               KhanHub HQ Portal
             </span>
           </div>
           <div className="flex items-center gap-3">
             {user ? <HqNotificationBell session={user} /> : null}
-            <button onClick={toggleDark} className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-400 hover:bg-gray-100'}`} title="Toggle dark mode">
+            <button 
+              onClick={toggleDark} 
+              className="p-2 rounded-xl transition-colors text-gray-400 hover:bg-gray-100 dark:text-yellow-400 dark:hover:bg-gray-800" 
+              title="Toggle dark mode"
+            >
               {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
