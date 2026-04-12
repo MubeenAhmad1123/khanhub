@@ -34,7 +34,7 @@ export interface HqStaff {
   name: string;
   fatherName: string;
   designation: string;
-  department: 'rehab' | 'spims' | 'hq';
+  department: 'rehab' | 'spims' | 'job-center' | 'hq';
   cnic: string;
   phone: string;
   address: string;
@@ -92,7 +92,7 @@ export interface HqDutyLog {
 
 export interface HqTransaction {
   id: string;
-  dept: 'rehab' | 'spims';
+  dept: 'rehab' | 'spims' | 'job-center';
   type: 'income' | 'expense';
   category: string;
   amount: number;
@@ -101,6 +101,8 @@ export interface HqTransaction {
   patientName?: string;
   studentId?: string;
   studentName?: string;
+  seekerId?: string;
+  seekerName?: string;
   note?: string;
   cashierId: string;
   cashierName: string;
@@ -265,10 +267,10 @@ export interface HqStaffDutyConfig {
  */
 export interface HqLedgerEntry {
   id: string;
-  sourceCollection: 'rehab_transactions' | 'spims_transactions';
+  sourceCollection: 'rehab_transactions' | 'spims_transactions' | 'jobcenter_transactions';
   sourceTxId: string;
-  departmentCode: 'rehab' | 'spims';
-  entityType: 'patient' | 'student' | 'staff' | 'general';
+  departmentCode: 'rehab' | 'spims' | 'job-center';
+  entityType: 'patient' | 'student' | 'seeker' | 'staff' | 'general';
   entityId?: string;
   entityName?: string;
   type: 'income' | 'expense';

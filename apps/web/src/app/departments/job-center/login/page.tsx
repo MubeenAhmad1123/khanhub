@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginRehab } from '@/lib/rehab/rehabAuth';
-import EyePasswordInput from '@/components/rehab/EyePasswordInput';
+import { loginJobCenter } from '@/lib/job-center/jobCenterAuth';
+import EyePasswordInput from '@/components/job-center/EyePasswordInput';
 
-export default function RehabLoginPage() {
+export default function JobCenterLoginPage() {
   const [customId, setCustomId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,8 +32,8 @@ export default function RehabLoginPage() {
     try {
       console.log('Attempting login with ID:', customId);
       
-      // loginRehab already handles Firestore fetch + isActive check
-      const userData = await loginRehab(customId, password);
+      // loginJobCenter already handles Firestore fetch + isActive check
+      const userData = await loginJobCenter(customId, password);
       console.log('Login success, user data:', userData);
 
       const session = {
@@ -41,23 +41,23 @@ export default function RehabLoginPage() {
         customId: userData.customId,
         role: userData.role,
         displayName: userData.displayName,
-        patientId: userData.patientId || null
+        seekerId: userData.seekerId || null
       };
 
-      localStorage.setItem('rehab_session', JSON.stringify(session));
-      localStorage.setItem('rehab_login_time', Date.now().toString());
+      localStorage.setItem('jobcenter_session', JSON.stringify(session));
+      localStorage.setItem('jobcenter_login_time', Date.now().toString());
       console.log('Redirecting to role:', userData.role);
 
-      if (userData.role === 'family') {
-        router.push(`/departments/rehab/dashboard/family/${userData.patientId}`);
+      if (userData.role === 'seeker') {
+        router.push(`/departments/job-center/dashboard/seeker/${userData.seekerId}`);
       } else if (userData.role === 'staff') {
-        router.push('/departments/rehab/dashboard/staff');
+        router.push('/departments/job-center/dashboard/staff');
       } else if (userData.role === 'cashier') {
-        router.push('/departments/rehab/dashboard/cashier');
+        router.push('/departments/job-center/dashboard/cashier');
       } else if (userData.role === 'admin') {
-        router.push('/departments/rehab/dashboard/admin');
+        router.push('/departments/job-center/dashboard/admin');
       } else if (userData.role === 'superadmin') {
-        router.push('/departments/rehab/dashboard/superadmin');
+        router.push('/departments/job-center/dashboard/superadmin');
       } else {
         setError('Unknown role: ' + userData.role);
       }
@@ -75,8 +75,8 @@ export default function RehabLoginPage() {
     <div className="min-h-screen bg-[#fcfdfd] flex items-center justify-center p-6">
       <div className="w-full max-w-lg bg-white p-12 rounded-[50px] shadow-2xl shadow-gray-200/50 border border-gray-100 flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <div className="text-center">
-          <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-3">Rehab Portal</h1>
-          <p className="text-[#1D9E75] font-black uppercase text-xs tracking-[0.4em] ml-1">Access Authentication</p>
+          <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-3">Job Center Portal</h1>
+          <p className="text-[#EA580C] font-black uppercase text-xs tracking-[0.4em] ml-1">Access Authentication</p>
         </div>
 
         {error && (
@@ -90,9 +90,9 @@ export default function RehabLoginPage() {
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-6">User Identity</label>
             <input 
               type="text" 
-              placeholder="e.g. REHAB-ADM-001"
+              placeholder="e.g. JOBCENTER-ADM-001"
               required
-              className="bg-gray-50 border-none rounded-[30px] px-8 py-6 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300"
+              className="bg-gray-50 border-none rounded-[30px] px-8 py-6 text-gray-700 font-bold focus:ring-4 focus:ring-orange-600/10 outline-none transition-all placeholder:text-gray-300"
               value={customId}
               onChange={(e) => setCustomId(e.target.value)}
             />
@@ -104,7 +104,7 @@ export default function RehabLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="bg-gray-50 border-none rounded-[30px] px-8 py-6 text-gray-700 font-bold focus:ring-4 focus:ring-[#1D9E75]/10 outline-none transition-all placeholder:text-gray-300"
+              className="bg-gray-50 border-none rounded-[30px] px-8 py-6 text-gray-700 font-bold focus:ring-4 focus:ring-orange-600/10 outline-none transition-all placeholder:text-gray-300"
             />
           </div>
 
@@ -124,3 +124,4 @@ export default function RehabLoginPage() {
     </div>
   );
 }
+

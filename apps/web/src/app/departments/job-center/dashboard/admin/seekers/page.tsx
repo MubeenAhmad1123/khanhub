@@ -18,53 +18,53 @@ function toDate(val: any): Date {
   return new Date(val);
 }
 
-export default function PatientsListPage() {
+export default function SeekersListPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [patients, setPatients] = useState<any[]>([]);
+  const [seekers, setSeekers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [allPatients, setAllPatients] = useState<any[]>([]);
+  const [allSeekers, setAllSeekers] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('active');
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('jobcenter_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     setSession(parsed);
-    fetchPatients();
+    fetchSeekers();
   }, [router]);
 
-  const fetchPatients = async () => {
+  const fetchSeekers = async () => {
     try {
       setLoading(true);
       const [snap, feesSnap, canteenSnap] = await Promise.all([
-        getDocs(collection(db, 'rehab_patients')),
-        getDocs(collection(db, 'rehab_fees')),
-        getDocs(collection(db, 'rehab_canteen')),
+        getDocs(collection(db, 'jobcenter_seekers')),
+        getDocs(collection(db, 'jobcenter_fees')),
+        getDocs(collection(db, 'jobcenter_canteen')),
       ]);
       
       const feesMap: Record<string, any[]> = {};
       feesSnap.docs.forEach(d => {
         const data = d.data();
-        if (!feesMap[data.patientId]) feesMap[data.patientId] = [];
-        feesMap[data.patientId].push(data);
+        if (!feesMap[data.seekerId]) feesMap[data.seekerId] = [];
+        feesMap[data.seekerId].push(data);
       });
 
       const canteenMap: Record<string, any[]> = {};
       canteenSnap.docs.forEach(d => {
         const data = d.data();
-        if (!canteenMap[data.patientId]) canteenMap[data.patientId] = [];
-        canteenMap[data.patientId].push(data);
+        if (!canteenMap[data.seekerId]) canteenMap[data.seekerId] = [];
+        canteenMap[data.seekerId].push(data);
       });
 
       const all = snap.docs.map(d => {
@@ -95,7 +95,7 @@ export default function PatientsListPage() {
           admissionDate,
           packageAmount: Number(data.packageAmount) || 0,
           durationMonths: data.durationMonths || 1,
-          inpatientNumber: data.inpatientNumber || '',
+          seekerNumber: data.seekerNumber || '',
           serialNumber: data.serialNumber || 0,
           substanceOfAddiction: data.substanceOfAddiction || '',
           isActive: data.isActive !== false,
@@ -112,10 +112,10 @@ export default function PatientsListPage() {
       })
       .sort((a, b) => b.serialNumber - a.serialNumber);
 
-      setPatients(all);
-      setAllPatients(all);
+      setSeekers(all);
+      setAllSeekers(all);
     } catch (err: any) {
-      console.error('Fetch patients error:', err?.message);
+      console.error('Fetch seekers error:', err?.message);
     } finally {
       setLoading(false);
     }
@@ -128,37 +128,37 @@ export default function PatientsListPage() {
       setSearchOpen(false);
       return;
     }
-    const matches = allPatients.filter((p) =>
+    const matches = allSeekers.filter((p) =>
       (p.name || '').toLowerCase().includes(q) ||
-      (p.inpatientNumber || p.patientId || p.id || '').toLowerCase().includes(q)
+      (p.seekerNumber || p.seekerId || p.id || '').toLowerCase().includes(q)
     );
     setSearchResults(matches.slice(0, 10));
     setSearchOpen(true);
-  }, [searchQuery, allPatients]);
+  }, [searchQuery, allSeekers]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
       </div>
     );
   }
 
-  const filteredPatients = patients.filter(p => {
+  const filteredSeekers = seekers.filter(p => {
     if (statusFilter === 'active' && !p.isActive) return false;
     if (statusFilter === 'discharged' && p.isActive) return false;
     const s = searchQuery.toLowerCase();
     return (
       p.name.toLowerCase().includes(s) ||
-      p.inpatientNumber.toLowerCase().includes(s) ||
+      p.inseekerNumber.toLowerCase().includes(s) ||
       p.substanceOfAddiction.toLowerCase().includes(s) ||
       p.fatherName.toLowerCase().includes(s)
     );
   });
 
-  const totalActive = patients.filter(p => p.isActive).length;
-  const totalDischarged = patients.filter(p => !p.isActive).length;
-  const totalOutstanding = patients.filter(p => p.isActive && p.remaining > 0).reduce((s, p) => s + p.remaining, 0);
+  const totalActive = seekers.filter(p => p.isActive).length;
+  const totalDischarged = seekers.filter(p => !p.isActive).length;
+  const totalOutstanding = seekers.filter(p => p.isActive && p.remaining > 0).reduce((s, p) => s + p.remaining, 0);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 w-full overflow-x-hidden">
@@ -167,24 +167,24 @@ export default function PatientsListPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2">
-              <Heart className="w-6 h-6 text-teal-600" />
-              Patients
+              <Heart className="w-6 h-6 text-orange-600" />
+              Seekers
             </h1>
-            <p className="text-sm text-gray-500 font-medium mt-0.5">Manage all patients and their recovery journey</p>
+            <p className="text-sm text-gray-500 font-medium mt-0.5">Manage all seekers and their recovery journey</p>
           </div>
           <Link 
-            href="/departments/rehab/dashboard/admin/patients/new"
-            className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all whitespace-nowrap"
+            href="/departments/job-center/dashboard/admin/seekers/new"
+            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 transition-all whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
-            Add Patient
+            Add Seeker
           </Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 flex-shrink-0"><User className="w-4 h-4" /></div>
+              <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 flex-shrink-0"><User className="w-4 h-4" /></div>
               <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Active</p><p className="text-xl font-black text-gray-900">{totalActive}</p></div>
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function PatientsListPage() {
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0"><Phone className="w-4 h-4" /></div>
-              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total</p><p className="text-xl font-black text-gray-900">{patients.length}</p></div>
+              <div><p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total</p><p className="text-xl font-black text-gray-900">{seekers.length}</p></div>
             </div>
           </div>
         </div>
@@ -237,7 +237,7 @@ export default function PatientsListPage() {
                     key={p.id}
                     type="button"
                     onClick={() => {
-                      setSearchQuery(p.name || p.inpatientNumber || p.id);
+                      setSearchQuery(p.name || p.inseekerNumber || p.id);
                       setSearchOpen(false);
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
@@ -248,7 +248,7 @@ export default function PatientsListPage() {
                     <div>
                       <p className="text-white text-sm font-bold">{p.name}</p>
                       <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">
-                        {p.inpatientNumber || p.patientId || p.id}
+                        {p.inseekerNumber || p.seekerId || p.id}
                       </p>
                     </div>
                   </button>
@@ -274,43 +274,43 @@ export default function PatientsListPage() {
           </div>
         </div>
 
-        {filteredPatients.length === 0 ? (
+        {filteredSeekers.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
             <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-black text-gray-900 mb-1">No patients found</h3>
-            <p className="text-gray-500 text-sm">{searchQuery ? "Try adjusting your search." : "Add your first patient to get started."}</p>
+            <h3 className="text-lg font-black text-gray-900 mb-1">No Seekers found</h3>
+            <p className="text-gray-500 text-sm">{searchQuery ? "Try adjusting your search." : "Add your first seeker to get started."}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredPatients.map(patient => (
+            {filteredSeekers.map(seeker => (
               <Link 
-                href={`/departments/rehab/dashboard/admin/patients/${patient.id}`} 
-                key={patient.id}
-                className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-200 transition-all active:scale-[0.98] group flex flex-col h-full relative overflow-hidden"
+                href={`/departments/job-center/dashboard/admin/seekers/${seeker.id}`} 
+                key={seeker.id}
+                className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-orange-900/5 hover:border-orange-200 transition-all active:scale-[0.98] group flex flex-col h-full relative overflow-hidden"
               >
                 <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center text-teal-500">
+                    <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
                         <ChevronRight size={16} />
                     </div>
                 </div>
                 
                 <div className="flex items-center gap-3 mb-4">
                     <div className="relative flex-shrink-0">
-                        {patient.photoUrl ? (
-                            <img src={patient.photoUrl} alt={patient.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md" />
+                        {seeker.photoUrl ? (
+                            <img src={seeker.photoUrl} alt={seeker.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md" />
                         ) : (
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 flex items-center justify-center font-black text-xl border border-teal-200/50">
-                                {patient.name.charAt(0).toUpperCase()}
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 text-orange-700 flex items-center justify-center font-black text-xl border border-orange-200/50">
+                                {seeker.name.charAt(0).toUpperCase()}
                             </div>
                         )}
-                        <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-white rounded-full ${patient.isActive ? 'bg-green-500' : 'bg-red-400'}`} />
+                        <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-white rounded-full ${seeker.isActive ? 'bg-green-500' : 'bg-red-400'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-black text-gray-900 truncate leading-tight">{patient.name}</h3>
-                        <p className="text-[10px] font-mono text-teal-600 font-bold">{patient.inpatientNumber || `#${patient.serialNumber}`}</p>
-                        {patient.substanceOfAddiction && (
+                        <h3 className="text-sm font-black text-gray-900 truncate leading-tight">{seeker.name}</h3>
+                        <p className="text-[10px] font-mono text-orange-600 font-bold">{seeker.inseekerNumber || `#${seeker.serialNumber}`}</p>
+                        {seeker.substanceOfAddiction && (
                           <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 text-[9px] font-black uppercase tracking-wider">
-                            {patient.substanceOfAddiction}
+                            {seeker.substanceOfAddiction}
                           </span>
                         )}
                     </div>
@@ -320,25 +320,25 @@ export default function PatientsListPage() {
                     <div>
                       <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
                         <span>Progress</span>
-                        <span>{patient.progressPct}%</span>
+                        <span>{seeker.progressPct}%</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
-                        <div className={`h-1.5 rounded-full transition-all ${patient.progressPct >= 80 ? 'bg-green-500' : patient.progressPct >= 50 ? 'bg-amber-500' : 'bg-teal-500'}`} style={{ width: `${patient.progressPct}%` }} />
+                        <div className={`h-1.5 rounded-full transition-all ${seeker.progressPct >= 80 ? 'bg-green-500' : seeker.progressPct >= 50 ? 'bg-amber-500' : 'bg-orange-500'}`} style={{ width: `${seeker.progressPct}%` }} />
                       </div>
-                      <p className="text-[9px] text-gray-400 mt-1">{patient.daysSinceAdmission}d / {patient.totalDays}d ({patient.durationMonths} month{patient.durationMonths > 1 ? 's' : ''})</p>
+                      <p className="text-[9px] text-gray-400 mt-1">{seeker.daysSinceAdmission}d / {seeker.totalDays}d ({seeker.durationMonths} month{seeker.durationMonths > 1 ? 's' : ''})</p>
                     </div>
 
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400">
-                            <Calendar size={11} className="text-teal-400" />
-                            {patient.admissionDate instanceof Date 
-                                ? formatDateDMY(patient.admissionDate)
+                            <Calendar size={11} className="text-orange-400" />
+                            {seeker.admissionDate instanceof Date 
+                                ? formatDateDMY(seeker.admissionDate)
                                 : 'No date'
                             }
                         </div>
-                        {patient.remaining > 0 ? (
+                        {seeker.remaining > 0 ? (
                           <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                            <AlertCircle size={10} />₨{patient.remaining.toLocaleString()}
+                            <AlertCircle size={10} />₨{seeker.remaining.toLocaleString()}
                           </span>
                         ) : (
                           <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-lg flex items-center gap-1">

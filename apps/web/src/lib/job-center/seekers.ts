@@ -1,4 +1,4 @@
-// src/lib/job-center/patients.ts
+// src/lib/job-center/seekers.ts
 
 import { 
   collection, 
@@ -17,7 +17,7 @@ import {
 import { db } from '../firebase';
 import { toDate } from '../utils';
 import type { 
-  Patient, 
+  Seeker, 
   FeeRecord, 
   CanteenRecord, 
   DailyActivityRecord, 
@@ -26,11 +26,12 @@ import type {
   WeeklyProgress 
 } from '@/types/job-center';
 
-export interface PatientFinanceSummary {
-  patientId: string;
+export interface SeekerFinanceSummary {
+  seekerId: string;
   serialNumber: number;
   name: string;
-  inpatientNumber: string;
+  seekerNumber: string;
+  inpatientNumber?: string;
   admissionDate: Date;
   packageAmount: number;
   durationMonths: number;
@@ -46,10 +47,10 @@ export interface PatientFinanceSummary {
   isActive: boolean;
 }
 
-// ─── PATIENT BASIC ───────────────────────────────────────────────────────────
+// ─── SEEKER BASIC ───────────────────────────────────────────────────────────
 
-export async function getPatient(id: string): Promise<Patient | null> {
-  const snap = await getDoc(doc(db, 'job-center_patients', id));
+export async function getSeeker(id: string): Promise<Seeker | null> {
+  const snap = await getDoc(doc(db, 'jobcenter_seekers', id));
   if (!snap.exists()) return null;
   const data = snap.data();
   return { 
@@ -58,11 +59,11 @@ export async function getPatient(id: string): Promise<Patient | null> {
     admissionDate: toDate(data.admissionDate),
     createdAt: toDate(data.createdAt),
     dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
-  } as Patient;
+  } as Seeker;
 }
 
-export async function getPatients(): Promise<Patient[]> {
-  const q = query(collection(db, 'job-center_patients'), orderBy('serialNumber', 'desc'));
+export async function getSeekers(): Promise<Seeker[]> {
+  const q = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'));
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
     const data = doc.data();
@@ -72,12 +73,12 @@ export async function getPatients(): Promise<Patient[]> {
       admissionDate: toDate(data.admissionDate),
       createdAt: toDate(data.createdAt),
       dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
-    } as Patient;
+    } as Seeker;
   });
 }
 
-export async function createPatient(data: Omit<Patient, 'id' | 'createdAt'>): Promise<string> {
-  const res = await addDoc(collection(db, 'job-center_patients'), {
+export async function createSeeker(data: Omit<Seeker, 'id' | 'createdAt'>): Promise<string> {
+  const res = await addDoc(collection(db, 'jobcenter_seekers'), {
     ...data,
     admissionDate: Timestamp.fromDate(toDate(data.admissionDate)),
     createdAt: Timestamp.now(),
@@ -86,7 +87,7 @@ export async function createPatient(data: Omit<Patient, 'id' | 'createdAt'>): Pr
   return res.id;
 }
 
-export async function updatePatient(id: string, data: Partial<Patient>): Promise<void> {
+export async function updateSeeker(id: string, data: Partial<Seeker>): Promise<void> {
   const updateData = { ...data };
   if (data.admissionDate) {
     updateData.admissionDate = Timestamp.fromDate(toDate(data.admissionDate)) as any;
@@ -94,20 +95,20 @@ export async function updatePatient(id: string, data: Partial<Patient>): Promise
   if (data.dischargeDate) {
     updateData.dischargeDate = Timestamp.fromDate(toDate(data.dischargeDate)) as any;
   }
-  await updateDoc(doc(db, 'job-center_patients', id), updateData);
+  await updateDoc(doc(db, 'jobcenter_seekers', id), updateData);
 }
 
 // ─── DAILY ACTIVITIES ────────────────────────────────────────────────────────
 
-// Get daily activities for a patient for a given month
-export async function getDailyActivities(patientId: string, yearMonth: string): Promise<DailyActivityRecord[]> {
+// Get daily activities for a seeker for a given month
+export async function getDailyActivities(seekerId: string, yearMonth: string): Promise<DailyActivityRecord[]> {
   // yearMonth = "2025-01"
   const start = `${yearMonth}-01`;
   const end = `${yearMonth}-31`;
   
   const q = query(
-    collection(db, 'job-center_daily_activities'),
-    where('patientId', '==', patientId),
+    collection(db, 'jobcenter_daily_activities'),
+    where('seekerId', '==', seekerId),
     where('date', '>=', start),
     where('date', '<=', end)
   );
@@ -126,16 +127,16 @@ export async function getDailyActivities(patientId: string, yearMonth: string): 
 
 // Save/update a single day's activity record
 export async function saveDailyActivity(
-  patientId: string,
+  seekerId: string,
   date: string,
   activities: DailyActivityRecord['activities'],
   markedBy: string,
   extra?: { counsellingNotes?: string; vitalNotes?: string }
 ): Promise<void> {
-  // Check if doc exists for this patientId+date
+  // Check if doc exists for this seekerId+date
   const q = query(
-    collection(db, 'job-center_daily_activities'),
-    where('patientId', '==', patientId),
+    collection(db, 'jobcenter_daily_activities'),
+    where('seekerId', '==', seekerId),
     where('date', '==', date),
     limit(1)
   );
@@ -144,7 +145,7 @@ export async function saveDailyActivity(
   
   if (!snap.empty) {
     const docId = snap.docs[0].id;
-    await updateDoc(doc(db, 'job-center_daily_activities', docId), {
+    await updateDoc(doc(db, 'jobcenter_daily_activities', docId), {
       activities,
       markedBy,
       updatedAt: Timestamp.now(),
@@ -152,8 +153,8 @@ export async function saveDailyActivity(
       ...(extra?.vitalNotes !== undefined && { vitalSignNotes: extra.vitalNotes })
     });
   } else {
-    await addDoc(collection(db, 'job-center_daily_activities'), {
-      patientId,
+    await addDoc(collection(db, 'jobcenter_daily_activities'), {
+      seekerId,
       date,
       activities,
       markedBy,
@@ -166,10 +167,10 @@ export async function saveDailyActivity(
 
 // ─── THERAPY SESSIONS ──────────────────────────────────────────────────────────
 
-export async function getTherapySessions(patientId: string): Promise<TherapySession[]> {
+export async function getTherapySessions(seekerId: string): Promise<TherapySession[]> {
   const q = query(
-    collection(db, 'job-center_therapy_sessions'),
-    where('patientId', '==', patientId)
+    collection(db, 'jobcenter_therapy_sessions'),
+    where('seekerId', '==', seekerId)
   );
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
@@ -183,7 +184,7 @@ export async function getTherapySessions(patientId: string): Promise<TherapySess
 }
 
 export async function addTherapySession(data: Omit<TherapySession, 'id' | 'createdAt'>): Promise<string> {
-  const res = await addDoc(collection(db, 'job-center_therapy_sessions'), {
+  const res = await addDoc(collection(db, 'jobcenter_therapy_sessions'), {
     ...data,
     createdAt: Timestamp.now()
   });
@@ -192,10 +193,10 @@ export async function addTherapySession(data: Omit<TherapySession, 'id' | 'creat
 
 // ─── MEDICATION RECORDS ──────────────────────────────────────────────────────
 
-export async function getMedicationRecords(patientId: string): Promise<MedicationRecord[]> {
+export async function getMedicationRecords(seekerId: string): Promise<MedicationRecord[]> {
   const q = query(
-    collection(db, 'job-center_medication_records'),
-    where('patientId', '==', patientId)
+    collection(db, 'jobcenter_medication_records'),
+    where('seekerId', '==', seekerId)
   );
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
@@ -209,7 +210,7 @@ export async function getMedicationRecords(patientId: string): Promise<Medicatio
 }
 
 export async function addMedicationRecord(data: Omit<MedicationRecord, 'id' | 'createdAt'>): Promise<string> {
-  const res = await addDoc(collection(db, 'job-center_medication_records'), {
+  const res = await addDoc(collection(db, 'jobcenter_medication_records'), {
     ...data,
     createdAt: Timestamp.now()
   });
@@ -218,10 +219,10 @@ export async function addMedicationRecord(data: Omit<MedicationRecord, 'id' | 'c
 
 // ─── WEEKLY PROGRESS ──────────────────────────────────────────────────────────
 
-export async function getWeeklyProgress(patientId: string): Promise<WeeklyProgress[]> {
+export async function getWeeklyProgress(seekerId: string): Promise<WeeklyProgress[]> {
   const q = query(
-    collection(db, 'job-center_weekly_progress'),
-    where('patientId', '==', patientId)
+    collection(db, 'jobcenter_weekly_progress'),
+    where('seekerId', '==', seekerId)
   );
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
@@ -235,7 +236,7 @@ export async function getWeeklyProgress(patientId: string): Promise<WeeklyProgre
 }
 
 export async function addWeeklyProgress(data: Omit<WeeklyProgress, 'id' | 'createdAt'>): Promise<string> {
-  const res = await addDoc(collection(db, 'job-center_weekly_progress'), {
+  const res = await addDoc(collection(db, 'jobcenter_weekly_progress'), {
     ...data,
     createdAt: Timestamp.now()
   });
@@ -244,57 +245,58 @@ export async function addWeeklyProgress(data: Omit<WeeklyProgress, 'id' | 'creat
 
 // ─── FINANCE HQ VIEW ──────────────────────────────────────────────────────────
 
-export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinanceSummary[]> {
-  // Load all active patients
-  const patientsSnap = await getDocs(query(collection(db, 'job-center_patients'), where('isActive', '==', true)));
-  const patients = patientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
+export async function getAllSeekersWithFinanceSummary(): Promise<SeekerFinanceSummary[]> {
+  // Load all active seekers
+  const seekersSnap = await getDocs(query(collection(db, 'jobcenter_seekers'), where('isActive', '==', true)));
+  const seekers = seekersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Seeker));
   
   // Load ALL fees
-  const feesSnap = await getDocs(collection(db, 'job-center_fees'));
+  const feesSnap = await getDocs(collection(db, 'jobcenter_fees'));
   const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FeeRecord));
   
   // Load ALL canteen records
-  const canteenSnap = await getDocs(collection(db, 'job-center_canteen'));
+  const canteenSnap = await getDocs(collection(db, 'jobcenter_canteen'));
   const allCanteen = canteenSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CanteenRecord));
   
-  // Map fees/canteen by patientId
-  const feesByPatient: Record<string, FeeRecord[]> = {};
+  // Map fees/canteen by seekerId
+  const feesBySeeker: Record<string, FeeRecord[]> = {};
   allFees.forEach(f => {
-    if (!feesByPatient[f.patientId]) feesByPatient[f.patientId] = [];
-    feesByPatient[f.patientId].push(f);
+    if (!feesBySeeker[f.seekerId]) feesBySeeker[f.seekerId] = [];
+    feesBySeeker[f.seekerId].push(f);
   });
   
-  const canteenByPatient: Record<string, CanteenRecord[]> = {};
+  const canteenBySeeker: Record<string, CanteenRecord[]> = {};
   allCanteen.forEach(c => {
-    if (!canteenByPatient[c.patientId]) canteenByPatient[c.patientId] = [];
-    canteenByPatient[c.patientId].push(c);
+    if (!canteenBySeeker[c.seekerId]) canteenBySeeker[c.seekerId] = [];
+    canteenBySeeker[c.seekerId].push(c);
   });
   
-  return patients.map(p => {
-    const pFees = feesByPatient[p.id] || [];
-    const pCanteen = canteenByPatient[p.id] || [];
+  return seekers.map(s => {
+    const sFees = feesBySeeker[s.id] || [];
+    const sCanteen = canteenBySeeker[s.id] || [];
     
-    const totalFees = (p.packageAmount || 0) * (p.durationMonths || 1);
-    const otherExpenses = p.otherExpenses || 0;
+    const totalFees = (s.packageAmount || 0) * (s.durationMonths || 1);
+    const otherExpenses = s.otherExpenses || 0;
     const totalDues = totalFees + otherExpenses;
     
-    const totalReceived = pFees.reduce((acc, f) => {
+    const totalReceived = sFees.reduce((acc, f) => {
       const approvedPayments = (f.payments || []).filter(pay => pay.status === 'approved');
-      return acc + approvedPayments.reduce((pacc, pay) => pacc + pay.amount, 0);
+      return acc + approvedPayments.reduce((sacc, pay) => sacc + pay.amount, 0);
     }, 0);
     
-    const totalCanteenDeposited = pCanteen.reduce((acc, c) => acc + (c.totalDeposited || 0), 0);
-    const totalCanteenSpent = pCanteen.reduce((acc, c) => acc + (c.totalSpent || 0), 0);
+    const totalCanteenDeposited = sCanteen.reduce((acc, c) => acc + (c.totalDeposited || 0), 0);
+    const totalCanteenSpent = sCanteen.reduce((acc, c) => acc + (c.totalSpent || 0), 0);
     const canteenBalance = totalCanteenDeposited - totalCanteenSpent;
     
     return {
-      patientId: p.id,
-      serialNumber: p.serialNumber,
-      name: p.name,
-      inpatientNumber: p.inpatientNumber,
-      admissionDate: toDate(p.admissionDate),
-      packageAmount: p.packageAmount,
-      durationMonths: p.durationMonths,
+      seekerId: s.id,
+      serialNumber: s.serialNumber,
+      name: s.name,
+      seekerNumber: s.seekerNumber,
+      inpatientNumber: s.inpatientNumber,
+      admissionDate: toDate(s.admissionDate),
+      packageAmount: s.packageAmount,
+      durationMonths: s.durationMonths,
       totalFees,
       otherExpenses,
       totalDues,
@@ -303,16 +305,16 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
       canteenDeposit: totalCanteenDeposited,
       canteenSpent: totalCanteenSpent,
       canteenBalance,
-      guardianNumber: p.contactNumber,
-      isActive: p.isActive
+      guardianNumber: s.contactNumber,
+      isActive: s.isActive
     };
   }).sort((a, b) => b.serialNumber - a.serialNumber);
 }
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 
-export async function getPatientFeeRecords(patientId: string): Promise<FeeRecord[]> {
-  const q = query(collection(db, 'job-center_fees'), where('patientId', '==', patientId));
+export async function getSeekerFeeRecords(seekerId: string): Promise<FeeRecord[]> {
+  const q = query(collection(db, 'jobcenter_fees'), where('seekerId', '==', seekerId));
   const snap = await getDocs(q);
   return snap.docs.map(doc => {
     const data = doc.data();

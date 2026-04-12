@@ -26,14 +26,14 @@ const ICONS: Record<string, React.ReactNode> = {
 const COLORS: Record<string, string> = {
   blue: 'bg-blue-500',
   purple: 'bg-purple-500',
-  teal: 'bg-teal-500',
+  orange: 'bg-orange-500',
   amber: 'bg-amber-500',
 };
 
 const TEXT_COLORS: Record<string, string> = {
   blue: 'text-blue-500',
   purple: 'text-purple-500',
-  teal: 'text-teal-500',
+  orange: 'text-orange-500',
   amber: 'text-amber-500',
 };
 
@@ -82,7 +82,7 @@ export default function ScoreCard({ staffName, month, scores, darkMode = false }
             fill="transparent"
             stroke="currentColor"
             className={`transition-all duration-1000 ease-in-out ${
-              percentage >= 80 ? 'text-teal-500' : percentage >= 50 ? 'text-amber-500' : 'text-rose-500'
+              percentage >= 80 ? 'text-orange-500' : percentage >= 50 ? 'text-amber-500' : 'text-rose-500'
             }`}
             strokeWidth="8"
             strokeLinecap="round"
@@ -138,7 +138,7 @@ export default function ScoreCard({ staffName, month, scores, darkMode = false }
               reward?.color === 'red' ? 'text-rose-500' :
               reward?.color === 'amber' ? 'text-amber-500' :
               reward?.color === 'blue' ? 'text-blue-500' :
-              'text-teal-500'
+              'text-orange-500'
             }`}>{reward?.label}</p>
             <p className={`text-xs font-bold leading-tight mt-0.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{reward?.reward}</p>
           </div>

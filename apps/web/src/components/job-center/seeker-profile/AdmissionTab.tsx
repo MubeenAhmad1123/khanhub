@@ -35,7 +35,7 @@ export default function AdmissionTab({
   const handleSave = async () => {
     try {
       setSaving(true);
-      await updateDoc(doc(db, 'job-center_seekers', seeker.id), {
+      await updateDoc(doc(db, 'jobcenter_seekers', seeker.id), {
         ...form
       });
       onUpdate(form);
@@ -52,7 +52,7 @@ export default function AdmissionTab({
   const SectionCard = ({ title, icon: Icon, children }: any) => (
     <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm mb-6">
       <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
-        <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
           <Icon size={16} />
         </div>
         <h3 className="text-lg font-black text-gray-900">{title}</h3>
@@ -83,7 +83,7 @@ export default function AdmissionTab({
           <select 
             value={value ? 'true' : 'false'} 
             onChange={e => handleChange(fieldKey, e.target.value === 'true')}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none h-[42px]"
           >
             <option value="false">No</option>
             <option value="true">Yes</option>
@@ -99,7 +99,7 @@ export default function AdmissionTab({
           <select 
             value={value ?? ''} 
             onChange={e => handleChange(fieldKey, e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none h-[42px]"
           >
             <option value="">Select...</option>
             {options.map((opt: string) => (
@@ -117,7 +117,7 @@ export default function AdmissionTab({
           <textarea
             value={value ?? ''}
             onChange={e => handleChange(fieldKey, e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none"
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
             rows={2}
           />
         ) : (
@@ -126,7 +126,7 @@ export default function AdmissionTab({
             value={value ?? ''}
             onChange={e => handleChange(fieldKey, type === 'number' ? Number(e.target.value) : e.target.value)}
             inputMode={type === 'tel' ? 'numeric' : undefined}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none h-[42px]"
           />
         )}
       </div>
@@ -158,7 +158,7 @@ export default function AdmissionTab({
             <button 
               onClick={handleSave} 
               disabled={saving}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 disabled:opacity-70 transition-all"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 disabled:opacity-70 transition-all"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={16} />} 
               {saving ? 'Saving...' : 'Save Changes'}
@@ -169,7 +169,7 @@ export default function AdmissionTab({
 
       <div className="space-y-6">
         <SectionCard title="1. Identity & Demographics" icon={User}>
-          <Field label="Inpatient Number" value={form.inpatientNumber} fieldKey="inpatientNumber" />
+          <Field label="Seeker Number" value={form.seekerNumber || form.inpatientNumber} fieldKey="seekerNumber" />
           <Field label="Name" value={form.name} fieldKey="name" />
           <Field label="Father/Husband Name" value={form.fatherName} fieldKey="fatherName" />
           <Field label="Date of Birth" value={form.dateOfBirth} type="date" fieldKey="dateOfBirth" />
@@ -197,7 +197,7 @@ export default function AdmissionTab({
           <Field label="Avg Daily Intake / Expense" value={form.averageDailyIntake} fieldKey="averageDailyIntake" />
           <Field label="Presenting Complaints" value={form.presentingComplaints} type="textarea" fieldKey="presentingComplaints" />
           <Field label="Previous Treatment Duration" value={form.previousTreatmentDuration} fieldKey="previousTreatmentDuration" />
-          <Field label="Previous JobCenter Center" value={form.previousHospital} fieldKey="previousHospital" />
+          <Field label="Previous Job Center" value={form.previousCenter} fieldKey="previousCenter" />
         </SectionCard>
 
         <SectionCard title="4. Health & Medical Status" icon={Heart}>

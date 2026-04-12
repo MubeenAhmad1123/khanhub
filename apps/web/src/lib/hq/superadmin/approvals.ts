@@ -56,7 +56,7 @@ export type ApprovalsTab = 'pending' | 'approved_today' | 'rejected_today' | 'hi
 
 export type EntityPick = {
   id: string;
-  dept: 'rehab' | 'spims';
+  dept: 'rehab' | 'spims' | 'job-center';
   name: string;
 };
 
@@ -86,9 +86,10 @@ function sortComparator(sort: SortOrder) {
   };
 }
 
-function normalizeTx(dept: 'rehab' | 'spims', id: string, data: Record<string, unknown>): UnifiedTx {
+function normalizeTx(dept: 'rehab' | 'spims' | 'job-center', id: string, data: Record<string, unknown>): UnifiedTx {
   const patientId = data.patientId != null ? String(data.patientId) : undefined;
   const studentId = data.studentId != null ? String(data.studentId) : undefined;
+  const seekerId = data.seekerId != null ? String(data.seekerId) : undefined;
   const rejectionReason =
     (data.rejectionReason as string | undefined) || (data.rejectedReason as string | undefined);
   return {
@@ -111,6 +112,8 @@ function normalizeTx(dept: 'rehab' | 'spims', id: string, data: Record<string, u
     patientName: data.patientName as string | undefined,
     studentId,
     studentName: data.studentName as string | undefined,
+    seekerId,
+    seekerName: data.seekerName as string | undefined,
     staffId: data.staffId as string | undefined,
     staffName: data.staffName as string | undefined,
     cashierId: data.cashierId as string | undefined,
@@ -279,7 +282,7 @@ function tabFilterClient(
 }
 
 /**
- * Main feed: real-time merged rehab + spims transactions.
+ * Main feed: real-time merged rehab + spims + job-center transactions.
  * Server-side: status (+ orderBy) only; everything else is client-side.
  */
 export function subscribeApprovalsFeed(
@@ -290,12 +293,12 @@ export function subscribeApprovalsFeed(
   tabTimePreset: TabTimePreset = 'all'
 ) {
   const unsub: Array<() => void> = [];
-  const buffers: Record<'rehab' | 'spims', UnifiedTx[]> = { rehab: [], spims: [] };
+  const buffers: Record<'rehab' | 'spims' | 'job-center', UnifiedTx[]> = { rehab: [], spims: [], 'job-center': [] };
 
   const { from, to } = pickRange(filters);
 
   const apply = () => {
-    const all = ([] as UnifiedTx[]).concat(buffers.rehab, buffers.spims);
+    const all = ([] as UnifiedTx[]).concat(buffers.rehab, buffers.spims, buffers['job-center']);
 
     const amtOk = getAmountBucketPredicate(filters.amountBucket);
     const proofOk = (tx: UnifiedTx) => {
@@ -306,7 +309,7 @@ export function subscribeApprovalsFeed(
     const entityQ = filters.entityQuery.trim().toLowerCase();
     const entityOk = (tx: UnifiedTx) => {
       if (!entityQ) return true;
-      const name = String(tx.patientName || tx.studentName || tx.staffName || '').toLowerCase();
+      const name = String(tx.patientName || tx.studentName || tx.seekerName || tx.staffName || '').toLowerCase();
       return name.includes(entityQ);
     };
 
@@ -348,16 +351,16 @@ export function subscribeApprovalsFeed(
     onData(filtered);
   };
 
-  const wantsDept = (dept: 'rehab' | 'spims') => filters.dept === 'all' || filters.dept === dept;
+  const wantsDept = (dept: 'rehab' | 'spims' | 'job-center') => filters.dept === 'all' || filters.dept === dept;
 
-  (['rehab', 'spims'] as const).forEach((dept) => {
+  (['rehab', 'spims', 'job-center'] as const).forEach((dept) => {
     if (!wantsDept(dept)) {
       buffers[dept] = [];
       apply();
       return;
     }
 
-    const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : 'jobcenter_transactions';
     const queries = buildQueriesForTab(tab, col);
 
     queries.forEach((q) => {
@@ -379,7 +382,7 @@ export function subscribeApprovalsFeed(
   return () => unsub.forEach((u) => u());
 }
 
-/** All transactions for one entity (both statuses). Merges patientId + studentId listeners for SPIMS. */
+/** All transactions for one entity (both statuses). Merges patientId + studentId + seekerId listeners. */
 export function subscribeEntityTransactions({
   entity,
   onData,
@@ -391,10 +394,11 @@ export function subscribeEntityTransactions({
 }) {
   const unsub: Array<() => void> = [];
   /** SPIMS may subscribe twice (patientId + studentId); merge latest snapshot per listener */
-  const buffers: { rehab: UnifiedTx[]; spimsA: UnifiedTx[]; spimsB: UnifiedTx[] } = {
+  const buffers: { rehab: UnifiedTx[]; spimsA: UnifiedTx[]; spimsB: UnifiedTx[]; jobCenter: UnifiedTx[] } = {
     rehab: [],
     spimsA: [],
     spimsB: [],
+    jobCenter: [],
   };
 
   const bump = () => {
@@ -402,16 +406,17 @@ export function subscribeEntityTransactions({
     buffers.rehab.forEach((tx) => map.set(`r_${tx.id}`, tx));
     buffers.spimsA.forEach((tx) => map.set(`s_${tx.id}`, tx));
     buffers.spimsB.forEach((tx) => map.set(`s_${tx.id}`, tx));
+    buffers.jobCenter.forEach((tx) => map.set(`j_${tx.id}`, tx));
     onData(Array.from(map.values()).sort(sortComparator('newest')));
   };
 
   const attach = (
-    slot: 'rehab' | 'spimsA' | 'spimsB',
-    dept: 'rehab' | 'spims',
-    field: 'patientId' | 'studentId',
+    slot: 'rehab' | 'spimsA' | 'spimsB' | 'jobCenter',
+    dept: 'rehab' | 'spims' | 'job-center',
+    field: 'patientId' | 'studentId' | 'seekerId',
     id: string
   ) => {
-    const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : 'jobcenter_transactions';
     const q = query(
       collection(db, col),
       where(field, '==', id),
@@ -432,9 +437,11 @@ export function subscribeEntityTransactions({
 
   if (entity.dept === 'rehab') {
     attach('rehab', 'rehab', 'patientId', entity.id);
-  } else {
+  } else if (entity.dept === 'spims') {
     attach('spimsA', 'spims', 'patientId', entity.id);
     attach('spimsB', 'spims', 'studentId', entity.id);
+  } else {
+    attach('jobCenter', 'job-center', 'seekerId', entity.id);
   }
 
   return () => unsub.forEach((x) => x());
@@ -449,7 +456,8 @@ export function subscribePendingApprovalsCount({
 }) {
   let r = 0;
   let s = 0;
-  const push = () => onCount(r + s);
+  let j = 0;
+  const push = () => onCount(r + s + j);
 
   const qR = query(
     collection(db, 'rehab_transactions'),
@@ -459,6 +467,12 @@ export function subscribePendingApprovalsCount({
   );
   const qS = query(
     collection(db, 'spims_transactions'),
+    where('status', 'in', [...PENDING_STATUSES]),
+    orderBy('createdAt', 'desc'),
+    limit(500)
+  );
+  const qJ = query(
+    collection(db, 'jobcenter_transactions'),
     where('status', 'in', [...PENDING_STATUSES]),
     orderBy('createdAt', 'desc'),
     limit(500)
@@ -480,10 +494,19 @@ export function subscribePendingApprovalsCount({
     },
     (e) => onError?.(e)
   );
+  const u3 = onSnapshot(
+    qJ,
+    (snap) => {
+      j = snap.size;
+      push();
+    },
+    (e) => onError?.(e)
+  );
 
   return () => {
     u1();
     u2();
+    u3();
   };
 }
 
@@ -491,12 +514,12 @@ export async function searchEntitiesByNamePrefix({
   dept,
   namePrefix,
 }: {
-  dept: 'rehab' | 'spims';
+  dept: 'rehab' | 'spims' | 'job-center';
   namePrefix: string;
-}): Promise<Array<{ id: string; name: string; dept: 'rehab' | 'spims' }>> {
+}): Promise<Array<{ id: string; name: string; dept: 'rehab' | 'spims' | 'job-center' }>> {
   const p = namePrefix.trim();
   if (!p) return [];
-  const col = dept === 'rehab' ? 'rehab_patients' : 'spims_students';
+  const col = dept === 'rehab' ? 'rehab_patients' : dept === 'spims' ? 'spims_students' : 'jobcenter_seekers';
   const field = 'name';
   const q = query(
     collection(db, col),
@@ -515,11 +538,12 @@ export async function searchEntitiesByNamePrefix({
 
 export async function searchEntitiesCombined(
   prefix: string,
-  deptFilter: 'all' | 'rehab' | 'spims'
-): Promise<Array<{ id: string; name: string; dept: 'rehab' | 'spims' }>> {
-  const parts: Promise<{ id: string; name: string; dept: 'rehab' | 'spims' }[]>[] = [];
+  deptFilter: 'all' | 'rehab' | 'spims' | 'job-center'
+): Promise<Array<{ id: string; name: string; dept: 'rehab' | 'spims' | 'job-center' }>> {
+  const parts: Promise<{ id: string; name: string; dept: 'rehab' | 'spims' | 'job-center' }[]>[] = [];
   if (deptFilter === 'all' || deptFilter === 'rehab') parts.push(searchEntitiesByNamePrefix({ dept: 'rehab', namePrefix: prefix }));
   if (deptFilter === 'all' || deptFilter === 'spims') parts.push(searchEntitiesByNamePrefix({ dept: 'spims', namePrefix: prefix }));
+  if (deptFilter === 'all' || deptFilter === 'job-center') parts.push(searchEntitiesByNamePrefix({ dept: 'job-center', namePrefix: prefix }));
   const rows = (await Promise.all(parts)).flat();
   return rows.slice(0, 16);
 }

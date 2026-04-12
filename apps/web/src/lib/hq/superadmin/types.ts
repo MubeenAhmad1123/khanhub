@@ -1,13 +1,13 @@
 // apps/web/src/lib/hq/superadmin/types.ts
 
-export type DeptFilter = 'all' | 'rehab' | 'spims' | 'hq';
+export type DeptFilter = 'all' | 'rehab' | 'spims' | 'job-center' | 'hq';
 export type TxStatusFilter = 'pending' | 'approved' | 'rejected' | 'history';
 
 export type AmountBucket = 'all' | 'under_1000' | '1000_5000' | '5000_20000' | 'over_20000';
 export type ProofFilter = 'all' | 'has_proof' | 'missing_proof';
 export type SortOrder = 'all' | 'newest' | 'oldest' | 'highest' | 'lowest';
 
-export type AuditSource = 'hq' | 'rehab' | 'spims';
+export type AuditSource = 'hq' | 'rehab' | 'spims' | 'job-center';
 export type AuditAction = 'created' | 'updated' | 'approved' | 'rejected' | 'login' | 'reset' | 'other';
 
 export type HqSettings = {
@@ -38,13 +38,13 @@ export type UnifiedAuditEntry = {
   message: string;
   entityLabel?: string;
   entityId?: string;
-  dept?: 'rehab' | 'spims' | 'hq';
+  dept?: 'rehab' | 'spims' | 'job-center' | 'hq';
   _raw?: any;
 };
 
 export type UnifiedTx = {
   id: string;
-  dept: 'rehab' | 'spims';
+  dept: 'rehab' | 'spims' | 'job-center';
   status: string;
   createdAt?: unknown;
   date?: unknown;
@@ -62,6 +62,8 @@ export type UnifiedTx = {
   patientName?: string;
   studentId?: string;
   studentName?: string;
+  seekerId?: string;
+  seekerName?: string;
   staffId?: string;
   staffName?: string;
   cashierId?: string;

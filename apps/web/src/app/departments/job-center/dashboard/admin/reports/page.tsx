@@ -38,11 +38,11 @@ export default function AdminReportsPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('jobcenter_session');
+    if (!sessionData) { router.push('/departments/job-center/login'); return; }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login'); return;
+      router.push('/departments/job-center/login'); return;
     }
     setSession(parsed);
   }, [router]);
@@ -56,7 +56,7 @@ export default function AdminReportsPage() {
       const lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
       const q = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'jobcenter_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'approved'),
@@ -109,8 +109,8 @@ export default function AdminReportsPage() {
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #JOBCENTER-report-print, #JOBCENTER-report-print * { visibility: visible; }
+          #JOBCENTER-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
         }
       `}</style>
 
@@ -171,7 +171,7 @@ export default function AdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="rehab-report-print" ref={printRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-8">
+          <div id="JOBCENTER-report-print" ref={printRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-8">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
@@ -300,3 +300,4 @@ export default function AdminReportsPage() {
     </div>
   );
 }
+

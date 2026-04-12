@@ -115,12 +115,14 @@ function fmtPKR(n: number): string {
 }
 
 function entityName(tx: UnifiedTx): string {
-  return String(tx.patientName || tx.studentName || tx.staffName || '—');
+  return String(tx.patientName || tx.studentName || tx.seekerName || tx.staffName || '—');
 }
 
 function entityId(tx: UnifiedTx): string | undefined {
   if (tx.dept === 'rehab') return tx.patientId || undefined;
-  return (tx.studentId || tx.patientId) ?? undefined;
+  if (tx.dept === 'spims') return tx.studentId || tx.patientId || undefined;
+  if (tx.dept === 'job-center') return tx.seekerId || undefined;
+  return (tx.studentId || tx.patientId || tx.seekerId) ?? undefined;
 }
 
 
@@ -134,9 +136,10 @@ function statusLabel(s: string): string {
 function profileHref(tx: UnifiedTx): string | null {
   const id = entityId(tx);
   if (!id) return null;
-  return tx.dept === 'rehab'
-    ? `/hq/dashboard/superadmin/rehab/patients/${id}`
-    : `/hq/dashboard/superadmin/spims/students/${id}`;
+  if (tx.dept === 'rehab') return `/hq/dashboard/superadmin/rehab/patients/${id}`;
+  if (tx.dept === 'spims') return `/hq/dashboard/superadmin/spims/students/${id}`;
+  if (tx.dept === 'job-center') return `/hq/dashboard/superadmin/job-center/seekers/${id}`;
+  return null;
 }
 
 // ─── Styles (design tokens) ─────────────────────────────────────────────────
@@ -462,7 +465,9 @@ function TxCard({
   const deptBadge =
     tx.dept === 'rehab'
       ? 'bg-[color:var(--rehab)]/15 text-[color:var(--rehab)] border-[color:var(--rehab)]/30'
-      : 'bg-[color:var(--spims)]/15 text-[color:var(--spims)] border-[color:var(--spims)]/30';
+      : tx.dept === 'spims'
+        ? 'bg-[color:var(--spims)]/15 text-[color:var(--spims)] border-[color:var(--spims)]/30'
+        : 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400';
 
   const typeColors =
     typ.toLowerCase().includes('month') || typ.toLowerCase().includes('fee')
@@ -533,7 +538,7 @@ function TxCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${deptBadge}`}>
-              {tx.dept === 'rehab' ? 'Rehab' : 'SPIMS'}
+              {tx.dept === 'rehab' ? 'Rehab' : tx.dept === 'spims' ? 'SPIMS' : 'Job Center'}
             </span>
             <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${typeColors}`}>{typ}</span>
           </div>
@@ -551,7 +556,9 @@ function TxCard({
             <div className="flex gap-2 text-sm">
               <span aria-hidden>👤</span>
               <div>
-                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Student / Patient</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">
+                  {tx.dept === 'rehab' ? 'Patient' : tx.dept === 'spims' ? 'Student' : 'Seeker'}
+                </p>
                 <p className="text-lg font-bold text-[#111827] dark:text-gray-200">{name}</p>
               </div>
             </div>
@@ -572,6 +579,14 @@ function TxCard({
                 <div>
                   <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Department</p>
                   <p className="text-sm font-medium text-[#4B5563] dark:text-gray-400">Rehab Center</p>
+                </div>
+              </div>
+            ) : tx.dept === 'job-center' ? (
+              <div className="flex gap-2 text-sm text-[#111827] dark:text-gray-100">
+                <span aria-hidden>💼</span>
+                <div>
+                  <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Department</p>
+                  <p className="text-sm font-medium text-[#4B5563] dark:text-gray-400">Job Center</p>
                 </div>
               </div>
             ) : null}
@@ -643,7 +658,9 @@ function TxCard({
               </div>
               <div className="sm:col-span-2">
                 <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Forwarded from</p>
-                <p className="font-bold text-[#111827] dark:text-gray-100">{tx.forwardedFromLabel || tx.departmentName || 'SPIMS Portal'}</p>
+                <p className="font-bold text-[#111827] dark:text-gray-100">
+                  {tx.forwardedFromLabel || tx.departmentName || (tx.dept === 'rehab' ? 'Rehab Portal' : tx.dept === 'spims' ? 'SPIMS Portal' : 'Job Center Portal')}
+                </p>
               </div>
               <div className="sm:col-span-2">
                 <button
@@ -749,7 +766,7 @@ export default function HqApprovalsPage() {
 
   const [searchDraft, setSearchDraft] = useState('');
   const [entityQueryDebounced, setEntityQueryDebounced] = useState('');
-  const [searchHits, setSearchHits] = useState<Array<{ id: string; name: string; dept: 'rehab' | 'spims' }>>([]);
+  const [searchHits, setSearchHits] = useState<Array<{ id: string; name: string; dept: 'rehab' | 'spims' | 'job-center' }>>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchWrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -862,7 +879,7 @@ export default function HqApprovalsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const need = new Map<string, { dept: 'rehab' | 'spims'; id: string }>();
+    const need = new Map<string, { dept: 'rehab' | 'spims' | 'job-center'; id: string }>();
     const source = selectedEntity ? entityRows : rows;
     source.forEach((tx) => {
       const id = entityId(tx);
@@ -874,7 +891,8 @@ export default function HqApprovalsPage() {
       for (const [, v] of need) {
         const k = `${v.dept}_${v.id}`;
         try {
-          const ref = doc(db, v.dept === 'rehab' ? 'rehab_patients' : 'spims_students', v.id);
+          const coll = v.dept === 'rehab' ? 'rehab_patients' : v.dept === 'spims' ? 'spims_students' : 'jobcenter_seekers';
+          const ref = doc(db, coll, v.id);
           const snap = await getDoc(ref);
           if (!snap.exists() || cancelled) continue;
           const d = snap.data() as Record<string, unknown>;
@@ -975,7 +993,10 @@ export default function HqApprovalsPage() {
       });
     }
     if (filters.cashierName !== 'all') chips.push({ key: 'cashierName', label: `Cashier: ${filters.cashierName}` });
-    if (selectedEntity) chips.push({ key: 'entity', label: `${selectedEntity.dept === 'spims' ? 'Student' : 'Patient'}: ${selectedEntity.name}` });
+    if (selectedEntity) {
+      const label = selectedEntity.dept === 'spims' ? 'Student' : selectedEntity.dept === 'rehab' ? 'Patient' : 'Seeker';
+      chips.push({ key: 'entity', label: `${label}: ${selectedEntity.name}` });
+    }
     return chips;
   }, [filters, selectedEntity, entityQueryDebounced]);
 
@@ -1008,7 +1029,7 @@ export default function HqApprovalsPage() {
   const runApprove = async (tx: UnifiedTx) => {
     setBusyId(tx.id);
     try {
-      const dept = tx.dept === 'rehab' ? 'rehab' : 'spims';
+      const dept = tx.dept;
       const [res] = await Promise.all([
         decideTransaction({ dept, txId: tx.id, decision: 'approved' }),
         new Promise<void>((r) => setTimeout(r, 500)),
@@ -1034,7 +1055,7 @@ export default function HqApprovalsPage() {
   const runReject = async (tx: UnifiedTx, reason: string) => {
     setRejectBusy(true);
     try {
-      const dept = tx.dept === 'rehab' ? 'rehab' : 'spims';
+      const dept = tx.dept;
       const res = await decideTransaction({ dept, txId: tx.id, decision: 'rejected', rejectReason: reason });
       if (!res.success) throw new Error(res.error ?? 'Failed');
       setRejectTx(null);
@@ -1061,9 +1082,11 @@ export default function HqApprovalsPage() {
       const ids = [...selected];
       const rehabIds = ids.filter((id) => txMap.get(id)?.dept === 'rehab');
       const spimsIds = ids.filter((id) => txMap.get(id)?.dept === 'spims');
+      const jobcenterIds = ids.filter((id) => txMap.get(id)?.dept === 'job-center');
       const results = await Promise.all([
         rehabIds.length ? bulkDecideTransactions({ dept: 'rehab', txIds: rehabIds, decision: 'approved' }) : Promise.resolve({ success: true, processed: 0, error: undefined }),
         spimsIds.length ? bulkDecideTransactions({ dept: 'spims', txIds: spimsIds, decision: 'approved' }) : Promise.resolve({ success: true, processed: 0, error: undefined }),
+        jobcenterIds.length ? bulkDecideTransactions({ dept: 'job-center', txIds: jobcenterIds, decision: 'approved' }) : Promise.resolve({ success: true, processed: 0, error: undefined }),
       ]);
       const ok = results.every((r) => r.success !== false);
       if (!ok) {
@@ -1354,10 +1377,10 @@ export default function HqApprovalsPage() {
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Department</p>
                       <PillGroup
-                        options={['all', 'rehab', 'spims'] as const}
+                        options={['all', 'rehab', 'spims', 'job-center'] as const}
                         value={filters.dept === 'hq' ? 'all' : filters.dept}
                         onChange={(v) => setFilters((f) => ({ ...f, dept: v }))}
-                        labelMap={{ all: 'All', rehab: 'Rehab', spims: 'SPIMS' }}
+                        labelMap={{ all: 'All', rehab: 'Rehab', spims: 'SPIMS', 'job-center': 'Job Center' }}
                       />
                     </div>
                     <div>
@@ -1430,7 +1453,7 @@ export default function HqApprovalsPage() {
                             setSearchOpen(true);
                           }}
                           onFocus={() => setSearchOpen(true)}
-                          placeholder="Search patient / student name..."
+                          placeholder="Search patient / student / seeker name..."
                           className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#D1D5DB] dark:border-gray-700 text-sm outline-none focus:border-purple-400 dark:bg-gray-900 text-[#111827] dark:text-gray-100 font-bold"
                         />
                       </div>

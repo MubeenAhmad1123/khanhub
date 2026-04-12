@@ -6,7 +6,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireHqSuperadmin } from './auth';
 import { sendHqPushServer } from '@/lib/hqNotificationsServer';
 
-type Dept = 'rehab' | 'spims';
+type Dept = 'rehab' | 'spims' | 'job-center';
 type Decision = 'approved' | 'rejected';
 
 function getAdminApp(): App {
@@ -28,7 +28,9 @@ function getAdminApp(): App {
 }
 
 function txCollection(dept: Dept) {
-  return dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+  if (dept === 'rehab') return 'rehab_transactions';
+  if (dept === 'spims') return 'spims_transactions';
+  return 'jobcenter_transactions';
 }
 
 async function updateEntityTotals(
@@ -36,10 +38,14 @@ async function updateEntityTotals(
   dept: Dept,
   txData: any
 ) {
-  const entityId = txData.patientId || txData.studentId;
+  const entityId = txData.patientId || txData.studentId || txData.seekerId;
   if (!entityId) return;
+  
+  let col = '';
+  if (dept === 'rehab') col = 'rehab_patients';
+  else if (dept === 'spims') col = 'spims_students';
+  else col = 'jobcenter_seekers';
 
-  const col = dept === 'rehab' ? 'rehab_patients' : 'spims_students';
   const ref = adminDb.collection(col).doc(entityId);
   const snap = await ref.get();
   if (!snap.exists) return;
@@ -123,8 +129,8 @@ export async function decideTransaction(params: {
       actorId: caller.uid,
       actorName: caller.name,
       dept: params.dept,
-      entityId: data.patientId || data.studentId || data.staffId || null,
-      entityLabel: data.patientName || data.studentName || data.staffName || null,
+      entityId: data.patientId || data.studentId || data.seekerId || data.staffId || null,
+      entityLabel: data.patientName || data.studentName || data.seekerName || data.staffName || null,
       message:
         params.decision === 'approved'
           ? `Approved ${params.dept} transaction`
@@ -153,7 +159,7 @@ export async function decideTransaction(params: {
                 recipientUid: data.createdBy,
                 type: params.decision === 'approved' ? 'tx_approved' : 'tx_rejected',
                 title: params.decision === 'approved' ? 'Transaction Approved' : 'Transaction Rejected',
-                body: `Your transaction of Rs ${Number(data.amount).toLocaleString()} for ${data.patientName || data.studentName || 'Patient/Student'} has been ${params.decision}.`,
+                body: `Your transaction of Rs ${Number(data.amount).toLocaleString()} for ${data.patientName || data.studentName || data.seekerName || 'Patient/Student/Seeker'} has been ${params.decision}.`,
                 actionUrl: '/hq/dashboard/cashier',
                 relatedId: params.txId,
               });

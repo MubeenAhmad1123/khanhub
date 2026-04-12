@@ -1,4 +1,4 @@
-// src/lib/welfare/patients.ts
+// src/lib/welfare/children.ts
 
 import { 
   collection, 
@@ -46,7 +46,7 @@ export interface ChildFinanceSummary {
   isActive: boolean;
 }
 
-// ─── PATIENT BASIC ───────────────────────────────────────────────────────────
+// ─── CHILD BASIC ───────────────────────────────────────────────────────────
 
 export async function getChild(id: string): Promise<Child | null> {
   const snap = await getDoc(doc(db, 'welfare_children', id));
@@ -99,7 +99,7 @@ export async function updateChild(id: string, data: Partial<Child>): Promise<voi
 
 // ─── DAILY ACTIVITIES ────────────────────────────────────────────────────────
 
-// Get daily activities for a patient for a given month
+// Get daily activities for a child for a given month
 export async function getDailyActivities(childId: string, yearMonth: string): Promise<DailyActivityRecord[]> {
   // yearMonth = "2025-01"
   const start = `${yearMonth}-01`;

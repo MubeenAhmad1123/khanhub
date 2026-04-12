@@ -6,7 +6,7 @@ export interface JobCenterSession {
   customId: string;
   role: string;
   displayName: string;
-  patientId?: string | null;
+  seekerId?: string | null;
 }
 
 export function useJobCenterSession() {
@@ -15,7 +15,7 @@ export function useJobCenterSession() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('job-center_session');
+      const raw = localStorage.getItem('jobcenter_session');
       if (raw) {
         setSession(JSON.parse(raw));
       }

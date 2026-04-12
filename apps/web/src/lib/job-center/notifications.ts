@@ -14,7 +14,7 @@ export async function checkUnmarkedDuties(managerId: string): Promise<string[]> 
   
   // 1. Get all active staff
   const staffQuery = query(
-    collection(db, 'job-center_staff'),
+    collection(db, 'jobcenter_staff'),
     where('isActive', '==', true)
   );
   const staffSnap = await getDocs(staffQuery);
@@ -22,7 +22,7 @@ export async function checkUnmarkedDuties(managerId: string): Promise<string[]> 
 
   // 2. Get all duty logs for today
   const dutyLogQuery = query(
-    collection(db, 'job-center_duty_logs'),
+    collection(db, 'jobcenter_duty_logs'),
     where('date', '==', today)
   );
   const dutyLogSnap = await getDocs(dutyLogQuery);

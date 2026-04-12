@@ -18,7 +18,7 @@ export async function createJobCenterUser(
   password: string, 
   role: JobCenterRole, 
   displayName: string, 
-  patientId?: string
+  seekerId?: string
 ): Promise<string> {
   // NOTE: This will sign the current user out and the new user in if called on the client.
   // In a real app, this should be a Server Action or Firebase Admin SDK call.
@@ -30,12 +30,12 @@ export async function createJobCenterUser(
     name: displayName,
     role,
     displayName,
-    patientId,
+    seekerId,
     createdAt: new Date(),
     isActive: true
   };
 
-  await setDoc(doc(db, 'job-center_users', cred.user.uid), {
+  await setDoc(doc(db, 'jobcenter_users', cred.user.uid), {
     ...userData,
     createdAt: Timestamp.now()
   });
@@ -44,13 +44,13 @@ export async function createJobCenterUser(
 }
 
 export async function deactivateUser(uid: string): Promise<void> {
-  await updateDoc(doc(db, 'job-center_users', uid), {
+  await updateDoc(doc(db, 'jobcenter_users', uid), {
     isActive: false
   });
 }
 
 export async function getJobCenterUserByCustomId(customId: string): Promise<JobCenterUser | null> {
-  const q = query(collection(db, 'job-center_users'), where('customId', '==', customId));
+  const q = query(collection(db, 'jobcenter_users'), where('customId', '==', customId));
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const doc = snap.docs[0];

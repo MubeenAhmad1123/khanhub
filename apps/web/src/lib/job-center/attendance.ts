@@ -13,7 +13,7 @@ import { db } from '@/lib/firebase';
 import type { AttendanceRecord } from '@/types/job-center';
 
 export async function markAttendance(staffId: string, date: string): Promise<string> {
-  const res = await addDoc(collection(db, 'job-center_attendance'), {
+  const res = await addDoc(collection(db, 'jobcenter_attendance'), {
     staffId,
     date,
     status: 'present',
@@ -24,7 +24,7 @@ export async function markAttendance(staffId: string, date: string): Promise<str
 
 export async function hasMarkedToday(staffId: string, date: string): Promise<boolean> {
   const q = query(
-    collection(db, 'job-center_attendance'), 
+    collection(db, 'jobcenter_attendance'), 
     where('staffId', '==', staffId), 
     where('date', '==', date)
   );
@@ -39,14 +39,14 @@ export async function overrideAttendance(
   adminId: string
 ): Promise<void> {
   const q = query(
-    collection(db, 'job-center_attendance'), 
+    collection(db, 'jobcenter_attendance'), 
     where('staffId', '==', staffId), 
     where('date', '==', date)
   );
   const snap = await getDocs(q);
   
   if (snap.empty) {
-    await addDoc(collection(db, 'job-center_attendance'), {
+    await addDoc(collection(db, 'jobcenter_attendance'), {
       staffId,
       date,
       status,
@@ -54,7 +54,7 @@ export async function overrideAttendance(
       checkInTime: Timestamp.now()
     });
   } else {
-    await updateDoc(doc(db, 'job-center_attendance', snap.docs[0].id), {
+    await updateDoc(doc(db, 'jobcenter_attendance', snap.docs[0].id), {
       status,
       overriddenBy: adminId
     });
@@ -64,7 +64,7 @@ export async function overrideAttendance(
 export async function getMonthlyAttendance(staffId: string, month: string): Promise<AttendanceRecord[]> {
   // month format "2025-01"
   const q = query(
-    collection(db, 'job-center_attendance'), 
+    collection(db, 'jobcenter_attendance'), 
     where('staffId', '==', staffId), 
     where('date', '>=', `${month}-01`),
     where('date', '<=', `${month}-31`),

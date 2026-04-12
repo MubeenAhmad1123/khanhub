@@ -13,7 +13,7 @@ const ACTION_TYPES = [
   { value: '', label: 'All Actions' },
   { value: 'user_created', label: 'User Created' },
   { value: 'staff_created', label: 'Staff Created' },
-  { value: 'patient_added', label: 'Patient Added' },
+  { value: 'seeker_added', label: 'Seeker Added' },
   { value: 'transaction_approved', label: 'Transaction Approved' },
   { value: 'transaction_rejected', label: 'Transaction Rejected' },
   { value: 'attendance_overridden', label: 'Attendance Overridden' },
@@ -25,8 +25,8 @@ function getActionIcon(action: string) {
   const cls = 'w-5 h-5';
   switch (action) {
     case 'user_created': return <UserPlus className={`${cls} text-blue-500`} />;
-    case 'staff_created': return <UserCog className={`${cls} text-teal-500`} />;
-    case 'patient_added': return <Heart className={`${cls} text-teal-600`} />;
+    case 'staff_created': return <UserCog className={`${cls} text-orange-500`} />;
+    case 'seeker_added': return <Heart className={`${cls} text-orange-600`} />;
     case 'transaction_approved': return <CheckCircle className={`${cls} text-green-500`} />;
     case 'transaction_rejected': return <XCircle className={`${cls} text-red-500`} />;
     case 'attendance_overridden': return <Calendar className={`${cls} text-amber-500`} />;
@@ -39,8 +39,8 @@ function getActionIcon(action: string) {
 function getActionColor(action: string) {
   switch (action) {
     case 'user_created': return 'bg-blue-50 border-blue-200';
-    case 'staff_created': return 'bg-teal-50 border-teal-200';
-    case 'patient_added': return 'bg-teal-50 border-teal-200';
+    case 'staff_created': return 'bg-orange-50 border-orange-200';
+    case 'seeker_added': return 'bg-orange-50 border-orange-200';
     case 'transaction_approved': return 'bg-green-50 border-green-200';
     case 'transaction_rejected': return 'bg-red-50 border-red-200';
     case 'attendance_overridden': return 'bg-amber-50 border-amber-200';
@@ -71,10 +71,10 @@ export default function AuditLogPage() {
   const [filter, setFilter] = useState('');
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('jobcenter_session');
+    if (!sessionData) { router.push('/departments/job-center/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'superadmin') { router.push('/departments/rehab/login'); return; }
+    if (parsed.role !== 'superadmin') { router.push('/departments/job-center/login'); return; }
     fetchAudit('');
   }, [router]);
 
@@ -84,14 +84,14 @@ export default function AuditLogPage() {
       let q;
       if (actionFilter) {
         q = query(
-          collection(db, 'rehab_audit'),
+          collection(db, 'jobcenter_audit'),
           where('action', '==', actionFilter),
           orderBy('createdAt', 'desc'),
           limit(50)
         );
       } else {
         q = query(
-          collection(db, 'rehab_audit'),
+          collection(db, 'jobcenter_audit'),
           orderBy('createdAt', 'desc'),
           limit(50)
         );
@@ -117,7 +117,7 @@ export default function AuditLogPage() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Activity className="w-6 h-6 text-purple-600" /> Audit Log
+            <Activity className="w-6 h-6 text-orange-600" /> Audit Log
           </h1>
           <p className="text-sm text-gray-500 mt-1">Full activity history — last 50 entries</p>
         </div>
@@ -131,7 +131,7 @@ export default function AuditLogPage() {
           <select
             value={filter}
             onChange={e => handleFilterChange(e.target.value)}
-            className="w-full sm:w-64 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full sm:w-64 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500"
           >
             {ACTION_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
           </select>
@@ -140,7 +140,7 @@ export default function AuditLogPage() {
         {/* Timeline */}
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
           </div>
         ) : entries.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
@@ -198,3 +198,4 @@ export default function AuditLogPage() {
     </div>
   );
 }
+

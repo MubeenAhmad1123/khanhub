@@ -16,9 +16,9 @@ import { MonthlyGrowthPoints } from '@/types/job-center';
 export async function recalculateGrowthPoints(
   staffId: string,
   month: string,  // "2025-04"
-  prefix: string = 'job-center'
+  prefix: string = 'jobcenter'
 ): Promise<MonthlyGrowthPoints> {
-  const p = prefix ? `${prefix}_` : 'job-center_';
+  const p = prefix ? `${prefix}_` : 'jobcenter_';
 
   // 1. Fetch Attendance
   const attendanceQuery = query(
@@ -129,9 +129,9 @@ export async function recalculateGrowthPoints(
 export async function getGrowthPoints(
   staffId: string,
   month: string,
-  prefix: string = 'job-center'
+  prefix: string = 'jobcenter'
 ): Promise<MonthlyGrowthPoints | null> {
-  const p = prefix ? `${prefix}_` : 'job-center_';
+  const p = prefix ? `${prefix}_` : 'jobcenter_';
   const q = query(
     collection(db, `${p}growth_points`),
     where('staffId', '==', staffId),

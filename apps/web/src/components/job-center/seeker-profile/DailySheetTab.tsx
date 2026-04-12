@@ -210,7 +210,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
       </div>
 
       {loading ? (
-        <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>
+        <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-orange-600" /></div>
       ) : (
         <>
         <div className="md:hidden space-y-4">
@@ -244,7 +244,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
                 <div key={activity.id} className="p-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">
-                      <span className="text-teal-600 font-black mr-1">{activity.id}.</span>{activity.name}
+                      <span className="text-orange-600 font-black mr-1">{activity.id}.</span>{activity.name}
                     </p>
                   </div>
                   <button
@@ -254,7 +254,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
                       readOnly ? 'cursor-default' : 'hover:bg-gray-50'
                     }`}
                   >
-                    {isSaving ? <Loader2 className="w-4 h-4 text-teal-600 animate-spin" /> : getCellIcon(existing?.status, activity.id, selectedDateStr)}
+                    {isSaving ? <Loader2 className="w-4 h-4 text-orange-600 animate-spin" /> : getCellIcon(existing?.status, activity.id, selectedDateStr)}
                   </button>
                 </div>
               );
@@ -285,9 +285,9 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
                 {DAILY_ACTIVITIES.map(activity => {
                   const pct = getRowCompletion(activity.id);
                   return (
-                    <tr key={activity.id} className="hover:bg-teal-50/20 transition-colors group">
-                      <td className="px-5 py-3 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-teal-50/20 z-10 transition-colors font-semibold text-gray-800 text-xs">
-                        <span className="text-[10px] text-teal-600 w-5 inline-block font-black">{activity.id}.</span> 
+                    <tr key={activity.id} className="hover:bg-orange-50/20 transition-colors group">
+                      <td className="px-5 py-3 border-r border-gray-100 sticky left-0 bg-white group-hover:bg-orange-50/20 z-10 transition-colors font-semibold text-gray-800 text-xs">
+                        <span className="text-[10px] text-orange-600 w-5 inline-block font-black">{activity.id}.</span> 
                         {activity.name}
                       </td>
                       {daysArray.map(day => {
@@ -308,7 +308,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
                               title={`${activity.name} — ${dateStr}`}
                             >
                               {isSaving ? (
-                                <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />
+                                <Loader2 className="w-4 h-4 text-orange-600 animate-spin" />
                               ) : (
                                 getCellIcon(existing?.status, activity.id, dateStr)
                               )}
@@ -365,12 +365,12 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
                 value={noteModal.value}
                 onChange={e => setNoteModal({ ...noteModal, value: e.target.value })}
                 rows={6}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
                 placeholder={noteModal.type === 'counselling' ? 'Write counselling session notes...' : 'Write vital sign observations...'}
               />
               <div className="flex gap-2">
                 <button onClick={() => setNoteModal(null)} className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-xs font-black uppercase tracking-widest">Cancel</button>
-                <button onClick={handleSaveNote} disabled={noteSaving} className="flex-1 bg-teal-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50">
+                <button onClick={handleSaveNote} disabled={noteSaving} className="flex-1 bg-orange-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50">
                   {noteSaving ? 'Saving...' : 'Save Notes'}
                 </button>
               </div>

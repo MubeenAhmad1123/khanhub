@@ -74,7 +74,8 @@ export interface Seeker {
   id: string;
 
   // Basic Identity
-  inpatientNumber: string;         // e.g. "JOBCENTER-058"
+  seekerNumber: string;            // e.g. "JOBCENTER-058"
+  inpatientNumber?: string;        // Legacy field (Seeker Number preferred)
   serialNumber: number;            // 58, 60, 61 etc from records
   name: string;
   fatherName: string;
@@ -100,7 +101,7 @@ export interface Seeker {
 
   // Previous Treatment
   previousTreatmentDuration?: string;
-  previousHospital?: string;
+  previousCenter?: string;
 
   // Location
   townPoliceStation?: string;
@@ -184,7 +185,7 @@ export interface Seeker {
 
 // ─── DAILY ACTIVITY RECORD ───────────────────────────────────────────────────
 // One document per seeker per date
-// Collection: job-center_daily_activities
+// Collection: jobcenter_daily_activities
 
 export const DAILY_ACTIVITIES = [
   { id: 1,  name: 'Fajar Prayer' },
@@ -229,7 +230,7 @@ export interface DailyActivityRecord {
 }
 
 // ─── INDIVIDUAL THERAPY SESSION ───────────────────────────────────────────────
-// Collection: job-center_therapy_sessions
+// Collection: jobcenter_therapy_sessions
 
 export interface TherapySession {
   id: string;
@@ -246,7 +247,7 @@ export interface TherapySession {
 }
 
 // ─── MEDICATION ASSISTED THERAPY ─────────────────────────────────────────────
-// Collection: job-center_medication_records
+// Collection: jobcenter_medication_records
 
 export interface MedicationRecord {
   id: string;
@@ -262,7 +263,7 @@ export interface MedicationRecord {
 }
 
 // ─── WEEKLY PROGRESS RECORD ───────────────────────────────────────────────────
-// Collection: job-center_weekly_progress
+// Collection: jobcenter_weekly_progress
 
 export interface WeeklyProgress {
   id: string;
@@ -277,7 +278,7 @@ export interface WeeklyProgress {
 }
 
 // ─── FEE RECORD (already exists, keep compatible) ────────────────────────────
-// Collection: job-center_fees
+// Collection: jobcenter_fees
 
 export interface FeeRecord {
   id: string;
@@ -300,7 +301,7 @@ export interface Payment {
 }
 
 // ─── CANTEEN RECORD (already exists, keep compatible) ────────────────────────
-// Collection: job-center_canteen
+// Collection: jobcenter_canteen
 
 export interface CanteenRecord {
   id: string;
@@ -370,7 +371,7 @@ export interface StaffMember {
   // Status
   isActive: boolean;
   joiningDate: string;          // "YYYY-MM-DD"
-  loginUserId?: string;         // uid in job-center_users for portal login
+  loginUserId?: string;         // uid in jobcenter_users for portal login
   role: JobCenterRole;              // used for UI role indicators
   customId?: string;            // unique staff identifier
   createdAt: string;            // ISO
@@ -379,7 +380,7 @@ export interface StaffMember {
 
 // ─── DAILY DUTY LOG ────────────────────────────────────────────────────────────
 // One doc per staff per date
-// Collection: job-center_duty_logs
+// Collection: jobcenter_duty_logs
 
 export interface DailyDutyLog {
   id: string;
@@ -403,7 +404,7 @@ export interface DailyDutyLog {
 
 // ─── DAILY DRESS CODE LOG ─────────────────────────────────────────────────────
 // One doc per staff per date
-// Collection: job-center_dress_logs
+// Collection: jobcenter_dress_logs
 
 export interface DailyDressLog {
   id: string;
@@ -422,7 +423,7 @@ export interface DailyDressLog {
 
 // ─── MONTHLY GROWTH POINTS ────────────────────────────────────────────────────
 // Auto-calculated and stored monthly
-// Collection: job-center_growth_points
+// Collection: jobcenter_growth_points
 // One doc per staff per month
 
 export interface MonthlyGrowthPoints {

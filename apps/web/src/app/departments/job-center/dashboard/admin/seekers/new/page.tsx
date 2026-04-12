@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { createJobCenterUserServer } from '@/app/departments/job-center/actions/createJobCenterUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { 
   ArrowLeft, Heart, Save, Loader2, User, Upload, 
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function AdmitPatientPage() {
+export default function RegisterSeekerPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   
@@ -24,13 +24,12 @@ export default function AdmitPatientPage() {
   const [submitStatus, setSubmitStatus] = useState('');
   const [error, setError] = useState('');
 
-
   // SECTION 1: Login Credentials
   const [loginId, setLoginId] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // SECTION 2: Patient Information
+  // SECTION 2: Seeker Information
   const [name, setName] = useState('');
   const [fatherName, setFatherName] = useState('');
   const [age, setAge] = useState('');
@@ -38,55 +37,46 @@ export default function AdmitPatientPage() {
   const [gender, setGender] = useState('');
   const [education, setEducation] = useState('');
   const [maritalStatus, setMaritalStatus] = useState('');
-  const [children, setChildren] = useState('0');
   const [address, setAddress] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState('');
 
-  // SECTION 3: Guardian / Family Information
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianFatherName, setGuardianFatherName] = useState('');
-  const [guardianRelation, setGuardianRelation] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [guardianCnic, setGuardianCnic] = useState('');
+  // SECTION 3: Physical Information
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+  const [skills, setSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState('');
 
-  // SECTION 4: Admission Details
-  const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [treatmentDuration, setTreatmentDuration] = useState('3 Months');
-  const [customDuration, setCustomDuration] = useState('');
-  const [reasonsForAdmission, setReasonsForAdmission] = useState<string[]>([]);
-  const [conditionOnAdmission, setConditionOnAdmission] = useState('');
-  const [packageAmount, setPackageAmount] = useState('60000');
+  // SECTION 4: Contact Details
+  const [phone, setPhone] = useState('');
+  const [cnic, setCnic] = useState('');
 
   // SECTION 5: Additional Notes
   const [notes, setNotes] = useState('');
 
-  const admissionReasons = [
-    'Heroin', 'Ice (Crystal Meth)', 'Charas/Hashish', 'Opium', 
-    'Alcohol', 'Cigarette/Tobacco', 'Prescription Drugs', 
-    'Psychological', 'Other'
-  ];
-
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('jobcenter_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     setLoading(false);
   }, [router]);
 
-  const toggleReason = (reason: string) => {
-    setReasonsForAdmission(prev => 
-      prev.includes(reason) 
-        ? prev.filter(r => r !== reason) 
-        : [...prev, reason]
-    );
+  const addSkill = () => {
+    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
+      setSkills([...skills, newSkill.trim()]);
+      setNewSkill('');
+    }
+  };
+
+  const removeSkill = (skill: string) => {
+    setSkills(skills.filter(s => s !== skill));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,8 +85,7 @@ export default function AdmitPatientPage() {
     // Validate required fields
     if (!loginId || !loginPassword || !name || !fatherName || 
         !age || !dateOfBirth || !gender || !maritalStatus || !address || 
-        !guardianName || !guardianPhone || !guardianRelation || 
-        !admissionDate || reasonsForAdmission.length === 0) {
+        !phone || !cnic) {
       setError('Please fill all required fields');
       toast.error('Missing required fields');
       return;
@@ -114,12 +103,12 @@ export default function AdmitPatientPage() {
       let photoUrl = null;
       if (photoFile) {
         setSubmitStatus('Uploading photo...');
-        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
+        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/jobcenter/seekers');
       }
 
-      // 2. Create patient document in Firestore
-      setSubmitStatus('Creating patient record...');
-      const patientRef = await addDoc(collection(db, 'rehab_patients'), {
+      // 2. Create seeker document in Firestore
+      setSubmitStatus('Creating seeker record...');
+      const seekerRef = await addDoc(collection(db, 'jobcenter_seekers'), {
         name,
         fatherName,
         age: Number(age),
@@ -127,55 +116,43 @@ export default function AdmitPatientPage() {
         gender,
         education: education || null,
         maritalStatus,
-        children: maritalStatus === 'Married' ? Number(children || 0) : 0,
         address,
         photoUrl,
-        guardianName,
-        guardianFatherName: guardianFatherName || null,
-        guardianRelation,
-        guardianPhone,
-        contactNumber: guardianPhone, // used by AdmissionTab profile editor
-        guardianCnic: guardianCnic || null,
-        admissionDate: Timestamp.fromDate(new Date(admissionDate)),
-        treatmentDuration: treatmentDuration === 'Custom' 
-          ? Number(customDuration) 
-          : parseInt(treatmentDuration),
-        reasonsForAdmission,
-        conditionOnAdmission: conditionOnAdmission || null,
-        conditionOnDischarge: null,
-        packageAmount: Number(packageAmount) || 60000,
+        phone,
+        cnic,
+        height: height || null,
+        weight: weight || null,
+        skills,
         notes: notes || null,
         isActive: true,
         loginId: loginId.toUpperCase(),
         createdAt: Timestamp.now(),
       });
 
-      // 3. Create family login account linked to this patient
-      setSubmitStatus('Creating family login...');
-      const result = await createRehabUserServer(
+      // 3. Create seeker login account
+      setSubmitStatus('Creating seeker login...');
+      const result = await createJobCenterUserServer(
         loginId.toUpperCase(),
         loginPassword,
-        'family',
+        'seeker',
         name,
-        patientRef.id
+        seekerRef.id
       );
 
       if (!result.success) {
-        // Roll back the patient doc if the login account could not be created.
-        // This prevents "half-created" records from confusing future logins.
         try {
-          await deleteDoc(doc(db, 'rehab_patients', patientRef.id));
+          await deleteDoc(doc(db, 'jobcenter_seekers', seekerRef.id));
         } catch {}
 
-        setError(`Patient admission failed: ${result.error}. Please choose a different Patient Login ID.`);
+        setError(`Registration failed: ${result.error}. Please choose a different Seeker Login ID.`);
         toast.error('Login account creation failed');
         setSubmitting(false);
         return;
       }
 
       setSubmitStatus('Done!');
-      toast.success('Patient admitted successfully ✓');
-      router.push(`/departments/rehab/dashboard/admin/patients/${patientRef.id}`);
+      toast.success('Seeker registered successfully ✓');
+      router.push(`/departments/job-center/dashboard/admin/seekers/${seekerRef.id}`);
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Something went wrong');
@@ -187,21 +164,21 @@ export default function AdmitPatientPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
       </div>
     );
   }
 
   const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
     <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-      <Icon size={16} className="text-teal-500" />
+      <Icon size={16} className="text-orange-500" />
       <h3 className="font-black text-gray-700 text-sm uppercase tracking-widest">
         {title}
       </h3>
     </div>
   );
 
-  const inputStyle = "w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm transition-all";
+  const inputStyle = "w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm transition-all";
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -209,16 +186,16 @@ export default function AdmitPatientPage() {
         
         {/* Header */}
         <div className="flex flex-col gap-4">
-          <Link href="/departments/rehab/dashboard/admin/patients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit">
+          <Link href="/departments/job-center/dashboard/admin/seekers" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-orange-600 transition-colors w-fit">
             <ArrowLeft className="w-4 h-4" />
-            Back to Patients
+            Back to Seekers
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Plus className="w-6 h-6 text-teal-600" />
-              Admit New Patient
+              <Plus className="w-6 h-6 text-orange-600" />
+              Register New Seeker
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Register a new patient and set up family access.</p>
+            <p className="text-sm text-gray-500 mt-1">Register a new job seeker and set up login access.</p>
           </div>
         </div>
 
@@ -231,8 +208,8 @@ export default function AdmitPatientPage() {
               <SectionHeader icon={Shield} title="Login Credentials" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient Login ID *</label>
-                  <input required placeholder="e.g. REHAB-PAT-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Seeker Login ID *</label>
+                  <input required placeholder="e.g. JC-SEEK-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Login Password * (Min 6 chars)</label>
@@ -244,12 +221,12 @@ export default function AdmitPatientPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 italic px-1">Family will use these to log in and view this patient's profile</p>
+              <p className="text-[10px] text-gray-400 italic px-1">The seeker will use these to log in to their dashboard</p>
             </div>
 
-            {/* SECTION 2: Patient Information */}
+            {/* SECTION 2: Seeker Information */}
             <div className="space-y-4 mt-8">
-              <SectionHeader icon={User} title="Patient Information" />
+              <SectionHeader icon={User} title="Seeker Information" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Full Name *</label>
@@ -301,20 +278,24 @@ export default function AdmitPatientPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5 mt-2">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input required type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
+                  <input required type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Phone Number *</label>
+                  <input required placeholder="+92XXXXXXXXXX" className={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} />
+                </div>
               </div>
 
-              {maritalStatus === 'Married' && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Number of Children</label>
-                  <input type="number" min="0" className={inputStyle} value={children} onChange={e => setChildren(e.target.value)} />
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase px-1">CNIC Number *</label>
+                <input required placeholder="XXXXX-XXXXXXX-X" className={inputStyle} value={cnic} onChange={e => setCnic(e.target.value)} />
+              </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Address *</label>
+                <label className="text-xs font-bold text-gray-500 uppercase px-1">Residential Address *</label>
                 <textarea required rows={2} className={inputStyle} placeholder="Full Address" value={address} onChange={e => setAddress(e.target.value)} />
               </div>
 
@@ -322,7 +303,7 @@ export default function AdmitPatientPage() {
               <div className="flex items-center gap-4 py-2">
                 <div 
                   onClick={() => fileRef.current?.click()}
-                  className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 transition-all overflow-hidden flex-shrink-0"
+                  className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all overflow-hidden flex-shrink-0"
                 >
                   {photoPreview ? (
                     <img src={photoPreview} className="w-full h-full object-cover" alt="Preview" />
@@ -340,7 +321,7 @@ export default function AdmitPatientPage() {
                   setPhotoPreview(URL.createObjectURL(file));
                 }} />
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">Patient Photo</p>
+                  <p className="text-sm font-semibold text-gray-700">Seeker Photo</p>
                   <p className="text-xs text-gray-400 mt-0.5">JPG, PNG up to 5MB</p>
                   {photoPreview && (
                     <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview('') }} className="text-xs text-red-400 mt-1 hover:text-red-600 font-semibold">Remove</button>
@@ -349,115 +330,52 @@ export default function AdmitPatientPage() {
               </div>
             </div>
 
-            {/* SECTION 3: Guardian Information */}
+            {/* SECTION 3: Physical & Skills */}
             <div className="space-y-4 mt-8">
-              <SectionHeader icon={Users} title="Guardian / Family Information" />
+              <SectionHeader icon={Plus} title="Physical & Skills" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian Name *</label>
-                  <input required placeholder="Parent or responsible person" className={inputStyle} value={guardianName} onChange={e => setGuardianName(e.target.value)} />
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Height (e.g. 5'8")</label>
+                  <input placeholder="Height" className={inputStyle} value={height} onChange={e => setHeight(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian's Father Name</label>
-                  <input placeholder="Optional" className={inputStyle} value={guardianFatherName} onChange={e => setGuardianFatherName(e.target.value)} />
+                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Weight (kg)</label>
+                  <input placeholder="Weight" className={inputStyle} value={weight} onChange={e => setWeight(e.target.value)} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Relation *</label>
-                  <select required className={inputStyle} value={guardianRelation} onChange={e => setGuardianRelation(e.target.value)}>
-                    <option value="">Select</option>
-                    <option value="Father">Father</option>
-                    <option value="Mother">Mother</option>
-                    <option value="Brother">Brother</option>
-                    <option value="Sister">Sister</option>
-                    <option value="Son">Son</option>
-                    <option value="Daughter">Daughter</option>
-                    <option value="Spouse">Spouse</option>
-                    <option value="Uncle">Uncle</option>
-                    <option value="Other">Other</option>
-                  </select>
+              
+              <div className="space-y-1.5 text-black">
+                <label className="text-xs font-bold text-gray-500 uppercase px-1">Skills</label>
+                <div className="flex gap-2">
+                  <input 
+                    placeholder="Add a skill (e.g. Carpentry, Driver)" 
+                    className={inputStyle} 
+                    value={newSkill} 
+                    onChange={e => setNewSkill(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                  />
+                  <button type="button" onClick={addSkill} className="bg-orange-600 text-white px-6 rounded-xl font-bold text-sm">Add</button>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian Phone *</label>
-                  <div className="relative">
-                    <Phone size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input required className={`${inputStyle} pl-10`} placeholder="+92XXXXXXXXXX" value={guardianPhone} onChange={e => setGuardianPhone(e.target.value)} />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian CNIC</label>
-                  <input className={inputStyle} placeholder="XXXXX-XXXXXXX-X" value={guardianCnic} onChange={e => setGuardianCnic(e.target.value)} />
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 4: Admission Details */}
-            <div className="space-y-4 mt-8">
-              <SectionHeader icon={Calendar} title="Admission Details" />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Admission Date *</label>
-                  <input required type="date" className={inputStyle} value={admissionDate} onChange={e => setAdmissionDate(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Planned Duration</label>
-                  <select className={inputStyle} value={treatmentDuration} onChange={e => setTreatmentDuration(e.target.value)}>
-                    <option value="1 Month">1 Month</option>
-                    <option value="2 Months">2 Months</option>
-                    <option value="3 Months">3 Months</option>
-                    <option value="6 Months">6 Months</option>
-                    <option value="Custom">Custom Months</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Monthly Package *</label>
-                  <input required type="number" className={inputStyle} value={packageAmount} onChange={e => setPackageAmount(e.target.value)} />
-                </div>
-              </div>
-
-              {treatmentDuration === 'Custom' && (
-                <div className="space-y-1.5 max-w-xs">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Duration in Months</label>
-                  <input type="number" className={inputStyle} value={customDuration} onChange={e => setCustomDuration(e.target.value)} />
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Reasons for Admission *</label>
-                <div className="flex flex-wrap gap-2">
-                  {admissionReasons.map(r => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => toggleReason(r)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
-                        reasonsForAdmission.includes(r)
-                          ? 'bg-teal-600 text-white border-teal-600 shadow-md'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-200'
-                      }`}
-                    >
-                      {r}
-                    </button>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {skills.map(s => (
+                    <span key={s} className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-xs font-bold border border-orange-100 flex items-center gap-2">
+                      {s}
+                      <button type="button" onClick={() => removeSkill(s)} className="hover:text-orange-900"><X size={12} /></button>
+                    </span>
                   ))}
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Condition on Admission</label>
-                <textarea rows={2} className={inputStyle} placeholder="Physical and mental condition on arrival..." value={conditionOnAdmission} onChange={e => setConditionOnAdmission(e.target.value)} />
               </div>
             </div>
 
             {/* SECTION 5: Additional Notes */}
             <div className="space-y-4 mt-8">
               <SectionHeader icon={FileText} title="Additional Notes" />
-              <textarea rows={3} className={inputStyle} placeholder="History, special requests, or medical notes..." value={notes} onChange={e => setNotes(e.target.value)} />
+              <textarea rows={3} className={inputStyle} placeholder="Current employment status, medical issues, or other notes..." value={notes} onChange={e => setNotes(e.target.value)} />
             </div>
 
             {error && (
               <div className="mt-6 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3 text-red-700 text-sm font-semibold">
-                <AlertTriangle size={18} />
+                <X size={18} />
                 {error}
               </div>
             )}
@@ -466,7 +384,7 @@ export default function AdmitPatientPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
               >
                 {submitting ? (
                   <>
@@ -476,11 +394,11 @@ export default function AdmitPatientPage() {
                 ) : (
                   <>
                     <Save size={18} className="group-hover:scale-110 transition-transform" />
-                    Admit Patient
+                    Register Seeker
                   </>
                 )}
               </button>
-              <Link href="/departments/rehab/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
+              <Link href="/departments/job-center/dashboard/admin/seekers" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
                 Cancel Registration
               </Link>
             </div>
@@ -490,8 +408,4 @@ export default function AdmitPatientPage() {
       </div>
     </div>
   );
-}
-
-function AlertTriangle({ size, className }: { size: number, className?: string }) {
-  return <X size={size} className={className} />;
 }

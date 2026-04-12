@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer, markSetupComplete } from '../actions/createJobCenterUser';
-import EyePasswordInput from '@/components/rehab/EyePasswordInput';
+import { createJobCenterUserServer, markJobCenterSetupComplete } from '../actions/createJobCenterUser';
+import EyePasswordInput from '@/components/job-center/EyePasswordInput';
 
 export default function SetupPage() {
   const router = useRouter();
@@ -16,10 +16,10 @@ export default function SetupPage() {
   const [alreadySetup, setAlreadySetup] = useState(false);
 
   // form state
-  const [superAdminId, setSuperAdminId] = useState('REHAB-SA-001');
+  const [superAdminId, setSuperAdminId] = useState('JOBCENTER-SA-001');
   const [superAdminPassword, setSuperAdminPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [cashierId, setCashierId] = useState('REHAB-CSH-001');
+  const [cashierId, setCashierId] = useState('JOBCENTER-CSH-001');
   const [cashierPassword, setCashierPassword] = useState('');
 
   // submission state
@@ -32,21 +32,12 @@ export default function SetupPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    import('../actions/createJobCenterUser').then(m => {
-      m.debugEnvVars().then((result: unknown) => {
-        console.log('ENV CHECK:', result);
-      });
-    });
-  }, [mounted]);
-
   // Step 2: check Firestore only after mounted
   useEffect(() => {
     if (!mounted) return;
     async function checkSetup() {
       try {
-        const snap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+        const snap = await getDoc(doc(db, 'jobcenter_meta', 'setup'));
         if (snap.exists() && snap.data()?.completed === true) {
           setAlreadySetup(true);
         }
@@ -75,23 +66,23 @@ export default function SetupPage() {
     setLoading(true);
     try {
       // 1. Create super admin
-      const saResult = await createRehabUserServer(
+      const saResult = await createJobCenterUserServer(
         superAdminId, superAdminPassword, 'superadmin', 'Super Admin'
       );
       if (!saResult.success) throw new Error(saResult.error || 'Failed to create super admin');
 
       // 2. Create cashier
-      const cshResult = await createRehabUserServer(
+      const cshResult = await createJobCenterUserServer(
         cashierId, cashierPassword, 'cashier', 'Cashier'
       );
       if (!cshResult.success) throw new Error(cshResult.error || 'Failed to create cashier');
 
       // 3. Mark setup as completed via server action (bypasses client rules)
-      const metaResult = await markSetupComplete(superAdminId, cashierId);
+      const metaResult = await markJobCenterSetupComplete(superAdminId, cashierId);
       if (!metaResult.success) throw new Error(metaResult.error || 'Failed to mark setup complete');
 
       setSuccess(true);
-      setTimeout(() => router.push('/departments/rehab/login'), 2000);
+      setTimeout(() => router.push('/departments/job-center/login'), 2000);
     } catch (err: any) {
       setError(err.message || 'Setup failed. Please try again.');
     } finally {
@@ -116,8 +107,8 @@ export default function SetupPage() {
         <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column',
                       alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
           <p className="text-gray-700 font-medium">System already initialized.</p>
-          <button onClick={() => router.push('/departments/rehab/login')}
-             className="text-teal-600 underline text-sm">Go to Login</button>
+          <button onClick={() => router.push('/departments/job-center/login')}
+             className="text-orange-600 underline text-sm">Go to Login</button>
         </div>
       );
     }
@@ -138,7 +129,7 @@ export default function SetupPage() {
         <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl p-10 border border-gray-100">
           <h1 className="text-4xl font-black text-center text-gray-900 mb-2 tracking-tight">System Setup</h1>
           <p className="text-xs text-center tracking-[0.3em] text-gray-400 font-black uppercase mb-10">
-            Initialize Rehab Portal
+            Initialize Job Center Portal
           </p>
 
           {error && (
@@ -161,7 +152,7 @@ export default function SetupPage() {
                     onChange={e => setSuperAdminId(e.target.value)}
                     required
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
-                               py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                               py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -172,7 +163,7 @@ export default function SetupPage() {
                       value={superAdminPassword}
                       onChange={e => setSuperAdminPassword(e.target.value)}
                       required
-                      className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-none"
+                      className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all shadow-none"
                     />
                   </div>
                   <div className="relative">
@@ -182,7 +173,7 @@ export default function SetupPage() {
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
                       required
-                      className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-none"
+                      className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all shadow-none"
                     />
                   </div>
                 </div>
@@ -201,7 +192,7 @@ export default function SetupPage() {
                     onChange={e => setCashierId(e.target.value)}
                     required
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 
-                               py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                               py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
                   />
                 </div>
                 <div className="relative">
@@ -211,7 +202,7 @@ export default function SetupPage() {
                     value={cashierPassword}
                     onChange={e => setCashierPassword(e.target.value)}
                     required
-                    className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-none"
+                    className="bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all shadow-none"
                   />
                 </div>
               </div>
@@ -238,3 +229,4 @@ export default function SetupPage() {
     );
   }
 }
+

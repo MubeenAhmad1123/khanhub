@@ -13,35 +13,35 @@ import { useTheme } from 'next-themes';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-type RehabRole = 'admin' | 'staff' | 'family' | 'superadmin';
+type JobCenterRole = 'admin' | 'staff' | 'seeker' | 'superadmin';
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
-  roles: RehabRole[];
+  roles: JobCenterRole[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview',      href: '/departments/job-center/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
-  { label: 'Patients',      href: '/departments/job-center/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
+  { label: 'Seekers',      href: '/departments/job-center/dashboard/admin/seekers', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
   { label: 'Credentials',   href: '/departments/job-center/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/job-center/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
-  { label: 'My Patient',    href: '/departments/job-center/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
-  { label: 'My Profile',    href: '/departments/job-center/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },
+  { label: 'My Portal',    href: '/departments/job-center/dashboard/seeker',         icon: <User size={16}/>,            roles: ['seeker'] },
+  { label: 'My Profile',    href: '/departments/job-center/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'seeker', 'superadmin'] },
 ];
 
-const ROLE_COLORS: Record<RehabRole, string> = {
+const ROLE_COLORS: Record<JobCenterRole, string> = {
   admin:      'bg-blue-100 text-blue-700',
-  staff:      'bg-teal-100 text-teal-700',
-  family:     'bg-green-100 text-green-700',
+  staff:      'bg-orange-100 text-orange-700',
+  seeker:     'bg-green-100 text-green-700',
   superadmin: 'bg-purple-100 text-purple-700',
 };
 
-const ROLE_LABELS: Record<RehabRole, string> = {
+const ROLE_LABELS: Record<JobCenterRole, string> = {
   admin:      'Admin',
   staff:      'Staff',
-  family:     'Family',
+  seeker:     'Seeker',
   superadmin: 'HQ Admin',
 };
 
@@ -70,7 +70,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
   const { theme, setTheme, resolvedTheme } = useTheme();
   
   const [isChecking, setIsChecking] = useState(true);
-  const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
+  const [user, setUser] = useState<{ role: JobCenterRole; displayName: string; customId: string; uid: string; seekerId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isHqAdmin, setIsHqAdmin] = useState(false);
@@ -81,7 +81,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
 
   useEffect(() => {
     setMounted(true);
-    let session = localStorage.getItem('job-center_session');
+    let session = localStorage.getItem('jobcenter_session');
     const hqSessionStr = localStorage.getItem('hq_session');
     
     if (hqSessionStr) {
@@ -94,8 +94,8 @@ export default function JobCenterDashboardLayout({ children }: { children: React
             role: 'superadmin',
             displayName: hqSession.displayName || 'Superadmin',
           };
-          localStorage.setItem('job-center_session', JSON.stringify(syncSession));
-          localStorage.setItem('job-center_login_time', Date.now().toString());
+          localStorage.setItem('jobcenter_session', JSON.stringify(syncSession));
+          localStorage.setItem('jobcenter_login_time', Date.now().toString());
           session = JSON.stringify(syncSession);
           setIsHqAdmin(true);
         }
@@ -109,14 +109,14 @@ export default function JobCenterDashboardLayout({ children }: { children: React
         const parsed = JSON.parse(session!);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
 
-        const loginTime = localStorage.getItem('job-center_login_time');
+        const loginTime = localStorage.getItem('jobcenter_login_time');
         if (loginTime && (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60) > 12) {
           handleSignOut();
           return;
         }
 
         if (parsed.role !== 'superadmin') {
-          const userDoc = await getDoc(doc(db, 'job-center_users', parsed.uid));
+          const userDoc = await getDoc(doc(db, 'jobcenter_users', parsed.uid));
           if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
             handleSignOut();
             return;
@@ -134,7 +134,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
   }, [router]);
 
   const handleSignOut = () => {
-    localStorage.removeItem('job-center_session');
+    localStorage.removeItem('jobcenter_session');
     const hqSessionStr = localStorage.getItem('hq_session');
     if (hqSessionStr) {
       try {
@@ -159,7 +159,7 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     );
   }
 
-  const role = user?.role as RehabRole;
+  const role = user?.role as JobCenterRole;
   const navItems = viewMode === 'dept'
     ? NAV_ITEMS.filter(item => user && item.roles.includes(role))
     : HQ_NAV_ITEMS;
@@ -359,3 +359,4 @@ export default function JobCenterDashboardLayout({ children }: { children: React
     </div>
   );
 }
+

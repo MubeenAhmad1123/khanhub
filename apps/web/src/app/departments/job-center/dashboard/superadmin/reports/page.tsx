@@ -34,10 +34,10 @@ export default function SuperAdminReportsPage() {
   const [generated, setGenerated] = useState(false);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('jobcenter_session');
+    if (!sessionData) { router.push('/departments/job-center/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'superadmin') { router.push('/departments/rehab/login'); return; }
+    if (parsed.role !== 'superadmin') { router.push('/departments/job-center/login'); return; }
   }, [router]);
 
   const handleGenerate = async () => {
@@ -51,7 +51,7 @@ export default function SuperAdminReportsPage() {
 
       // === FINANCIAL TRANSACTIONS ===
       const txnQ = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'jobcenter_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'approved'),
@@ -62,7 +62,7 @@ export default function SuperAdminReportsPage() {
 
       // Pending count
       const pendingQ = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'jobcenter_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'pending')
@@ -82,13 +82,13 @@ export default function SuperAdminReportsPage() {
       };
 
       // === STAFF SALARY ===
-      const staffSnap = await getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)));
+      const staffSnap = await getDocs(query(collection(db, 'jobcenter_staff'), where('isActive', '==', true)));
       const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const finesSnap = await getDocs(query(collection(db, 'rehab_fines'), where('month', '==', monthStr)));
+      const finesSnap = await getDocs(query(collection(db, 'jobcenter_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
 
-      const attendanceSnap = await getDocs(query(collection(db, 'rehab_attendance'),
+      const attendanceSnap = await getDocs(query(collection(db, 'jobcenter_attendance'),
         where('date', '>=', `${monthStr}-01`),
         where('date', '<=', `${monthStr}-31`),
         where('status', '==', 'absent')
@@ -113,12 +113,12 @@ export default function SuperAdminReportsPage() {
 
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
-      // === PATIENTS ===
-      const activePatientsSnap = await getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
-      const totalActivePatients = activePatientsSnap.size;
+      // === SEEKERS ===
+      const activeSeekersSnap = await getDocs(query(collection(db, 'jobcenter_seekers'), where('isActive', '==', true)));
+      const totalActiveSeekers = activeSeekersSnap.size;
 
       const newAdmissionsSnap = await getDocs(query(
-        collection(db, 'rehab_patients'),
+        collection(db, 'jobcenter_seekers'),
         where('admissionDate', '>=', Timestamp.fromDate(firstDay)),
         where('admissionDate', '<=', Timestamp.fromDate(lastDay))
       ));
@@ -133,7 +133,7 @@ export default function SuperAdminReportsPage() {
         pendingCount,
         staffSalaries,
         totalPayroll,
-        totalActivePatients,
+        totalActiveSeekers,
         newAdmissions,
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
@@ -152,8 +152,8 @@ export default function SuperAdminReportsPage() {
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #JOBCENTER-report-print, #JOBCENTER-report-print * { visibility: visible; }
+          #JOBCENTER-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
         }
       `}</style>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -162,7 +162,7 @@ export default function SuperAdminReportsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <FileBarChart className="w-6 h-6 text-purple-600" /> Super Admin Reports
+              <FileBarChart className="w-6 h-6 text-orange-600" /> Super Admin Reports
             </h1>
             <p className="text-sm text-gray-500 mt-1">Comprehensive monthly report including staff payroll</p>
           </div>
@@ -175,19 +175,19 @@ export default function SuperAdminReportsPage() {
 
         {/* Controls */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-purple-500" /> Select Period</h2>
+          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-orange-500" /> Select Period</h2>
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
-              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500">
+              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500">
                 {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
             </div>
             <div className="flex-1">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
-              <input type="number" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} min={2020} max={2100} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500" />
+              <input type="number" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} min={2020} max={2100} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500" />
             </div>
-            <button onClick={handleGenerate} disabled={generating} className="flex-1 sm:flex-none bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+            <button onClick={handleGenerate} disabled={generating} className="flex-1 sm:flex-none bg-orange-600 hover:bg-orange-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
               Generate Report
             </button>
@@ -196,12 +196,12 @@ export default function SuperAdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="rehab-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
+          <div id="JOBCENTER-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">KhanHub Rehab Center — Super Admin Report</h2>
-              <p className="text-lg font-bold text-purple-700 mt-1">Monthly Financial Summary — {reportData.monthLabel}</p>
+              <h2 className="text-2xl font-black text-gray-900">KhanHub Job Center — Super Admin Report</h2>
+              <p className="text-lg font-bold text-orange-700 mt-1">Monthly Financial Summary — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
 
@@ -215,13 +215,13 @@ export default function SuperAdminReportsPage() {
               </div>
             )}
 
-            {/* Patients Summary */}
+            {/* seekers Summary */}
             <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-teal-500" /> Patient Summary</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-orange-500" /> Seeker Summary</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                  <div className="text-3xl font-black text-teal-800">{reportData.totalActivePatients}</div>
-                  <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">Active Patients</div>
+                <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl text-center">
+                  <div className="text-3xl font-black text-orange-800">{reportData.totalActiveSeekers}</div>
+                  <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mt-1">Active Seekers</div>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
                   <div className="text-3xl font-black text-blue-800">{reportData.newAdmissions}</div>
@@ -232,12 +232,12 @@ export default function SuperAdminReportsPage() {
 
             {/* Financial Summary */}
             <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5 text-teal-500" /> Financial Summary</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5 text-orange-500" /> Financial Summary</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                  <TrendingUp className="w-6 h-6 text-teal-600 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Income</div>
-                  <div className="text-2xl font-black text-teal-800">{formatPKR(reportData.totalIncome)}</div>
+                <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl text-center">
+                  <TrendingUp className="w-6 h-6 text-orange-600 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Income</div>
+                  <div className="text-2xl font-black text-orange-800">{formatPKR(reportData.totalIncome)}</div>
                 </div>
                 <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
                   <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
@@ -259,13 +259,13 @@ export default function SuperAdminReportsPage() {
                 {/* Income Breakdown */}
                 {Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-orange-500" /> Income Breakdown</h3>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
                       <table className="w-full text-sm border-collapse min-w-[300px]">
-                        <thead className="bg-teal-50">
+                        <thead className="bg-orange-50">
                           <tr>
-                            <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-teal-800">Category</th>
-                            <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-teal-800">Amount</th>
+                            <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-orange-800">Category</th>
+                            <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-orange-800">Amount</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -275,9 +275,9 @@ export default function SuperAdminReportsPage() {
                               <td className="border-b border-gray-200 px-4 py-3 text-right font-medium">{formatPKR(amt)}</td>
                             </tr>
                           ))}
-                          <tr className="bg-teal-50/50 font-black">
-                            <td className="px-4 py-3 text-teal-800">Total Income</td>
-                            <td className="px-4 py-3 text-right text-teal-800">{formatPKR(reportData.totalIncome)}</td>
+                          <tr className="bg-orange-50/50 font-black">
+                            <td className="px-4 py-3 text-orange-800">Total Income</td>
+                            <td className="px-4 py-3 text-right text-orange-800">{formatPKR(reportData.totalIncome)}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -334,7 +334,7 @@ export default function SuperAdminReportsPage() {
                           <tr key={t.id} className="hover:bg-gray-50">
                             <td className="border border-gray-200 px-3 py-2 text-gray-600">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
                             <td className="border border-gray-200 px-3 py-2">
-                              <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
+                              <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-700">{formatCat(t.category)}</td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[160px] truncate">{t.description || '—'}</td>
@@ -352,16 +352,16 @@ export default function SuperAdminReportsPage() {
             {/* Staff Salary Summary */}
             {reportData.staffSalaries.length > 0 && (
               <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-purple-500" /> Staff Payroll Summary</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-orange-500" /> Staff Payroll Summary</h3>
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <table className="w-full text-sm border-collapse min-w-[600px]">
-                    <thead className="bg-purple-50">
+                    <thead className="bg-orange-50">
                       <tr>
-                        <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-purple-800">Staff Member</th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Gross</th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-center font-bold text-purple-800">Absent</th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Fines</th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Net Payable</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-orange-800">Staff Member</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-orange-800">Gross</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-center font-bold text-orange-800">Absent</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-orange-800">Fines</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-orange-800">Net Payable</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -374,9 +374,9 @@ export default function SuperAdminReportsPage() {
                           <td className="border-b border-gray-200 px-4 py-3 text-right font-black text-green-800">{formatPKR(s.netPayable)}</td>
                         </tr>
                       ))}
-                      <tr className="bg-purple-50/50 font-black">
-                        <td colSpan={4} className="px-4 py-3 text-purple-800">Total Payroll</td>
-                        <td className="px-4 py-3 text-right text-purple-800">{formatPKR(reportData.totalPayroll)}</td>
+                      <tr className="bg-orange-50/50 font-black">
+                        <td colSpan={4} className="px-4 py-3 text-orange-800">Total Payroll</td>
+                        <td className="px-4 py-3 text-right text-orange-800">{formatPKR(reportData.totalPayroll)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -390,3 +390,4 @@ export default function SuperAdminReportsPage() {
     </div>
   );
 }
+

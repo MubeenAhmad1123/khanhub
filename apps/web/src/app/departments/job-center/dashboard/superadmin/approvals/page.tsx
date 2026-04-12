@@ -24,14 +24,14 @@ export default function ApprovalsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('jobcenter_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     setSession(parsed);
@@ -44,7 +44,7 @@ export default function ApprovalsPage() {
 
     // No orderBy — avoids index requirement
     const q = query(
-      collection(db, 'rehab_transactions'),
+      collection(db, 'jobcenter_transactions'),
       where('status', '==', 'pending')
     )
 
@@ -60,8 +60,8 @@ export default function ApprovalsPage() {
             amount: Number(data.amount) || 0,
             status: data.status || 'pending',
             cashierId: data.cashierId || '',
-            patientId: data.patientId || null,
-            patientName: data.patientName || null,
+            seekerId: data.seekerId || null,
+            seekerName: data.seekerName || null,
             date: data.date,  // keep as Firestore Timestamp for display
             createdAt: data.createdAt,
           }
@@ -87,7 +87,7 @@ export default function ApprovalsPage() {
       // No orderBy — avoids composite index requirement
       const snap = await getDocs(
         query(
-          collection(db, 'rehab_transactions'),
+          collection(db, 'jobcenter_transactions'),
           where('status', 'in', ['approved', 'rejected'])
         )
       )
@@ -122,8 +122,8 @@ export default function ApprovalsPage() {
             approvedBy: data.approvedBy || '',
             rejectedBy: data.rejectedBy || '',
             rejectReason: data.rejectReason || '',
-            patientId: data.patientId || null,
-            patientName: data.patientName || null,
+            seekerId: data.seekerId || null,
+            seekerName: data.seekerName || null,
             createdAt,
             approvedAt,
             date: txDate,
@@ -151,40 +151,40 @@ export default function ApprovalsPage() {
       setActionLoading(txId);
       
       // 1. Update the transaction status first
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+      await updateDoc(doc(db, 'jobcenter_transactions', txId), {
         status: 'approved',
         approvedBy: session.uid,
         approvedAt: Timestamp.now()
       });
 
-      // ── SYNC TO PATIENT RECORDS AFTER APPROVAL ──
+      // ── SYNC TO seeker RECORDS AFTER APPROVAL ──
       const allTransactions = [...pendingTransactions, ...historyTransactions];
       const tx = allTransactions.find((t: any) => t.id === txId);
-      if (tx && tx.patientId) {
+      if (tx && tx.seekerId) {
         try {
           const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
           const month = txDate.toISOString().slice(0, 7); // "2026-03"
 
-          if (tx.category === 'patient_fee') {
-            // Find or CREATE the fee record for this patient+month
+          if (tx.category === 'seeker_fee') {
+            // Find or CREATE the fee record for this seeker+month
             const feesQ = query(
-              collection(db, 'rehab_fees'),
-              where('patientId', '==', tx.patientId),
+              collection(db, 'jobcenter_fees'),
+              where('seekerId', '==', tx.seekerId),
               where('month', '==', month)
             );
             const feesSnap = await getDocs(feesQ);
 
             if (feesSnap.empty) {
-              // Auto-create fee record — fetch patient package amount first
-              const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
-              const packageAmount = patientSnap.exists()
-                ? (patientSnap.data().packageAmount || 60000)
+              // Auto-create fee record — fetch seeker package amount first
+              const seekerSnap = await getDoc(doc(db, 'jobcenter_seekers', tx.seekerId));
+              const packageAmount = seekerSnap.exists()
+                ? (seekerSnap.data().packageAmount || 60000)
                 : 60000;
               const amountPaid = tx.amount;
               const amountRemaining = Math.max(0, packageAmount - amountPaid);
-              await addDoc(collection(db, 'rehab_fees'), {
-                patientId: tx.patientId,
-                patientName: tx.patientName || '',
+              await addDoc(collection(db, 'jobcenter_fees'), {
+                seekerId: tx.seekerId,
+                seekerName: tx.seekerName || '',
                 month,
                 packageAmount,
                 amountPaid,
@@ -206,7 +206,7 @@ export default function ApprovalsPage() {
               const newPaid = (current.amountPaid || 0) + tx.amount;
               const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
               const existingPayments = current.payments || [];
-              await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+              await updateDoc(doc(db, 'jobcenter_fees', feeDoc.id), {
                 amountPaid: newPaid,
                 amountRemaining: newRemaining,
                 lastPaymentDate: serverTimestamp(),
@@ -223,17 +223,17 @@ export default function ApprovalsPage() {
 
           if (tx.category === 'canteen_deposit') {
             const canteenQ = query(
-              collection(db, 'rehab_canteen'),
-              where('patientId', '==', tx.patientId),
+              collection(db, 'jobcenter_canteen'),
+              where('seekerId', '==', tx.seekerId),
               where('month', '==', month)
             );
             const canteenSnap = await getDocs(canteenQ);
 
             if (canteenSnap.empty) {
               // Auto-create canteen record
-              await addDoc(collection(db, 'rehab_canteen'), {
-                patientId: tx.patientId,
-                patientName: tx.patientName || '',
+              await addDoc(collection(db, 'jobcenter_canteen'), {
+                seekerId: tx.seekerId,
+                seekerName: tx.seekerName || '',
                 month,
                 totalDeposited: tx.amount,
                 totalSpent: 0,
@@ -246,7 +246,7 @@ export default function ApprovalsPage() {
               const current = canteenDoc.data();
               const newDeposited = (current.totalDeposited || 0) + tx.amount;
               const newBalance = newDeposited - (current.totalSpent || 0);
-              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+              await updateDoc(doc(db, 'jobcenter_canteen', canteenDoc.id), {
                 totalDeposited: newDeposited,
                 balance: newBalance,
                 lastDepositDate: serverTimestamp(),
@@ -256,8 +256,8 @@ export default function ApprovalsPage() {
 
           if (tx.category === 'canteen_expense') {
             const canteenQ = query(
-              collection(db, 'rehab_canteen'),
-              where('patientId', '==', tx.patientId),
+              collection(db, 'jobcenter_canteen'),
+              where('seekerId', '==', tx.seekerId),
               where('month', '==', month)
             );
             const canteenSnap = await getDocs(canteenQ);
@@ -266,7 +266,7 @@ export default function ApprovalsPage() {
               const current = canteenDoc.data();
               const newSpent = (current.totalSpent || 0) + tx.amount;
               const newBalance = (current.totalDeposited || 0) - newSpent;
-              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+              await updateDoc(doc(db, 'jobcenter_canteen', canteenDoc.id), {
                 totalSpent: newSpent,
                 balance: Math.max(0, newBalance),
               });
@@ -276,13 +276,13 @@ export default function ApprovalsPage() {
           if (tx.category === 'staff_salary' && tx.staffId) {
             // Mark salary as paid for this staff member this month
             const salaryQ = query(
-              collection(db, 'rehab_salary_records'),
+              collection(db, 'jobcenter_salary_records'),
               where('staffId', '==', tx.staffId),
               where('month', '==', month)
             );
             const salarySnap = await getDocs(salaryQ);
             if (salarySnap.empty) {
-              await addDoc(collection(db, 'rehab_salary_records'), {
+              await addDoc(collection(db, 'jobcenter_salary_records'), {
                 staffId: tx.staffId,
                 staffName: tx.staffName || '',
                 month,
@@ -292,7 +292,7 @@ export default function ApprovalsPage() {
                 approvedBy: session?.uid,
               });
             } else {
-              await updateDoc(doc(db, 'rehab_salary_records', salarySnap.docs[0].id), {
+              await updateDoc(doc(db, 'jobcenter_salary_records', salarySnap.docs[0].id), {
                 amount: (salarySnap.docs[0].data().amount || 0) + tx.amount,
                 lastPaidAt: serverTimestamp(),
               });
@@ -323,7 +323,7 @@ export default function ApprovalsPage() {
     
     try {
       setActionLoading(txId);
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+      await updateDoc(doc(db, 'jobcenter_transactions', txId), {
         status: 'rejected',
         rejectedBy: session.uid,
         rejectedAt: Timestamp.now(),
@@ -343,7 +343,7 @@ export default function ApprovalsPage() {
 
   const formatCategory = (cat: string) => {
     const map: Record<string, string> = {
-      patient_fee: 'Patient Monthly Fee',
+      seeker_fee: 'Seeker Monthly Fee',
       canteen_deposit: 'Canteen Deposit',
       donation: 'Donation',
       government_grant: 'Government Grant',
@@ -361,7 +361,7 @@ export default function ApprovalsPage() {
       equipment: 'Equipment Purchase',
       security: 'Security Services',
       cleaning: 'Cleaning Supplies',
-      patient_welfare: 'Patient Welfare',
+      seeker_welfare: 'Seeker Welfare',
       office_supplies: 'Office Supplies',
       other_expense: 'Other Expense',
     };
@@ -371,7 +371,7 @@ export default function ApprovalsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
       </div>
     );
   }
@@ -406,9 +406,9 @@ export default function ApprovalsPage() {
             </div>
             <div className="text-2xl font-black text-gray-900 mb-1 tracking-tight">
               {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>
-              {tx.patientName && (
-                <span className="ml-3 text-sm font-black text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg uppercase tracking-widest">
-                  Patient: {tx.patientName}
+              {tx.seekerName && (
+                <span className="ml-3 text-sm font-black text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg uppercase tracking-widest">
+                  Seeker: {tx.seekerName}
                 </span>
               )}
             </div>
@@ -470,7 +470,7 @@ export default function ApprovalsPage() {
                 <button
                   onClick={() => handleApprove(tx.id)}
                   disabled={actionLoading === tx.id}
-                  className="flex-1 flex items-center justify-center gap-2 bg-teal-500 text-white px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-teal-600 transition-all shadow-lg shadow-teal-200 active:scale-95 disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 bg-orange-600 text-white px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 active:scale-95 disabled:opacity-50"
                 >
                   {actionLoading === tx.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle size={16} />} 
                   Approve
@@ -511,7 +511,7 @@ export default function ApprovalsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <CheckCircle className="w-6 h-6 text-teal-600" />
+              <CheckCircle className="w-6 h-6 text-orange-600" />
               Transaction Approvals
             </h1>
             <p className="text-sm text-gray-500 mt-1">
@@ -562,3 +562,4 @@ export default function ApprovalsPage() {
     </div>
   );
 }
+

@@ -11,7 +11,7 @@ export async function logJobCenterAudit(
   details: Record<string, any>
 ): Promise<void> {
   try {
-    await addDoc(collection(db, 'job-center_audit'), {
+    await addDoc(collection(db, 'jobcenter_audit'), {
       action,
       performedBy,
       details,

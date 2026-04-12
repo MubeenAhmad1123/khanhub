@@ -80,7 +80,7 @@ export default function StaffSelfPage() {
 
       // Contributions (last 7 days)
       const contribSnap = await getDocs(
-        query(collection(db, 'rehab_contributions'), where('staffId', '==', staffId))
+        query(collection(db, 'welfare_contributions'), where('staffId', '==', staffId))
       );
       setContributions(
         contribSnap.docs
@@ -137,7 +137,7 @@ export default function StaffSelfPage() {
   const handleCheckIn = async () => {
     console.log('Check-in clicked, staffProfile:', staffProfile?.id, 'today:', today);
     if (!staffProfile) {
-      showMsg('error', 'Staff profile not found. Contact admin.');
+      showMsg('error', 'Staff profile not found. Contact superadmin.');
       return;
     }
 
@@ -210,7 +210,7 @@ export default function StaffSelfPage() {
     if (!contributionText.trim() || !staffProfile) return;
     setContribLoading(true);
     try {
-      await addDoc(collection(db, 'rehab_contributions'), {
+      await addDoc(collection(db, 'welfare_contributions'), {
         staffId: staffProfile.id,
         date: today,
         content: contributionText.trim(),

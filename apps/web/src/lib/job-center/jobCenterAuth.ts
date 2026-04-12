@@ -12,7 +12,7 @@ export function buildEmail(customId: string): string {
 export async function loginJobCenter(customId: string, password: string): Promise<JobCenterUser> {
   const email = buildEmail(customId);
   const cred = await signInWithEmailAndPassword(auth, email, password);
-  const snap = await getDoc(doc(db, 'job-center_users', cred.user.uid));
+  const snap = await getDoc(doc(db, 'jobcenter_users', cred.user.uid));
   if (!snap.exists()) throw new Error('User profile not found');
   const data = snap.data();
   if (!data.isActive) throw new Error('Account is inactive');
@@ -24,7 +24,7 @@ export async function logoutJobCenter(): Promise<void> {
 }
 
 export async function getJobCenterUser(uid: string): Promise<JobCenterUser | null> {
-  const snap = await getDoc(doc(db, 'job-center_users', uid));
+  const snap = await getDoc(doc(db, 'jobcenter_users', uid));
   if (!snap.exists()) return null;
   return { uid, ...snap.data() } as JobCenterUser;
 }

@@ -17,23 +17,23 @@ import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY } from '@/lib/utils';
 
-import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
-import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
-import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
-import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
-import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
+import AdmissionTab from '@/components/job-center/seeker-profile/AdmissionTab';
+import DailySheetTab from '@/components/job-center/seeker-profile/DailySheetTab';
+import ProgressTab from '@/components/job-center/seeker-profile/ProgressTab';
+import TherapyTab from '@/components/job-center/seeker-profile/TherapyTab';
+import MedicationTab from '@/components/job-center/seeker-profile/MedicationTab';
 
-export default function PatientDetailPage() {
+export default function SeekerDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const patientId = params.id as string;
+  const seekerId = params.id as string;
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const isAdmin = session?.role === 'admin';
   
   // Data
-  const [patient, setPatient] = useState<any>(null);
+  const [seeker, setSeeker] = useState<any>(null);
   const [feeRecord, setFeeRecord] = useState<any>(null);
   const [canteenRecord, setCanteenRecord] = useState<any>(null);
   const [videos, setVideos] = useState<any[]>([]);
@@ -104,14 +104,14 @@ export default function PatientDetailPage() {
   const [canteenDate, setCanteenDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('jobcenter_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin' && parsed.role !== 'staff') {
+      router.push('/departments/job-center/login');
       return;
     }
     setSession(parsed);
@@ -122,14 +122,14 @@ export default function PatientDetailPage() {
     try {
       setLoading(true);
 
-      // 1. Patient Profile
-      const pDoc = await getDoc(doc(db, 'rehab_patients', patientId));
-      if (!pDoc.exists()) {
-        toast.error('Patient not found');
-        router.push('/departments/rehab/dashboard/admin/patients');
+      // 1. Seeker Profile
+      const sDoc = await getDoc(doc(db, 'jobcenter_seekers', seekerId));
+      if (!sDoc.exists()) {
+        toast.error('Seeker not found');
+        router.push('/departments/job-center/dashboard/admin/seekers');
         return;
       }
-      const data = pDoc.data();
+      const data = sDoc.data();
       
       // Calculate Remaining Days
       let remainingDays = 0;
@@ -137,12 +137,11 @@ export default function PatientDetailPage() {
       if (data.admissionDate) {
         const admission = data.admissionDate.toDate();
         const diffTimeMs = new Date().getTime() - admission.getTime();
-        // Days admitted should count from admission date until "today"
         daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
         remainingDays = Math.max(0, 100 - daysAdmitted);
       }
 
-      setPatient({ id: pDoc.id, ...data, remainingDays, daysAdmitted });
+      setSeeker({ id: sDoc.id, ...data, remainingDays, daysAdmitted });
       setEditForm({
         name: data.name || '',
         diagnosis: data.diagnosis || '',
@@ -154,10 +153,10 @@ export default function PatientDetailPage() {
       const now = new Date();
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      // 2. Fees (Initial current month)
+      // 2. Fees
       const feesQ = query(
-        collection(db, 'rehab_fees'),
-        where('patientId', '==', patientId),
+        collection(db, 'jobcenter_fees'),
+        where('seekerId', '==', seekerId),
         where('month', '==', monthStr)
       );
       const feeSnap = await getDocs(feesQ);
@@ -167,10 +166,10 @@ export default function PatientDetailPage() {
         setFeeRecord(null);
       }
 
-      // 3. Canteen (Initial current month)
+      // 3. Canteen
       const canteenQ = query(
-        collection(db, 'rehab_canteen'),
-        where('patientId', '==', patientId),
+        collection(db, 'jobcenter_canteen'),
+        where('seekerId', '==', seekerId),
         where('month', '==', monthStr)
       );
       const canteenSnap = await getDocs(canteenQ);
@@ -182,8 +181,8 @@ export default function PatientDetailPage() {
 
       // 4. Videos
       const videosQ = query(
-        collection(db, 'rehab_videos'),
-        where('patientId', '==', patientId),
+        collection(db, 'jobcenter_videos'),
+        where('seekerId', '==', seekerId),
         orderBy('createdAt', 'desc')
       );
       const vidSnap = await getDocs(videosQ);
@@ -191,8 +190,8 @@ export default function PatientDetailPage() {
 
       // 5. Visits
       const visitsQ = query(
-        collection(db, 'rehab_visits'),
-        where('patientId', '==', patientId),
+        collection(db, 'jobcenter_visits'),
+        where('seekerId', '==', seekerId),
         orderBy('date', 'desc')
       );
       const visitSnap = await getDocs(visitsQ);
@@ -200,24 +199,24 @@ export default function PatientDetailPage() {
 
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast.error('Failed to load patient data');
+      toast.error('Failed to load seeker data');
     } finally {
       setLoading(false);
     }
-  }, [patientId, router]);
+  }, [seekerId, router]);
 
   useEffect(() => {
-    if (!session || !patientId) return;
+    if (!session || !seekerId) return;
     fetchData();
-  }, [session, patientId, fetchData]);
+  }, [session, seekerId, fetchData]);
 
   useEffect(() => {
-    if (!patientId || !session) return;
+    if (!seekerId || !session) return;
     fetchFeeRecord();
   }, [feeMonth]);
 
   useEffect(() => {
-    if (!patientId || !session) return;
+    if (!seekerId || !session) return;
     fetchCanteenRecord();
   }, [canteenMonth]);
 
@@ -225,8 +224,8 @@ export default function PatientDetailPage() {
     try {
       const snap = await getDocs(
         query(
-          collection(db, 'rehab_fees'),
-          where('patientId', '==', patientId),
+          collection(db, 'jobcenter_fees'),
+          where('seekerId', '==', seekerId),
           where('month', '==', feeMonth)
         )
       );
@@ -265,24 +264,24 @@ export default function PatientDetailPage() {
         return;
       }
 
-      const setupSnap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+      const setupSnap = await getDoc(doc(db, 'jobcenter_meta', 'setup'));
       const setupData = setupSnap.data() as any;
       const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
 
       if (!cashierCustomId) {
-        toast.error('Cashier is not configured (missing rehab_meta/setup.cashierCustomId).');
+        toast.error('Cashier is not configured (missing jobcenter_meta/setup.cashierCustomId).');
         return;
       }
 
-      await addDoc(collection(db, 'rehab_transactions'), {
+      await addDoc(collection(db, 'jobcenter_transactions'), {
         type: 'income',
         amount,
         category: 'fee',
         categoryName: 'Admission / Fees',
-        departmentCode: 'rehab',
-        departmentName: 'Rehab Center',
-        patientId: patientId,
-        patientName: patient?.name || '',
+        departmentCode: 'job-center',
+        departmentName: 'Job Center',
+        seekerId: seekerId,
+        seekerName: seeker?.name || '',
         status: 'pending_cashier',
         cashierId: cashierCustomId,
         proofRequired: true,
@@ -290,7 +289,7 @@ export default function PatientDetailPage() {
         date: Timestamp.fromDate(new Date(paymentDate)),
         transactionDate: Timestamp.fromDate(new Date(paymentDate)),
         createdBy: session.uid,
-        createdByName: session?.displayName || session?.name || 'Rehab Admin',
+        createdByName: session?.displayName || session?.name || 'Job Center Admin',
         createdAt: Timestamp.now()
       });
       setShowAddFeeModal(false);
@@ -315,24 +314,24 @@ export default function PatientDetailPage() {
         return;
       }
 
-      const setupSnap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+      const setupSnap = await getDoc(doc(db, 'jobcenter_meta', 'setup'));
       const setupData = setupSnap.data() as any;
       const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
 
       if (!cashierCustomId) {
-        toast.error('Cashier is not configured (missing rehab_meta/setup.cashierCustomId).');
+        toast.error('Cashier is not configured (missing jobcenter_meta/setup.cashierCustomId).');
         return;
       }
 
-      await addDoc(collection(db, 'rehab_transactions'), {
+      await addDoc(collection(db, 'jobcenter_transactions'), {
         type: 'income',
         amount,
         category: 'fee',
         categoryName: 'Admission / Fees',
-        departmentCode: 'rehab',
-        departmentName: 'Rehab Center',
-        patientId: patientId,
-        patientName: patient?.name || '',
+        departmentCode: 'job-center',
+        departmentName: 'Job Center',
+        seekerId: seekerId,
+        seekerName: seeker?.name || '',
         status: 'pending_cashier',
         cashierId: cashierCustomId,
         proofRequired: true,
@@ -340,14 +339,14 @@ export default function PatientDetailPage() {
         date: Timestamp.fromDate(new Date(payDate)),
         transactionDate: Timestamp.fromDate(new Date(payDate)),
         createdBy: session.uid,
-        createdByName: session?.displayName || session?.name || 'Rehab Admin',
+        createdByName: session?.displayName || session?.name || 'Job Center Admin',
         createdAt: Timestamp.now()
       });
       setShowAddPaymentModal(false);
       setPayAmt('');
       setPayNote('');
       toast.success('Payment request sent to cashier for approval ✓');
-      // Important: do not update rehab_fees here; it syncs only after superadmin approval.
+      // Important: do not update jobcenter_fees here; it syncs only after superadmin approval.
     } catch (error) {
       console.error("Add Payment error", error);
       toast.error('Failed to record payment');
@@ -358,8 +357,8 @@ export default function PatientDetailPage() {
     try {
       const snap = await getDocs(
         query(
-          collection(db, 'rehab_canteen'),
-          where('patientId', '==', patientId),
+          collection(db, 'jobcenter_canteen'),
+          where('seekerId', '==', seekerId),
           where('month', '==', canteenMonth)
         )
       );
@@ -396,8 +395,8 @@ export default function PatientDetailPage() {
       };
 
       if (!canteenRecord) {
-        await addDoc(collection(db, 'rehab_canteen'), {
-          patientId: patientId,
+        await addDoc(collection(db, 'jobcenter_canteen'), {
+          seekerId: seekerId,
           month: canteenMonth,
           totalDeposited: canteenModal === 'deposit' ? Number(canteenAmt) : 0,
           totalSpent: canteenModal === 'expense' ? Number(canteenAmt) : 0,
@@ -414,7 +413,7 @@ export default function PatientDetailPage() {
         const newSpent = Number(canteenRecord.totalSpent) + 
           (canteenModal === 'expense' ? Number(canteenAmt) : 0);
         
-        await updateDoc(doc(db, 'rehab_canteen', canteenRecord.id), {
+        await updateDoc(doc(db, 'jobcenter_canteen', canteenRecord.id), {
           totalDeposited: newDeposited,
           totalSpent: newSpent,
           balance: newDeposited - newSpent,
@@ -444,7 +443,7 @@ export default function PatientDetailPage() {
       if (photoFile) {
         setPhotoUploading(true);
         try {
-          const url = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
+          const url = await uploadToCloudinary(photoFile, 'khanhub/job-center/seekers');
           photoUrl = url;
         } catch (err) {
           console.error("Photo upload failed", err);
@@ -453,14 +452,14 @@ export default function PatientDetailPage() {
         setPhotoUploading(false);
       }
 
-      await updateDoc(doc(db, 'rehab_patients', patientId), {
+      await updateDoc(doc(db, 'jobcenter_seekers', seekerId), {
         name: editForm.name,
         diagnosis: editForm.diagnosis,
         packageAmount: Number(editForm.packageAmount),
         photoUrl: photoUrl || null
       });
 
-      setPatient((prev: any) => ({ 
+      setSeeker((prev: any) => ({ 
         ...prev, 
         name: editForm.name,
         diagnosis: editForm.diagnosis,
@@ -480,12 +479,12 @@ export default function PatientDetailPage() {
   };
 
   const handleDeactivate = async () => {
-    if (!window.confirm("Are you sure you want to deactivate this patient?")) return;
+    if (!window.confirm("Are you sure you want to deactivate this seeker?")) return;
     try {
       setDeactivating(true);
-      await updateDoc(doc(db, 'rehab_patients', patientId), { isActive: false });
-      toast.success('Patient deactivated');
-      router.push('/departments/rehab/dashboard/admin/patients');
+      await updateDoc(doc(db, 'jobcenter_seekers', seekerId), { isActive: false });
+      toast.success('Seeker deactivated');
+      router.push('/departments/job-center/dashboard/admin/seekers');
     } catch (error) {
       console.error("Deactivate error", error);
       toast.error('Deactivation failed');
@@ -494,16 +493,16 @@ export default function PatientDetailPage() {
   };
 
   const handleDischarge = async () => {
-    if (!window.confirm("Are you sure you want to discharge this patient?")) return;
+    if (!window.confirm("Are you sure you want to discharge this seeker?")) return;
     try {
       setDeactivating(true);
-      await updateDoc(doc(db, 'rehab_patients', patientId), {
+      await updateDoc(doc(db, 'jobcenter_seekers', seekerId), {
         isActive: false,
         dischargeDate: Timestamp.now(),
         dischargeReason: null
       });
-      toast.success('Patient discharged');
-      router.push('/departments/rehab/dashboard/admin/patients');
+      toast.success('Seeker discharged');
+      router.push('/departments/job-center/dashboard/admin/seekers');
     } catch (error) {
       console.error("Discharge error", error);
       toast.error('Discharge failed');
@@ -520,10 +519,10 @@ export default function PatientDetailPage() {
 
     try {
       setIsUploading(true);
-      const secureUrl = await uploadToCloudinary(selectedFile, 'khanhub/rehab/patients');
+      const secureUrl = await uploadToCloudinary(selectedFile, 'khanhub/job-center/seekers');
       
-      await addDoc(collection(db, 'rehab_videos'), {
-        patientId: patientId,
+      await addDoc(collection(db, 'jobcenter_videos'), {
+        seekerId: seekerId,
         title: videoTitle,
         url: secureUrl,
         fileType: selectedFile.type,
@@ -536,7 +535,7 @@ export default function PatientDetailPage() {
       setVideoTitle('');
       setSelectedFile(null);
       // Refresh videos
-      const videosQ = query(collection(db, 'rehab_videos'), where('patientId', '==', patientId), orderBy('createdAt', 'desc'));
+      const videosQ = query(collection(db, 'jobcenter_videos'), where('seekerId', '==', seekerId), orderBy('createdAt', 'desc'));
       const vidSnap = await getDocs(videosQ);
       setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
       
@@ -551,7 +550,7 @@ export default function PatientDetailPage() {
   const handleDeleteVideo = async (videoId: string) => {
     if (!window.confirm("Delete this file?")) return;
     try {
-      await deleteDoc(doc(db, 'rehab_videos', videoId));
+      await deleteDoc(doc(db, 'jobcenter_videos', videoId));
       toast.success('Deleted');
       setVideos(prev => prev.filter(v => v.id !== videoId));
     } catch (error) {
@@ -570,7 +569,7 @@ export default function PatientDetailPage() {
     try {
       setIsSavingVisit(true);
       const visitData = {
-        patientId,
+        seekerId,
         visitorName: vName,
         relation: vRelation,
         phone: vPhone,
@@ -582,7 +581,7 @@ export default function PatientDetailPage() {
         createdAt: Timestamp.now()
       };
 
-      await addDoc(collection(db, 'rehab_visits'), visitData);
+      await addDoc(collection(db, 'jobcenter_visits'), visitData);
       
       toast.success('Visit logged ✓');
       setShowAddVisitModal(false);
@@ -596,7 +595,7 @@ export default function PatientDetailPage() {
       setVDate(new Date().toISOString().split('T')[0]);
 
       // Refresh visits
-      const visitsQ = query(collection(db, 'rehab_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitsQ = query(collection(db, 'jobcenter_visits'), where('seekerId', '==', seekerId), orderBy('date', 'desc'));
       const visitSnap = await getDocs(visitsQ);
       setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
 
@@ -632,7 +631,7 @@ export default function PatientDetailPage() {
     }
     try {
       setIsUpdatingVisit(true);
-      await updateDoc(doc(db, 'rehab_visits', editVisitModal.id), {
+      await updateDoc(doc(db, 'jobcenter_visits', editVisitModal.id), {
         visitorName: vName,
         relation: vRelation,
         phone: vPhone,
@@ -645,7 +644,7 @@ export default function PatientDetailPage() {
 
       toast.success('Visit updated ✓');
       setEditVisitModal(null);
-      const visitsQ = query(collection(db, 'rehab_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitsQ = query(collection(db, 'jobcenter_visits'), where('seekerId', '==', seekerId), orderBy('date', 'desc'));
       const visitSnap = await getDocs(visitsQ);
       setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
     } catch (error) {
@@ -659,12 +658,12 @@ export default function PatientDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
       </div>
     );
   }
 
-  if (!patient) return null;
+  if (!seeker) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 overflow-x-hidden w-full max-w-full">
@@ -672,45 +671,45 @@ export default function PatientDetailPage() {
         
         {/* Top Link */}
         <Link 
-          href="/departments/rehab/dashboard/admin/patients" 
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit"
+          href="/departments/job-center/dashboard/admin/seekers" 
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-orange-600 transition-colors w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Patients
+          Back to Seekers
         </Link>
         
         {/* Header Profile Summary */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full p-4 md:p-8 flex flex-col items-center gap-4 sm:gap-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 -z-0"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full opacity-50 -z-0"></div>
           
           <div className="relative z-10">
-            {patient.photoUrl ? (
-              <img src={patient.photoUrl} alt={patient.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
+            {seeker.photoUrl ? (
+              <img src={seeker.photoUrl} alt={seeker.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
             ) : (
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
-                {patient.name.charAt(0).toUpperCase()}
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
+                {seeker.name.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
           
           <div className="relative z-10 flex-1 text-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{patient.name}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{seeker.name}</h1>
             <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
               <span className="flex items-center justify-center gap-1">
                 <Calendar className="w-4 h-4" /> 
-                Admitted: {formatDateDMY(patient.admissionDate?.toDate?.() || patient.admissionDate)}
+                Admitted: {formatDateDMY(seeker.admissionDate?.toDate?.() || seeker.admissionDate)}
               </span>
-              <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
-                PKR {patient.packageAmount?.toLocaleString()} / m
+              <span className="flex items-center justify-center gap-1 text-orange-700 font-medium bg-orange-50 px-2 py-0.5 rounded-full">
+                PKR {seeker.packageAmount?.toLocaleString()} / m
               </span>
               <span className="flex items-center justify-center gap-1 text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full animate-pulse shadow-sm border border-orange-100">
-                ⏳ {patient.remainingDays} Days Left
+                ⏳ {seeker.remainingDays} Days Left
               </span>
             </div>
-            {patient.diagnosis && (
+            {seeker.diagnosis && (
               <p className="text-gray-600 max-w-2xl bg-gray-50 px-4 py-3 rounded-xl text-sm border border-gray-100">
-                <span className="font-bold text-gray-800">Diagnosis/Notes:</span><br/>
-                {patient.diagnosis}
+                <span className="font-bold text-gray-800">Objectives/Notes:</span><br/>
+                {seeker.diagnosis}
               </p>
             )}
           </div>
@@ -722,7 +721,7 @@ export default function PatientDetailPage() {
           <button
             onClick={() => setActiveTab('profile')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'profile' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'profile' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <User className="w-4 h-4" /> Overview
@@ -730,15 +729,15 @@ export default function PatientDetailPage() {
           <button
             onClick={() => setActiveTab('admission')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'admission' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'admission' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <ClipboardList className="w-4 h-4" /> Admission
+            <ClipboardList className="w-4 h-4" /> Seeker Log
           </button>
           <button
             onClick={() => setActiveTab('daily')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'daily' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'daily' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <Activity className="w-4 h-4" /> Daily Sheet
@@ -746,7 +745,7 @@ export default function PatientDetailPage() {
           <button
             onClick={() => setActiveTab('progress')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'progress' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'progress' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <TrendingUp className="w-4 h-4" /> Progress
@@ -754,23 +753,23 @@ export default function PatientDetailPage() {
           <button
             onClick={() => setActiveTab('therapy')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'therapy' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'therapy' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Brain className="w-4 h-4" /> Therapy
+            <Brain className="w-4 h-4" /> Job Training
           </button>
           <button
             onClick={() => setActiveTab('meds')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'meds' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'meds' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Pill className="w-4 h-4" /> Medication
+            <Pill className="w-4 h-4" /> Support
           </button>
           <button
             onClick={() => setActiveTab('fees')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'fees' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'fees' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <DollarSign className="w-4 h-4" /> Fees
@@ -778,7 +777,7 @@ export default function PatientDetailPage() {
           <button
             onClick={() => setActiveTab('canteen')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'canteen' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'canteen' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <ShoppingCart className="w-4 h-4" /> Canteen
@@ -786,7 +785,7 @@ export default function PatientDetailPage() {
           <button
             onClick={() => setActiveTab('videos')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'videos' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'videos' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <Video className="w-4 h-4" /> Videos ({videos.length})
@@ -794,7 +793,7 @@ export default function PatientDetailPage() {
           <button
             onClick={() => setActiveTab('visits')}
             className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'visits' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              activeTab === 'visits' ? 'border-orange-500 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <Users className="w-4 h-4" /> Family Visits
@@ -811,7 +810,7 @@ export default function PatientDetailPage() {
               <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                 <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
                 {!isEditing ? (
-                  <button onClick={() => setIsEditing(true)} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+                  <button onClick={() => setIsEditing(true)} className="text-orange-600 hover:bg-orange-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
                     <Edit3 className="w-4 h-4" /> Edit
                   </button>
                 ) : (
@@ -819,7 +818,7 @@ export default function PatientDetailPage() {
                     <button onClick={() => setIsEditing(false)} className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg text-sm font-medium transition-colors">
                       Cancel
                     </button>
-                    <button onClick={handleSaveEdit} disabled={savingEdit} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-colors shadow-sm">
+                    <button onClick={handleSaveEdit} disabled={savingEdit} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-colors shadow-sm">
                       {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
                     </button>
                   </div>
@@ -830,7 +829,7 @@ export default function PatientDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                    <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                    <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -839,7 +838,7 @@ export default function PatientDetailPage() {
                     <div className="flex items-center gap-4">
                       <div
                         onClick={() => photoInputRef.current?.click()}
-                        className="w-20 h-20 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 transition-all overflow-hidden flex-shrink-0"
+                        className="w-20 h-20 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all overflow-hidden flex-shrink-0"
                       >
                         {photoPreview ? (
                           <img 
@@ -874,7 +873,7 @@ export default function PatientDetailPage() {
                             ✓ New photo selected
                           </p>
                         ) : photoPreview ? (
-                          <p className="text-xs text-teal-600 font-medium">
+                          <p className="text-xs text-orange-600 font-medium">
                             Current photo
                           </p>
                         ) : (
@@ -900,8 +899,8 @@ export default function PatientDetailPage() {
                     </div>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis / Notes</label>
-                    <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Objectives / notes</label>
+                    <textarea value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})} rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none" />
                   </div>
                 </div>
               ) : (
@@ -909,44 +908,44 @@ export default function PatientDetailPage() {
                   <div className="bg-orange-50 border border-orange-100 w-full p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
                     <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Discharge Countdown</p>
                     <p className="text-4xl font-black text-orange-700">
-                      {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)}
+                      {(seeker.remainingDays || 0) > 0 ? seeker.remainingDays : (seeker.daysAdmitted || 0)}
                     </p>
                     <p className="text-xs font-bold text-orange-500 mt-1">
-                      {(patient.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in rehab center'}
+                      {(seeker.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in seeker\'s center'}
                     </p>
                     <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
                       <div 
                         className="bg-orange-500 h-full transition-all duration-1000" 
-                        style={{ width: `${Math.min(100, (100 - (patient.remainingDays || 0)))}%` }}
+                        style={{ width: `${Math.min(100, (100 - (seeker.remainingDays || 0)))}%` }}
                       ></div>
                     </div>
-                    {patient.isActive && (
+                    {seeker.isActive && (
                       <button
                         type="button"
                         onClick={handleDischarge}
                         disabled={deactivating}
                         className="mt-4 bg-white border border-orange-200 text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-60"
                       >
-                        {deactivating ? 'Discharging...' : 'Discharge Patient'}
+                        {deactivating ? 'Discharging...' : 'Discharge Seeker'}
                       </button>
                     )}
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Package</span>
                     <span className="font-black text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
-                      PKR {patient.packageAmount?.toLocaleString()}
+                      PKR {seeker.packageAmount?.toLocaleString()}
                     </span>
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
                     <span className="font-mono font-bold text-gray-900 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm border border-gray-100">
-                      {patient.assignedStaffId || 'None'}
+                      {seeker.assignedStaffId || 'None'}
                     </span>
                   </div>
                   <div className="sm:col-span-2 pt-2 w-full">
-                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Patient Doc ID</span>
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Seeker Doc ID</span>
                     <span className="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg inline-block border border-gray-100 w-full break-all">
-                      {patient.id}
+                      {seeker.id}
                     </span>
                   </div>
                 </div>
@@ -954,13 +953,13 @@ export default function PatientDetailPage() {
 
               <div className="pt-8 border-t border-red-50 w-full">
                 <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
-                <p className="text-sm text-gray-500 mb-4">Deactivating a patient hides them from the active list. Data remains intact.</p>
+                <p className="text-sm text-gray-500 mb-4">Deactivating a seeker hides them from the active list. Data remains intact.</p>
                 <button 
                   onClick={handleDeactivate} 
                   disabled={deactivating}
                   className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 w-full sm:w-auto"
                 >
-                  {deactivating ? 'Deactivating...' : 'Deactivate Patient'}
+                  {deactivating ? 'Deactivating...' : 'Deactivate Seeker'}
                 </button>
               </div>
             </div>
@@ -968,27 +967,27 @@ export default function PatientDetailPage() {
 
           {/* TAB: ADMISSION */}
           {activeTab === 'admission' && (
-            <AdmissionTab patient={patient} onUpdate={(updated) => setPatient({...patient, ...updated})} />
+            <AdmissionTab patient={seeker} onUpdate={(updated) => setSeeker({...seeker, ...updated})} />
           )}
 
           {/* TAB: DAILY SHEET */}
           {activeTab === 'daily' && (
-            <DailySheetTab patientId={patientId} session={session} />
+            <DailySheetTab patientId={seekerId} session={session} />
           )}
 
           {/* TAB: PROGRESS */}
           {activeTab === 'progress' && (
-            <ProgressTab patientId={patientId} session={session} />
+            <ProgressTab patientId={seekerId} session={session} />
           )}
 
           {/* TAB: THERAPY */}
           {activeTab === 'therapy' && (
-            <TherapyTab patientId={patientId} session={session} />
+            <TherapyTab patientId={seekerId} session={session} />
           )}
 
           {/* TAB: MEDICATION */}
           {activeTab === 'meds' && (
-            <MedicationTab patientId={patientId} session={session} />
+            <MedicationTab patientId={seekerId} session={session} />
           )}
 
           {/* TAB: FEES */}
@@ -1016,7 +1015,7 @@ export default function PatientDetailPage() {
                       setPayNote('');
                       setShowAddPaymentModal(true);
                     }}
-                    className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-teal-600 shadow-sm transition-all active:scale-95"
+                    className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-600 shadow-sm transition-all active:scale-95"
                   >
                     <Plus size={14} /> Add Payment
                   </button>
@@ -1030,17 +1029,17 @@ export default function PatientDetailPage() {
                   </div>
                   <h3 className="text-gray-900 font-bold mb-1">No fee record for this month</h3>
                   <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                    You can initialize a fee record manually with the patient's base package amount.
+                    You can initialize a fee record manually with the seeker's base package amount.
                   </p>
                   {!isAdmin && (
                   <button 
                     onClick={() => {
-                      setPackageAmt(patient.packageAmount?.toString() || '');
+                      setPackageAmt(seeker.packageAmount?.toString() || '');
                       setInitialPayment('');
                       setPaymentNote('');
                       setShowAddFeeModal(true);
                     }}
-                    className="inline-flex items-center gap-2 bg-teal-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-teal-600 transition shadow-lg shadow-teal-100"
+                    className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-orange-600 transition shadow-lg shadow-orange-100"
                   >
                     <Plus size={16} /> Initialize Fee Record
                   </button>
@@ -1065,7 +1064,7 @@ export default function PatientDetailPage() {
 
                   <div className="bg-gray-100 h-3 rounded-full overflow-hidden">
                     <div 
-                      className="bg-teal-500 h-full transition-all duration-700 ease-out"
+                      className="bg-orange-500 h-full transition-all duration-700 ease-out"
                       style={{ width: `${Math.min(100, Math.max(0, (feeRecord.amountPaid / feeRecord.packageAmount) * 100))}%` }}
                     />
                   </div>
@@ -1095,7 +1094,7 @@ export default function PatientDetailPage() {
                             return bT - aT;
                           })
                           .map((p: any) => (
-                          <div key={p.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-teal-100 transition-colors">
+                          <div key={p.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-orange-100 transition-colors">
                             <div className="flex-1">
                               <p className="font-black text-gray-900">
                                 PKR {Number(p.amount).toLocaleString('en-PK')}
@@ -1167,9 +1166,9 @@ export default function PatientDetailPage() {
               ) : (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   {/* Balance Card */}
-                  <div className="text-center p-8 bg-gradient-to-br from-teal-50 to-teal-100 rounded-[2rem] border border-teal-200/50 shadow-sm">
-                    <p className="text-[10px] font-black text-teal-500 uppercase tracking-widest mb-1">Available Balance</p>
-                    <p className={`text-5xl font-black ${canteenRecord.balance >= 0 ? 'text-teal-700' : 'text-red-600'}`}>
+                  <div className="text-center p-8 bg-gradient-to-br from-orange-50 to-orange-100 rounded-[2rem] border border-orange-200/50 shadow-sm">
+                    <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Available Balance</p>
+                    <p className={`text-5xl font-black ${canteenRecord.balance >= 0 ? 'text-orange-700' : 'text-red-600'}`}>
                       PKR {Number(canteenRecord.balance).toLocaleString('en-PK')}
                     </p>
                     <div className="flex justify-center gap-8 mt-6">
@@ -1177,7 +1176,7 @@ export default function PatientDetailPage() {
                         <p className="text-[10px] text-green-600 font-black uppercase tracking-widest">↑ Deposited</p>
                         <p className="text-sm font-black text-green-700">PKR {Number(canteenRecord.totalDeposited).toLocaleString('en-PK')}</p>
                       </div>
-                      <div className="w-px h-8 bg-teal-200/50"></div>
+                      <div className="w-px h-8 bg-orange-200/50"></div>
                       <div className="text-left">
                         <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">↓ Spent</p>
                         <p className="text-sm font-black text-red-600">PKR {Number(canteenRecord.totalSpent).toLocaleString('en-PK')}</p>
@@ -1233,12 +1232,12 @@ export default function PatientDetailPage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between mb-2 border-b border-gray-100 pb-4">
                 <div className="flex items-center gap-3">
-                  <Video className="w-6 h-6 text-teal-600" />
+                  <Video className="w-6 h-6 text-orange-600" />
                   <h2 className="text-xl font-bold text-gray-800">Files & Progress</h2>
                 </div>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   <Upload className="w-4 h-4" /> Upload
                 </button>
@@ -1257,7 +1256,7 @@ export default function PatientDetailPage() {
                     const isPdf = vid.fileType === 'application/pdf';
 
                     return (
-                      <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-teal-300 transition-colors shadow-sm relative">
+                      <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-orange-300 transition-colors shadow-sm relative">
                         {session?.role === 'superadmin' && (
                           <button
                             onClick={() => handleDeleteVideo(vid.id)}
@@ -1277,7 +1276,7 @@ export default function PatientDetailPage() {
                           )}
                           
                           <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
-                            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-teal-600 transform scale-90 group-hover:scale-100 transition-transform">
+                            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-orange-600 transform scale-90 group-hover:scale-100 transition-transform">
                               <Play className="w-5 h-5 ml-1" />
                             </div>
                           </a>
@@ -1309,14 +1308,14 @@ export default function PatientDetailPage() {
             <div className="space-y-6 animate-in fade-in duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
                     <Users size={20} />
                   </div>
                   <h2 className="text-xl font-black text-gray-900">Family Visit Log</h2>
                 </div>
                 <button
                   onClick={() => setShowAddVisitModal(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 w-full sm:w-auto"
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 w-full sm:w-auto"
                 >
                   <Plus size={16} /> Log New Visit
                 </button>
@@ -1330,7 +1329,7 @@ export default function PatientDetailPage() {
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {visits.map(visit => (
-                    <div key={visit.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 transition-all group relative overflow-hidden">
+                    <div key={visit.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-orange-900/5 hover:border-orange-100 transition-all group relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4">
                          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
                             <span>{formatDateDMY(visit.date?.toDate?.() ? visit.date.toDate() : visit.date)}</span>
@@ -1341,10 +1340,10 @@ export default function PatientDetailPage() {
                         <div className="space-y-1 pr-16">
                           <div className="flex items-center gap-2">
                              <h4 className="font-black text-gray-900 text-xl tracking-tight">{visit.visitorName}</h4>
-                             <span className="text-[10px] font-black bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{visit.relation}</span>
+                             <span className="text-[10px] font-black bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{visit.relation}</span>
                           </div>
                           <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
-                            <span className="flex items-center gap-1.5"><Phone size={14} className="text-teal-500" /> {visit.phone}</span>
+                            <span className="flex items-center gap-1.5"><Phone size={14} className="text-orange-500" /> {visit.phone}</span>
                             {visit.cnic && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {visit.cnic}</span>}
                           </div>
                         </div>
@@ -1362,7 +1361,7 @@ export default function PatientDetailPage() {
                               <button
                                 type="button"
                                 onClick={() => openEditVisit(visit)}
-                                className="text-[10px] font-black uppercase tracking-widest text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-2 rounded-xl transition"
+                                className="text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-2 rounded-xl transition"
                               >
                                 Edit
                               </button>
@@ -1386,7 +1385,7 @@ export default function PatientDetailPage() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Upload className="w-5 h-5 text-teal-600" />
+                <Upload className="w-5 h-5 text-orange-600" />
                 Upload File
               </h2>
               <button onClick={() => setIsUploadModalOpen(false)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-lg transition-colors">
@@ -1401,7 +1400,7 @@ export default function PatientDetailPage() {
                   type="text"
                   value={videoTitle}
                   onChange={e => setVideoTitle(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500 bg-gray-50 focus:bg-white"
                   placeholder="e.g. Weekly Progress Video"
                   required
                 />
@@ -1413,7 +1412,7 @@ export default function PatientDetailPage() {
                   type="file"
                   accept="video/*,image/*,.pdf"
                   onChange={e => setSelectedFile(e.target.files?.[0] || null)}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 outline-none"
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 outline-none"
                   required
                 />
                 <p className="text-xs text-gray-500 mt-2">Supported: Images, Videos, PDFs.</p>
@@ -1430,7 +1429,7 @@ export default function PatientDetailPage() {
                 <button
                   type="submit"
                   disabled={isUploading}
-                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors shadow-sm disabled:opacity-70 flex items-center justify-center gap-2"
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors shadow-sm disabled:opacity-70 flex items-center justify-center gap-2"
                 >
                   {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   {isUploading ? 'Uploading...' : 'Upload'}
@@ -1453,23 +1452,23 @@ export default function PatientDetailPage() {
             <form onSubmit={handleInitializeFee} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Package Amount (PKR) *</label>
-                <input required type="number" value={packageAmt} onChange={e => setPackageAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. 50000" />
+                <input required type="number" value={packageAmt} onChange={e => setPackageAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. 50000" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Initial Payment</label>
-                  <input type="number" value={initialPayment} onChange={e => setInitialPayment(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="0" />
+                  <input type="number" value={initialPayment} onChange={e => setInitialPayment(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Note (Optional)</label>
-                <input value={paymentNote} onChange={e => setPaymentNote(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Received by hand" />
+                <input value={paymentNote} onChange={e => setPaymentNote(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Received by hand" />
               </div>
-              <button type="submit" className="w-full bg-teal-500 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100">
+              <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-orange-100">
                 <Plus size={18} /> Create Fee Record
               </button>
             </form>
@@ -1491,18 +1490,18 @@ export default function PatientDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
-                  <input required type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
+                  <input required type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Amount" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment Date *</label>
-                  <input required type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input required type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Note (Optional)</label>
-                <input value={payNote} onChange={e => setPayNote(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Received via bank" />
+                <input value={payNote} onChange={e => setPayNote(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Received via bank" />
               </div>
-              <button type="submit" className="w-full bg-teal-500 hover:bg-teal-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100">
+              <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-orange-100">
                 <Plus size={18} /> Record Payment
               </button>
             </form>
@@ -1524,7 +1523,7 @@ export default function PatientDetailPage() {
             <form onSubmit={handleCanteenEntry} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Amount (PKR) *</label>
-                <input required type="number" value={canteenAmt} onChange={e => setCanteenAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Amount" />
+                <input required type="number" value={canteenAmt} onChange={e => setCanteenAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Amount" />
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Description *</label>
@@ -1532,13 +1531,13 @@ export default function PatientDetailPage() {
                   required 
                   value={canteenDesc} 
                   onChange={e => setCanteenDesc(e.target.value)} 
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" 
                   placeholder={canteenModal === 'deposit' ? 'e.g. Cash deposit by family' : 'e.g. Snacks and drinks'} 
                 />
               </div>
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Transaction Date *</label>
-                <input required type="date" value={canteenDate} onChange={e => setCanteenDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input required type="date" value={canteenDate} onChange={e => setCanteenDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
               </div>
               <button 
                 type="submit" 
@@ -1559,7 +1558,7 @@ export default function PatientDetailPage() {
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                <Users className="w-6 h-6 text-teal-600" /> Log Family Visit
+                <Users className="w-6 h-6 text-orange-600" /> Log Family Visit
               </h2>
               <button onClick={() => setShowAddVisitModal(false)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl">
                 <X className="w-5 h-5" />
@@ -1569,32 +1568,32 @@ export default function PatientDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
-                  <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Full Name" />
+                  <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Full Name" />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation *</label>
-                  <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Father" />
+                  <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Father" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
-                  <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="+92..." />
+                  <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="+92..." />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">CNIC (Optional)</label>
-                  <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
+                  <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
-                <textarea rows={2} value={vNotes} onChange={e => setVNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="What was discussed? items brought?"></textarea>
+                <textarea rows={2} value={vNotes} onChange={e => setVNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none" placeholder="What was discussed? items brought?"></textarea>
               </div>
-              <button type="submit" disabled={isSavingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">
+              <button type="submit" disabled={isSavingVisit} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-orange-100 disabled:opacity-70">
                 {isSavingVisit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
                 {isSavingVisit ? 'Saving...' : 'Log Visit'}
               </button>
@@ -1609,7 +1608,7 @@ export default function PatientDetailPage() {
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                <Users className="w-6 h-6 text-teal-600" /> Edit Visit
+                <Users className="w-6 h-6 text-orange-600" /> Edit Visit
               </h2>
               <button onClick={() => setEditVisitModal(null)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl">
                 <X className="w-5 h-5" />
@@ -1619,32 +1618,32 @@ export default function PatientDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visitor Name *</label>
-                  <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Full Name" />
+                  <input required value={vName} onChange={e => setVName(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Full Name" />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Relation *</label>
-                  <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Father" />
+                  <input required value={vRelation} onChange={e => setVRelation(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Father" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Phone *</label>
-                  <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="+92..." />
+                  <input required value={vPhone} onChange={e => setVPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="+92..." />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">CNIC (Optional)</label>
-                  <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
+                  <input value={vCnic} onChange={e => setVCnic(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="XXXXX-XXXXXXX-X" />
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                <input required type="date" value={vDate} onChange={e => setVDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Notes</label>
-                <textarea rows={2} value={vNotes} onChange={e => setVNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="What was discussed? items brought?"></textarea>
+                <textarea rows={2} value={vNotes} onChange={e => setVNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none" placeholder="What was discussed? items brought?"></textarea>
               </div>
-              <button type="submit" disabled={isUpdatingVisit} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70">
+              <button type="submit" disabled={isUpdatingVisit} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-orange-100 disabled:opacity-70">
                 {isUpdatingVisit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
                 {isUpdatingVisit ? 'Saving...' : 'Save Changes'}
               </button>

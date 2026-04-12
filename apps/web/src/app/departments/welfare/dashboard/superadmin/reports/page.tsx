@@ -113,7 +113,7 @@ export default function SuperAdminReportsPage() {
 
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
-      // === PATIENTS ===
+      // === CHILDREN ===
       const activeChildrenSnap = await getDocs(query(collection(db, 'welfare_children'), where('isActive', '==', true)));
       const totalActiveChildren = activeChildrenSnap.size;
 

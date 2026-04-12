@@ -18,7 +18,7 @@ export async function createSukoonUser(
   password: string, 
   role: SukoonRole, 
   displayName: string, 
-  patientId?: string
+  clientId?: string
 ): Promise<string> {
   // NOTE: This will sign the current user out and the new user in if called on the client.
   // In a real app, this should be a Server Action or Firebase Admin SDK call.
@@ -30,7 +30,7 @@ export async function createSukoonUser(
     name: displayName,
     role,
     displayName,
-    patientId,
+    clientId,
     createdAt: new Date(),
     isActive: true
   };

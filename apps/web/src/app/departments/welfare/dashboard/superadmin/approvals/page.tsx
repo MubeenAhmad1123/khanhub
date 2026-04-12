@@ -38,7 +38,7 @@ export default function ApprovalsPage() {
     setLoading(false);
   }, [router]);
 
-  // Realtime listener for pending transactions
+  // Get daily activities for a child for a given month
   useEffect(() => {
     if (!session) return;
 
@@ -157,7 +157,7 @@ export default function ApprovalsPage() {
         approvedAt: Timestamp.now()
       });
 
-      // ── SYNC TO PATIENT RECORDS AFTER APPROVAL ──
+      // ─── CHILD BASIC ───────────────────────────────────────────────────────────
       const allTransactions = [...pendingTransactions, ...historyTransactions];
       const tx = allTransactions.find((t: any) => t.id === txId);
       if (tx && tx.childId) {
@@ -276,13 +276,13 @@ export default function ApprovalsPage() {
           if (tx.category === 'staff_salary' && tx.staffId) {
             // Mark salary as paid for this staff member this month
             const salaryQ = query(
-              collection(db, 'rehab_salary_records'),
+              collection(db, 'welfare_salary_records'),
               where('staffId', '==', tx.staffId),
               where('month', '==', month)
             );
             const salarySnap = await getDocs(salaryQ);
             if (salarySnap.empty) {
-              await addDoc(collection(db, 'rehab_salary_records'), {
+              await addDoc(collection(db, 'welfare_salary_records'), {
                 staffId: tx.staffId,
                 staffName: tx.staffName || '',
                 month,
@@ -292,7 +292,7 @@ export default function ApprovalsPage() {
                 approvedBy: session?.uid,
               });
             } else {
-              await updateDoc(doc(db, 'rehab_salary_records', salarySnap.docs[0].id), {
+              await updateDoc(doc(db, 'welfare_salary_records', salarySnap.docs[0].id), {
                 amount: (salarySnap.docs[0].data().amount || 0) + tx.amount,
                 lastPaidAt: serverTimestamp(),
               });

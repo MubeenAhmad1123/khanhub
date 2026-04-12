@@ -30,14 +30,14 @@ export default function FinanceLogPage() {
   const [stats, setStats] = useState({ income: 0, expense: 0, net: 0 });
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('jobcenter_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/job-center/login');
       return;
     }
     setSession(parsed);
@@ -56,7 +56,7 @@ export default function FinanceLogPage() {
 
       // We constrain our query to date range to keep it simple and composite index minimal
       const q = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'jobcenter_transactions'),
         where('date', '>=', Timestamp.fromDate(from)),
         where('date', '<=', Timestamp.fromDate(to)),
         orderBy('date', 'desc')
@@ -112,7 +112,7 @@ export default function FinanceLogPage() {
 
   const formatCategory = (cat: string) => {
     const map: Record<string, string> = {
-      patient_fee: 'Patient Monthly Fee',
+      seeker_fee: 'seeker Monthly Fee',
       canteen_deposit: 'Canteen Deposit',
       donation: 'Donation',
       government_grant: 'Government Grant',
@@ -130,7 +130,7 @@ export default function FinanceLogPage() {
       equipment: 'Equipment Purchase',
       security: 'Security Services',
       cleaning: 'Cleaning Supplies',
-      patient_welfare: 'Patient Welfare',
+      seeker_welfare: 'seeker Welfare',
       office_supplies: 'Office Supplies',
       other_expense: 'Other Expense',
     };
@@ -146,10 +146,10 @@ export default function FinanceLogPage() {
   }
 
   const allCategories = [
-    'patient_fee', 'canteen_deposit', 'donation', 'government_grant', 'other_income',
+    'seeker_fee', 'canteen_deposit', 'donation', 'government_grant', 'other_income',
     'staff_salary', 'rent', 'electricity', 'gas', 'water', 'medicine', 'food',
     'canteen_expense', 'maintenance', 'transport', 'equipment', 'security',
-    'cleaning', 'patient_welfare', 'office_supplies', 'other_expense'
+    'cleaning', 'seeker_welfare', 'office_supplies', 'other_expense'
   ];
 
   return (
@@ -349,3 +349,4 @@ export default function FinanceLogPage() {
     </div>
   );
 }
+

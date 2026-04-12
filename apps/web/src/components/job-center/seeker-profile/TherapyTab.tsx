@@ -84,7 +84,7 @@ export default function TherapyTab({ seekerId, session }: { seekerId: string, se
   };
 
   if (loading) {
-    return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>;
+    return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-orange-600" /></div>;
   }
 
   return (
@@ -93,7 +93,7 @@ export default function TherapyTab({ seekerId, session }: { seekerId: string, se
         <h2 className="text-xl font-black text-gray-900">Individual Therapy Sessions</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
+          className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 transition-all"
         >
           <Plus size={16} /> Add Session
         </button>
@@ -110,12 +110,12 @@ export default function TherapyTab({ seekerId, session }: { seekerId: string, se
             <div key={s.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-md transition-all">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="bg-teal-50 text-teal-700 font-black text-lg w-12 h-12 rounded-xl flex items-center justify-center border border-teal-100 shadow-inner">
+                  <div className="bg-orange-50 text-orange-700 font-black text-lg w-12 h-12 rounded-xl flex items-center justify-center border border-orange-100 shadow-inner">
                     #{s.sessionNumber}
                   </div>
                   <div>
                     <div className="flex items-center gap-2 text-gray-500 text-sm font-bold mb-1">
-                      <Calendar size={14} className="text-teal-500" />
+                      <Calendar size={14} className="text-orange-500" />
                       {s.date}
                     </div>
                     <div className="flex items-center gap-1">
@@ -152,11 +152,11 @@ export default function TherapyTab({ seekerId, session }: { seekerId: string, se
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Date *</label>
-                  <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
                 </div>
                 <div>
                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Progress Rating</label>
-                   <select value={progressRating} onChange={e => setProgressRating(Number(e.target.value) as 1|2|3|4)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none appearance-none">
+                   <select value={progressRating} onChange={e => setProgressRating(Number(e.target.value) as 1|2|3|4)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none appearance-none">
                      <option value={1}>★ Static (1/4)</option>
                      <option value={2}>★★ Slow Progress (2/4)</option>
                      <option value={3}>★★★ Good Progress (3/4)</option>
@@ -167,15 +167,15 @@ export default function TherapyTab({ seekerId, session }: { seekerId: string, se
               
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Seeker Mood (Optional)</label>
-                <input value={seekerMood} onChange={e => setSeekerMood(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Anxious, Calm, Defensive" />
+                <input value={seekerMood} onChange={e => setSeekerMood(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="e.g. Anxious, Calm, Defensive" />
               </div>
 
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Session Notes *</label>
-                <textarea required rows={4} value={sessionNotes} onChange={e => setSessionNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="Detailed notes about the therapy session..."></textarea>
+                <textarea required rows={4} value={sessionNotes} onChange={e => setSessionNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none" placeholder="Detailed notes about the therapy session..."></textarea>
               </div>
 
-              <button type="submit" disabled={saving} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70 mt-4">
+              <button type="submit" disabled={saving} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-orange-100 disabled:opacity-70 mt-4">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus size={18} />}
                 {saving ? 'Saving...' : 'Save Session'}
               </button>

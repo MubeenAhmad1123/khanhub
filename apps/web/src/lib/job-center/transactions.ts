@@ -14,7 +14,7 @@ import { db } from '@/lib/firebase';
 import type { Transaction } from '@/types/job-center';
 
 export async function createTransaction(data: Omit<Transaction, 'id' | 'status' | 'approvedBy' | 'approvedAt'>): Promise<string> {
-  const res = await addDoc(collection(db, 'job-center_transactions'), {
+  const res = await addDoc(collection(db, 'jobcenter_transactions'), {
     ...data,
     date: data.date instanceof Date ? Timestamp.fromDate(data.date) : data.date,
     status: 'pending'
@@ -26,7 +26,7 @@ export async function getTodayTransactions(cashierId: string): Promise<Transacti
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const q = query(
-    collection(db, 'job-center_transactions'), 
+    collection(db, 'jobcenter_transactions'), 
     where('cashierId', '==', cashierId), 
     where('date', '>=', Timestamp.fromDate(today)),
     orderBy('date', 'desc')
@@ -44,7 +44,7 @@ export async function getTodayTransactions(cashierId: string): Promise<Transacti
 
 export async function getPendingTransactions(): Promise<Transaction[]> {
   const q = query(
-    collection(db, 'job-center_transactions'), 
+    collection(db, 'jobcenter_transactions'), 
     where('status', '==', 'pending'),
     orderBy('date', 'desc')
   );
@@ -60,7 +60,7 @@ export async function getPendingTransactions(): Promise<Transaction[]> {
 }
 
 export async function approveTransaction(id: string, superAdminId: string): Promise<void> {
-  await updateDoc(doc(db, 'job-center_transactions', id), {
+  await updateDoc(doc(db, 'jobcenter_transactions', id), {
     status: 'approved',
     approvedBy: superAdminId,
     approvedAt: Timestamp.now()
@@ -68,7 +68,7 @@ export async function approveTransaction(id: string, superAdminId: string): Prom
 }
 
 export async function rejectTransaction(id: string, superAdminId: string): Promise<void> {
-  await updateDoc(doc(db, 'job-center_transactions', id), {
+  await updateDoc(doc(db, 'jobcenter_transactions', id), {
     status: 'rejected',
     approvedBy: superAdminId,
     approvedAt: Timestamp.now()
@@ -77,7 +77,7 @@ export async function rejectTransaction(id: string, superAdminId: string): Promi
 
 export async function getTransactionsByDateRange(start: Date, end: Date): Promise<Transaction[]> {
   const q = query(
-    collection(db, 'job-center_transactions'), 
+    collection(db, 'jobcenter_transactions'), 
     where('date', '>=', Timestamp.fromDate(start)),
     where('date', '<=', Timestamp.fromDate(end)),
     orderBy('date', 'desc')
@@ -95,7 +95,7 @@ export async function getTransactionsByDateRange(start: Date, end: Date): Promis
 
 export async function getRecentTransactions(limitCount: number = 10): Promise<Transaction[]> {
     const q = query(
-      collection(db, 'job-center_transactions'), 
+      collection(db, 'jobcenter_transactions'), 
       orderBy('date', 'desc'),
       limit(limitCount)
     );

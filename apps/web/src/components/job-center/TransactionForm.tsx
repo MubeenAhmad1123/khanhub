@@ -58,7 +58,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
         <button
           type="button"
           onClick={() => setFormData({ ...formData, type: 'income', category: 'seeker_fee' })}
-          className={`flex-1 py-3 rounded-xl font-black transition-all ${formData.type === 'income' ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/20' : 'text-gray-500 hover:bg-gray-100'}`}
+          className={`flex-1 py-3 rounded-xl font-black transition-all ${formData.type === 'income' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/20' : 'text-gray-500 hover:bg-gray-100'}`}
         >
           Income
         </button>
@@ -75,7 +75,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
         <div className="space-y-2">
           <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Category</label>
           <select
-            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-teal-500 outline-none appearance-none"
+            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
           >
@@ -88,7 +88,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
           <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Date</label>
           <input
             type="date"
-            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-teal-500 outline-none"
+            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-orange-500 outline-none"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
           />
@@ -102,7 +102,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
             type="number"
             required
             placeholder="0.00"
-            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-3xl font-black text-gray-900 placeholder:text-gray-200 focus:ring-2 focus:ring-teal-500 outline-none"
+            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-3xl font-black text-gray-900 placeholder:text-gray-200 focus:ring-2 focus:ring-orange-500 outline-none"
             value={formData.amount}
             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
           />
@@ -117,7 +117,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
             type="text"
             required
             placeholder="e.g. JOBCENTER-058"
-            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-teal-500 outline-none"
+            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-orange-500 outline-none"
             value={formData.seekerId}
             onChange={(e) => setFormData({ ...formData, seekerId: e.target.value })}
           />
@@ -130,7 +130,7 @@ export default function TransactionForm({ cashierId, onSuccess }: { cashierId: s
           required
           rows={3}
           placeholder="Provide more details..."
-          className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-teal-500 outline-none resize-none"
+          className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-gray-700 font-bold focus:ring-2 focus:ring-orange-500 outline-none resize-none"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
         />

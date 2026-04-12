@@ -1,4 +1,4 @@
-// src/app/departments/rehab/dashboard/profile/page.tsx
+// src/app/departments/job-center/dashboard/profile/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,7 +14,7 @@ import {
   Shirt, Award, Plus, Trash2, Clock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY, toDate } from '@/lib/utils';
+import { formatDateDMY } from '@/lib/utils';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function ProfilePage() {
   // Profile Data
   const [profile, setProfile] = useState<any>(null);
   const [staffDoc, setStaffDoc] = useState<any>(null);
-  const [patientDoc, setPatientDoc] = useState<any>(null);
+  const [seekerDoc, setseekerDoc] = useState<any>(null);
   
   // Tabs for Admin/Staff
   const [activeTab, setActiveTab] = useState<'attendance'|'duties'|'dress'|'contributions'>('attendance');
@@ -43,7 +43,7 @@ export default function ProfilePage() {
 
   const fetchMetrics = useCallback(async (sId: string, dept: string) => {
     try {
-      const prefix = dept === 'hq' ? 'hq' : 'rehab';
+      const prefix = dept === 'hq' ? 'hq' : dept.replace(/-/g, '');
       
       const [attSnap, dutySnap, dressSnap, contribSnap, pointsSnap] = await Promise.all([
         getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))),
@@ -53,7 +53,7 @@ export default function ProfilePage() {
         getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', sId), limit(1)))
       ]);
 
-      // Client-side sorting to avoid composite index requirement
+      // Client-side sorting
       const sortByDate = (docs: any[]) => [...docs].sort((a, b) => {
         const dateA = a.date?.seconds || 0;
         const dateB = b.date?.seconds || 0;
@@ -74,8 +74,8 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('jobcenter_session');
+    if (!sessionData) { router.push('/departments/job-center/login'); return; }
     const parsed = JSON.parse(sessionData);
     setSession(parsed);
 
@@ -83,10 +83,10 @@ export default function ProfilePage() {
       try {
         setLoading(true);
         // 1. User Doc
-        const userSnap = await getDoc(doc(db, 'rehab_users', parsed.uid));
+        const userSnap = await getDoc(doc(db, 'jobcenter_users', parsed.uid));
         if (!userSnap.exists()) {
           toast.error("User not found");
-          router.push('/departments/rehab/login');
+          router.push('/departments/job-center/login');
           return;
         }
         const uData = userSnap.data();
@@ -94,8 +94,8 @@ export default function ProfilePage() {
 
         // 2. Role Data
         if (parsed.role === 'admin' || parsed.role === 'staff') {
-          // Find staff dock in rehab_staff or hq_staff
-          let sSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
+          // Find staff dock in jobcenter_staff or hq_staff
+          let sSnap = await getDocs(query(collection(db, 'jobcenter_staff'), where('loginUserId', '==', parsed.uid)));
           if (sSnap.empty) {
             sSnap = await getDocs(query(collection(db, 'hq_staff'), where('loginUserId', '==', parsed.uid)));
           }
@@ -103,11 +103,11 @@ export default function ProfilePage() {
           if (!sSnap.empty) {
             const sd = sSnap.docs[0].data();
             setStaffDoc({ id: sSnap.docs[0].id, ...sd });
-            fetchMetrics(sSnap.docs[0].id, sd.department || 'rehab');
+            fetchMetrics(sSnap.docs[0].id, sd.department || 'job-center');
           }
-        } else if (parsed.role === 'family' && uData.patientId) {
-          const pSnap = await getDoc(doc(db, 'rehab_patients', uData.patientId));
-          if (pSnap.exists()) setPatientDoc({ id: pSnap.id, ...pSnap.data() });
+        } else if (parsed.role === 'seeker' && uData.seekerId) {
+          const pSnap = await getDoc(doc(db, 'jobcenter_seekers', uData.seekerId));
+          if (pSnap.exists()) setseekerDoc({ id: pSnap.id, ...pSnap.data() });
         }
       } catch (err) {
         console.error(err);
@@ -125,7 +125,7 @@ export default function ProfilePage() {
 
     try {
       setSubmittingContrib(true);
-      const prefix = staffDoc.department === 'hq' ? 'hq' : 'rehab';
+      const prefix = staffDoc.department === 'hq' ? 'hq' : (staffDoc.department || 'job-center').replace(/-/g, '');
       await addDoc(collection(db, `${prefix}_contributions`), {
         staffId: staffDoc.id,
         title: newContrib.title,
@@ -138,7 +138,7 @@ export default function ProfilePage() {
       toast.success("Contribution submitted for approval");
       setIsAddingContrib(false);
       setNewContrib({ title: '', content: '' });
-      fetchMetrics(staffDoc.id, staffDoc.department || 'rehab');
+      fetchMetrics(staffDoc.id, staffDoc.department || 'job-center');
     } catch (error) {
       toast.error("Failed to submit");
     } finally {
@@ -149,10 +149,10 @@ export default function ProfilePage() {
   const handleDeleteContribution = async (cid: string) => {
     if (!confirm("Are you sure?")) return;
     try {
-      const prefix = staffDoc.department === 'hq' ? 'hq' : 'rehab';
+      const prefix = staffDoc.department === 'hq' ? 'hq' : (staffDoc.department || 'job-center').replace(/-/g, '');
       await deleteDoc(doc(db, `${prefix}_contributions`, cid));
       toast.success("Deleted");
-      fetchMetrics(staffDoc.id, staffDoc.department || 'rehab');
+      fetchMetrics(staffDoc.id, staffDoc.department || 'job-center');
     } catch (error) {
       toast.error("Failed to delete");
     }
@@ -160,7 +160,7 @@ export default function ProfilePage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-      <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
     </div>
   );
 
@@ -170,7 +170,7 @@ export default function ProfilePage() {
       <div className="bg-white border-b sticky top-0 z-10 w-full">
         <div className="w-full px-4 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-100">
+            <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-100">
               <User size={24} />
             </div>
             <div>
@@ -189,45 +189,45 @@ export default function ProfilePage() {
             {profile?.photoUrl ? (
               <img src={profile.photoUrl} className="w-20 h-20 rounded-2xl mx-auto object-cover shadow-xl ring-4 ring-gray-50" />
             ) : (
-              <div className="w-20 h-20 rounded-2xl mx-auto bg-teal-50 text-teal-600 flex items-center justify-center text-3xl font-black shadow-inner">
+              <div className="w-20 h-20 rounded-2xl mx-auto bg-orange-50 text-orange-600 flex items-center justify-center text-3xl font-black shadow-inner">
                 {profile?.displayName?.[0]}
               </div>
             )}
           </div>
           <h2 className="text-center text-xl font-black mt-3 text-gray-900">{profile?.displayName}</h2>
-          <span className="mx-auto mt-2 px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-teal-500/10 text-teal-500">
+          <span className="mx-auto mt-2 px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-orange-500/10 text-orange-500">
             {session?.role}
           </span>
           <p className="text-sm font-medium text-gray-500 flex items-center justify-center gap-2 mt-3">
-            <Phone size={14} className="text-teal-500" /> {profile?.phone || 'No phone provided'}
+            <Phone size={14} className="text-orange-500" /> {profile?.phone || 'No phone provided'}
           </p>
         </div>
 
         {/* Role Specific Content */}
-        {session?.role === 'family' ? (
-          <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-green-100 w-full">
+        {session?.role === 'seeker' ? (
+          <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-emerald-100 w-full">
             <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
-              <Heart className="text-green-500" /> Linked Patient Information
+              <Heart className="text-emerald-500" /> Linked Seeker Information
             </h3>
-            {patientDoc ? (
+            {seekerDoc ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                <div className="p-4 md:p-6 bg-green-50 rounded-2xl border border-green-100/50">
-                  <p className="text-[9px] font-black text-green-600 uppercase tracking-widest mb-1">Name</p>
-                  <p className="text-sm font-bold text-gray-900">{patientDoc.name}</p>
+                <div className="p-4 md:p-6 bg-emerald-50 rounded-2xl border border-emerald-100/50">
+                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Name</p>
+                  <p className="text-sm font-bold text-gray-900">{seekerDoc.name}</p>
                 </div>
                 <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Date</p>
-                  <p className="text-sm font-bold text-gray-900">{formatDateDMY(patientDoc.admissionDate)}</p>
+                  <p className="text-sm font-bold text-gray-900">{formatDateDMY(seekerDoc.admissionDate)}</p>
                 </div>
                 <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-start gap-1">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-xl text-[9px] font-black uppercase tracking-widest">
-                    {patientDoc.isActive ? 'Active' : 'Inactive'}
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-xl text-[9px] font-black uppercase tracking-widest">
+                    {seekerDoc.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-400 font-medium italic">No patient linked to this account.</p>
+              <p className="text-sm text-gray-400 font-medium italic">No seeker linked to this account.</p>
             )}
           </div>
         ) : (
@@ -245,9 +245,9 @@ export default function ProfilePage() {
                   <span className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-60 block text-gray-600">{stat.label}</span>
                 </div>
               ))}
-              <div className="col-span-2 rounded-2xl p-4 text-center bg-teal-500/10 border border-teal-500/20 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black block text-teal-600">{growthPoints?.totalPoints || 0}</span>
-                <span className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-60 block text-teal-800">Total Points</span>
+              <div className="col-span-2 rounded-2xl p-4 text-center bg-orange-500/10 border border-orange-500/20 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black block text-orange-600">{growthPoints?.totalPoints || 0}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-60 block text-orange-800">Total Points</span>
               </div>
             </div>
 
@@ -266,7 +266,7 @@ export default function ProfilePage() {
                       onClick={() => setActiveTab(tab.id as any)}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${
                         activeTab === tab.id 
-                          ? 'bg-white shadow-sm text-teal-600' 
+                          ? 'bg-white shadow-sm text-orange-600' 
                           : 'opacity-40 hover:opacity-70'
                       }`}
                     >
@@ -303,7 +303,7 @@ export default function ProfilePage() {
                             <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{log.day}</p>
                           </div>
                           <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${
-                            log.status === 'present' ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-700'
+                            log.status === 'present' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
                           }`}>
                             {log.status}
                           </span>
@@ -326,7 +326,7 @@ export default function ProfilePage() {
                         <div key={log.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col sm:flex-row sm:items-start justify-between gap-4 w-full">
                           <div className="flex-1 w-full">
                             <div className="flex items-center gap-3 mb-2 flex-wrap">
-                              <span className="text-[9px] font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded-xl uppercase tracking-widest">
+                              <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-xl uppercase tracking-widest">
                                 {formatDateDMY(log.date)}
                               </span>
                               <h4 className="font-black text-gray-900 text-sm capitalize">{log.dutyType?.replace(/_/g, ' ')}</h4>
@@ -334,7 +334,7 @@ export default function ProfilePage() {
                             <p className="text-sm font-medium text-gray-600 leading-relaxed">{log.comment || 'No comments'}</p>
                           </div>
                    
-                          <div className={`flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-1 p-3 sm:p-2 w-full sm:w-[90px] rounded-xl sm:rounded-2xl shrink-0 ${log.status === 'completed' ? 'bg-teal-100/50 text-teal-600 border border-teal-100' : 'bg-red-100/50 text-red-600 border border-red-100'}`}>
+                          <div className={`flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-1 p-3 sm:p-2 w-full sm:w-[90px] rounded-xl sm:rounded-2xl shrink-0 ${log.status === 'completed' ? 'bg-orange-100/50 text-orange-600 border border-orange-100' : 'bg-red-100/50 text-red-600 border border-red-100'}`}>
                               <span className="text-[9px] font-black uppercase tracking-widest">{log.status}</span>
                               <span className="text-[11px] font-black text-gray-900 bg-white px-2 py-1 rounded-xl shadow-sm">+{log.points || 0} pts</span>
                           </div>
@@ -360,7 +360,7 @@ export default function ProfilePage() {
                             <p className="text-[11px] font-medium text-gray-500">{log.comment || 'Professional attire'}</p>
                           </div>
                           <div className="flex flex-col items-end">
-                             <div className="text-sm font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-xl border border-teal-100">+{log.points || 0} pts</div>
+                             <div className="text-sm font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-xl border border-orange-100">+{log.points || 0} pts</div>
                           </div>
                         </div>
                       ))
@@ -370,42 +370,42 @@ export default function ProfilePage() {
 
                 {activeTab === 'contributions' && (
                   <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-teal-50 p-4 md:p-6 rounded-2xl border border-teal-100 gap-4 w-full">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-orange-50 p-4 md:p-6 rounded-2xl border border-orange-100 gap-4 w-full">
                       <div className="flex flex-col gap-1">
-                        <h4 className="font-black text-teal-900 text-sm">Share your contribution</h4>
-                        <p className="text-[11px] text-teal-600 font-medium">Add records of extra work or achievements</p>
+                        <h4 className="font-black text-orange-900 text-sm">Share your contribution</h4>
+                        <p className="text-[11px] text-orange-600 font-medium">Add records of extra work or achievements</p>
                       </div>
                       <button 
                         onClick={() => setIsAddingContrib(true)}
-                        className="bg-teal-600 text-white px-6 py-3 sm:py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-teal-700 transition-all flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto shadow-md shadow-teal-600/20"
+                        className="bg-orange-600 text-white px-6 py-3 sm:py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto shadow-md shadow-orange-600/20"
                       >
                         <Plus size={16} /> New Entry
                       </button>
                     </div>
 
                     {isAddingContrib && (
-                      <div className="p-4 md:p-6 bg-white border border-teal-200 rounded-2xl shadow-xl space-y-4 animate-in fade-in slide-in-from-top-2 w-full">
+                      <div className="p-4 md:p-6 bg-white border border-orange-200 rounded-2xl shadow-xl space-y-4 animate-in fade-in slide-in-from-top-2 w-full">
                         <div className="flex justify-between items-center w-full">
-                          <h4 className="font-black text-[11px] uppercase tracking-widest text-teal-600">New Contribution</h4>
+                          <h4 className="font-black text-[11px] uppercase tracking-widest text-orange-600">New Contribution</h4>
                           <button onClick={() => setIsAddingContrib(false)} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"><X size={16} /></button>
                         </div>
                         <input 
                            type="text" 
-                           placeholder="Title (e.g. Extra Patient Care)" 
-                           className="w-full px-4 py-3 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-teal-500 outline-none text-gray-900"
+                           placeholder="Title (e.g. Extra Seeker Care)" 
+                           className="w-full px-4 py-3 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none text-gray-900"
                            value={newContrib.title}
                            onChange={e => setNewContrib({...newContrib, title: e.target.value})}
                         />
                         <textarea 
                            placeholder="Describe your contribution in detail..." 
-                           className="w-full px-4 py-4 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-teal-500 outline-none min-h-[120px] leading-relaxed text-gray-900"
+                           className="w-full px-4 py-4 bg-[#F8FAFC] border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-orange-500 outline-none min-h-[120px] leading-relaxed text-gray-900"
                            value={newContrib.content}
                            onChange={e => setNewContrib({...newContrib, content: e.target.value})}
                         />
                         <button 
                            onClick={handleAddContribution}
                            disabled={submittingContrib}
-                           className="w-full bg-teal-600 text-white py-4 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-teal-100 hover:bg-teal-700 disabled:opacity-50 transition-all font-medium"
+                           className="w-full bg-orange-600 text-white py-4 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-orange-100 hover:bg-orange-700 disabled:opacity-50 transition-all font-medium"
                         >
                           {submittingContrib ? 'Submitting...' : 'Submit Contribution'}
                         </button>
@@ -444,7 +444,7 @@ export default function ProfilePage() {
                             </div>
                             <p className="text-sm text-gray-600 font-medium leading-relaxed mb-4 whitespace-pre-wrap">{c.content}</p>
                             {c.isApproved && (
-                              <div className="flex items-center justify-center sm:justify-start gap-2 text-teal-600 font-black text-[9px] uppercase tracking-widest bg-teal-50 px-3 py-2 rounded-xl border border-teal-100 w-full sm:w-fit mt-auto">
+                              <div className="flex items-center justify-center sm:justify-start gap-2 text-orange-600 font-black text-[9px] uppercase tracking-widest bg-orange-50 px-3 py-2 rounded-xl border border-orange-100 w-full sm:w-fit mt-auto">
                                 <Award size={14} /> +{c.points || 0} Points Awarded
                               </div>
                             )}

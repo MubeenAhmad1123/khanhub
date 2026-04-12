@@ -73,7 +73,7 @@ export default function MedicationTab({ seekerId, session }: { seekerId: string,
   };
 
   if (loading) {
-    return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>;
+    return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-orange-600" /></div>;
   }
 
   return (
@@ -82,7 +82,7 @@ export default function MedicationTab({ seekerId, session }: { seekerId: string,
         <h2 className="text-xl font-black text-gray-900">Medication Assisted Therapy</h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all"
+          className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-900/10 active:scale-95 transition-all"
         >
           <Plus size={16} /> Add Record
         </button>
@@ -100,7 +100,7 @@ export default function MedicationTab({ seekerId, session }: { seekerId: string,
             <div key={r.id} className="rounded-2xl border border-gray-100 shadow-sm bg-white p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 font-bold text-gray-900 text-sm">
-                  <Calendar size={14} className="text-teal-500" />
+                  <Calendar size={14} className="text-orange-500" />
                   <span>{r.date}</span>
                 </div>
                 <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
@@ -145,10 +145,10 @@ export default function MedicationTab({ seekerId, session }: { seekerId: string,
             </thead>
             <tbody className="divide-y divide-gray-100">
               {records.map(r => (
-                <tr key={r.id} className="hover:bg-teal-50/30 transition-colors">
+                <tr key={r.id} className="hover:bg-orange-50/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 font-bold text-gray-900 mb-1">
-                      <Calendar size={14} className="text-teal-500" />
+                      <Calendar size={14} className="text-orange-500" />
                       {r.date}
                     </div>
                     <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md uppercase tracking-widest">
@@ -204,11 +204,11 @@ export default function MedicationTab({ seekerId, session }: { seekerId: string,
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Date *</label>
-                  <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" />
+                  <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
                 </div>
                 <div>
                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Timing *</label>
-                   <select value={timing} onChange={e => setTiming(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none appearance-none">
+                   <select value={timing} onChange={e => setTiming(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none appearance-none">
                      <option value="Morning">Morning</option>
                      <option value="Afternoon">Afternoon</option>
                      <option value="Night">Night</option>
@@ -218,26 +218,26 @@ export default function MedicationTab({ seekerId, session }: { seekerId: string,
               
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Medications *</label>
-                <textarea required rows={2} value={medications} onChange={e => setMedications(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none" placeholder="List medications..."></textarea>
+                <textarea required rows={2} value={medications} onChange={e => setMedications(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none" placeholder="List medications..."></textarea>
               </div>
 
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Notes (Optional)</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Special instructions..." />
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Special instructions..." />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">M.O. Signature (Name)</label>
-                  <input value={medicalOfficerSig} onChange={e => setMedicalOfficerSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Name" />
+                  <input value={medicalOfficerSig} onChange={e => setMedicalOfficerSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Name" />
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Dispenser Signature (Name)</label>
-                  <input value={dispenserSig} onChange={e => setDispenserSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Name" />
+                  <input value={dispenserSig} onChange={e => setDispenserSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Name" />
                 </div>
               </div>
 
-              <button type="submit" disabled={saving} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70 mt-4">
+              <button type="submit" disabled={saving} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-orange-100 disabled:opacity-70 mt-4">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus size={18} />}
                 {saving ? 'Saving...' : 'Save Record'}
               </button>
