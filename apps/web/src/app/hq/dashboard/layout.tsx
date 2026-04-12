@@ -170,13 +170,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     }
   }, [router]);
 
-  const darkMode = mounted && resolvedTheme === 'dark';
-  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
-  // Effect for mounting
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const toggleDark = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   if (isChecking) {
     return (
@@ -188,7 +183,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </div>
         <div className="mt-6 text-center">
-          <p className="text-sm font-black uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">KhanHub HQ</p>
+          <p className="text-sm font-black uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+            KhanHub HQ
+          </p>
           <div className="mt-2 flex items-center gap-1 justify-center">
             <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce [animation-delay:-0.3s]" />
             <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce [animation-delay:-0.15s]" />
@@ -456,7 +453,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               className="p-2 rounded-xl transition-colors text-gray-400 hover:bg-gray-100 dark:text-yellow-400 dark:hover:bg-gray-800" 
               title="Toggle dark mode"
             >
-              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+              {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
               {ROLE_LABELS[role]}
