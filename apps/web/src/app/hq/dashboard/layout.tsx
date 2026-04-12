@@ -410,7 +410,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
       <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } bg-white dark:bg-gray-900">
+      } bg-white dark:bg-gray-900`}>
         <button
           onClick={() => setSidebarOpen(false)}
           className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors"
