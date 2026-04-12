@@ -188,7 +188,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </div>
         <div className="mt-6 text-center">
-          <p className={`text-sm font-black uppercase tracking-[0.3em] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>KhanHub HQ</p>
+          <p className="text-sm font-black uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">KhanHub HQ</p>
           <div className="mt-2 flex items-center gap-1 justify-center">
             <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce [animation-delay:-0.3s]" />
             <span className="w-1 h-1 rounded-full bg-teal-500 animate-bounce [animation-delay:-0.15s]" />
@@ -217,16 +217,16 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     return (
       <div className="flex flex-col h-full bg-white dark:bg-gray-900">
         {/* Header / Branding */}
-        <div className={`px-6 pt-7 pb-6 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <div className="px-6 pt-7 pb-6 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3 mb-6">
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-xl rotate-3 transition-transform hover:rotate-0 ${darkMode ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/20' : 'bg-gradient-to-br from-teal-500 to-emerald-600 shadow-teal-500/20'}`}>
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-xl rotate-3 transition-transform hover:rotate-0 bg-gradient-to-br from-teal-500 to-emerald-600 shadow-teal-500/20 dark:from-indigo-500 dark:to-purple-600 dark:shadow-indigo-500/20">
               <Shield size={22} strokeWidth={2.5} />
             </div>
             <div>
-              <p className={`font-black tracking-tight text-base leading-none ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <p className="font-black tracking-tight text-base leading-none text-gray-900 dark:text-white">
                 {viewMode === 'hq' ? 'KhanHub HQ' : DEPT_INFO[viewMode]?.label}
               </p>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 ${darkMode ? 'text-gray-500' : 'text-[#6B7280]'}`}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mt-1.5 text-gray-500 dark:text-gray-500 text-[#6B7280]">
                 {viewMode === 'hq' ? 'Central Console' : 'Management'}
               </p>
             </div>
@@ -237,11 +237,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <div className="relative">
               <button
                 onClick={() => setPortalOpen(!portalOpen)}
-                className={`w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border ${
-                  darkMode 
-                    ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-800' 
-                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-                }`}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all border bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
               >
                 <div className="flex items-center gap-2">
                   <ExternalLink size={14} className="text-teal-500" />
@@ -251,9 +247,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               </button>
 
               {portalOpen && (
-                <div className={`absolute top-full left-0 right-0 mt-2 p-2 rounded-2xl border shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 ${
-                  darkMode ? 'bg-gray-800 border-gray-700 shadow-black/40' : 'bg-white border-gray-100 shadow-gray-200/50'
-                }`}>
+                <div className="absolute top-full left-0 right-0 mt-2 p-2 rounded-2xl border shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 bg-white border-gray-100 shadow-gray-200/50 dark:bg-gray-800 dark:border-gray-700 dark:shadow-black/40">
                   {Object.keys(DEPT_INFO).map(dept => {
                     const info = DEPT_INFO[dept];
                     return (
@@ -261,11 +255,9 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                         key={dept}
                         href={info.adminUrl}
                         onClick={() => setPortalOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                          darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-teal-50 text-gray-600 hover:text-teal-700'
-                        }`}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-teal-50 text-gray-600 hover:text-teal-700 dark:hover:bg-gray-700 dark:text-gray-300"
                       >
-                        <div className={`p-1.5 rounded-lg ${darkMode ? 'bg-gray-900' : 'bg-white shadow-sm'}`}>
+                        <div className="p-1.5 rounded-lg bg-white shadow-sm dark:bg-gray-900">
                           {React.cloneElement(info.icon as React.ReactElement, { size: 12, className: info.color })}
                         </div>
                         <span>{info.label} Dashboard</span>
@@ -280,13 +272,13 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
         {/* Navigation Mode Switcher - Modernized Pill */}
         {role === 'superadmin' && activeDepts.length > 0 && (
-          <div className={`px-4 pt-5 pb-2`}>
-            <div className={`p-1 rounded-2xl flex items-center gap-1 ${darkMode ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
+          <div className="px-4 pt-5 pb-2">
+            <div className="p-1 rounded-2xl flex items-center gap-1 bg-gray-100 dark:bg-gray-800/50">
               <button
                 onClick={() => setViewMode('hq')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
                   viewMode === 'hq'
-                    ? darkMode ? 'bg-gray-700 text-white shadow-lg' : 'bg-white text-gray-900 shadow-sm'
+                    ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white dark:shadow-lg'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -311,7 +303,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
         {/* Main Navigation */}
         <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto scrollbar-hide">
-          <p className={`px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ${darkMode ? 'text-gray-600' : 'text-[#374151]'}`}>
+          <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-gray-400 dark:text-gray-600">
             Menu
           </p>
           {navItems.map((item, i) => {
@@ -327,15 +319,11 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all group ${
                   isActive
-                    ? darkMode 
-                      ? 'bg-gradient-to-r from-gray-800 to-gray-800/50 text-white shadow-lg' 
-                      : 'bg-white text-teal-600 shadow-xl shadow-gray-200/50'
-                    : darkMode
-                      ? 'text-gray-500 hover:bg-gray-800/80 hover:text-gray-200'
-                      : 'text-[#374151] hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-white text-teal-600 shadow-xl shadow-gray-200/50 dark:bg-gradient-to-r dark:from-gray-800 dark:to-gray-800/50 dark:text-white dark:shadow-lg'
+                    : 'text-[#374151] hover:bg-gray-50 hover:text-gray-900 dark:text-gray-500 dark:hover:bg-gray-800/80 dark:hover:text-gray-200'
                 }`}
               >
-                <div className={`p-1 rounded-lg transition-colors ${isActive ? (darkMode ? 'text-teal-400' : 'text-teal-600') : (darkMode ? 'text-gray-500' : 'text-[#9CA3AF] group-hover:text-teal-500')}`}>
+                <div className={`p-1 rounded-lg transition-colors ${isActive ? 'text-teal-600 dark:text-teal-400' : 'text-[#9CA3AF] group-hover:text-teal-500 dark:text-gray-500'}`}>
                   {React.cloneElement(item.icon as React.ReactElement, { size: 18, strokeWidth: isActive ? 2.5 : 2 })}
                 </div>
                 <span className="flex-1">{item.label}</span>
@@ -343,7 +331,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
                   <HqSuperadminApprovalsNavBadge />
                 )}
                 {isActive && (
-                  <div className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-teal-500' : 'bg-teal-600'} animate-pulse`} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-500 animate-pulse" />
                 )}
               </Link>
             );
@@ -351,18 +339,18 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
         </nav>
 
         {/* Bottom Section: Profile & Logout */}
-        <div className={`px-4 py-6 mt-auto border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+        <div className="px-4 py-6 mt-auto border-t border-gray-100 dark:border-gray-800">
           <div className="mb-4 p-3 rounded-2xl flex items-center gap-3 bg-gray-50 dark:bg-gray-800/30">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-600'}`}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm bg-white text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className={`text-xs font-bold truncate ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{user?.name}</p>
-              <p className={`text-[9px] font-black uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-[#6B7280]'}`}>{ROLE_LABELS[role]}</p>
+              <p className="text-xs font-bold truncate text-gray-900 dark:text-gray-200">{user?.name}</p>
+              <p className="text-[9px] font-black uppercase tracking-wider text-[#6B7280] dark:text-gray-500">{ROLE_LABELS[role]}</p>
             </div>
             <button 
               onClick={handleSignOut}
-              className={`p-2 rounded-lg transition-all ${darkMode ? 'text-gray-500 hover:text-red-400 hover:bg-red-500/10' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'}`}
+              className="p-2 rounded-lg transition-all text-gray-400 hover:text-red-600 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-500/10"
               title="Sign Out"
             >
               <LogOut size={16} />
@@ -372,14 +360,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           <div className="flex gap-2">
             <button
               onClick={toggleDark}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                darkMode 
-                  ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
-                  : 'bg-white border border-gray-100 text-gray-500 hover:bg-gray-50 shadow-sm'
-              }`}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-white border border-gray-100 text-gray-500 hover:bg-gray-50 shadow-sm dark:bg-gray-800 dark:border-transparent dark:text-yellow-400 dark:hover:bg-gray-700"
             >
-              {darkMode ? <Sun size={14} /> : <Moon size={14} />}
-              {darkMode ? 'Light' : 'Dark'}
+              {mounted ? (resolvedTheme === 'dark' ? <Sun size={14} /> : <Moon size={14} />) : <Sun size={14} />}
+              {mounted ? (resolvedTheme === 'dark' ? 'Light' : 'Dark') : '...'}
             </button>
             <Link 
               href="/"
