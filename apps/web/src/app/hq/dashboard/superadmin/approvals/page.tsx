@@ -216,10 +216,10 @@ function PillGroup<T extends string>({
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition border ${
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition border shadow-sm ${
             value === opt 
-              ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900' 
-              : 'bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500'
+              ? 'bg-[#111827] text-white border-[#111827] dark:bg-gray-100 dark:text-gray-900' 
+              : 'bg-white dark:bg-[#111111] text-[#4B5563] dark:text-gray-300 border-[#D1D5DB] dark:border-white/10 hover:border-gray-400'
           }`}
         >
           {labelMap?.[opt] ?? opt}
@@ -246,12 +246,12 @@ function RejectModal({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-[#111111] rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md mx-auto p-6 shadow-2xl z-10 max-h-[95vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-black text-gray-900 dark:text-white">Reject this transaction?</h2>
+          <h2 className="text-lg font-black text-[#111827] dark:text-white">Reject this transaction?</h2>
           <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:bg-white/10">
-            <X className="w-4 h-4 text-gray-500 dark:text-gray-400 dark:text-gray-500" />
+            <X className="w-4 h-4 text-[#6B7280] dark:text-gray-400" />
           </button>
         </div>
-        <div className="mb-5 p-4 rounded-2xl bg-red-50 dark:bg-red-900/30 border border-red-100">
+        <div className="mb-5 p-4 rounded-2xl bg-red-50 dark:bg-red-900/30 border border-red-200 shadow-inner">
           <div className="text-sm font-bold text-red-800 dark:text-red-400">{entityName(tx)}</div>
           <div className="text-2xl font-extrabold text-red-900 mt-1">{fmtPKR(tx.amount)}</div>
         </div>
@@ -313,19 +313,19 @@ function BulkConfirmModal({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-[#111111] rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg mx-auto p-6 shadow-2xl z-10 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-black text-gray-900 dark:text-white">Approve {selected.length} transactions?</h2>
+          <h2 className="text-lg font-black text-[#111827] dark:text-white">Approve {selected.length} transactions?</h2>
           <button type="button" onClick={onClose} aria-label="Close">
-            <X className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+            <X className="w-5 h-5 text-[#6B7280] dark:text-gray-500" />
           </button>
         </div>
         <ul className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto">
           {items.map((tx) => (
             <li key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/10 gap-3">
               <div className="min-w-0">
-                <div className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{entityName(tx)}</div>
-                <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{typeLabel(tx)}</div>
+                <div className="text-sm font-bold text-[#111827] dark:text-gray-100 truncate">{entityName(tx)}</div>
+                <div className="text-xs text-[#6B7280] dark:text-gray-500 truncate">{typeLabel(tx)}</div>
               </div>
-              <div className="text-sm font-extrabold text-gray-900 dark:text-white shrink-0">{fmtPKR(tx.amount)}</div>
+              <div className="text-sm font-extrabold text-[#111827] dark:text-white shrink-0">{fmtPKR(tx.amount)}</div>
             </li>
           ))}
         </ul>
@@ -499,7 +499,7 @@ function TxCard({
           ? 'border-green-500 ring-2 ring-green-400/40 bg-white dark:bg-gray-900' 
           : phase === 'fail' 
             ? 'border-red-500 ring-2 ring-red-400/40 bg-white dark:bg-gray-900' 
-            : 'border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900'
+            : 'border-[#D1D5DB] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900'
       } ${phase === 'idle' ? '' : 'tx-card-exit'}`}
     >
       {phase === 'success' ? (
@@ -538,45 +538,45 @@ function TxCard({
             <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${typeColors}`}>{typ}</span>
           </div>
           <div className="text-right shrink-0">
-            <div className="text-2xl font-extrabold text-gray-900 dark:text-white">{fmtPKR(tx.amount)}</div>
-            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border mt-1 ${statusUi}`}>
+            <div className="text-2xl font-extrabold text-[#111827] dark:text-white">{fmtPKR(tx.amount)}</div>
+            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border mt-1 shadow-sm ${statusUi}`}>
               {statusLabel(st)}
             </span>
           </div>
         </div>
 
         <div className="mt-4 space-y-4">
-          <section className="rounded-2xl bg-[color:var(--filter-bg,#f8fafc)] border border-gray-100 dark:border-white/10 p-4 space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Entity info</p>
+          <section className="rounded-2xl bg-[#F9FAFB] dark:bg-white/5 border border-gray-100 dark:border-white/10 p-4 space-y-2 shadow-inner">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500">Entity info</p>
             <div className="flex gap-2 text-sm">
               <span aria-hidden>👤</span>
               <div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Student / Patient</p>
-                <p className="text-lg font-bold text-gray-800 dark:text-gray-200">{name}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Student / Patient</p>
+                <p className="text-lg font-bold text-[#111827] dark:text-gray-200">{name}</p>
               </div>
             </div>
             {tx.dept === 'spims' && (enrich?.course || enrich?.session) ? (
-              <div className="flex gap-2 text-sm text-gray-800 dark:text-gray-100">
+              <div className="flex gap-2 text-sm text-[#111827] dark:text-gray-100">
                 <span aria-hidden>🎓</span>
                 <div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Course · Session</p>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Course · Session</p>
+                  <p className="text-sm font-medium text-[#4B5563] dark:text-gray-400">
                     {enrich?.course || '—'} · {enrich?.session || '—'}
                   </p>
                 </div>
               </div>
             ) : null}
             {tx.dept === 'rehab' ? (
-              <div className="flex gap-2 text-sm text-gray-800 dark:text-gray-100">
+              <div className="flex gap-2 text-sm text-[#111827] dark:text-gray-100">
                 <span aria-hidden>🏥</span>
                 <div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Department</p>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Rehab Center</p>
+                  <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Department</p>
+                  <p className="text-sm font-medium text-[#4B5563] dark:text-gray-400">Rehab Center</p>
                 </div>
               </div>
             ) : null}
             {tx.dept === 'spims' && enrich?.rollNo ? (
-              <div className="flex gap-2 text-sm text-gray-700 dark:text-gray-200">
+              <div className="flex gap-2 text-sm text-[#4B5563] dark:text-gray-200">
                 <span aria-hidden>📋</span>
                 <span>
                   Roll No: <span className="font-semibold">{enrich.rollNo}</span>
@@ -584,31 +584,31 @@ function TxCard({
               </div>
             ) : null}
             {phref ? (
-              <Link href={phref} className="inline-flex items-center justify-center w-full mt-2 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-black uppercase tracking-widest transition-colors shadow-sm">
+              <Link href={phref} className="inline-flex items-center justify-center w-full mt-2 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-black uppercase tracking-widest transition-colors shadow-sm">
                 View Profile & Payment History →
               </Link>
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-gray-100 dark:border-white/10 p-4 space-y-2 bg-white dark:bg-[#111111]">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Payment details</p>
+          <section className="rounded-2xl border border-[#D1D5DB] dark:border-white/10 p-4 space-y-2 bg-white dark:bg-[#111111] shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500">Payment details</p>
             <div className="grid sm:grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Amount</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{fmtPKR(tx.amount)}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Amount</p>
+                <p className="font-bold text-[#111827] dark:text-gray-100">{fmtPKR(tx.amount)}</p>
               </div>
               <div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Payment date</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{fmtDate(tx.createdAt || tx.date || tx.transactionDate)}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Payment date</p>
+                <p className="font-bold text-[#111827] dark:text-gray-100">{fmtDate(tx.createdAt || tx.date || tx.transactionDate)}</p>
               </div>
               <div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Type</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{typ}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Type</p>
+                <p className="font-bold text-[#111827] dark:text-gray-100">{typ}</p>
               </div>
               {tx.description ? (
                 <div className="sm:col-span-2">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Note</p>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 break-words">&quot;{tx.description}&quot;</p>
+                  <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Note</p>
+                  <p className="text-sm font-medium text-[#4B5563] dark:text-gray-200 break-words">&quot;{tx.description}&quot;</p>
                 </div>
               ) : null}
               {runningPaid != null && pkg != null ? (
@@ -626,24 +626,24 @@ function TxCard({
             </div>
           </section>
 
-          <section className="rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 p-4 space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Submitted by</p>
+          <section className="rounded-2xl bg-[#F9FAFB] dark:bg-white/5 border border-gray-100 dark:border-white/10 p-4 space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500">Submitted by</p>
             <div className="grid sm:grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Cashier</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{tx.cashierName || tx.cashierId || '—'}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Cashier</p>
+                <p className="font-bold text-[#111827] dark:text-gray-100">{tx.cashierName || tx.cashierId || '—'}</p>
               </div>
               <div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Cashier role</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{tx.cashierRole || '—'}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Cashier role</p>
+                <p className="font-bold text-[#111827] dark:text-gray-100">{tx.cashierRole || '—'}</p>
               </div>
               <div className="sm:col-span-2">
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Submitted at</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{fmtTime(tx.createdAt || tx.date)}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Submitted at</p>
+                <p className="font-bold text-[#111827] dark:text-gray-100">{fmtTime(tx.createdAt || tx.date)}</p>
               </div>
               <div className="sm:col-span-2">
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Forwarded from</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{tx.forwardedFromLabel || tx.departmentName || 'SPIMS Portal'}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-gray-400 uppercase tracking-wide">Forwarded from</p>
+                <p className="font-bold text-[#111827] dark:text-gray-100">{tx.forwardedFromLabel || tx.departmentName || 'SPIMS Portal'}</p>
               </div>
               <div className="sm:col-span-2">
                 <button
@@ -1104,7 +1104,7 @@ export default function HqApprovalsPage() {
   if (sessionLoading) {
     return (
       <div className="min-h-[40vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400 dark:text-gray-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#6B7280] dark:text-gray-500" />
       </div>
     );
   }
@@ -1117,15 +1117,15 @@ export default function HqApprovalsPage() {
         {/* 1 Title */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-[#111827] dark:text-white flex flex-wrap items-center gap-2">
               Approvals
               {pendingCount > 0 ? (
-                <span className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-full bg-amber-400 text-gray-900 text-xs font-black">
+                <span className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-full bg-amber-400 text-[#111827] text-xs font-black">
                   {pendingCount > 99 ? '99+' : pendingCount}
                 </span>
               ) : null}
             </h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">Review incoming payments with confidence.</p>
+            <p className="mt-1 text-sm text-[#6B7280] dark:text-gray-400 font-medium">Review incoming payments with confidence.</p>
           </div>
         </div>
 
@@ -1191,14 +1191,14 @@ export default function HqApprovalsPage() {
                   }}
                   className={`w-full py-2.5 px-2 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition border flex flex-col items-center gap-0.5 ${
                     isActive
-                      ? 'bg-gray-900 text-white border-gray-900 shadow-md dark:bg-white dark:text-gray-900 dark:border-white'
-                      : 'bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-300'
+                      ? 'bg-[#111827] text-white border-[#111827] shadow-md dark:bg-white dark:text-gray-900 dark:border-white'
+                      : 'bg-white dark:bg-[#111111] text-[#4B5563] dark:text-gray-300 border-[#D1D5DB] dark:border-white/10 hover:border-gray-400 shadow-sm'
                   }`}
                 >
                   <span>{t.label}</span>
                   {currentOption && currentOption.value !== 'all' && (
                     <span className={`text-[9px] font-semibold normal-case tracking-normal ${
-                      isActive ? 'text-white/70 dark:text-gray-900/70' : 'text-gray-400 dark:text-gray-500'
+                      isActive ? 'text-white/80 dark:text-gray-900/70' : 'text-[#6B7280] dark:text-gray-500'
                     }`}>
                       {currentOption.label}
                     </span>
@@ -1210,7 +1210,7 @@ export default function HqApprovalsPage() {
                       className="fixed inset-0 z-[50]"
                       onClick={() => setTabDropdownOpen(null)}
                     />
-                    <div className="absolute top-full left-0 right-0 mt-1 z-[51] bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
+                    <div className="absolute top-full left-0 right-0 mt-1 z-[51] bg-white dark:bg-[#1a1a1a] border border-[#D1D5DB] dark:border-white/10 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
                       {t.options.map((opt) => (
                         <button
                           key={opt.value}
@@ -1221,8 +1221,8 @@ export default function HqApprovalsPage() {
                           }}
                           className={`w-full text-left px-3 py-2.5 text-xs font-bold transition ${
                             currentPreset === opt.value
-                              ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                              : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
+                              ? 'bg-[#111827] dark:bg-white text-white dark:text-gray-900'
+                              : 'text-[#111827] dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 last:border-0'
                           }`}
                         >
                           {opt.label}
@@ -1246,23 +1246,23 @@ export default function HqApprovalsPage() {
               <ArrowLeft className="w-4 h-4" />
               Back to All Transactions
             </button>
-            <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111111] shadow-md p-5 max-w-[680px] mx-auto w-full">
-              <p className="text-xs font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Entity</p>
-              <p className="text-xl font-black text-gray-900 dark:text-white mt-1">{selectedEntity.name}</p>
+            <div className="rounded-3xl border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#111111] shadow-md p-5 max-w-[680px] mx-auto w-full">
+              <p className="text-xs font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500">Entity</p>
+              <p className="text-xl font-black text-[#111827] dark:text-white mt-1">{selectedEntity.name}</p>
               {selectedEntity.dept === 'spims' && (entitySummary?.course || entitySummary?.session) ? (
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                <p className="text-sm text-[#4B5563] dark:text-gray-300 mt-1">
                   {entitySummary?.course} · {entitySummary?.session}
                 </p>
               ) : null}
               {entitySummary?.totalPackage != null ? (
                 <div className="mt-4">
-                  <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
+                  <div className="flex justify-between text-xs font-bold text-[#6B7280] dark:text-gray-400 uppercase tracking-wide mb-1">
                     <span>Package progress</span>
                     <span>
                       {fmtPKR(entitySummary.totalReceived || 0)} / {fmtPKR(entitySummary.totalPackage)}
                     </span>
                   </div>
-                  <div className="h-3 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden">
+                  <div className="h-3 rounded-full bg-[#F3F4F6] dark:bg-white/10 overflow-hidden">
                     <div
                       className="h-full bg-purple-600 rounded-full transition-all"
                       style={{
@@ -1270,12 +1270,12 @@ export default function HqApprovalsPage() {
                       }}
                     />
                   </div>
-                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-2">
+                  <p className="text-sm font-semibold text-[#111827] dark:text-gray-100 mt-2">
                     Remaining balance: {fmtPKR(entitySummary.remaining ?? 0)}
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-2">Loading package info…</p>
+                <p className="text-sm text-[#6B7280] dark:text-gray-400 mt-2">Loading package info…</p>
               )}
             </div>
 
@@ -1288,7 +1288,7 @@ export default function HqApprovalsPage() {
                 <div className="table-responsive">
 
                 <table className="w-full text-sm min-w-[640px]">
-                  <thead className="bg-gray-50 dark:bg-white/5 text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                  <thead className="bg-[#F3F4F6] dark:bg-white/5 text-[10px] uppercase tracking-widest text-[#6B7280] dark:text-gray-500 font-black">
                     <tr>
                       <th className="text-left px-4 py-3">Date</th>
                       <th className="text-left px-4 py-3">Type</th>
@@ -1336,10 +1336,10 @@ export default function HqApprovalsPage() {
           <>
             {/* 3 Filters */}
             <div className="lg:sticky lg:top-0 lg:z-10 mb-6">
-              <div className="rounded-3xl bg-white dark:bg-gray-800 shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="rounded-3xl bg-white dark:bg-gray-800 shadow-md border border-[#D1D5DB] dark:border-gray-700 overflow-hidden">
                 <button
                   type="button"
-                  className="lg:hidden w-full flex items-center justify-between px-4 py-3 text-sm font-black text-gray-800 dark:text-gray-100 bg-[color:var(--filter-bg,#f8fafc)] dark:bg-gray-900"
+                  className="lg:hidden w-full flex items-center justify-between px-4 py-3 text-sm font-black text-[#111827] dark:text-gray-100 bg-[#F9FAFB] dark:bg-gray-900"
                   onClick={() => setFiltersPanelOpen((v) => !v)}
                 >
                   <span className="flex items-center gap-2">
@@ -1352,7 +1352,7 @@ export default function HqApprovalsPage() {
                 <div className={`${filtersPanelOpen ? 'block' : 'hidden'} lg:block p-4 sm:p-5 space-y-4`}>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Department</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Department</p>
                       <PillGroup
                         options={['all', 'rehab', 'spims'] as const}
                         value={filters.dept === 'hq' ? 'all' : filters.dept}
@@ -1361,7 +1361,7 @@ export default function HqApprovalsPage() {
                       />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Date range</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Date range</p>
                       <PillGroup
                         options={['all', 'today', 'yesterday', 'this_week', 'custom'] as const}
                         value={filters.datePreset}
@@ -1374,13 +1374,13 @@ export default function HqApprovalsPage() {
                             type="date"
                             value={filters.customFrom ?? ''}
                             onChange={(e) => setFilters((f) => ({ ...f, customFrom: e.target.value }))}
-                            className="flex-1 min-w-[140px] rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs bg-white dark:bg-gray-900 dark:text-gray-100"
+                            className="flex-1 min-w-[140px] rounded-xl border border-[#D1D5DB] dark:border-gray-700 px-3 py-2 text-xs bg-white dark:bg-gray-900 dark:text-gray-100"
                           />
                           <input
                             type="date"
                             value={filters.customTo ?? ''}
                             onChange={(e) => setFilters((f) => ({ ...f, customTo: e.target.value }))}
-                            className="flex-1 min-w-[140px] rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs bg-white dark:bg-gray-900 dark:text-gray-100"
+                            className="flex-1 min-w-[140px] rounded-xl border border-[#D1D5DB] dark:border-gray-700 px-3 py-2 text-xs bg-white dark:bg-gray-900 dark:text-gray-100"
                           />
                         </div>
                       ) : null}
@@ -1389,11 +1389,11 @@ export default function HqApprovalsPage() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Sort by</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Sort by</p>
                       <select
                         value={filters.sort}
                         onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ApprovalsFilters['sort'] }))}
-                        className="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 dark:text-gray-100"
+                        className="w-full rounded-xl border border-[#D1D5DB] dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 text-[#111827] dark:text-gray-100 font-bold"
                       >
                         <option value="all">All</option>
                         <option value="newest">Newest First</option>
@@ -1403,11 +1403,11 @@ export default function HqApprovalsPage() {
                       </select>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Amount range</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Amount range</p>
                       <select
                         value={filters.amountBucket}
                         onChange={(e) => setFilters((f) => ({ ...f, amountBucket: e.target.value as ApprovalsFilters['amountBucket'] }))}
-                        className="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 dark:text-gray-100"
+                        className="w-full rounded-xl border border-[#D1D5DB] dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 text-[#111827] dark:text-gray-100 font-bold"
                       >
                         <option value="all">All</option>
                         <option value="under_1000">Under 1,000</option>
@@ -1420,9 +1420,9 @@ export default function HqApprovalsPage() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div ref={searchWrapRef} className="relative">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Entity search</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Entity search</p>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] dark:text-gray-500" />
                         <input
                           value={searchDraft}
                           onChange={(e) => {
@@ -1431,11 +1431,11 @@ export default function HqApprovalsPage() {
                           }}
                           onFocus={() => setSearchOpen(true)}
                           placeholder="Search patient / student name..."
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:border-purple-400 dark:bg-gray-900 dark:text-gray-100"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#D1D5DB] dark:border-gray-700 text-sm outline-none focus:border-purple-400 dark:bg-gray-900 text-[#111827] dark:text-gray-100 font-bold"
                         />
                       </div>
                       {searchOpen && searchHits.length > 0 ? (
-                        <ul className="absolute z-50 mt-1 w-full rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl max-h-56 overflow-y-auto">
+                        <ul className="absolute z-50 mt-1 w-full rounded-2xl border border-[#D1D5DB] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl max-h-56 overflow-y-auto">
                           {searchHits.map((h) => (
                             <li key={`${h.dept}_${h.id}`}>
                               <button
@@ -1456,7 +1456,7 @@ export default function HqApprovalsPage() {
                       ) : null}
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Proof</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Proof</p>
                       <PillGroup
                         options={['all', 'has_proof', 'missing_proof'] as const}
                         value={filters.proof}
@@ -1477,11 +1477,11 @@ export default function HqApprovalsPage() {
                     </button>
                     <div className={`${moreFiltersOpen ? 'block' : 'hidden'} lg:grid lg:grid-cols-2 lg:col-span-2 lg:gap-4 lg:!block space-y-4`}>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Cashier name</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Cashier name</p>
                         <select
                           value={filters.cashierName}
                           onChange={(e) => setFilters((f) => ({ ...f, cashierName: e.target.value }))}
-                          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 dark:text-gray-100"
+                          className="w-full rounded-xl border border-[#D1D5DB] dark:border-gray-700 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 text-[#111827] dark:text-gray-100 font-bold"
                         >
                           {cashierNames.map((n) => (
                             <option key={n} value={n}>
@@ -1491,7 +1491,7 @@ export default function HqApprovalsPage() {
                         </select>
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Transaction type</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] dark:text-gray-500 mb-2">Transaction type</p>
                         <div className="flex flex-wrap gap-2">
                           {TRANSACTION_TYPE_OPTIONS.map((t) => {
                             const isSelected = (filters.txTypes || []).includes(t) || (t === 'All' && (filters.txTypes || []).length === 0);
@@ -1511,8 +1511,8 @@ export default function HqApprovalsPage() {
                                 }}
                                 className={`px-2.5 py-1.5 rounded-full text-[10px] font-black border transition ${
                                   isSelected
-                                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900'
-                                    : 'bg-white dark:bg-[#111111] text-gray-600 dark:text-gray-300 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 hover:border-gray-400'
+                                    ? 'bg-[#111827] text-white border-[#111827] dark:bg-gray-100 dark:text-[#111827]'
+                                    : 'bg-white dark:bg-[#111111] text-[#4B5563] dark:text-gray-300 border-[#D1D5DB] dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 hover:border-gray-400'
                                 }`}
                               >
                                 {t}
@@ -1544,7 +1544,7 @@ export default function HqApprovalsPage() {
                     <button
                       type="button"
                       onClick={clearAllFilters}
-                      className="text-sm font-black text-red-600 hover:text-red-800 dark:text-red-400 underline underline-offset-2"
+                      className="text-sm font-black text-red-600 hover:text-red-800 dark:text-red-400 underline underline-offset-4"
                     >
                       Clear All Filters
                     </button>
@@ -1575,8 +1575,8 @@ export default function HqApprovalsPage() {
             {/* Bulk select row */}
             {isSelectableTab && !loading && filteredRows.length > 0 ? (
               <div className="flex items-center justify-end gap-3">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 dark:text-gray-200">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="w-4 h-4 accent-gray-900" />
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#4B5563] dark:text-gray-200">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="w-4 h-4 accent-[#111827]" />
                   Select All
                 </label>
               </div>
@@ -1653,7 +1653,7 @@ export default function HqApprovalsPage() {
         <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white dark:bg-[#111111] border-t border-gray-200 dark:border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] px-4 py-4 pb-6">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex-1 text-center sm:text-left">
-              <div className="text-sm font-black text-gray-900 dark:text-white">
+              <div className="text-sm font-black text-[#111827] dark:text-white">
                 {selected.size} selected · Total: {fmtPKR(selectedTotal)}
               </div>
             </div>
@@ -1708,14 +1708,14 @@ function SkeletonCards() {
   return (
     <div className="col-span-full space-y-4 max-w-[680px] mx-auto w-full">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111111] p-5 animate-pulse">
+        <div key={i} className="rounded-3xl border border-[#D1D5DB] dark:border-white/10 bg-white dark:bg-[#111111] p-5 animate-pulse">
           <div className="flex justify-between mb-4">
-            <div className="h-5 w-24 rounded-full bg-gray-100 dark:bg-white/10" />
-            <div className="h-8 w-28 rounded-xl bg-gray-100 dark:bg-white/10" />
+            <div className="h-5 w-24 rounded-full bg-[#F3F4F6] dark:bg-white/10" />
+            <div className="h-8 w-28 rounded-xl bg-[#F3F4F6] dark:bg-white/10" />
           </div>
           <div className="space-y-2">
-            <div className="h-4 w-2/3 rounded-lg bg-gray-100 dark:bg-white/10" />
-            <div className="h-4 w-1/2 rounded-lg bg-gray-100 dark:bg-white/10" />
+            <div className="h-4 w-2/3 rounded-lg bg-[#F3F4F6] dark:bg-white/10" />
+            <div className="h-4 w-1/2 rounded-lg bg-[#F3F4F6] dark:bg-white/10" />
           </div>
         </div>
       ))}
@@ -1730,8 +1730,8 @@ function EmptyApprovals({ tab }: { tab: ApprovalsTab }) {
       <div className="text-5xl mb-4" aria-hidden>
         {isPending ? '✅' : '📋'}
       </div>
-      <div className="text-lg font-black text-gray-900 dark:text-white">{isPending ? 'No pending approvals' : 'No transactions found'}</div>
-      <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-2 font-medium">
+      <div className="text-lg font-black text-[#111827] dark:text-white">{isPending ? 'No pending approvals' : 'No transactions found'}</div>
+      <div className="text-sm text-[#6B7280] dark:text-gray-400 mt-2 font-medium">
         {isPending ? 'All caught up — nothing is waiting for you.' : 'Try adjusting filters or date range.'}
       </div>
     </div>
