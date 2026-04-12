@@ -93,11 +93,12 @@ function normalizeAudit(source: string, id: string, data: any): UnifiedAuditEntr
     entityLabel,
     entityId: data.entityId || data.patientId || data.studentId || data.staffId,
     dept: (data.departmentCode || data.dept || source) as any,
+    _raw: data,
   };
 }
 
 // Full audit sources list including existing and potential future departments
-const DEFAULT_SOURCES = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+const DEFAULT_SOURCES = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job_center'];
 
 export function subscribeUnifiedAuditFeed({
   limitCount = 50,

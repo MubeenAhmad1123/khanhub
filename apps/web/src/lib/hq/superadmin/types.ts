@@ -39,6 +39,7 @@ export type UnifiedAuditEntry = {
   entityLabel?: string;
   entityId?: string;
   dept?: 'rehab' | 'spims' | 'hq';
+  _raw?: any;
 };
 
 export type UnifiedTx = {
