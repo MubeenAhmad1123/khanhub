@@ -89,7 +89,7 @@ export function StatCard({
     </div>
   );
 
-  const className = `block rounded-3xl border bg-gradient-to-br ${toneStyles} bg-[#F3F4F6] dark:bg-gray-950 p-5 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all`;
+  const className = `block rounded-3xl border bg-gradient-to-br ${toneStyles} bg-white dark:bg-gray-950 p-5 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all`;
 
   return href ? (
     <Link href={href} className={className}>

@@ -215,7 +215,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     const [portalOpen, setPortalOpen] = useState(false);
     
     return (
-      <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      <div className="flex flex-col h-full bg-white dark:bg-gray-900">
         {/* Header / Branding */}
         <div className={`px-6 pt-7 pb-6 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
           <div className="flex items-center gap-3 mb-6">
@@ -352,7 +352,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
         {/* Bottom Section: Profile & Logout */}
         <div className={`px-4 py-6 mt-auto border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-          <div className={`mb-4 p-3 rounded-2xl flex items-center gap-3 ${darkMode ? 'bg-gray-800/30' : 'bg-gray-50'}`}>
+          <div className="mb-4 p-3 rounded-2xl flex items-center gap-3 bg-gray-50 dark:bg-gray-800/30">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-600'}`}>
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
@@ -398,8 +398,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
 
   return (
-    <div className={`min-h-screen flex overflow-x-hidden ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
-      <aside className={`hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+    <div className="min-h-screen flex overflow-x-hidden bg-gray-50 dark:bg-gray-950">
+      <aside className="hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 bg-white border-gray-100 dark:bg-gray-900 dark:border-gray-800">
         <SidebarContent />
       </aside>
 
@@ -412,7 +412,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
       <aside className={`fixed left-0 top-0 h-screen w-72 z-50 lg:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      } bg-white dark:bg-gray-900">
         <button
           onClick={() => setSidebarOpen(false)}
           className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:bg-gray-100 transition-colors"
@@ -455,9 +455,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <header className={`hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between ${
-          darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
-        }`}>
+        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between bg-white/80 border-gray-100 dark:bg-gray-900/80 dark:border-gray-800">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
