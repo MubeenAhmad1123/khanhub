@@ -11,6 +11,10 @@ export default function ConditionalShell({ children }: { children: React.ReactNo
   // Hide main site layout components on these paths
   const isDepartmentDashboard = pathname.startsWith('/departments/rehab/') || 
                                pathname.startsWith('/departments/spims/') ||
+                               pathname.startsWith('/departments/welfare/') ||
+                               pathname.startsWith('/departments/job-center/') ||
+                               pathname.startsWith('/departments/hospital/') ||
+                               pathname.startsWith('/departments/sukoon/') ||
                                pathname.startsWith('/hq/');
 
   if (isDepartmentDashboard) {
