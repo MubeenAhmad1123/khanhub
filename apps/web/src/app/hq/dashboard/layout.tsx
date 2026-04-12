@@ -383,9 +383,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             </button>
             <Link 
               href="/"
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                darkMode ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-white border border-gray-100 text-gray-500 hover:bg-gray-50 shadow-sm'
-              }`}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-white border border-gray-100 text-gray-500 hover:bg-gray-50 shadow-sm dark:bg-gray-800 dark:border-transparent dark:text-gray-400 dark:hover:bg-gray-700"
             >
               <ArrowLeft size={14} />
               Portal
@@ -423,19 +421,17 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className={`lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between ${
-          darkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-white/80 border-gray-100'
-        }`}>
+        <header className="lg:hidden sticky top-0 z-20 backdrop-blur border-b px-4 py-3 flex items-center justify-between bg-white/80 border-gray-100 dark:bg-gray-900/80 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+              className="p-2 rounded-xl transition-colors text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
             >
               <Menu size={20} />
             </button>
             <button
               onClick={() => router.back()}
-              className={`p-2 rounded-xl transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+              className="p-2 rounded-xl transition-colors text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
               title="Go back"
             >
               <ChevronLeft size={20} />
@@ -445,7 +441,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <div className="w-7 h-7 bg-gray-800 rounded-lg flex items-center justify-center text-white">
               <Shield size={14} />
             </div>
-            <span className={`font-black text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>KhanHub HQ</span>
+            <span className="font-black text-sm text-gray-900 dark:text-white">KhanHub HQ</span>
           </div>
           <div className="flex items-center gap-2">
             {user ? <HqNotificationBell session={user} /> : null}
