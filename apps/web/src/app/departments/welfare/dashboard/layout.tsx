@@ -23,12 +23,15 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Overview',      href: '/departments/welfare/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
-  { label: 'Children',      href: '/departments/welfare/dashboard/admin/children', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
-  { label: 'Credentials',   href: '/departments/welfare/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin', 'superadmin'] },
-  { label: 'My Attendance', href: '/departments/welfare/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
-  { label: 'My Child',    href: '/departments/welfare/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
-  { label: 'My Profile',    href: '/departments/welfare/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },
+  { label: 'Overview',      href: '/departments/welfare/dashboard/admin',                    icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
+  { label: 'Children',      href: '/departments/welfare/dashboard/admin/children',           icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
+  { label: 'Credentials',   href: '/departments/welfare/dashboard/admin/passwords',          icon: <Shield size={16}/>,          roles: ['admin', 'superadmin'] },
+  { label: 'Approvals',     href: '/departments/welfare/dashboard/superadmin/approvals',     icon: <CheckCircle size={16}/>,     roles: ['superadmin'] },
+  { label: 'Reports',       href: '/departments/welfare/dashboard/superadmin/reports',       icon: <FileBarChart size={16}/>,    roles: ['superadmin'] },
+  { label: 'User Management', href: '/departments/welfare/dashboard/superadmin/users',      icon: <Users size={16}/>,           roles: ['superadmin'] },
+  { label: 'My Attendance', href: '/departments/welfare/dashboard/staff',                   icon: <CalendarDays size={16}/>,    roles: ['staff'] },
+  { label: 'My Child',      href: '/departments/welfare/dashboard/family',                  icon: <User size={16}/>,            roles: ['family'] },
+  { label: 'My Profile',    href: '/departments/welfare/dashboard/profile',                 icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },
 ];
 
 const ROLE_COLORS: Record<WelfareRole, string> = {

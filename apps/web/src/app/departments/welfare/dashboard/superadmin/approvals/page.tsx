@@ -370,7 +370,7 @@ export default function ApprovalsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-[60vh] flex items-center justify-center bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
       </div>
     );
@@ -504,7 +504,7 @@ export default function ApprovalsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="space-y-8 pb-10 w-full overflow-x-hidden">
       <div className="max-w-4xl mx-auto space-y-8">
         
         {/* Header */}

@@ -148,7 +148,7 @@ export default function SuperAdminReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="space-y-6 pb-10 w-full overflow-x-hidden">
       <style>{`
         @media print {
           body * { visibility: hidden; }
