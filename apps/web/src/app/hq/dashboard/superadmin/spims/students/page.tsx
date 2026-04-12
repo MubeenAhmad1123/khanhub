@@ -61,19 +61,19 @@ export default function SuperadminSpimsStudentsListPage() {
   }, [rows, q]);
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] dark:bg-transparent py-6">
+    <div className="min-h-screen py-6 bg-gray-950">
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-[#111827] dark:text-white">SPIMS Students</h1>
-          <p className="mt-1 text-sm text-[#6B7280] dark:text-gray-400 font-medium">Browse and open any student profile.</p>
+          <h1 className="text-xl font-black tracking-tight text-white">SPIMS Students</h1>
+          <p className="mt-1 text-sm text-gray-400 font-medium">Browse and open any student profile.</p>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-[#D1D5DB] bg-[#FFFFFF] px-4 py-3 dark:border-white/10 dark:bg-white/5 focus-within:border-teal-500/50 transition-all shadow-sm">
+        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 focus-within:border-teal-500/50 transition-all shadow-sm">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search student…"
-            className="w-full bg-transparent text-sm font-semibold text-[#111827] outline-none placeholder:text-[#9CA3AF] dark:text-white dark:placeholder:text-gray-400"
+            className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-400"
           />
         </div>
 
@@ -83,21 +83,21 @@ export default function SuperadminSpimsStudentsListPage() {
           ) : !filtered.length ? (
             <EmptyState title="No students" message="No students match your search." />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white dark:border-white/10 dark:bg-white/5 shadow-sm">
-              <div className="divide-y divide-[#F3F4F6] dark:divide-white/5">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-sm">
+              <div className="divide-y divide-white/5">
                 {filtered.map((r) => (
                   <Link
                     key={r.id}
                     href={`/hq/dashboard/superadmin/spims/students/${r.id}`}
-                    className="block p-4 transition-colors hover:bg-[#F9FAFB] active:bg-[#F3F4F6] dark:hover:bg-white/5 dark:active:bg-white/10"
+                    className="block p-4 transition-colors hover:bg-white/5 active:bg-white/10"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[#111827] dark:text-white">{r.name}</p>
-                        <p className="mt-1 text-xs text-[#9CA3AF] dark:text-gray-400">{r.className ? `Class: ${r.className}` : '—'}</p>
+                        <p className="truncate text-sm font-medium text-white">{r.name}</p>
+                        <p className="mt-1 text-xs text-gray-400">{r.className ? `Class: ${r.className}` : '—'}</p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="text-xs font-black text-amber-600 dark:text-amber-400">
+                        <div className="text-xs font-black text-amber-400">
                           Remaining: PKR {Number(r.remaining || 0).toLocaleString('en-PK')}
                         </div>
                       </div>
