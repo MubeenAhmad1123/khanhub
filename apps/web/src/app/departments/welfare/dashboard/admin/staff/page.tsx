@@ -1,4 +1,4 @@
-// src/app/departments/rehab/dashboard/admin/staff/page.tsx
+// src/app/departments/welfare/dashboard/admin/staff/page.tsx
 'use client';
 
 import { useEffect } from 'react';

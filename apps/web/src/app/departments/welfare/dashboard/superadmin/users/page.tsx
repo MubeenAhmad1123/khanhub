@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
+import { useWelfareSession } from '@/hooks/welfare/useWelfareSession';
 import { createRehabUserServer, deactivateRehabUser, resetRehabPassword } from '../../../actions/createWelfareUser';
-import EyePasswordInput from '@/components/rehab/EyePasswordInput';
+import EyePasswordInput from '@/components/welfare/EyePasswordInput';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { RehabUser } from '@/types/rehab';
+import type { WelfareUser } from '@/types/welfare';
 
 export default function SuperAdminUserManagement() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useWelfareSession();
   const [admins, setAdmins] = useState<RehabUser[]>([]);
   const [cashier, setCashier] = useState<RehabUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,8 +24,8 @@ export default function SuperAdminUserManagement() {
 
   const fetchData = async () => {
     try {
-      const qAdmins = query(collection(db, 'rehab_users'), where('role', '==', 'admin'));
-      const qCashier = query(collection(db, 'rehab_users'), where('role', '==', 'cashier'), where('isActive', '==', true));
+      const qAdmins = query(collection(db, 'welfare_users'), where('role', '==', 'admin'));
+      const qCashier = query(collection(db, 'welfare_users'), where('role', '==', 'cashier'), where('isActive', '==', true));
       
       const [snapAdmins, snapCashier] = await Promise.all([getDocs(qAdmins), getDocs(qCashier)]);
       
@@ -41,7 +41,7 @@ export default function SuperAdminUserManagement() {
   useEffect(() => {
     if (!sessionLoading) {
       if (!user || user.role !== 'superadmin') {
-        router.push('/departments/rehab/login');
+        router.push('/departments/welfare/login');
       } else {
         fetchData();
       }
@@ -80,7 +80,7 @@ export default function SuperAdminUserManagement() {
   const handleDeactivate = async (uid: string) => {
     if (!confirm('Are you sure? This user will lose all access.')) return;
     setActionLoading(true);
-    const res = await deactivateRehabUser(uid);
+    const res = await deactivateWelfareUser(uid);
     if (res.success) {
       setMessage({ type: 'success', text: 'User deactivated successfully' });
       fetchData();
@@ -92,7 +92,7 @@ export default function SuperAdminUserManagement() {
     const newPass = prompt('Enter new password (min 6 chars):');
     if (!newPass || newPass.length < 6) return;
     setActionLoading(true);
-    const res = await resetRehabPassword(uid, newPass);
+    const res = await resetWelfarePassword(uid, newPass);
     if (res.success) setMessage({ type: 'success', text: 'Password reset successful' });
     setActionLoading(false);
   };

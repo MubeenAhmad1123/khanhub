@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2, Search, Eye, EyeOff, Copy, Check, ArrowLeft, Shield } from 'lucide-react';
-import { resetRehabPassword } from '@/app/departments/rehab/actions/createRehabUser';
+import { resetWelfarePassword } from '@/app/departments/welfare/actions/createWelfareUser';
 
 type RehabPatientCredential = {
   id: string;
@@ -29,14 +29,14 @@ export default function RehabAdminPasswordsPage() {
   const [resettingId, setResettingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     setSession(parsed);
@@ -49,7 +49,7 @@ export default function RehabAdminPasswordsPage() {
       try {
         setLoading(true);
         const q = query(
-          collection(db, 'rehab_users'),
+          collection(db, 'welfare_users'),
           where('role', '==', 'family'),
           orderBy('displayName', 'asc'),
         );
@@ -101,7 +101,7 @@ export default function RehabAdminPasswordsPage() {
 
     try {
       setResettingId(u.id);
-      const res = await resetRehabPassword(u.id, next);
+      const res = await resetWelfarePassword(u.id, next);
       if (!res.success) {
         window.alert(res.error || 'Failed to reset password.');
         return;
@@ -126,7 +126,7 @@ export default function RehabAdminPasswordsPage() {
 
   return (
     <div className="space-y-5">
-      <Link href="/departments/rehab/dashboard/admin" className="inline-flex items-center gap-2 text-xs font-black text-gray-500 hover:text-teal-700 uppercase tracking-widest">
+      <Link href="/departments/welfare/dashboard/admin" className="inline-flex items-center gap-2 text-xs font-black text-gray-500 hover:text-teal-700 uppercase tracking-widest">
         <ArrowLeft size={14} />
         Back to admin
       </Link>

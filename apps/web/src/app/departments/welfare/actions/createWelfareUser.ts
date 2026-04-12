@@ -4,10 +4,11 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const DOMAIN = '@rehab.khanhub';
+const DOMAIN = '@welfare.khanhub';
+const ADMIN_APP_NAME = 'welfare-admin';
 
 function getAdminApp(): App {
-  const existing = getApps().find(a => a.name === 'rehab-admin');
+  const existing = getApps().find(a => a.name === ADMIN_APP_NAME);
   if (existing) return existing;
 
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -21,17 +22,17 @@ function getAdminApp(): App {
       clientEmail: sa.client_email,
       privateKey: sa.private_key,
     }),
-  }, 'rehab-admin');
+  }, ADMIN_APP_NAME);
 }
 
-export async function createRehabUserServer(
+export async function createWelfareUserServer(
   customId: string,
   password: string,
   role: string,
   displayName: string,
   patientId?: string,
   emailDomain: string = DOMAIN,
-  userCollection: string = 'rehab_users'
+  userCollection: string = 'welfare_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -41,12 +42,10 @@ export async function createRehabUserServer(
     const adminAuth = getAuth(app);
     const adminDb = getFirestore(app);
 
-    // Guardrails: family login IDs must never collide with reserved master IDs.
-    // Even if reserved master users were deleted from Auth by mistake, this prevents
-    // patient admissions from overwriting them later.
+    // Guardrail: family login IDs must never collide with reserved master IDs.
     if (role === 'family') {
       try {
-        const setupSnap = await adminDb.collection('rehab_meta').doc('setup').get();
+        const setupSnap = await adminDb.collection('welfare_meta').doc('setup').get();
         const setupData = setupSnap.data() as any;
         if (setupSnap.exists && setupData?.completed === true) {
           const reservedSuper = String(setupData?.superAdminCustomId || '').toUpperCase();
@@ -60,7 +59,7 @@ export async function createRehabUserServer(
           }
         }
       } catch {
-        // If guardrail check fails, we still rely on the collision check below.
+        // If guardrail check fails, fall through to collision check below.
       }
     }
 
@@ -68,25 +67,17 @@ export async function createRehabUserServer(
 
     try {
       const existingUser = await adminAuth.getUserByEmail(email);
-      // If the user exists, fail instead of deleting/recreating.
-      // Deleting/recreating can overwrite existing admin/cashier accounts if a patient
-      // login ID accidentally collides with a master account ID.
       const existingProfileSnap = await adminDb.collection(userCollection).doc(existingUser.uid).get();
       const nextPatientId = patientId || null;
 
-      // If Auth exists but Firestore profile is missing, "repair" the Firestore doc.
-      // This does NOT change Firebase Auth password.
+      // Repair missing Firestore profile (but never guess a family user into an admin slot).
       if (!existingProfileSnap.exists) {
-        // For family accounts, do not guess/repair role into Firestore when Auth user exists.
-        // Otherwise an admin/cashier Auth user with a deleted Firestore profile could be
-        // accidentally converted into a family user.
         if (role === 'family') {
           return {
             success: false,
             error: 'Login ID already exists. Please use a different Patient Login ID.',
           };
         }
-
         await adminDb.collection(userCollection).doc(existingUser.uid).set({
           customId,
           role,
@@ -101,42 +92,34 @@ export async function createRehabUserServer(
 
       const existingProfile = existingProfileSnap.data() as any;
 
-      // Prevent role hijacking (ex: admin auth user accidentally being used as patient family).
+      // Prevent role hijacking.
       if (existingProfile?.role && existingProfile.role !== role) {
         return {
           success: false,
-          error: `Login ID already exists for a different account type. Please use the correct Login ID.`,
+          error: 'Login ID already exists for a different account type. Please use the correct Login ID.',
         };
       }
 
-      // For family users, prevent reassigning the same login ID to a different patient.
+      // Prevent reassigning family login to a different patient.
       if (role === 'family' && existingProfile?.patientId && existingProfile.patientId !== nextPatientId) {
         return {
           success: false,
-          error: `This Patient Login ID is already assigned to another patient.`,
+          error: 'This Patient Login ID is already assigned to another patient.',
         };
       }
 
-      // Role matches (and assignment is safe): update Firestore profile fields.
+      // Safe update.
       await adminDb.collection(userCollection).doc(existingUser.uid).set(
-        {
-          customId,
-          role,
-          displayName,
-          password,
-          patientId: nextPatientId,
-          isActive: true,
-        },
+        { customId, role, displayName, password, patientId: nextPatientId, isActive: true },
         { merge: true }
       );
-
       return { success: true, uid: existingUser.uid };
     } catch {
-      // User doesn't exist — continue normally.
+      // User doesn't exist in Auth — create normally.
     }
 
     const userRecord = await adminAuth.createUser({ email, password, displayName });
-    await getFirestore(app).collection(userCollection).doc(userRecord.uid).set({
+    await adminDb.collection(userCollection).doc(userRecord.uid).set({
       customId,
       role,
       displayName,
@@ -145,22 +128,27 @@ export async function createRehabUserServer(
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
     });
+
     // Fire-and-forget audit log
     try {
-      await getFirestore(app).collection('rehab_audit').add({
+      await adminDb.collection('welfare_audit').add({
         action: 'user_created',
         performedBy: 'server_action',
         details: { customId, role, displayName },
         createdAt: new Date(),
       });
     } catch {}
+
     return { success: true, uid: userRecord.uid };
   } catch (err: any) {
     return { success: false, error: err.message };
   }
 }
 
-export async function deactivateRehabUser(
+// Keep old name as alias for backward-compat with HQ manager page imports
+export const createRehabUserServer = createWelfareUserServer;
+
+export async function deactivateWelfareUser(
   uid: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
@@ -168,10 +156,9 @@ export async function deactivateRehabUser(
   try {
     const app = getAdminApp();
     await getAuth(app).updateUser(uid, { disabled: true });
-    await getFirestore(app).collection('rehab_users').doc(uid).update({ isActive: false });
-    // Fire-and-forget audit log
+    await getFirestore(app).collection('welfare_users').doc(uid).update({ isActive: false });
     try {
-      await getFirestore(app).collection('rehab_audit').add({
+      await getFirestore(app).collection('welfare_audit').add({
         action: 'user_deactivated',
         performedBy: 'server_action',
         details: { uid },
@@ -184,7 +171,7 @@ export async function deactivateRehabUser(
   }
 }
 
-export async function resetRehabPassword(
+export async function resetWelfarePassword(
   uid: string,
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -193,9 +180,7 @@ export async function resetRehabPassword(
   try {
     const app = getAdminApp();
     await getAuth(app).updateUser(uid, { password: newPassword });
-    await getFirestore(app).collection('rehab_users').doc(uid).update({
-      password: newPassword,
-    });
+    await getFirestore(app).collection('welfare_users').doc(uid).update({ password: newPassword });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -247,7 +232,7 @@ export async function markSetupComplete(
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
   try {
     const app = getAdminApp();
-    await getFirestore(app).collection('rehab_meta').doc('setup').set({
+    await getFirestore(app).collection('welfare_meta').doc('setup').set({
       completed: true,
       completedAt: new Date(),
       superAdminCustomId,
@@ -263,8 +248,8 @@ export async function createStaffMemberServer(
   customId: string,
   password: string,
   displayName: string,
-  emailDomain: string = '@rehab.khanhub',
-  userCollection: string = 'rehab_users'
+  emailDomain: string = DOMAIN,
+  userCollection: string = 'welfare_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -276,15 +261,13 @@ export async function createStaffMemberServer(
     const email = `${customId.toLowerCase()}${emailDomain}`;
 
     try {
-      const existingUser = await adminAuth.getUserByEmail(email);
-      // If the user exists, fail instead of deleting/recreating.
-      // This prevents accidental overwrite of admin/staff/cashier accounts.
+      await adminAuth.getUserByEmail(email);
       return {
         success: false,
-        error: `Login ID already exists. Choose a different Staff Login ID.`,
+        error: 'Login ID already exists. Choose a different Staff Login ID.',
       };
     } catch {
-      // fine
+      // User doesn't exist — continue.
     }
 
     const userRecord = await adminAuth.createUser({ email, password, displayName });
@@ -298,15 +281,15 @@ export async function createStaffMemberServer(
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    // Fire-and-forget audit log
     try {
-      await adminDb.collection('rehab_audit').add({
+      await adminDb.collection('welfare_audit').add({
         action: 'login_initialization',
         performedBy: 'server_action',
         details: { customId, displayName },
         createdAt: new Date(),
       });
     } catch {}
+
     return { success: true, uid: userRecord.uid };
   } catch (err: any) {
     return { success: false, error: err.message };

@@ -71,10 +71,10 @@ export default function AuditLogPage() {
   const [filter, setFilter] = useState('');
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('welfare_session');
+    if (!sessionData) { router.push('/departments/welfare/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'superadmin') { router.push('/departments/rehab/login'); return; }
+    if (parsed.role !== 'superadmin') { router.push('/departments/welfare/login'); return; }
     fetchAudit('');
   }, [router]);
 
@@ -84,14 +84,14 @@ export default function AuditLogPage() {
       let q;
       if (actionFilter) {
         q = query(
-          collection(db, 'rehab_audit'),
+          collection(db, 'welfare_audit'),
           where('action', '==', actionFilter),
           orderBy('createdAt', 'desc'),
           limit(50)
         );
       } else {
         q = query(
-          collection(db, 'rehab_audit'),
+          collection(db, 'welfare_audit'),
           orderBy('createdAt', 'desc'),
           limit(50)
         );

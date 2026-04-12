@@ -13,13 +13,13 @@ import { useTheme } from 'next-themes';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-type RehabRole = 'admin' | 'staff' | 'family' | 'superadmin';
+type WelfareRole = 'admin' | 'staff' | 'family' | 'superadmin';
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
-  roles: RehabRole[];
+  roles: WelfareRole[];
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -31,14 +31,14 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Profile',    href: '/departments/welfare/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },
 ];
 
-const ROLE_COLORS: Record<RehabRole, string> = {
+const ROLE_COLORS: Record<WelfareRole, string> = {
   admin:      'bg-blue-100 text-blue-700',
   staff:      'bg-teal-100 text-teal-700',
   family:     'bg-green-100 text-green-700',
   superadmin: 'bg-purple-100 text-purple-700',
 };
 
-const ROLE_LABELS: Record<RehabRole, string> = {
+const ROLE_LABELS: Record<WelfareRole, string> = {
   admin:      'Admin',
   staff:      'Staff',
   family:     'Family',
@@ -46,7 +46,7 @@ const ROLE_LABELS: Record<RehabRole, string> = {
 };
 
 const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string; icon: React.ReactNode }> = {
-  rehab:        { label: 'Rehab',      adminUrl: '/departments/rehab/dashboard/admin',       color: 'text-rose-500',   icon: <Heart size={16} /> },
+  welfare:      { label: 'Welfare',      adminUrl: '/departments/welfare/dashboard/admin',       color: 'text-rose-500',   icon: <Heart size={16} /> },
   hospital:     { label: 'Hospital',   adminUrl: '/departments/hospital/dashboard/admin',    color: 'text-blue-500',   icon: <Building2 size={16} /> },
   spims:        { label: 'SPIMS',      adminUrl: '/departments/spims/dashboard/admin',       color: 'text-teal-500',   icon: <GraduationCap size={16} /> },
   sukoon:       { label: 'Sukoon',     adminUrl: '/departments/sukoon/dashboard/admin',      color: 'text-purple-500', icon: <Heart size={16} /> },
@@ -70,7 +70,7 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
   const { theme, setTheme, resolvedTheme } = useTheme();
   
   const [isChecking, setIsChecking] = useState(true);
-  const [user, setUser] = useState<{ role: RehabRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
+  const [user, setUser] = useState<{ role: WelfareRole; displayName: string; customId: string; uid: string; patientId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isHqAdmin, setIsHqAdmin] = useState(false);

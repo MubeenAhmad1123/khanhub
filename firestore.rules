@@ -1420,6 +1420,35 @@ service cloud.firestore {
       allow delete: if isWelfareSuperAdmin();
     }
 
+    match /welfare_canteen/{docId} {
+      allow read: if isWelfareAdminOrAbove()
+        || isWelfareRole('cashier')
+        || (isWelfareRole('child') && welfareChildId() == resource.data.childId);
+      allow create, update: if isWelfareRole('cashier') || isWelfareAdminOrAbove();
+      allow delete: if isWelfareSuperAdmin();
+    }
+
+    match /welfare_videos/{docId} {
+      allow read: if isWelfareAdminOrAbove()
+        || (isWelfareRole('child') && welfareChildId() == resource.data.patientId);
+      allow create: if isWelfareAdminOrAbove();
+      allow delete: if isWelfareAdminOrAbove();
+    }
+
+    match /welfare_visits/{docId} {
+      allow read: if isWelfareAdminOrAbove()
+        || (isWelfareRole('child') && welfareChildId() == resource.data.patientId);
+      allow create, update: if isWelfareAdminOrAbove();
+      allow delete: if isWelfareSuperAdmin();
+    }
+
+    match /welfare_fines/{docId} {
+      allow read: if isWelfareAdminOrAbove()
+        || (isWelfareRole('staff') && welfareStaffId() == resource.data.staffId);
+      allow create, update: if isWelfareAdminOrAbove();
+      allow delete: if isWelfareSuperAdmin();
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  JOB CENTER PORTAL HELPERS
     // ═══════════════════════════════════════════════════════════

@@ -30,14 +30,14 @@ export default function FinanceLogPage() {
   const [stats, setStats] = useState({ income: 0, expense: 0, net: 0 });
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     setSession(parsed);
@@ -56,7 +56,7 @@ export default function FinanceLogPage() {
 
       // We constrain our query to date range to keep it simple and composite index minimal
       const q = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'welfare_transactions'),
         where('date', '>=', Timestamp.fromDate(from)),
         where('date', '<=', Timestamp.fromDate(to)),
         orderBy('date', 'desc')

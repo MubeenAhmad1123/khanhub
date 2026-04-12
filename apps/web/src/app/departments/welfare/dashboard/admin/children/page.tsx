@@ -30,14 +30,14 @@ export default function PatientsListPage() {
   const [statusFilter, setStatusFilter] = useState<string>('active');
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     setSession(parsed);
@@ -48,9 +48,9 @@ export default function PatientsListPage() {
     try {
       setLoading(true);
       const [snap, feesSnap, canteenSnap] = await Promise.all([
-        getDocs(collection(db, 'rehab_patients')),
-        getDocs(collection(db, 'rehab_fees')),
-        getDocs(collection(db, 'rehab_canteen')),
+        getDocs(collection(db, 'welfare_children')),
+        getDocs(collection(db, 'welfare_fees')),
+        getDocs(collection(db, 'welfare_canteen')),
       ]);
       
       const feesMap: Record<string, any[]> = {};
@@ -173,7 +173,7 @@ export default function PatientsListPage() {
             <p className="text-sm text-gray-500 font-medium mt-0.5">Manage all patients and their recovery journey</p>
           </div>
           <Link 
-            href="/departments/rehab/dashboard/admin/patients/new"
+            href="/departments/welfare/dashboard/admin/patients/new"
             className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 transition-all whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
@@ -284,7 +284,7 @@ export default function PatientsListPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredPatients.map(patient => (
               <Link 
-                href={`/departments/rehab/dashboard/admin/patients/${patient.id}`} 
+                href={`/departments/welfare/dashboard/admin/patients/${patient.id}`} 
                 key={patient.id}
                 className="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-200 transition-all active:scale-[0.98] group flex flex-col h-full relative overflow-hidden"
               >

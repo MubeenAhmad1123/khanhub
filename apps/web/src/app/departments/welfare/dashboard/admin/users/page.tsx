@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { createRehabUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
@@ -36,14 +36,14 @@ export default function UserManagementPage() {
   const [modalError, setModalError] = useState('');
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     setSession(parsed);
@@ -58,7 +58,7 @@ export default function UserManagementPage() {
     try {
       setLoading(true);
       const q = query(
-        collection(db, 'rehab_users'),
+        collection(db, 'welfare_users'),
         orderBy('createdAt', 'desc')
       );
       const snapshot = await getDocs(q);

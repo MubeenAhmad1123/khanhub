@@ -17,11 +17,11 @@ import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY } from '@/lib/utils';
 
-import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
-import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
-import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
-import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
-import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
+import DailySheetTab from '@/components/welfare/patient-profile/DailySheetTab';
+import ProgressTab from '@/components/welfare/patient-profile/ProgressTab';
+import TherapyTab from '@/components/welfare/patient-profile/TherapyTab';
+import MedicationTab from '@/components/welfare/patient-profile/MedicationTab';
+import AdmissionTab from '@/components/welfare/patient-profile/AdmissionTab';
 
 export default function PatientDetailPage() {
   const router = useRouter();
@@ -104,14 +104,14 @@ export default function PatientDetailPage() {
   const [canteenDate, setCanteenDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     setSession(parsed);
@@ -123,10 +123,10 @@ export default function PatientDetailPage() {
       setLoading(true);
 
       // 1. Patient Profile
-      const pDoc = await getDoc(doc(db, 'rehab_patients', patientId));
+      const pDoc = await getDoc(doc(db, 'welfare_children', patientId));
       if (!pDoc.exists()) {
         toast.error('Patient not found');
-        router.push('/departments/rehab/dashboard/admin/patients');
+        router.push('/departments/welfare/dashboard/admin/patients');
         return;
       }
       const data = pDoc.data();
@@ -156,7 +156,7 @@ export default function PatientDetailPage() {
 
       // 2. Fees (Initial current month)
       const feesQ = query(
-        collection(db, 'rehab_fees'),
+        collection(db, 'welfare_fees'),
         where('patientId', '==', patientId),
         where('month', '==', monthStr)
       );
@@ -169,7 +169,7 @@ export default function PatientDetailPage() {
 
       // 3. Canteen (Initial current month)
       const canteenQ = query(
-        collection(db, 'rehab_canteen'),
+        collection(db, 'welfare_canteen'),
         where('patientId', '==', patientId),
         where('month', '==', monthStr)
       );
@@ -182,7 +182,7 @@ export default function PatientDetailPage() {
 
       // 4. Videos
       const videosQ = query(
-        collection(db, 'rehab_videos'),
+        collection(db, 'welfare_videos'),
         where('patientId', '==', patientId),
         orderBy('createdAt', 'desc')
       );
@@ -191,7 +191,7 @@ export default function PatientDetailPage() {
 
       // 5. Visits
       const visitsQ = query(
-        collection(db, 'rehab_visits'),
+        collection(db, 'welfare_visits'),
         where('patientId', '==', patientId),
         orderBy('date', 'desc')
       );
@@ -225,7 +225,7 @@ export default function PatientDetailPage() {
     try {
       const snap = await getDocs(
         query(
-          collection(db, 'rehab_fees'),
+          collection(db, 'welfare_fees'),
           where('patientId', '==', patientId),
           where('month', '==', feeMonth)
         )
@@ -265,22 +265,22 @@ export default function PatientDetailPage() {
         return;
       }
 
-      const setupSnap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+      const setupSnap = await getDoc(doc(db, 'welfare_meta', 'setup'));
       const setupData = setupSnap.data() as any;
       const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
 
       if (!cashierCustomId) {
-        toast.error('Cashier is not configured (missing rehab_meta/setup.cashierCustomId).');
+        toast.error('Cashier is not configured (missing welfare_meta/setup.cashierCustomId).');
         return;
       }
 
-      await addDoc(collection(db, 'rehab_transactions'), {
+      await addDoc(collection(db, 'welfare_transactions'), {
         type: 'income',
         amount,
         category: 'fee',
         categoryName: 'Admission / Fees',
-        departmentCode: 'rehab',
-        departmentName: 'Rehab Center',
+        departmentCode: 'welfare',
+        departmentName: 'Welfare Foundation',
         patientId: patientId,
         patientName: patient?.name || '',
         status: 'pending_cashier',
@@ -290,7 +290,7 @@ export default function PatientDetailPage() {
         date: Timestamp.fromDate(new Date(paymentDate)),
         transactionDate: Timestamp.fromDate(new Date(paymentDate)),
         createdBy: session.uid,
-        createdByName: session?.displayName || session?.name || 'Rehab Admin',
+        createdByName: session?.displayName || session?.name || 'Welfare Admin',
         createdAt: Timestamp.now()
       });
       setShowAddFeeModal(false);
@@ -315,22 +315,22 @@ export default function PatientDetailPage() {
         return;
       }
 
-      const setupSnap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+      const setupSnap = await getDoc(doc(db, 'welfare_meta', 'setup'));
       const setupData = setupSnap.data() as any;
       const cashierCustomId = String(setupData?.cashierCustomId || '').toUpperCase();
 
       if (!cashierCustomId) {
-        toast.error('Cashier is not configured (missing rehab_meta/setup.cashierCustomId).');
+        toast.error('Cashier is not configured (missing welfare_meta/setup.cashierCustomId).');
         return;
       }
 
-      await addDoc(collection(db, 'rehab_transactions'), {
+      await addDoc(collection(db, 'welfare_transactions'), {
         type: 'income',
         amount,
         category: 'fee',
         categoryName: 'Admission / Fees',
-        departmentCode: 'rehab',
-        departmentName: 'Rehab Center',
+        departmentCode: 'welfare',
+        departmentName: 'Welfare Foundation',
         patientId: patientId,
         patientName: patient?.name || '',
         status: 'pending_cashier',
@@ -340,14 +340,14 @@ export default function PatientDetailPage() {
         date: Timestamp.fromDate(new Date(payDate)),
         transactionDate: Timestamp.fromDate(new Date(payDate)),
         createdBy: session.uid,
-        createdByName: session?.displayName || session?.name || 'Rehab Admin',
+        createdByName: session?.displayName || session?.name || 'Welfare Admin',
         createdAt: Timestamp.now()
       });
       setShowAddPaymentModal(false);
       setPayAmt('');
       setPayNote('');
       toast.success('Payment request sent to cashier for approval ✓');
-      // Important: do not update rehab_fees here; it syncs only after superadmin approval.
+      // Important: do not update welfare_fees here; it syncs only after superadmin approval.
     } catch (error) {
       console.error("Add Payment error", error);
       toast.error('Failed to record payment');
@@ -358,7 +358,7 @@ export default function PatientDetailPage() {
     try {
       const snap = await getDocs(
         query(
-          collection(db, 'rehab_canteen'),
+          collection(db, 'welfare_canteen'),
           where('patientId', '==', patientId),
           where('month', '==', canteenMonth)
         )
@@ -396,7 +396,7 @@ export default function PatientDetailPage() {
       };
 
       if (!canteenRecord) {
-        await addDoc(collection(db, 'rehab_canteen'), {
+        await addDoc(collection(db, 'welfare_canteen'), {
           patientId: patientId,
           month: canteenMonth,
           totalDeposited: canteenModal === 'deposit' ? Number(canteenAmt) : 0,
@@ -414,7 +414,7 @@ export default function PatientDetailPage() {
         const newSpent = Number(canteenRecord.totalSpent) + 
           (canteenModal === 'expense' ? Number(canteenAmt) : 0);
         
-        await updateDoc(doc(db, 'rehab_canteen', canteenRecord.id), {
+        await updateDoc(doc(db, 'welfare_canteen', canteenRecord.id), {
           totalDeposited: newDeposited,
           totalSpent: newSpent,
           balance: newDeposited - newSpent,
@@ -444,7 +444,7 @@ export default function PatientDetailPage() {
       if (photoFile) {
         setPhotoUploading(true);
         try {
-          const url = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
+          const url = await uploadToCloudinary(photoFile, 'khanhub/welfare/children');
           photoUrl = url;
         } catch (err) {
           console.error("Photo upload failed", err);
@@ -453,7 +453,7 @@ export default function PatientDetailPage() {
         setPhotoUploading(false);
       }
 
-      await updateDoc(doc(db, 'rehab_patients', patientId), {
+      await updateDoc(doc(db, 'welfare_children', patientId), {
         name: editForm.name,
         diagnosis: editForm.diagnosis,
         packageAmount: Number(editForm.packageAmount),
@@ -483,9 +483,9 @@ export default function PatientDetailPage() {
     if (!window.confirm("Are you sure you want to deactivate this patient?")) return;
     try {
       setDeactivating(true);
-      await updateDoc(doc(db, 'rehab_patients', patientId), { isActive: false });
+      await updateDoc(doc(db, 'welfare_children', patientId), { isActive: false });
       toast.success('Patient deactivated');
-      router.push('/departments/rehab/dashboard/admin/patients');
+      router.push('/departments/welfare/dashboard/admin/patients');
     } catch (error) {
       console.error("Deactivate error", error);
       toast.error('Deactivation failed');
@@ -497,13 +497,13 @@ export default function PatientDetailPage() {
     if (!window.confirm("Are you sure you want to discharge this patient?")) return;
     try {
       setDeactivating(true);
-      await updateDoc(doc(db, 'rehab_patients', patientId), {
+      await updateDoc(doc(db, 'welfare_children', patientId), {
         isActive: false,
         dischargeDate: Timestamp.now(),
         dischargeReason: null
       });
       toast.success('Patient discharged');
-      router.push('/departments/rehab/dashboard/admin/patients');
+      router.push('/departments/welfare/dashboard/admin/patients');
     } catch (error) {
       console.error("Discharge error", error);
       toast.error('Discharge failed');
@@ -520,9 +520,9 @@ export default function PatientDetailPage() {
 
     try {
       setIsUploading(true);
-      const secureUrl = await uploadToCloudinary(selectedFile, 'khanhub/rehab/patients');
+      const secureUrl = await uploadToCloudinary(selectedFile, 'khanhub/welfare/children');
       
-      await addDoc(collection(db, 'rehab_videos'), {
+      await addDoc(collection(db, 'welfare_videos'), {
         patientId: patientId,
         title: videoTitle,
         url: secureUrl,
@@ -536,7 +536,7 @@ export default function PatientDetailPage() {
       setVideoTitle('');
       setSelectedFile(null);
       // Refresh videos
-      const videosQ = query(collection(db, 'rehab_videos'), where('patientId', '==', patientId), orderBy('createdAt', 'desc'));
+      const videosQ = query(collection(db, 'welfare_videos'), where('patientId', '==', patientId), orderBy('createdAt', 'desc'));
       const vidSnap = await getDocs(videosQ);
       setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
       
@@ -551,7 +551,7 @@ export default function PatientDetailPage() {
   const handleDeleteVideo = async (videoId: string) => {
     if (!window.confirm("Delete this file?")) return;
     try {
-      await deleteDoc(doc(db, 'rehab_videos', videoId));
+      await deleteDoc(doc(db, 'welfare_videos', videoId));
       toast.success('Deleted');
       setVideos(prev => prev.filter(v => v.id !== videoId));
     } catch (error) {
@@ -582,7 +582,7 @@ export default function PatientDetailPage() {
         createdAt: Timestamp.now()
       };
 
-      await addDoc(collection(db, 'rehab_visits'), visitData);
+      await addDoc(collection(db, 'welfare_visits'), visitData);
       
       toast.success('Visit logged ✓');
       setShowAddVisitModal(false);
@@ -596,7 +596,7 @@ export default function PatientDetailPage() {
       setVDate(new Date().toISOString().split('T')[0]);
 
       // Refresh visits
-      const visitsQ = query(collection(db, 'rehab_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitsQ = query(collection(db, 'welfare_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
       const visitSnap = await getDocs(visitsQ);
       setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
 
@@ -632,7 +632,7 @@ export default function PatientDetailPage() {
     }
     try {
       setIsUpdatingVisit(true);
-      await updateDoc(doc(db, 'rehab_visits', editVisitModal.id), {
+      await updateDoc(doc(db, 'welfare_visits', editVisitModal.id), {
         visitorName: vName,
         relation: vRelation,
         phone: vPhone,
@@ -645,7 +645,7 @@ export default function PatientDetailPage() {
 
       toast.success('Visit updated ✓');
       setEditVisitModal(null);
-      const visitsQ = query(collection(db, 'rehab_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitsQ = query(collection(db, 'welfare_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
       const visitSnap = await getDocs(visitsQ);
       setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
     } catch (error) {
@@ -672,7 +672,7 @@ export default function PatientDetailPage() {
         
         {/* Top Link */}
         <Link 
-          href="/departments/rehab/dashboard/admin/patients" 
+          href="/departments/welfare/dashboard/admin/patients" 
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -912,7 +912,7 @@ export default function PatientDetailPage() {
                       {(patient.remainingDays || 0) > 0 ? patient.remainingDays : (patient.daysAdmitted || 0)}
                     </p>
                     <p className="text-xs font-bold text-orange-500 mt-1">
-                      {(patient.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in rehab center'}
+                      {(patient.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days admitted in welfare program'}
                     </p>
                     <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
                       <div 

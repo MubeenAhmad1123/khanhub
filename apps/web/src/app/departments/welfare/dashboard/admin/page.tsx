@@ -1,4 +1,4 @@
-// src/app/departments/rehab/dashboard/admin/page.tsx
+// src/app/departments/welfare/dashboard/admin/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -31,11 +31,11 @@ export default function AdminDashboardPage() {
   const [activePatients, setActivePatients] = useState<any[]>([]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('welfare_session');
+    if (!sessionData) { router.push('/departments/welfare/login'); return; }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin') {
-      router.push('/departments/rehab/login'); return;
+      router.push('/departments/welfare/login'); return;
     }
     setSession(parsed);
   }, [router]);
@@ -48,7 +48,7 @@ export default function AdminDashboardPage() {
   const loadDashboard = async () => {
     try {
       const patientsSnap = await getDocs(query(
-        collection(db, 'rehab_patients'), 
+        collection(db, 'welfare_children'), 
         where('isActive', '==', true),
         orderBy('name', 'asc')
       ));
@@ -89,7 +89,7 @@ export default function AdminDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link 
-            href="/departments/rehab/dashboard/admin/patients/new"
+            href="/departments/welfare/dashboard/admin/patients/new"
             className="flex items-center gap-2 px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-black hover:bg-teal-700 transition-all shadow-lg shadow-teal-100 whitespace-nowrap"
           >
             <Plus size={16} /> Add Patient
@@ -137,7 +137,7 @@ export default function AdminDashboardPage() {
             <h2 className="font-black text-gray-900 flex items-center gap-3 text-sm md:text-base">
               <Activity className="w-5 h-5 text-teal-500" /> Recent Patients
             </h2>
-            <Link href="/departments/rehab/dashboard/admin/patients" className="text-[9px] md:text-xs font-black text-teal-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform whitespace-nowrap">
+            <Link href="/departments/welfare/dashboard/admin/patients" className="text-[9px] md:text-xs font-black text-teal-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform whitespace-nowrap">
               View All <ChevronRight size={12} />
             </Link>
           </div>
@@ -145,14 +145,14 @@ export default function AdminDashboardPage() {
             {activePatients.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-gray-400 text-sm font-medium">No active patients found.</p>
-                <Link href="/departments/rehab/dashboard/admin/patients/new" className="text-teal-600 text-sm font-bold mt-2 inline-block">Add your first patient</Link>
+                <Link href="/departments/welfare/dashboard/admin/patients/new" className="text-teal-600 text-sm font-bold mt-2 inline-block">Add your first patient</Link>
               </div>
             ) : (
                 <div className="grid grid-cols-1 gap-2">
                   {activePatients.map(patient => (
                     <Link 
                       key={patient.id} 
-                      href={`/departments/rehab/dashboard/admin/patients/${patient.id}`}
+                      href={`/departments/welfare/dashboard/admin/patients/${patient.id}`}
                       className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 transition-colors group active:bg-gray-100"
                     >
                       <div className="flex items-center gap-3">
@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
             <Link 
-              href="/departments/rehab/dashboard/admin/patients/new"
+              href="/departments/welfare/dashboard/admin/patients/new"
               className="flex items-center gap-3 p-4 rounded-2xl bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors group active:scale-95"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
@@ -189,7 +189,7 @@ export default function AdminDashboardPage() {
             </Link>
             
             <Link 
-              href="/departments/rehab/dashboard/admin/patients"
+              href="/departments/welfare/dashboard/admin/patients"
               className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors group active:scale-95"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
@@ -199,7 +199,7 @@ export default function AdminDashboardPage() {
             </Link>
 
             <Link 
-              href="/departments/rehab/dashboard/profile"
+              href="/departments/welfare/dashboard/profile"
               className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors group active:scale-95"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">

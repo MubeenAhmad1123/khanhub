@@ -2,21 +2,21 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
+import { useWelfareSession } from '@/hooks/welfare/useWelfareSession';
 import { Loader2, User, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function FamilyDashboardIndex() {
   const router = useRouter();
-  const { session, loading } = useRehabSession();
+  const { session, loading } = useWelfareSession();
 
   useEffect(() => {
     if (!loading) {
       if (!session) {
-        router.push('/departments/rehab/login');
+        router.push('/departments/welfare/login');
       } else if (session.role === 'family' && session.patientId) {
         // Automatically redirect family members to their specific patient
-        router.push(`/departments/rehab/dashboard/family/${session.patientId}`);
+        router.push(`/departments/welfare/dashboard/family/${session.patientId}`);
       }
     }
   }, [session, loading, router]);
@@ -62,7 +62,7 @@ export default function FamilyDashboardIndex() {
           <div className="space-y-3">
             {session?.role !== 'family' && (
               <Link 
-                href="/departments/rehab/dashboard/admin/patients"
+                href="/departments/welfare/dashboard/admin/patients"
                 className="flex items-center justify-center gap-2 w-full bg-teal-600 hover:bg-teal-700 text-white rounded-2xl py-4 font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-teal-200 active:scale-95 group"
               >
                 Go to Patients List

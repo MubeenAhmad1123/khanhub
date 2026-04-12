@@ -34,10 +34,10 @@ export default function SuperAdminReportsPage() {
   const [generated, setGenerated] = useState(false);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('welfare_session');
+    if (!sessionData) { router.push('/departments/welfare/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'superadmin') { router.push('/departments/rehab/login'); return; }
+    if (parsed.role !== 'superadmin') { router.push('/departments/welfare/login'); return; }
   }, [router]);
 
   const handleGenerate = async () => {
@@ -51,7 +51,7 @@ export default function SuperAdminReportsPage() {
 
       // === FINANCIAL TRANSACTIONS ===
       const txnQ = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'welfare_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'approved'),
@@ -62,7 +62,7 @@ export default function SuperAdminReportsPage() {
 
       // Pending count
       const pendingQ = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'welfare_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'pending')
@@ -82,13 +82,13 @@ export default function SuperAdminReportsPage() {
       };
 
       // === STAFF SALARY ===
-      const staffSnap = await getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)));
+      const staffSnap = await getDocs(query(collection(db, 'welfare_staff'), where('isActive', '==', true)));
       const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const finesSnap = await getDocs(query(collection(db, 'rehab_fines'), where('month', '==', monthStr)));
+      const finesSnap = await getDocs(query(collection(db, 'welfare_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
 
-      const attendanceSnap = await getDocs(query(collection(db, 'rehab_attendance'),
+      const attendanceSnap = await getDocs(query(collection(db, 'welfare_attendance'),
         where('date', '>=', `${monthStr}-01`),
         where('date', '<=', `${monthStr}-31`),
         where('status', '==', 'absent')
@@ -114,11 +114,11 @@ export default function SuperAdminReportsPage() {
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
       // === PATIENTS ===
-      const activePatientsSnap = await getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
+      const activePatientsSnap = await getDocs(query(collection(db, 'welfare_children'), where('isActive', '==', true)));
       const totalActivePatients = activePatientsSnap.size;
 
       const newAdmissionsSnap = await getDocs(query(
-        collection(db, 'rehab_patients'),
+        collection(db, 'welfare_children'),
         where('admissionDate', '>=', Timestamp.fromDate(firstDay)),
         where('admissionDate', '<=', Timestamp.fromDate(lastDay))
       ));
@@ -152,8 +152,8 @@ export default function SuperAdminReportsPage() {
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #welfare-report-print, #welfare-report-print * { visibility: visible; }
+          #welfare-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
         }
       `}</style>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -196,11 +196,11 @@ export default function SuperAdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="rehab-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
+          <div id="welfare-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">KhanHub Rehab Center — Super Admin Report</h2>
+              <h2 className="text-2xl font-black text-gray-900">KhanHub Welfare Foundation — Super Admin Report</h2>
               <p className="text-lg font-bold text-purple-700 mt-1">Monthly Financial Summary — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>

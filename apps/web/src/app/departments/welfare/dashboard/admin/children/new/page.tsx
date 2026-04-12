@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { createRehabUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { 
   ArrowLeft, Heart, Save, Loader2, User, Upload, 
@@ -68,14 +68,14 @@ export default function AdmitPatientPage() {
   ];
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     setLoading(false);
@@ -114,12 +114,12 @@ export default function AdmitPatientPage() {
       let photoUrl = null;
       if (photoFile) {
         setSubmitStatus('Uploading photo...');
-        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
+        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/welfare/children');
       }
 
       // 2. Create patient document in Firestore
       setSubmitStatus('Creating patient record...');
-      const patientRef = await addDoc(collection(db, 'rehab_patients'), {
+      const patientRef = await addDoc(collection(db, 'welfare_children'), {
         name,
         fatherName,
         age: Number(age),
@@ -164,7 +164,7 @@ export default function AdmitPatientPage() {
         // Roll back the patient doc if the login account could not be created.
         // This prevents "half-created" records from confusing future logins.
         try {
-          await deleteDoc(doc(db, 'rehab_patients', patientRef.id));
+          await deleteDoc(doc(db, 'welfare_children', patientRef.id));
         } catch {}
 
         setError(`Patient admission failed: ${result.error}. Please choose a different Patient Login ID.`);
@@ -175,7 +175,7 @@ export default function AdmitPatientPage() {
 
       setSubmitStatus('Done!');
       toast.success('Patient admitted successfully ✓');
-      router.push(`/departments/rehab/dashboard/admin/patients/${patientRef.id}`);
+      router.push(`/departments/welfare/dashboard/admin/patients/${patientRef.id}`);
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Something went wrong');
@@ -209,7 +209,7 @@ export default function AdmitPatientPage() {
         
         {/* Header */}
         <div className="flex flex-col gap-4">
-          <Link href="/departments/rehab/dashboard/admin/patients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit">
+          <Link href="/departments/welfare/dashboard/admin/patients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit">
             <ArrowLeft className="w-4 h-4" />
             Back to Patients
           </Link>
@@ -232,7 +232,7 @@ export default function AdmitPatientPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient Login ID *</label>
-                  <input required placeholder="e.g. REHAB-PAT-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
+                  <input required placeholder="e.g. WEL-CHI-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Login Password * (Min 6 chars)</label>
@@ -480,7 +480,7 @@ export default function AdmitPatientPage() {
                   </>
                 )}
               </button>
-              <Link href="/departments/rehab/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
+              <Link href="/departments/welfare/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
                 Cancel Registration
               </Link>
             </div>

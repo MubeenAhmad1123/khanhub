@@ -10,10 +10,10 @@ import {
   Shield, Pill, TrendingUp, Activity, ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
-import DailySheetTab from '@/components/rehab/patient-profile/DailySheetTab';
-import ProgressTab from '@/components/rehab/patient-profile/ProgressTab';
-import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
-import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
+import DailySheetTab from '@/components/welfare/patient-profile/DailySheetTab';
+import ProgressTab from '@/components/welfare/patient-profile/ProgressTab';
+import TherapyTab from '@/components/welfare/patient-profile/TherapyTab';
+import MedicationTab from '@/components/welfare/patient-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
 
 function toDate(val: any): Date {
@@ -37,8 +37,8 @@ export default function FamilyPatientViewPage() {
 
   const fetchPatientData = useCallback(async () => {
     try {
-      const pDoc = await getDoc(doc(db, 'rehab_patients', patientId));
-      if (!pDoc.exists()) { router.push('/departments/rehab/login'); return; }
+      const pDoc = await getDoc(doc(db, 'welfare_children', patientId));
+      if (!pDoc.exists()) { router.push('/departments/welfare/login'); return; }
       const data = pDoc.data();
       
       const admissionDate = toDate(data.admissionDate);
@@ -50,8 +50,8 @@ export default function FamilyPatientViewPage() {
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       const [feesSnap, canteenSnap] = await Promise.all([
-        getDocs(query(collection(db, 'rehab_fees'), where('patientId', '==', patientId))),
-        getDocs(query(collection(db, 'rehab_canteen'), where('patientId', '==', patientId))),
+        getDocs(query(collection(db, 'welfare_fees'), where('patientId', '==', patientId))),
+        getDocs(query(collection(db, 'welfare_canteen'), where('patientId', '==', patientId))),
       ]);
 
       let totalReceived = 0;
@@ -95,8 +95,8 @@ export default function FamilyPatientViewPage() {
   }, [patientId, router]);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('welfare_session');
+    if (!sessionData) { router.push('/departments/welfare/login'); return; }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'family' || parsed.patientId !== patientId) {
       setLoading(false);
@@ -141,7 +141,7 @@ export default function FamilyPatientViewPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <Link href="/departments/rehab/dashboard/family" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold mb-4 transition-colors">
+          <Link href="/departments/welfare/dashboard/family" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold mb-4 transition-colors">
             <ArrowLeft size={16} /> Back
           </Link>
           <div className="flex flex-col items-start gap-3 p-2 sm:p-4">

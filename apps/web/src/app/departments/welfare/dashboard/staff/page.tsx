@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
+import { useWelfareSession } from '@/hooks/welfare/useWelfareSession';
 import {
   collection, query, where, getDocs, addDoc,
   updateDoc, doc, getDoc, Timestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
-import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/rehab';
+import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/welfare';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
   Lightbulb, Send, Star, List, Loader2
@@ -26,7 +26,7 @@ const toDate = (ts: any): Date | null => {
 
 export default function StaffSelfPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useWelfareSession();
 
   const [staffProfile, setStaffProfile] = useState<StaffMember | null>(null);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
@@ -46,7 +46,7 @@ export default function StaffSelfPage() {
     try {
       // Find staff profile linked to this login user
       const staffSnap = await getDocs(
-        query(collection(db, 'rehab_staff'), where('loginUserId', '==', user.uid))
+        query(collection(db, 'welfare_staff'), where('loginUserId', '==', user.uid))
       );
       if (staffSnap.empty) { setLoading(false); return; }
       const staffDoc = staffSnap.docs[0];
@@ -61,7 +61,7 @@ export default function StaffSelfPage() {
 
       const today = new Date().toISOString().split('T')[0];
       const attSnap = await getDocs(
-        query(collection(db, 'rehab_attendance'), where('staffId', '==', staffId), where('date', '==', today))
+        query(collection(db, 'welfare_attendance'), where('staffId', '==', staffId), where('date', '==', today))
       );
 
       // Today's attendance
@@ -105,7 +105,7 @@ export default function StaffSelfPage() {
 
       const monthlySnap = await getDocs(
         query(
-          collection(db, 'rehab_attendance'),
+          collection(db, 'welfare_attendance'),
           where('staffId', '==', staffId),
           where('date', '>=', firstDayStr),
           where('date', '<=', todayStr)
@@ -125,7 +125,7 @@ export default function StaffSelfPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!user || user.role !== 'staff') { router.push('/departments/rehab/login'); return; }
+    if (!user || user.role !== 'staff') { router.push('/departments/welfare/login'); return; }
     fetchData();
   }, [sessionLoading, user, fetchData, router]);
 
@@ -154,7 +154,7 @@ export default function StaffSelfPage() {
         const lateByMinutes = Math.floor(lateByMs / 60000);
         const isLate = lateByMinutes > 0;
 
-        await addDoc(collection(db, 'rehab_attendance'), {
+        await addDoc(collection(db, 'welfare_attendance'), {
           staffId: staffProfile.id,
           date: today,
           status: 'present',
@@ -180,7 +180,7 @@ export default function StaffSelfPage() {
 
         if (isLate) {
           const currentMonth = today.substring(0, 7);
-          await addDoc(collection(db, 'rehab_fines'), {
+          await addDoc(collection(db, 'welfare_fines'), {
             staffId: staffProfile.id,
             amount: 200,
             reason: `Late arrival — ${lateByMinutes} minutes late (duty start: ${staffProfile.dutyStartTime})`,
@@ -192,7 +192,7 @@ export default function StaffSelfPage() {
         }
       } else if (!todayRecord.checkOutTime) {
         // Already checked in — check out
-        await updateDoc(doc(db, 'rehab_attendance', todayRecord.id), {
+        await updateDoc(doc(db, 'welfare_attendance', todayRecord.id), {
           checkOutTime: Timestamp.now(),
         });
         showMsg('success', 'Checked out. Great work today! ✓');
@@ -389,7 +389,7 @@ export default function StaffSelfPage() {
             <Lightbulb size={18} className="text-amber-400" />
             <h2 className="font-black text-white">Your Contribution Today</h2>
           </div>
-          <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the rehab center.</p>
+          <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the welfare program.</p>
           <textarea
             rows={3}
             placeholder="e.g. Completed morning rounds, cleaned all patient rooms, suggested new shift handover system..."

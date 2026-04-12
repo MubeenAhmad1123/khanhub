@@ -24,14 +24,14 @@ export default function ApprovalsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/welfare/login');
       return;
     }
     setSession(parsed);
@@ -44,7 +44,7 @@ export default function ApprovalsPage() {
 
     // No orderBy — avoids index requirement
     const q = query(
-      collection(db, 'rehab_transactions'),
+      collection(db, 'welfare_transactions'),
       where('status', '==', 'pending')
     )
 
@@ -87,7 +87,7 @@ export default function ApprovalsPage() {
       // No orderBy — avoids composite index requirement
       const snap = await getDocs(
         query(
-          collection(db, 'rehab_transactions'),
+          collection(db, 'welfare_transactions'),
           where('status', 'in', ['approved', 'rejected'])
         )
       )
@@ -151,7 +151,7 @@ export default function ApprovalsPage() {
       setActionLoading(txId);
       
       // 1. Update the transaction status first
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+      await updateDoc(doc(db, 'welfare_transactions', txId), {
         status: 'approved',
         approvedBy: session.uid,
         approvedAt: Timestamp.now()
@@ -168,7 +168,7 @@ export default function ApprovalsPage() {
           if (tx.category === 'patient_fee') {
             // Find or CREATE the fee record for this patient+month
             const feesQ = query(
-              collection(db, 'rehab_fees'),
+              collection(db, 'welfare_fees'),
               where('patientId', '==', tx.patientId),
               where('month', '==', month)
             );
@@ -176,13 +176,13 @@ export default function ApprovalsPage() {
 
             if (feesSnap.empty) {
               // Auto-create fee record — fetch patient package amount first
-              const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
+              const patientSnap = await getDoc(doc(db, 'welfare_children', tx.patientId));
               const packageAmount = patientSnap.exists()
                 ? (patientSnap.data().packageAmount || 60000)
                 : 60000;
               const amountPaid = tx.amount;
               const amountRemaining = Math.max(0, packageAmount - amountPaid);
-              await addDoc(collection(db, 'rehab_fees'), {
+              await addDoc(collection(db, 'welfare_fees'), {
                 patientId: tx.patientId,
                 patientName: tx.patientName || '',
                 month,
@@ -206,7 +206,7 @@ export default function ApprovalsPage() {
               const newPaid = (current.amountPaid || 0) + tx.amount;
               const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
               const existingPayments = current.payments || [];
-              await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+              await updateDoc(doc(db, 'welfare_fees', feeDoc.id), {
                 amountPaid: newPaid,
                 amountRemaining: newRemaining,
                 lastPaymentDate: serverTimestamp(),
@@ -223,7 +223,7 @@ export default function ApprovalsPage() {
 
           if (tx.category === 'canteen_deposit') {
             const canteenQ = query(
-              collection(db, 'rehab_canteen'),
+              collection(db, 'welfare_canteen'),
               where('patientId', '==', tx.patientId),
               where('month', '==', month)
             );
@@ -231,7 +231,7 @@ export default function ApprovalsPage() {
 
             if (canteenSnap.empty) {
               // Auto-create canteen record
-              await addDoc(collection(db, 'rehab_canteen'), {
+              await addDoc(collection(db, 'welfare_canteen'), {
                 patientId: tx.patientId,
                 patientName: tx.patientName || '',
                 month,
@@ -246,7 +246,7 @@ export default function ApprovalsPage() {
               const current = canteenDoc.data();
               const newDeposited = (current.totalDeposited || 0) + tx.amount;
               const newBalance = newDeposited - (current.totalSpent || 0);
-              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+              await updateDoc(doc(db, 'welfare_canteen', canteenDoc.id), {
                 totalDeposited: newDeposited,
                 balance: newBalance,
                 lastDepositDate: serverTimestamp(),
@@ -256,7 +256,7 @@ export default function ApprovalsPage() {
 
           if (tx.category === 'canteen_expense') {
             const canteenQ = query(
-              collection(db, 'rehab_canteen'),
+              collection(db, 'welfare_canteen'),
               where('patientId', '==', tx.patientId),
               where('month', '==', month)
             );
@@ -266,7 +266,7 @@ export default function ApprovalsPage() {
               const current = canteenDoc.data();
               const newSpent = (current.totalSpent || 0) + tx.amount;
               const newBalance = (current.totalDeposited || 0) - newSpent;
-              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
+              await updateDoc(doc(db, 'welfare_canteen', canteenDoc.id), {
                 totalSpent: newSpent,
                 balance: Math.max(0, newBalance),
               });
@@ -323,7 +323,7 @@ export default function ApprovalsPage() {
     
     try {
       setActionLoading(txId);
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+      await updateDoc(doc(db, 'welfare_transactions', txId), {
         status: 'rejected',
         rejectedBy: session.uid,
         rejectedAt: Timestamp.now(),

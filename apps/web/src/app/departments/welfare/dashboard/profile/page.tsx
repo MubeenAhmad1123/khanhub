@@ -1,4 +1,4 @@
-// src/app/departments/rehab/dashboard/profile/page.tsx
+// src/app/departments/welfare/dashboard/profile/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -43,7 +43,7 @@ export default function ProfilePage() {
 
   const fetchMetrics = useCallback(async (sId: string, dept: string) => {
     try {
-      const prefix = dept === 'hq' ? 'hq' : 'rehab';
+      const prefix = dept === 'hq' ? 'hq' : 'welfare';
       
       const [attSnap, dutySnap, dressSnap, contribSnap, pointsSnap] = await Promise.all([
         getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', sId))),
@@ -74,8 +74,8 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('welfare_session');
+    if (!sessionData) { router.push('/departments/welfare/login'); return; }
     const parsed = JSON.parse(sessionData);
     setSession(parsed);
 
@@ -83,10 +83,10 @@ export default function ProfilePage() {
       try {
         setLoading(true);
         // 1. User Doc
-        const userSnap = await getDoc(doc(db, 'rehab_users', parsed.uid));
+        const userSnap = await getDoc(doc(db, 'welfare_users', parsed.uid));
         if (!userSnap.exists()) {
           toast.error("User not found");
-          router.push('/departments/rehab/login');
+          router.push('/departments/welfare/login');
           return;
         }
         const uData = userSnap.data();
@@ -94,8 +94,8 @@ export default function ProfilePage() {
 
         // 2. Role Data
         if (parsed.role === 'admin' || parsed.role === 'staff') {
-          // Find staff dock in rehab_staff or hq_staff
-          let sSnap = await getDocs(query(collection(db, 'rehab_staff'), where('loginUserId', '==', parsed.uid)));
+          // Find staff dock in welfare_staff or hq_staff
+          let sSnap = await getDocs(query(collection(db, 'welfare_staff'), where('loginUserId', '==', parsed.uid)));
           if (sSnap.empty) {
             sSnap = await getDocs(query(collection(db, 'hq_staff'), where('loginUserId', '==', parsed.uid)));
           }
@@ -103,10 +103,10 @@ export default function ProfilePage() {
           if (!sSnap.empty) {
             const sd = sSnap.docs[0].data();
             setStaffDoc({ id: sSnap.docs[0].id, ...sd });
-            fetchMetrics(sSnap.docs[0].id, sd.department || 'rehab');
+            fetchMetrics(sSnap.docs[0].id, sd.department || 'welfare');
           }
         } else if (parsed.role === 'family' && uData.patientId) {
-          const pSnap = await getDoc(doc(db, 'rehab_patients', uData.patientId));
+          const pSnap = await getDoc(doc(db, 'welfare_children', uData.patientId));
           if (pSnap.exists()) setPatientDoc({ id: pSnap.id, ...pSnap.data() });
         }
       } catch (err) {
@@ -125,7 +125,7 @@ export default function ProfilePage() {
 
     try {
       setSubmittingContrib(true);
-      const prefix = staffDoc.department === 'hq' ? 'hq' : 'rehab';
+      const prefix = staffDoc.department === 'hq' ? 'hq' : 'welfare';
       await addDoc(collection(db, `${prefix}_contributions`), {
         staffId: staffDoc.id,
         title: newContrib.title,
@@ -138,7 +138,7 @@ export default function ProfilePage() {
       toast.success("Contribution submitted for approval");
       setIsAddingContrib(false);
       setNewContrib({ title: '', content: '' });
-      fetchMetrics(staffDoc.id, staffDoc.department || 'rehab');
+      fetchMetrics(staffDoc.id, staffDoc.department || 'welfare');
     } catch (error) {
       toast.error("Failed to submit");
     } finally {
@@ -149,10 +149,10 @@ export default function ProfilePage() {
   const handleDeleteContribution = async (cid: string) => {
     if (!confirm("Are you sure?")) return;
     try {
-      const prefix = staffDoc.department === 'hq' ? 'hq' : 'rehab';
+      const prefix = staffDoc.department === 'hq' ? 'hq' : 'welfare';
       await deleteDoc(doc(db, `${prefix}_contributions`, cid));
       toast.success("Deleted");
-      fetchMetrics(staffDoc.id, staffDoc.department || 'rehab');
+      fetchMetrics(staffDoc.id, staffDoc.department || 'welfare');
     } catch (error) {
       toast.error("Failed to delete");
     }
