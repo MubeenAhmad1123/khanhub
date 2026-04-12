@@ -25,10 +25,13 @@ export function parseAuditMessage(entry: Partial<UnifiedAuditEntry>): string {
     const action = (entry.action || '').toLowerCase();
     const name = p.name || p.displayName || entry.entityLabel || '';
     const role = p.role || p.type || '';
-    const customId = p.customId || p.userId || p.id || '';
+    const customId = p.customId || p.userId || p.id || p.staffId || p.patientId || p.clientId || '';
 
-    if (action === 'created') {
-      return `User ${name || 'Member'}${role ? ` (${role})` : ''} was created${customId ? ` [${customId}]` : ''}`;
+    // Determine the verb, defaulting to created if it looks like a user JSON payload but action wasn't cleanly extracted
+    const verb = action === 'registered' ? 'registered' : (action === 'created' || action === 'other' ? 'created' : action);
+
+    if (verb === 'created' || verb === 'registered') {
+      return `User ${name || 'Member'}${role ? ` (${role})` : ''} was ${verb}${customId ? ` [${customId}]` : ''}`;
     }
     if (action === 'login') {
       return `User ${name || 'Member'} logged in successfully`;
@@ -39,16 +42,20 @@ export function parseAuditMessage(entry: Partial<UnifiedAuditEntry>): string {
     if (action === 'rejected') {
       return `Transaction for ${name || 'someone'} was rejected`;
     }
-    if (action === 'registered') {
-      return `Superadmin ${name || 'Member'}${customId ? ` (${customId})` : ''} was registered`;
-    }
     
     // Fallback formatting
     if (name) {
       return `${name}${role ? ` (${role})` : ''} performed action: ${action}`;
     }
     
-    return msg; // Fallback to raw if no name extracted
+    // If no name but there are keys, format a generic string instead of displaying raw JSON
+    const keys = Object.keys(p);
+    if (keys.length > 0) {
+      const parts = keys.map(k => `${k}: ${p[k]}`);
+      return `Details: ${parts.join(', ')}`;
+    }
+
+    return msg; // Fallback to raw if completely empty JSON object
   } catch {
     return msg;
   }

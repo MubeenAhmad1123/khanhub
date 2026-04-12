@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  collection, 
-  getDocs, 
-  updateDoc, 
-  doc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
+import {
+  collection,
+  getDocs,
+  updateDoc,
+  doc,
+  query,
+  where,
+  orderBy,
+  limit,
   Timestamp,
   addDoc,
   serverTimestamp,
@@ -19,13 +19,13 @@ import {
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
-import { 
-  Loader2, 
-  Users, 
-  ShieldCheck, 
-  UserPlus, 
-  Home, 
-  CheckCircle2, 
+import {
+  Loader2,
+  Users,
+  ShieldCheck,
+  UserPlus,
+  Home,
+  CheckCircle2,
   AlertCircle,
   Eye,
   EyeOff,
@@ -57,7 +57,9 @@ import {
   Fingerprint,
   Crosshair,
   Activity,
-  BookOpen
+  BookOpen,
+  Heart,
+  HandHeart
 } from 'lucide-react';
 import { createRehabUserServer, createStaffMemberServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
@@ -68,8 +70,10 @@ type TabType = 'admin' | 'staff' | 'client';
 const DEPARTMENTS = [
   { id: 'rehab', name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', collection: 'rehab_users', staffCollection: 'rehab_staff', prefix: 'REHAB' },
   { id: 'spims', name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', collection: 'spims_users', staffCollection: 'spims_staff', prefix: 'SPIMS' },
-  { id: 'hospital', name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Briefcase, color: 'emerald', emailDomain: '@hospital.khanhub', collection: 'hospital_users', staffCollection: 'hospital_staff', prefix: 'HOSP' },
+  { id: 'hospital', name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.khanhub', collection: 'hospital_users', staffCollection: 'hospital_staff', prefix: 'HOSP' },
   { id: 'sukoon-center', name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', collection: 'sukoon_users', staffCollection: 'sukoon_staff', prefix: 'SUK' },
+  { id: 'welfare', name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.khanhub', collection: 'welfare_users', staffCollection: 'welfare_staff', prefix: 'WEL' },
+  { id: 'job-center', name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@jobcenter.khanhub', collection: 'job_center_users', staffCollection: 'job_center_staff', prefix: 'JOB' },
   { id: 'social-media', name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.khanhub', collection: 'media_users', staffCollection: 'media_staff', prefix: 'MED' },
   { id: 'it', name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.khanhub', collection: 'it_users', staffCollection: 'it_staff', prefix: 'IT' },
   { id: 'hq', name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@khanhub.io', collection: 'hq_users', staffCollection: 'hq_staff', prefix: 'HQ' },
@@ -89,55 +93,57 @@ const DOCUMENT_TYPES = [
 ];
 
 const UNIFORM_RULES: Record<string, string[]> = {
-  'hospital_male_doctor':           ['ID Card'],
-  'hospital_female_doctor':         ['ID Card'],
-  'hospital_male_staff':            ['Black OT Kit', 'White Overall', 'Shoes', 'ID Card'],
-  'hospital_female_staff':          ['Black OT Kit', 'White Overall', 'Shoes', 'ID Card', 'Hijab'],
-  'spims_male_teacher':             ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'White Overall', 'ID Card'],
-  'spims_female_teacher':           ['White Overall', 'ID Card'],
-  'rehab_male_admin':               ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'rehab_female_doctor':            ['White Overall', 'ID Card', 'Shoes'],
-  'rehab_male_reception':           ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'rehab_female_reception':         ['Black OT Kit', 'Hijab', 'White Overall', 'Shoes', 'ID Card'],
-  'rehab_male_security':            ['Security Uniform', 'Shoes', 'ID Card', 'Security Cap'],
-  'rehab_male_default':             ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'sukoon-center_female_admin':     ['ID Card'],
-  'sukoon-center_male_default':     ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'social-media_male_default':      ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'it_male_default':                ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'welfare_male_admin':             ['ID Card'],
-  'hq_male_cashier':                ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'security_male_default':          ['Security Uniform', 'Shoes', 'ID Card', 'Security Cap', 'Torch', 'Whistle'],
-  'security_female_default':        ['ID Card'],
+  'hospital_male_doctor': ['ID Card'],
+  'hospital_female_doctor': ['ID Card'],
+  'hospital_male_staff': ['Black OT Kit', 'White Overall', 'Shoes', 'ID Card'],
+  'hospital_female_staff': ['Black OT Kit', 'White Overall', 'Shoes', 'ID Card', 'Hijab'],
+  'spims_male_teacher': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'White Overall', 'ID Card'],
+  'spims_female_teacher': ['White Overall', 'ID Card'],
+  'rehab_male_admin': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
+  'rehab_female_doctor': ['White Overall', 'ID Card', 'Shoes'],
+  'rehab_male_reception': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
+  'rehab_female_reception': ['Black OT Kit', 'Hijab', 'White Overall', 'Shoes', 'ID Card'],
+  'rehab_male_security': ['Security Uniform', 'Shoes', 'ID Card', 'Security Cap'],
+  'rehab_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
+  'sukoon-center_female_admin': ['ID Card'],
+  'sukoon-center_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
+  'social-media_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
+  'it_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
+  'welfare_male_admin': ['ID Card'],
+  'hq_male_cashier': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
+  'security_male_default': ['Security Uniform', 'Shoes', 'ID Card', 'Security Cap', 'Torch', 'Whistle'],
+  'security_female_default': ['ID Card'],
 };
 
 const ALL_DRESS_ITEMS = [
-  'Dress Pant', 'Dress Shirt', 'Tie', 'ID Card', 'Shoes', 'White Overall', 
+  'Dress Pant', 'Dress Shirt', 'Tie', 'ID Card', 'Shoes', 'White Overall',
   'Black OT Kit', 'Hijab', 'Lab Coat', 'Security Uniform', 'Security Cap', 'Torch', 'Whistle'
 ];
 
 const DEFAULT_DUTY_TIMES: Record<string, { start: string; end: string }> = {
-  'hospital':       { start: '08:00', end: '20:00' },
-  'spims':          { start: '09:00', end: '14:00' },
-  'rehab':          { start: '08:00', end: '20:00' },
-  'sukoon-center':  { start: '10:00', end: '17:00' },
-  'social-media':   { start: '09:00', end: '21:00' },
-  'it':             { start: '09:00', end: '21:00' },
-  'hq':             { start: '09:00', end: '17:00' },
+  'hospital': { start: '08:00', end: '20:00' },
+  'spims': { start: '09:00', end: '14:00' },
+  'rehab': { start: '08:00', end: '20:00' },
+  'sukoon-center': { start: '10:00', end: '17:00' },
+  'welfare': { start: '09:00', end: '17:00' },
+  'job-center': { start: '09:00', end: '18:00' },
+  'social-media': { start: '09:00', end: '21:00' },
+  'it': { start: '09:00', end: '21:00' },
+  'hq': { start: '09:00', end: '17:00' },
 };
 
 function getDressCodeKey(department: string, gender: string, designation: string): string {
   const dept = department.toLowerCase();
   const gen = gender.toLowerCase();
   const desig = designation.toLowerCase();
-  
+
   if (desig.includes('doctor')) return `${dept}_${gen}_doctor`;
   if (desig.includes('admin')) return `${dept}_${gen}_admin`;
   if (desig.includes('security')) return `${dept}_${gen}_security`;
   if (desig.includes('reception')) return `${dept}_${gen}_reception`;
   if (desig.includes('teacher') || desig.includes('lecturer')) return `${dept}_${gen}_teacher`;
   if (desig.includes('cashier')) return `${dept}_${gen}_cashier`;
-  
+
   return `${dept}_${gen}_default`;
 }
 
@@ -205,7 +211,7 @@ export default function ManagerUsersPage() {
     try {
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
       const collectionName = activeTab === 'staff' ? deptDetails.staffCollection : deptDetails.collection;
-      
+
       const snap = await getDocs(query(collection(db, collectionName), orderBy('createdAt', 'desc'), limit(50)));
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
       setUsers(list);
@@ -219,7 +225,7 @@ export default function ManagerUsersPage() {
   const fetchCounts = async () => {
     try {
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-      if(!deptDetails) return;
+      if (!deptDetails) return;
       const snap = await getDocs(collection(db, deptDetails.staffCollection));
       setEmployeeCount(snap.size);
     } catch (err) {
@@ -267,7 +273,7 @@ export default function ManagerUsersPage() {
     const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
     const domain = deptDetails ? deptDetails.emailDomain : '@rehab.khanhub';
     const autoEmail = `${empId.toLowerCase()}${domain}`;
-    
+
     setFormData(prev => ({
       ...prev,
       customId: empId.toLowerCase(),
@@ -285,11 +291,11 @@ export default function ManagerUsersPage() {
 
     // Smart Dress Code
     const key = getDressCodeKey(formData.department, formData.gender, formData.designation);
-    const suggested = UNIFORM_RULES[key] || 
-      (formData.gender === 'male' 
+    const suggested = UNIFORM_RULES[key] ||
+      (formData.gender === 'male'
         ? ['Dress Pant', 'Dress Shirt', 'Tie', 'ID Card', 'Shoes']
         : ['ID Card', 'Shoes']);
-        
+
     setFormData(prev => ({ ...prev, dressCode: suggested }));
   }, [formData.department, formData.gender, formData.designation]);
 
@@ -392,7 +398,7 @@ export default function ManagerUsersPage() {
       // Save to staff collection
       const collectionName = deptDetails.staffCollection;
       const staffRef = collection(db, collectionName);
-      
+
       await addDoc(staffRef, {
         employeeId: empId,
         userId: formData.userId || formData.customId || empId.toLowerCase(),
@@ -432,7 +438,7 @@ export default function ManagerUsersPage() {
 
       setMessage({ type: 'success', text: `Staff profile ${empId} created successfully.` });
       toast.success(`Staff profile initialized: ${empId}`);
-      
+
       // Reset Form (except for credentials view)
       setFormData(prev => ({
         ...prev,
@@ -440,7 +446,7 @@ export default function ManagerUsersPage() {
         designation: '', salary: '', duties: [], documents: [], patientId: '',
         userId: '', employeeId: ''
       }));
-      
+
       fetchUsers();
       fetchCounts();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -512,7 +518,7 @@ export default function ManagerUsersPage() {
   return (
     <div className={`min-h-screen transition-colors duration-300 pb-20 overflow-x-hidden w-full max-w-full ${darkMode ? 'bg-[#0A0A0A] text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Header Section */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
@@ -520,11 +526,11 @@ export default function ManagerUsersPage() {
               <Users className="w-10 h-10 text-blue-500" />
               Account Management
             </h1>
-            <p className={`mt-1 font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <p className={`mt-1 font-medium ${darkMode ? 'text-black-500' : 'text-gray-500'}`}>
               Create and manage administrative, staff, and family credentials
             </p>
           </div>
-          
+
           <div className={`flex items-center gap-4 px-5 py-2.5 rounded-2xl border w-full sm:w-auto ${darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex -space-x-3">
               {[1, 2, 3].map(i => (
@@ -550,11 +556,10 @@ export default function ManagerUsersPage() {
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id as TabType); setMessage(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${
-                activeTab === tab.id
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : `hover:bg-gray-300/50 dark:hover:bg-gray-800/50 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`
-              }`}
+                }`}
             >
               <tab.icon className="w-4 h-4" />
               <span>{tab.label}</span>
@@ -564,7 +569,7 @@ export default function ManagerUsersPage() {
 
         {/* Main Form Area */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           <div className="lg:col-span-2 space-y-6">
 
             {/* Department Horizontal Selector */}
@@ -574,11 +579,10 @@ export default function ManagerUsersPage() {
                   <button
                     key={dept.id}
                     onClick={() => { setFormData({ ...formData, department: dept.id }); fetchCounts(); }}
-                    className={`flex items-center gap-3 px-5 py-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                      formData.department === dept.id 
-                        ? 'border-blue-500 bg-blue-500/10' 
+                    className={`flex items-center gap-3 px-5 py-4 rounded-2xl border-2 transition-all cursor-pointer ${formData.department === dept.id
+                        ? 'border-blue-500 bg-blue-500/10'
                         : `border-transparent ${darkMode ? 'bg-zinc-900/60 hover:bg-zinc-800' : 'bg-white hover:bg-gray-50'} shadow-sm`
-                    }`}
+                      }`}
                   >
                     <div className={formData.department === dept.id ? 'text-blue-500' : 'text-gray-400'}>
                       <dept.icon size={24} />
@@ -592,19 +596,17 @@ export default function ManagerUsersPage() {
               </div>
             </div>
 
-            <div className={`rounded-[2.5rem] border p-8 md:p-10 transition-all duration-500 ${
-              darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl shadow-black/20' : 'bg-white border-gray-200 shadow-xl shadow-blue-900/5'
-            }`}>
-              
+            <div className={`rounded-[2.5rem] border p-8 md:p-10 transition-all duration-500 ${darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl shadow-black/20' : 'bg-white border-gray-200 shadow-xl shadow-blue-900/5'
+              }`}>
+
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                  activeTab === 'admin' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' :
-                  activeTab === 'staff' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600' :
-                  'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
-                }`}>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${activeTab === 'admin' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' :
+                    activeTab === 'staff' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600' :
+                      'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                  }`}>
                   {activeTab === 'admin' ? <ShieldCheck className="w-7 h-7" /> :
-                   activeTab === 'staff' ? <UserPlus className="w-7 h-7" /> :
-                   <Home className="w-7 h-7" />}
+                    activeTab === 'staff' ? <UserPlus className="w-7 h-7" /> :
+                      <Home className="w-7 h-7" />}
                 </div>
                 <div>
                   <h2 className="text-xl font-black uppercase tracking-tight">
@@ -612,8 +614,8 @@ export default function ManagerUsersPage() {
                   </h2>
                   <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                     {activeTab === 'admin' ? 'Strategic administrative oversight credentials' :
-                     activeTab === 'staff' ? 'Operational and clinical personnel management' :
-                     'Patient family and guardian portal access'}
+                      activeTab === 'staff' ? 'Operational and clinical personnel management' :
+                        'Patient family and guardian portal access'}
                   </p>
                 </div>
               </div>
@@ -632,7 +634,7 @@ export default function ManagerUsersPage() {
                         <XCircle size={24} />
                       </button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-black/20 p-6 rounded-2xl border border-white/10 backdrop-blur-xl">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Access Identity</p>
@@ -643,9 +645,9 @@ export default function ManagerUsersPage() {
                         <p className="text-lg font-mono font-black">{lastCreated.password}</p>
                       </div>
                     </div>
-                    
+
                     <p className="mt-6 text-[10px] font-bold uppercase tracking-widest leading-relaxed opacity-80">
-                      IMPORTANT: Please provide these credentials to {lastCreated.name}. 
+                      IMPORTANT: Please provide these credentials to {lastCreated.name}.
                       The system does not store passwords in plain text after this session.
                     </p>
                   </div>
@@ -654,18 +656,17 @@ export default function ManagerUsersPage() {
               )}
 
               {message && (
-                <div className={`mb-8 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${
-                  message.type === 'success' 
-                    ? 'bg-green-500/10 border border-green-500/20 text-green-500' 
+                <div className={`mb-8 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${message.type === 'success'
+                    ? 'bg-green-500/10 border border-green-500/20 text-green-500'
                     : 'bg-red-500/10 border border-red-500/20 text-red-500'
-                }`}>
+                  }`}>
                   {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
                   <p className="text-sm font-bold">{message.text}</p>
                 </div>
               )}
 
               <div className="space-y-6">
-                
+
                 {/* ADMIN & CLIENT FORMS (Simplified Grid) */}
                 {(activeTab === 'admin' || activeTab === 'client') && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-500">
@@ -679,9 +680,8 @@ export default function ManagerUsersPage() {
                           placeholder="e.g. jdoe_001"
                           value={formData.customId}
                           onChange={e => setFormData({ ...formData, customId: e.target.value.toLowerCase().replace(/\s/g, '') })}
-                          className={`w-full pl-11 pr-4 py-4 rounded-2xl border text-sm font-bold transition-all outline-none ${
-                            darkMode ? 'bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:bg-gray-800' : 'bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white'
-                          }`}
+                          className={`w-full pl-11 pr-4 py-4 rounded-2xl border text-sm font-bold transition-all outline-none ${darkMode ? 'bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:bg-gray-800' : 'bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white'
+                            }`}
                         />
                       </div>
                     </div>
@@ -695,9 +695,8 @@ export default function ManagerUsersPage() {
                           placeholder="e.g. Johnathan Doe"
                           value={formData.displayName}
                           onChange={e => setFormData({ ...formData, displayName: e.target.value })}
-                          className={`w-full pl-11 pr-4 py-4 rounded-2xl border text-sm font-bold transition-all outline-none ${
-                            darkMode ? 'bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:bg-gray-800' : 'bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white'
-                          }`}
+                          className={`w-full pl-11 pr-4 py-4 rounded-2xl border text-sm font-bold transition-all outline-none ${darkMode ? 'bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:bg-gray-800' : 'bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white'
+                            }`}
                         />
                       </div>
                     </div>
@@ -711,11 +710,10 @@ export default function ManagerUsersPage() {
                           placeholder="Min 6 characters"
                           value={formData.password}
                           onChange={e => setFormData({ ...formData, password: e.target.value })}
-                          className={`w-full pl-11 pr-12 py-4 rounded-2xl border text-sm font-bold transition-all outline-none ${
-                            darkMode ? 'bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:bg-gray-800' : 'bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white'
-                          }`}
+                          className={`w-full pl-11 pr-12 py-4 rounded-2xl border text-sm font-bold transition-all outline-none ${darkMode ? 'bg-gray-800/50 border-gray-700 focus:border-blue-500 focus:bg-gray-800' : 'bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white'
+                            }`}
                         />
-                        <button 
+                        <button
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
                         >
@@ -734,9 +732,8 @@ export default function ManagerUsersPage() {
                             placeholder="e.g. P001, P002"
                             value={formData.patientId}
                             onChange={e => setFormData({ ...formData, patientId: e.target.value.toUpperCase() })}
-                            className={`w-full pl-11 pr-4 py-4 rounded-2xl border text-sm font-bold transition-all outline-none ${
-                              darkMode ? 'bg-gray-800/50 border-gray-700 focus:border-blue-500' : 'bg-gray-50 border-gray-200 focus:border-blue-500'
-                            }`}
+                            className={`w-full pl-11 pr-4 py-4 rounded-2xl border text-sm font-bold transition-all outline-none ${darkMode ? 'bg-gray-800/50 border-gray-700 focus:border-blue-500' : 'bg-gray-50 border-gray-200 focus:border-blue-500'
+                              }`}
                           />
                         </div>
                       </div>
@@ -746,10 +743,9 @@ export default function ManagerUsersPage() {
                       <button
                         disabled={submitting}
                         onClick={activeTab === 'admin' ? handleAdminSubmit : handleClientSubmit}
-                        className={`w-full md:w-auto px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${
-                          activeTab === 'admin' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 text-white' :
-                          'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-white'
-                        }`}
+                        className={`w-full md:w-auto px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${activeTab === 'admin' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 text-white' :
+                            'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-white'
+                          }`}
                       >
                         {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
                         {submitting ? 'Confirming...' : `Initialize ${activeTab}`}
@@ -761,7 +757,7 @@ export default function ManagerUsersPage() {
                 {/* STAFF FORM (Comprehensive 6-Section Layout) */}
                 {activeTab === 'staff' && (
                   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    
+
                     {/* SECTION 1: PROFILE & IDENTITY */}
                     <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
                       <div className="flex items-center gap-4 mb-6">
@@ -784,9 +780,9 @@ export default function ManagerUsersPage() {
                               <span className="text-[10px] font-black uppercase tracking-widest opacity-50">Upload Photo*</span>
                             </div>
                           )}
-                          <input 
-                            type="file" 
-                            className="absolute inset-0 opacity-0 cursor-pointer" 
+                          <input
+                            type="file"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
                             accept="image/*"
                             onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'profile')}
                           />
@@ -825,11 +821,10 @@ export default function ManagerUsersPage() {
                                 <button
                                   key={g}
                                   onClick={() => setFormData({ ...formData, gender: g })}
-                                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    formData.gender === g 
-                                      ? 'bg-blue-600 text-white shadow-lg' 
+                                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.gender === g
+                                      ? 'bg-blue-600 text-white shadow-lg'
                                       : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
-                                  }`}
+                                    }`}
                                 >
                                   {g}
                                 </button>
@@ -908,90 +903,88 @@ export default function ManagerUsersPage() {
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black tracking-[0.25em] opacity-60 uppercase ml-1">
-                                Employee ID *
-                              </label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  placeholder={generateEmployeeId()}
-                                  value={formData.employeeId}
-                                  onChange={e => setFormData({ ...formData, employeeId: e.target.value.toUpperCase() })}
-                                  className={`flex-1 h-14 px-5 rounded-2xl font-mono text-sm outline-none transition-all ${
-                                    darkMode 
-                                      ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20 focus:border-indigo-500/50' 
-                                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500/50'
-                                  }`}
-                                />
-                                <button
-                                  onClick={() => setFormData({ ...formData, employeeId: generateEmployeeId() })}
-                                  className={`px-4 h-14 rounded-2xl border text-xs font-black transition-all whitespace-nowrap ${
-                                    darkMode ? 'bg-white/10 border-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
-                                  }`}
-                                >
-                                  Auto
-                                </button>
-                              </div>
-                              <p className="text-[9px] opacity-30 font-bold ml-1 uppercase tracking-widest italic">
-                                Internal HR number shown on staff badge and profile.
-                              </p>
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Joining Date*</label>
-                              <input
-                                type="date"
-                                value={formData.joiningDate}
-                                onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
-                                className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Designation / Title*</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black tracking-[0.25em] opacity-60 uppercase ml-1">
+                              Employee ID *
+                            </label>
+                            <div className="flex gap-2">
                               <input
                                 type="text"
-                                placeholder="e.g. Senior Doctor"
-                                value={formData.designation}
-                                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                                className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                                placeholder={generateEmployeeId()}
+                                value={formData.employeeId}
+                                onChange={e => setFormData({ ...formData, employeeId: e.target.value.toUpperCase() })}
+                                className={`flex-1 h-14 px-5 rounded-2xl font-mono text-sm outline-none transition-all ${darkMode
+                                    ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20 focus:border-indigo-500/50'
+                                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500/50'
+                                  }`}
                               />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Category / Role*</label>
-                              <select
-                                value={formData.staffRole}
-                                onChange={(e) => setFormData({ ...formData, staffRole: e.target.value })}
-                                className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                              <button
+                                onClick={() => setFormData({ ...formData, employeeId: generateEmployeeId() })}
+                                className={`px-4 h-14 rounded-2xl border text-xs font-black transition-all whitespace-nowrap ${darkMode ? 'bg-white/10 border-white/10 text-white/60 hover:bg-white/20' : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                                  }`}
                               >
-                                <option value="Worker">Worker / Junior</option>
-                                <option value="Doctor">Doctor / Clinical</option>
-                                <option value="Nurse">Medical Staff / Nurse</option>
-                                <option value="Supervisor">Supervisor</option>
-                                <option value="Manager">Management</option>
-                                <option value="Executive">Executive</option>
-                              </select>
+                                Auto
+                              </button>
                             </div>
+                            <p className="text-[9px] opacity-30 font-bold ml-1 uppercase tracking-widest italic">
+                              Internal HR number shown on staff badge and profile.
+                            </p>
                           </div>
-
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Starting Basic Salary (PKR)*</label>
-                            <div className="relative">
-                              <DollarSign className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
-                              <input
-                                type="number"
-                                placeholder="50000"
-                                value={formData.salary}
-                                onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-                                className={`w-full pl-11 pr-5 h-14 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
-                              />
-                            </div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Joining Date*</label>
+                            <input
+                              type="date"
+                              value={formData.joiningDate}
+                              onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
+                              className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Designation / Title*</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Senior Doctor"
+                              value={formData.designation}
+                              onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                              className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Category / Role*</label>
+                            <select
+                              value={formData.staffRole}
+                              onChange={(e) => setFormData({ ...formData, staffRole: e.target.value })}
+                              className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                            >
+                              <option value="Worker">Worker / Junior</option>
+                              <option value="Doctor">Doctor / Clinical</option>
+                              <option value="Nurse">Medical Staff / Nurse</option>
+                              <option value="Supervisor">Supervisor</option>
+                              <option value="Manager">Management</option>
+                              <option value="Executive">Executive</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Starting Basic Salary (PKR)*</label>
+                          <div className="relative">
+                            <DollarSign className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                            <input
+                              type="number"
+                              placeholder="50000"
+                              value={formData.salary}
+                              onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                              className={`w-full pl-11 pr-5 h-14 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
+                            />
                           </div>
                         </div>
                       </div>
+                    </div>
 
                     {/* SECTION 3: DUTIES ASSIGNMENT */}
                     <div className={`p-6 rounded-[2rem] border transition-all ${darkMode ? 'bg-[#1e1e1e] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
@@ -1050,11 +1043,10 @@ export default function ManagerUsersPage() {
                                     duties: exists ? formData.duties.filter(d => d !== duty) : [...formData.duties, duty]
                                   });
                                 }}
-                                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
-                                  formData.duties.includes(duty)
+                                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${formData.duties.includes(duty)
                                     ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-500/30'
                                     : 'bg-gray-100 border-gray-200 dark:bg-white/5 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
-                                }`}
+                                  }`}
                               >
                                 {duty}
                               </button>
@@ -1085,16 +1077,15 @@ export default function ManagerUsersPage() {
                               onClick={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  dressCode: isAssigned 
+                                  dressCode: isAssigned
                                     ? prev.dressCode.filter(i => i !== item)
                                     : [...prev.dressCode, item]
                                 }));
                               }}
-                              className={`flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all ${
-                                isAssigned 
-                                  ? 'bg-orange-500/10 border-orange-500/30 text-orange-600' 
+                              className={`flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all ${isAssigned
+                                  ? 'bg-orange-500/10 border-orange-500/30 text-orange-600'
                                   : 'bg-gray-50 border-gray-100 dark:bg-white/5 dark:border-white/5 text-gray-400 opacity-40 hover:opacity-100'
-                              }`}
+                                }`}
                             >
                               <div className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${isAssigned ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-300 dark:border-white/20'}`}>
                                 {isAssigned && <CheckCircle size={12} />}
@@ -1125,13 +1116,13 @@ export default function ManagerUsersPage() {
                         </div>
 
                         <div className="flex flex-wrap items-center bg-black/20 p-2 rounded-[1.5rem] border border-white/5 backdrop-blur-xl">
-                          <button 
+                          <button
                             onClick={() => setFormData({ ...formData, createAccount: true })}
                             className={`px-6 py-4 rounded-xl text-[11px] font-black tracking-[0.2em] transition-all duration-300 ${formData.createAccount ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/40' : 'opacity-30 hover:opacity-100'}`}
                           >
                             AUTHORIZED
                           </button>
-                          <button 
+                          <button
                             onClick={() => setFormData({ ...formData, createAccount: false })}
                             className={`px-6 py-4 rounded-xl text-[11px] font-black tracking-[0.2em] transition-all duration-300 ${!formData.createAccount ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'opacity-30 hover:opacity-100'}`}
                           >
@@ -1156,25 +1147,24 @@ export default function ManagerUsersPage() {
                                   const val = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
                                   const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
                                   const domain = deptDetails ? deptDetails.emailDomain : '@rehab.khanhub';
-                                  setFormData({ 
-                                    ...formData, 
+                                  setFormData({
+                                    ...formData,
                                     userId: val,
                                     customId: val,
                                     email: val ? `${val}${domain}` : ''
                                   });
                                 }}
-                                className={`w-full h-16 pl-12 pr-6 rounded-2xl font-mono text-sm outline-none transition-all ${
-                                  darkMode 
-                                    ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20 focus:bg-white/15 focus:border-indigo-500/50' 
+                                className={`w-full h-16 pl-12 pr-6 rounded-2xl font-mono text-sm outline-none transition-all ${darkMode
+                                    ? 'bg-white/10 border-white/10 text-white placeholder:text-white/20 focus:bg-white/15 focus:border-indigo-500/50'
                                     : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-indigo-500/50'
-                                }`}
+                                  }`}
                               />
                             </div>
                             <p className="text-[9px] text-indigo-400/60 font-bold ml-1 uppercase tracking-widest">
                               Login email will be: <span className="text-indigo-300">{formData.userId || '...'}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}</span>
                             </p>
                           </div>
-                          
+
                           <div className="space-y-3 relative">
                             <label className="text-[10px] font-black tracking-[0.25em] text-indigo-400 uppercase ml-1">SECURE ACCESS TOKEN (PASSWORD)*</label>
                             <div className="relative group">
@@ -1185,7 +1175,7 @@ export default function ManagerUsersPage() {
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 className="w-full h-16 px-6 rounded-2xl bg-white/10 border border-white/10 text-white font-mono placeholder:text-white/20 focus:bg-white/15 focus:border-indigo-500/50 outline-none transition-all"
                               />
-                              <button 
+                              <button
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
                               >
@@ -1223,8 +1213,8 @@ export default function ManagerUsersPage() {
                             <p className="text-xs font-black uppercase tracking-widest">Upload Archive</p>
                             <p className="text-[10px] opacity-30 mt-2 font-bold italic">MAX 10MB • PDF/IMG</p>
                           </div>
-                          <input 
-                            type="file" 
+                          <input
+                            type="file"
                             className="absolute inset-0 opacity-0 cursor-pointer"
                             multiple
                             onChange={(e) => {
@@ -1254,7 +1244,7 @@ export default function ManagerUsersPage() {
                                     <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest mt-0.5">Verified Asset ID: {doc.url.split('/').pop()?.slice(0, 8)}...</p>
                                   </div>
                                 </div>
-                                <button 
+                                <button
                                   onClick={() => setFormData({ ...formData, documents: formData.documents.filter((_, i) => i !== idx) })}
                                   className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center opacity-0 group-hover/item:opacity-100 hover:bg-red-500 hover:text-white transition-all"
                                 >
@@ -1291,7 +1281,7 @@ export default function ManagerUsersPage() {
                           </div>
                           {!submitting && <ArrowRightCircle size={28} className="ml-4 opacity-30 group-hover:opacity-100 group-hover:translate-x-2 transition-all" />}
                         </div>
-                        
+
                         {/* Background Decorative Flare */}
                         <div className="absolute top-0 -left-1/4 w-1/2 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 group-hover:left-full transition-all duration-1000 ease-in-out"></div>
                       </button>
@@ -1315,30 +1305,30 @@ export default function ManagerUsersPage() {
 
               <div className="space-y-8">
                 {[
-                  { 
-                    label: 'Authentication ID', 
-                    value: formData.firstName ? `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase() || 'stf'}@rehab.khanhub` : 'Awaiting Details', 
+                  {
+                    label: 'Authentication ID',
+                    value: formData.firstName ? `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase() || 'stf'}@rehab.khanhub` : 'Awaiting Details',
                     icon: Fingerprint,
                     color: 'text-indigo-500',
                     bg: 'bg-indigo-500/10'
                   },
-                  { 
-                    label: 'Security Clearance', 
-                    value: 'Operational Staff - L1', 
+                  {
+                    label: 'Security Clearance',
+                    value: 'Operational Staff - L1',
                     icon: ShieldCheck,
                     color: 'text-emerald-500',
                     bg: 'bg-emerald-500/10'
                   },
-                  { 
-                    label: 'Work Area', 
-                    value: formData.department ? (DEPARTMENTS.find(d => d.id === formData.department)?.name) : 'Physical Therapy Unit', 
+                  {
+                    label: 'Work Area',
+                    value: formData.department ? (DEPARTMENTS.find(d => d.id === formData.department)?.name) : 'Physical Therapy Unit',
                     icon: Crosshair,
                     color: 'text-orange-500',
                     bg: 'bg-orange-500/10'
                   },
-                  { 
-                    label: 'Onboarding Date', 
-                    value: formData.joiningDate || formatDateDMY(new Date()), 
+                  {
+                    label: 'Onboarding Date',
+                    value: formData.joiningDate || formatDateDMY(new Date()),
                     icon: Calendar,
                     color: 'text-pink-500',
                     bg: 'bg-pink-500/10'
@@ -1376,9 +1366,8 @@ export default function ManagerUsersPage() {
                 <p className={`text-xs font-bold leading-relaxed mb-8 ${darkMode ? 'text-indigo-400' : 'text-indigo-100'}`}>
                   Every deployment requires valid CNIC and verified joining date for biometric automation.
                 </p>
-                <button className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${
-                  darkMode ? 'border-indigo-500/30 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white' : 'border-white/30 bg-white/20 text-white hover:bg-white hover:text-indigo-600'
-                }`}>
+                <button className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${darkMode ? 'border-indigo-500/30 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white' : 'border-white/30 bg-white/20 text-white hover:bg-white hover:text-indigo-600'
+                  }`}>
                   INITIALIZATION DOCS
                 </button>
               </div>
@@ -1390,18 +1379,16 @@ export default function ManagerUsersPage() {
 
         {/* Audit Table */}
         <div className="mt-12">
-          <div className={`rounded-[2.5rem] border overflow-hidden transition-all duration-500 ${
-            darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl' : 'bg-white border-gray-200 shadow-xl shadow-blue-900/5'
-          }`}>
+          <div className={`rounded-[2.5rem] border overflow-hidden transition-all duration-500 ${darkMode ? 'bg-gray-900/40 border-gray-800 shadow-2xl' : 'bg-white border-gray-200 shadow-xl shadow-blue-900/5'
+            }`}>
             <div className={`px-8 py-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${darkMode ? 'border-gray-800 bg-gray-900/60' : 'border-gray-50 bg-gray-50/50'}`}>
               <div className="flex items-center gap-3">
                 <History className="w-5 h-5 text-gray-400" />
                 <h2 className="text-lg font-black uppercase tracking-tight">Recent System Access</h2>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                  darkMode ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
-                }`}>
+                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
+                  }`}>
                   {users.length} Records
                 </span>
               </div>
@@ -1416,10 +1403,9 @@ export default function ManagerUsersPage() {
                 users.map((u) => (
                   <div key={u.id} className="p-4 space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                        u.role === 'admin' ? 'bg-blue-500 text-white' :
-                        u.role === 'staff' ? 'bg-indigo-500 text-white' : 'bg-emerald-500 text-white'
-                      }`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${u.role === 'admin' ? 'bg-blue-500 text-white' :
+                          u.role === 'staff' ? 'bg-indigo-500 text-white' : 'bg-emerald-500 text-white'
+                        }`}>
                         {u.displayName?.substring(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -1430,21 +1416,19 @@ export default function ManagerUsersPage() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <span className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border text-center ${
-                        u.role === 'manager' || u.role === 'admin'
+                      <span className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border text-center ${u.role === 'manager' || u.role === 'admin'
                           ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
                           : 'bg-green-500/10 text-green-500 border-green-500/20'
-                      }`}>
+                        }`}>
                         {u.role}
                       </span>
                       <button
                         disabled={toggling === u.id}
                         onClick={() => handleToggleStatus(u.id, u.isActive !== false)}
-                        className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                          u.isActive !== false
+                        className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${u.isActive !== false
                             ? 'bg-green-500/10 text-green-500'
                             : 'bg-red-500/10 text-red-500'
-                        }`}
+                          }`}
                       >
                         <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500' : 'bg-red-500'}`} />
                         {u.isActive !== false ? 'Active' : 'Disabled'}
@@ -1468,95 +1452,92 @@ export default function ManagerUsersPage() {
               <div className="overflow-x-auto pb-4">
                 <div className="table-responsive">
 
-                <table className="w-full text-left min-w-[800px]">
-                  <thead>
-                    <tr className={`text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-50'}`}>
-                      <th className="px-8 py-5 text-[9px]">Full Identity</th>
-                      <th className="px-8 py-5 text-[9px]">Assigned Role</th>
-                      <th className="px-8 py-5 text-[9px]">Initialization Date</th>
-                      <th className="px-8 py-5 text-[9px]">Operational Status</th>
-                      <th className="px-8 py-5 text-right text-[9px] font-black uppercase tracking-widest opacity-40">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y ${darkMode ? 'divide-gray-800/50' : 'divide-gray-50'}`}>
-                    {users.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-8 py-12 text-center text-gray-400 font-bold uppercase tracking-widest text-[11px]">
-                          No account records initialized
-                        </td>
+                  <table className="w-full text-left min-w-[800px]">
+                    <thead>
+                      <tr className={`text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-50'}`}>
+                        <th className="px-8 py-5 text-[9px]">Full Identity</th>
+                        <th className="px-8 py-5 text-[9px]">Assigned Role</th>
+                        <th className="px-8 py-5 text-[9px]">Initialization Date</th>
+                        <th className="px-8 py-5 text-[9px]">Operational Status</th>
+                        <th className="px-8 py-5 text-right text-[9px] font-black uppercase tracking-widest opacity-40">Actions</th>
                       </tr>
-                    ) : (
-                      users.map(u => (
-                        <tr key={u.id} className="group hover:bg-blue-500/5 transition-all">
-                          <td className="px-8 py-5">
-                            <div className="flex items-center gap-4">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                                u.role === 'admin' ? 'bg-blue-500 text-white' : 
-                                u.role === 'staff' ? 'bg-indigo-500 text-white' : 'bg-emerald-500 text-white'
-                              }`}>
-                                {u.displayName?.substring(0, 2).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-black truncate">{u.displayName}</p>
-                                <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                  {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-8 py-5 capitalize">
-                            <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                              u.role === 'manager' || u.role === 'admin' 
-                                ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' 
-                                : 'bg-green-500/10 text-green-500 border-green-500/20'
-                            }`}>
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className={`px-8 py-5 text-xs font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                            {u.createdAt ? (() => {
-                              try {
-                                const date = u.createdAt.seconds ? new Date(u.createdAt.seconds * 1000) : new Date(u.createdAt);
-                                return formatDateDMY(date);
-                              } catch {
-                                return 'Format Error';
-                              }
-                            })() : 'Pending'}
-                          </td>
-                          <td className="px-8 py-5">
-                            <button
-                              disabled={toggling === u.id}
-                              onClick={() => handleToggleStatus(u.id, u.isActive !== false)}
-                              className={`inline-flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                u.isActive !== false
-                                  ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-                                  : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
-                              }`}
-                            >
-                              <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500' : 'bg-red-500'}`} />
-                              {u.isActive !== false ? 'Active' : 'Disabled'}
-                              {toggling === u.id && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
-                            </button>
-                          </td>
-                          <td className="px-8 py-5 text-right">
-                            <button
-                              onClick={() => {
-                                const col = u.department === 'rehab' || u._origin === 'rehab' || !u.department
-                                  ? 'rehab'
-                                  : u.department;
-                                router.push(`/hq/dashboard/manager/staff/${u.id}?collection=${col}`);
-                              }}
-                              className="px-6 py-2.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
-                            >
-                              Edit
-                            </button>
+                    </thead>
+                    <tbody className={`divide-y ${darkMode ? 'divide-gray-800/50' : 'divide-gray-50'}`}>
+                      {users.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-8 py-12 text-center text-gray-400 font-bold uppercase tracking-widest text-[11px]">
+                            No account records initialized
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ) : (
+                        users.map(u => (
+                          <tr key={u.id} className="group hover:bg-blue-500/5 transition-all">
+                            <td className="px-8 py-5">
+                              <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${u.role === 'admin' ? 'bg-blue-500 text-white' :
+                                    u.role === 'staff' ? 'bg-indigo-500 text-white' : 'bg-emerald-500 text-white'
+                                  }`}>
+                                  {u.displayName?.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-black truncate">{u.displayName}</p>
+                                  <p className={`text-[10px] font-bold truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    {u.customId}{DEPARTMENTS.find(d => d.id === formData.department)?.emailDomain || '@rehab.khanhub'}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-8 py-5 capitalize">
+                              <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${u.role === 'manager' || u.role === 'admin'
+                                  ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                  : 'bg-green-500/10 text-green-500 border-green-500/20'
+                                }`}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className={`px-8 py-5 text-xs font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {u.createdAt ? (() => {
+                                try {
+                                  const date = u.createdAt.seconds ? new Date(u.createdAt.seconds * 1000) : new Date(u.createdAt);
+                                  return formatDateDMY(date);
+                                } catch {
+                                  return 'Format Error';
+                                }
+                              })() : 'Pending'}
+                            </td>
+                            <td className="px-8 py-5">
+                              <button
+                                disabled={toggling === u.id}
+                                onClick={() => handleToggleStatus(u.id, u.isActive !== false)}
+                                className={`inline-flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${u.isActive !== false
+                                    ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+                                    : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                                  }`}
+                              >
+                                <div className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-green-500' : 'bg-red-500'}`} />
+                                {u.isActive !== false ? 'Active' : 'Disabled'}
+                                {toggling === u.id && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
+                              </button>
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <button
+                                onClick={() => {
+                                  const col = u.department === 'rehab' || u._origin === 'rehab' || !u.department
+                                    ? 'rehab'
+                                    : u.department;
+                                  router.push(`/hq/dashboard/manager/staff/${u.id}?collection=${col}`);
+                                }}
+                                className="px-6 py-2.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
+                              >
+                                Edit
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
