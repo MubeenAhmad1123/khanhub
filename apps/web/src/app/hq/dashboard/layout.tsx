@@ -461,14 +461,14 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
               {ROLE_LABELS[role]}
             </span>
-            <div className="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-gray-600 font-black text-sm">
+            <div className="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center text-gray-600 dark:text-gray-300 font-black text-sm">
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
-            <span className="text-gray-700 text-sm font-semibold hidden xl:inline">{user?.name}</span>
+            <span className="text-gray-700 dark:text-gray-200 text-sm font-semibold hidden xl:inline">{user?.name}</span>
           </div>
         </header>
 
-        <main className={`flex-1 overflow-x-hidden transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+        <main className={`flex-1 overflow-x-hidden transition-opacity duration-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
           {/* Notification permission banner — only when permission not yet decided */}
           {showNotifBanner && (
             <HqNotificationPermissionBanner
