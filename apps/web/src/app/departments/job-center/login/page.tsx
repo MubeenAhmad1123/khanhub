@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginJobCenter } from '@/lib/job-center/jobCenterAuth';
+import { loginUniversal } from '@/lib/hq/auth/universalAuth';
 import EyePasswordInput from '@/components/job-center/EyePasswordInput';
 
 export default function JobCenterLoginPage() {
@@ -30,43 +30,16 @@ export default function JobCenterLoginPage() {
     setError('');
 
     try {
-      console.log('Attempting login with ID:', customId);
-      
-      // loginJobCenter already handles Firestore fetch + isActive check
-      const userData = await loginJobCenter(customId, password);
-      console.log('Login success, user data:', userData);
-
-      const session = {
-        uid: userData.uid,
-        customId: userData.customId,
-        role: userData.role,
-        displayName: userData.displayName,
-        seekerId: userData.seekerId || null
-      };
-
-      localStorage.setItem('jobcenter_session', JSON.stringify(session));
-      localStorage.setItem('jobcenter_login_time', Date.now().toString());
-      console.log('Redirecting to role:', userData.role);
-
-      if (userData.role === 'seeker') {
-        router.push(`/departments/job-center/dashboard/seeker/${userData.seekerId}`);
-      } else if (userData.role === 'staff') {
-        router.push('/departments/job-center/dashboard/staff');
-      } else if (userData.role === 'cashier') {
-        router.push('/departments/job-center/dashboard/cashier');
-      } else if (userData.role === 'admin') {
-        router.push('/departments/job-center/dashboard/admin');
-      } else if (userData.role === 'superadmin') {
-        router.push('/departments/job-center/dashboard/superadmin');
-      } else {
-        setError('Unknown role: ' + userData.role);
+      const result = await loginUniversal(customId, password);
+      if (!result.success) {
+        setError(result.error || 'Identity verification failed.');
+        setLoading(false);
+        return;
       }
+      // Redirection handled by loginUniversal
     } catch (err: any) {
-      console.error('Login error full object:', err);
-      console.error('Login error code:', err.code);
-      console.error('Login error message:', err.message);
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
+      console.error('[Job Center Login] Error:', err);
+      setError('System authentication error. Try again.');
       setLoading(false);
     }
   };

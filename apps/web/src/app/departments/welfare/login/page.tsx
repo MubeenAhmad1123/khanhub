@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginWelfare } from '@/lib/welfare/welfareAuth';
+import { loginUniversal } from '@/lib/hq/auth/universalAuth';
 import EyePasswordInput from '@/components/welfare/EyePasswordInput';
 
 export default function WelfareLoginPage() {
@@ -30,43 +30,16 @@ export default function WelfareLoginPage() {
     setError('');
 
     try {
-      console.log('Attempting login with ID:', customId);
-      
-      // loginWelfare already handles Firestore fetch + isActive check
-      const userData = await loginWelfare(customId, password);
-      console.log('Login success, user data:', userData);
-
-      const session = {
-        uid: userData.uid,
-        customId: userData.customId,
-        role: userData.role,
-        displayName: userData.displayName,
-        childId: userData.childId || null
-      };
-
-      localStorage.setItem('welfare_session', JSON.stringify(session));
-      localStorage.setItem('welfare_login_time', Date.now().toString());
-      console.log('Redirecting to role:', userData.role);
-
-      if (userData.role === 'family') {
-        router.push(`/departments/welfare/dashboard/family/${userData.childId}`);
-      } else if (userData.role === 'staff') {
-        router.push('/departments/welfare/dashboard/staff');
-      } else if (userData.role === 'cashier') {
-        router.push('/departments/welfare/dashboard/cashier');
-      } else if (userData.role === 'admin') {
-        router.push('/departments/welfare/dashboard/admin');
-      } else if (userData.role === 'superadmin') {
-        router.push('/departments/welfare/dashboard/superadmin');
-      } else {
-        setError('Unknown role: ' + userData.role);
+      const result = await loginUniversal(customId, password);
+      if (!result.success) {
+        setError(result.error || 'Identity verification failed.');
+        setLoading(false);
+        return;
       }
+      // Redirection handled by loginUniversal
     } catch (err: any) {
-      console.error('Login error full object:', err);
-      console.error('Login error code:', err.code);
-      console.error('Login error message:', err.message);
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
+      console.error('[Welfare Login] Error:', err);
+      setError('System authentication error. Try again.');
       setLoading(false);
     }
   };

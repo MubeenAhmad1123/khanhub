@@ -2,16 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { HqSession, HqRole } from '@/types/hq';
+import { loginUniversal } from '@/lib/hq/auth/universalAuth';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 43200000;
-const HQ_DOMAIN = '@hq.khanhub.com';
 
 export default function HqLoginPage() {
   const [customId, setCustomId] = useState('');
@@ -73,61 +72,18 @@ export default function HqLoginPage() {
     setError('');
 
     try {
-      const normalizedCustomId = customId.trim();
-      const email = `${normalizedCustomId.toLowerCase()}${HQ_DOMAIN}`;
-
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, 'hq_users', cred.user.uid));
-
-      if (!userDoc.exists()) {
-        setError('User profile not found.');
+      const result = await loginUniversal(customId, password);
+      
+      if (!result.success) {
+        setError(result.error || 'Authentication failed.');
         setLoading(false);
         return;
       }
 
-      const data = userDoc.data();
-      if (data.isActive === false) {
-        setError('Account is disabled. Contact administrator.');
-        setLoading(false);
-        return;
-      }
-
-      const normalizedRole = normalizeRole(data.role);
-      if (!normalizedRole) {
-        setError('Invalid role on account. Contact administrator.');
-        setLoading(false);
-        return;
-      }
-
-      const normalizedSessionCustomId = String(data.customId || normalizedCustomId).trim().toUpperCase();
-
-      const session: HqSession = {
-        uid: cred.user.uid,
-        customId: normalizedSessionCustomId,
-        name: data.name,
-        role: normalizedRole,
-        loginTime: Date.now(),
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-
-      try {
-        const idToken = await cred.user.getIdToken();
-        await setHqSessionCookieFromIdToken(idToken);
-      } catch {
-        // ignore
-      }
-
-      const routes: Record<HqRole, string> = {
-        superadmin: '/hq/dashboard/superadmin',
-        manager: '/hq/dashboard/manager',
-        cashier: '/hq/dashboard/cashier',
-      };
-      router.push(routes[normalizedRole] || '/hq/login');
-
+      // Success is handled by loginUniversal via window.location.href
     } catch (err: any) {
       console.error('[HQ Login] Error:', err);
       setError('Something went wrong. Try again.');
-    } finally {
       setLoading(false);
     }
   };

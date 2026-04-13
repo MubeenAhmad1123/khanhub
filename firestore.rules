@@ -1047,6 +1047,7 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_contributions$')
           || collectionId.matches('^[a-z0-9_-]+_salary_records$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
+          || collectionId.matches('^[a-z0-9_-]+_meta$')
         );
       allow create, update: if (isHqSuperOrManager() || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$')))
         && (
@@ -1061,12 +1062,14 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_contributions$')
           || collectionId.matches('^[a-z0-9_-]+_salary_records$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
+          || collectionId.matches('^[a-z0-9_-]+_meta$')
         );
       allow delete: if isHqSuperAdmin()
         && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_fines$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
+          || collectionId.matches('^[a-z0-9_-]+_meta$')
         );
     }
 

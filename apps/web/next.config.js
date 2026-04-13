@@ -7,6 +7,12 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   disable: process.env.NODE_ENV === 'development', // Disable in dev to avoid confusion
   workboxOptions: {
     disableDevLogs: true,
+    runtimeCaching: [
+      {
+        urlPattern: /^\/_vercel\/.*/i,
+        handler: 'NetworkOnly',
+      },
+    ],
   },
 });
 
@@ -43,9 +49,9 @@ const nextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
+  serverExternalPackages: ['firebase-admin'],
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
-    serverExternalPackages: ['firebase-admin'],
   },
   async headers() {
     return [

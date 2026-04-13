@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginSpims } from '@/lib/spims/spimsAuth';
+import { loginUniversal } from '@/lib/hq/auth/universalAuth';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 
 export default function SpimsLoginPage() {
@@ -31,43 +31,16 @@ export default function SpimsLoginPage() {
     setError('');
 
     try {
-      const userData = await loginSpims(customId, password);
-
-      const studentId = userData.studentId ?? userData.patientId ?? null;
-
-      const session = {
-        uid: userData.uid,
-        customId: userData.customId,
-        role: userData.role,
-        displayName: userData.displayName || userData.name || '',
-        studentId,
-        patientId: studentId,
-      };
-
-      localStorage.setItem('spims_session', JSON.stringify(session));
-      localStorage.setItem('spims_login_time', Date.now().toString());
-
-      if (userData.role === 'student') {
-        if (!studentId) {
-          setError('Student profile is not linked to this account.');
-          setLoading(false);
-          return;
-        }
-        router.push(`/departments/spims/dashboard/student/${studentId}`);
-      } else if (userData.role === 'staff') {
-        router.push('/departments/spims/dashboard/staff');
-      } else if (userData.role === 'cashier') {
-        router.push('/departments/spims/dashboard/cashier');
-      } else if (userData.role === 'admin') {
-        router.push('/departments/spims/dashboard/admin');
-      } else if (userData.role === 'superadmin') {
-        router.push('/departments/spims/dashboard/superadmin');
-      } else {
-        setError('Unknown role: ' + userData.role);
+      const result = await loginUniversal(customId, password);
+      if (!result.success) {
+        setError(result.error || 'Identity verification failed.');
+        setLoading(false);
+        return;
       }
+      // Redirection handled by loginUniversal
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
+      console.error('[SPIMS Login] Error:', err);
+      setError('System authentication error. Try again.');
       setLoading(false);
     }
   };

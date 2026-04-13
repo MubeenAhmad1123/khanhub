@@ -128,6 +128,13 @@ export default function StaffProfilePage() {
   const [newTaskText, setNewTaskText] = useState('');
   const [creatingTask, setCreatingTask] = useState(false);
 
+  // Custom Config Add States
+  const [availableDuties, setAvailableDuties] = useState<{key: string, label: string}[]>([]);
+  const [availableDress, setAvailableDress] = useState<{key: string, label: string}[]>([]);
+  const [addingConfig, setAddingConfig] = useState<{type: 'duty' | 'dress', mode: 'select' | 'custom'} | null>(null);
+  const [addingConfigSelection, setAddingConfigSelection] = useState('');
+  const [addingConfigCustom, setAddingConfigCustom] = useState('');
+
   // Payroll Form State
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [payrollForm, setPayrollForm] = useState({
@@ -209,13 +216,30 @@ export default function StaffProfilePage() {
       const start = days[0];
       const end = days[days.length - 1];
 
-      const [attSnap, dressSnap, dutySnap, pointsSnap, salarySnap, tasksSnap] = await Promise.all([
+      const [attSnap, dressSnap, dutySnap, pointsSnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
         getDocs(query(collection(db, `${slug}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${slug}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${slug}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), limit(1))),
         getDocs(query(collection(db, 'hq_salary_records'), where('staffId', '==', uid))),
-        getDocs(query(collection(db, `${slug}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc')))
+        getDocs(query(collection(db, `${slug}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))),
+        getDoc(doc(db, `${slug}_meta`, 'config'))
+      ]);
+
+      const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
+      setAvailableDuties([
+        { key: 'attendance_portal', label: 'Attendance Entry' },
+        { key: 'patient_vitals', label: 'Patient Vitals' },
+        { key: 'ward_round', label: 'Ward Round' },
+        { key: 'cleanliness', label: 'Area Cleanliness' },
+        ...(metaData.customDuties || [])
+      ]);
+      setAvailableDress([
+        { key: 'pant', label: 'Dress Pant' },
+        { key: 'shirt', label: 'Uniform Shirt' },
+        { key: 'shoes', label: 'Black Shoes' },
+        { key: 'id_card', label: 'ID Card' },
+        ...(metaData.customDress || [])
       ]);
 
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
@@ -247,6 +271,58 @@ export default function StaffProfilePage() {
       setLoading(false);
     }
   }, [staffId, router, daysInMonth]);
+
+  const handleAddConfig = async () => {
+    if (!staff || !addingConfig) return;
+    const { type, mode } = addingConfig;
+    
+    let newItem: {key: string, label: string} | null = null;
+
+    if (mode === 'select' && addingConfigSelection) {
+       const opts = type === 'duty' ? availableDuties : availableDress;
+       newItem = opts.find(o => o.key === addingConfigSelection) || null;
+    } else if (mode === 'custom' && addingConfigCustom.trim()) {
+       const label = addingConfigCustom.trim();
+       const key = label.toLowerCase().replace(/\s+/g, '_');
+       newItem = { key, label };
+
+       // Save backend to `_meta/config`
+       try {
+         const slug = staff.dept.replace('-', '_');
+         const metaRef = doc(db, `${slug}_meta`, 'config');
+         const metaDoc = await getDoc(metaRef);
+         const field = type === 'duty' ? 'customDuties' : 'customDress';
+         const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
+         if (!existing.find((e: any) => e.key === key)) {
+            await setDoc(metaRef, { [field]: [...existing, newItem] }, { merge: true });
+            toast.success(`${type === 'duty' ? 'Duty' : 'Dress Item'} stored globally to options list!`);
+         }
+         
+         // Update Local States
+         if (type === 'duty') setAvailableDuties(p => [...p, newItem!]);
+         else setAvailableDress(p => [...p, newItem!]);
+       } catch(e) {
+         console.error(e);
+         toast.error("Failed to commit custom config to backend metadata.");
+       }
+    }
+
+    if (newItem) {
+       setEditForm(prev => {
+         const targetList = type === 'duty' ? prev.dutyConfig : prev.dressCodeConfig;
+         if (targetList.find(i => i.key === newItem!.key)) return prev;
+         return {
+           ...prev,
+           [type === 'duty' ? 'dutyConfig' : 'dressCodeConfig']: [...targetList, newItem!]
+         };
+       });
+    }
+
+    setAddingConfig(null);
+    setAddingConfigSelection('');
+    setAddingConfigCustom('');
+  };
+
 
   const toggleAttendance = async (date: string, next: any) => {
     try {
@@ -1311,21 +1387,46 @@ export default function StaffProfilePage() {
                     <div className="flex items-center justify-between mb-6">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Dress Code Items</h4>
                       <button 
-                        onClick={() => {
-                          const label = prompt("Enter new dress item label (e.g. White Coat):");
-                          if (label) {
-                            const key = label.toLowerCase().replace(/\s+/g, '_');
-                            setEditForm(prev => ({
-                              ...prev,
-                              dressCodeConfig: [...prev.dressCodeConfig, { key, label }]
-                            }));
-                          }
-                        }}
+                        onClick={() => setAddingConfig({ type: 'dress', mode: 'select' })}
                         className="p-2.5 rounded-xl bg-indigo-500 text-white hover:scale-105 transition-all shadow-lg shadow-indigo-500/20"
                       >
                          <Plus size={14} />
                       </button>
                     </div>
+
+                    {addingConfig?.type === 'dress' && (
+                       <div className={`p-4 rounded-2xl border mb-6 transition-all ${isDark ? 'bg-zinc-900/80 border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'bg-white border-indigo-200 shadow-xl shadow-indigo-500/10'}`}>
+                          <div className="flex flex-col gap-3">
+                             {addingConfig.mode === 'select' ? (
+                               <select 
+                                 className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                                 value={addingConfigSelection}
+                                 onChange={e => {
+                                   if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
+                                   else setAddingConfigSelection(e.target.value);
+                                 }}
+                               >
+                                 <option value="" disabled>Select a preset dress item...</option>
+                                 {availableDress.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                 <option value="__custom__">+ Create Custom Label...</option>
+                               </select>
+                             ) : (
+                               <input 
+                                 type="text" 
+                                 placeholder="Type a new global dress code item (e.g. Scarf)" 
+                                 autoFocus
+                                 className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-indigo-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
+                                 value={addingConfigCustom}
+                                 onChange={e => setAddingConfigCustom(e.target.value)}
+                               />
+                             )}
+                             <div className="flex gap-2 mt-1">
+                               <button onClick={handleAddConfig} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                               <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
+                             </div>
+                          </div>
+                       </div>
+                    )}
                     <div className="space-y-3">
                       {editForm.dressCodeConfig.map((item, idx) => (
                         <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
@@ -1351,21 +1452,46 @@ export default function StaffProfilePage() {
                     <div className="flex items-center justify-between mb-6">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-500">Scheduled Duties</h4>
                       <button 
-                        onClick={() => {
-                          const label = prompt("Enter new duty label (e.g. Morning Rounds):");
-                          if (label) {
-                            const key = label.toLowerCase().replace(/\s+/g, '_');
-                            setEditForm(prev => ({
-                              ...prev,
-                              dutyConfig: [...prev.dutyConfig, { key, label }]
-                            }));
-                          }
-                        }}
+                        onClick={() => setAddingConfig({ type: 'duty', mode: 'select' })}
                         className="p-2.5 rounded-xl bg-teal-500 text-white hover:scale-105 transition-all shadow-lg shadow-teal-500/20"
                       >
                          <Plus size={14} />
                       </button>
                     </div>
+
+                    {addingConfig?.type === 'duty' && (
+                       <div className={`p-4 rounded-2xl border mb-6 transition-all ${isDark ? 'bg-zinc-900/80 border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.1)]' : 'bg-white border-teal-200 shadow-xl shadow-teal-500/10'}`}>
+                          <div className="flex flex-col gap-3">
+                             {addingConfig.mode === 'select' ? (
+                               <select 
+                                 className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-teal-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-teal-500'}`}
+                                 value={addingConfigSelection}
+                                 onChange={e => {
+                                   if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
+                                   else setAddingConfigSelection(e.target.value);
+                                 }}
+                               >
+                                 <option value="" disabled>Select a preset duty...</option>
+                                 {availableDuties.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                 <option value="__custom__">+ Create Custom Duty...</option>
+                               </select>
+                             ) : (
+                               <input 
+                                 type="text" 
+                                 placeholder="Type a new global duty (e.g. Night Shift Guard)" 
+                                 autoFocus
+                                 className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-teal-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
+                                 value={addingConfigCustom}
+                                 onChange={e => setAddingConfigCustom(e.target.value)}
+                               />
+                             )}
+                             <div className="flex gap-2 mt-1">
+                               <button onClick={handleAddConfig} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest bg-teal-500 hover:bg-teal-600 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                               <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
+                             </div>
+                          </div>
+                       </div>
+                    )}
                     <div className="space-y-3">
                       {editForm.dutyConfig.map((item, idx) => (
                         <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>

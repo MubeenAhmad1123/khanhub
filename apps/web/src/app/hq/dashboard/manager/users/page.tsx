@@ -14,11 +14,15 @@ import {
   Timestamp,
   addDoc,
   serverTimestamp,
-  getDoc
+  getDoc,
+  setDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
+import { loginUniversal } from '@/lib/hq/auth/universalAuth';
+import EyePasswordInput from '@/components/job-center/EyePasswordInput';
+import { useHqSession } from '@/hooks/hq/useHqSession';
+import { checkIdUniqueness } from '@/lib/hq/auth/universalAuth';
 import {
   Loader2,
   Users,
@@ -193,6 +197,13 @@ export default function ManagerUsersPage() {
   const [lastCreated, setLastCreated] = useState<{ customId: string, password: string, name: string } | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  // Dynamic Configuration State
+  const [availableDuties, setAvailableDuties] = useState<{key: string, label: string}[]>([]);
+  const [availableDress, setAvailableDress] = useState<{key: string, label: string}[]>([]);
+  const [addingConfig, setAddingConfig] = useState<{type: 'duty' | 'dress', mode: 'select' | 'custom'} | null>(null);
+  const [addingConfigSelection, setAddingConfigSelection] = useState('');
+  const [addingConfigCustom, setAddingConfigCustom] = useState('');
+
   useEffect(() => {
     const isDark = localStorage.getItem('hq_dark_mode') === 'true';
     setDarkMode(isDark);
@@ -237,6 +248,78 @@ export default function ManagerUsersPage() {
     fetchUsers();
     fetchCounts();
   }, [session, formData.department, activeTab]);
+
+  // Fetch departmental meta config
+  useEffect(() => {
+    const fetchMeta = async () => {
+      const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
+      if (!deptDetails) return;
+      
+      const slug = deptDetails.id.replace('-', '_');
+      try {
+        const metaDoc = await getDoc(doc(db, `${slug}_meta`, 'config'));
+        const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
+        
+        setAvailableDuties([
+          ...COMMON_DUTIES.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
+          ...(metaData.customDuties || [])
+        ]);
+        
+        setAvailableDress([
+          ...ALL_DRESS_ITEMS.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
+          ...(metaData.customDress || [])
+        ]);
+      } catch (err) {
+        console.error("Error fetching meta config:", err);
+      }
+    };
+    fetchMeta();
+  }, [formData.department]);
+
+  const handleAddConfig = async () => {
+    if (!addingConfig) return;
+    const { type, mode } = addingConfig;
+    let newItem: {key: string, label: string} | null = null;
+
+    if (mode === 'select' && addingConfigSelection) {
+       const opts = type === 'duty' ? availableDuties : availableDress;
+       newItem = opts.find(o => o.key === addingConfigSelection) || null;
+    } else if (mode === 'custom' && addingConfigCustom.trim()) {
+       const label = addingConfigCustom.trim();
+       const key = label.toLowerCase().replace(/\s+/g, '_');
+       newItem = { key, label };
+
+       // Save to DB globally
+       try {
+         const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
+         if (deptDetails) {
+           const slug = deptDetails.id.replace('-', '_');
+           const metaRef = doc(db, `${slug}_meta`, 'config');
+           const metaDoc = await getDoc(metaRef);
+           const field = type === 'duty' ? 'customDuties' : 'customDress';
+           const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
+           if (!existing.find((e: any) => e.key === key)) {
+              await setDoc(metaRef, { [field]: [...existing, newItem] }, { merge: true });
+           }
+         }
+       } catch (err) { console.error(err); }
+    }
+
+    if (newItem) {
+      if (type === 'duty') {
+        if (!formData.duties.includes(newItem.label)) {
+          setFormData(prev => ({ ...prev, duties: [...prev.duties, newItem!.label] }));
+        }
+      } else {
+        if (!formData.dressCode.includes(newItem.label)) {
+          setFormData(prev => ({ ...prev, dressCode: [...prev.dressCode, newItem!.label] }));
+        }
+      }
+    }
+    setAddingConfig(null);
+    setAddingConfigSelection('');
+    setAddingConfigCustom('');
+  };
 
   const generateEmployeeId = () => {
     const nextIdx = employeeCount + 1;
@@ -321,6 +404,14 @@ export default function ManagerUsersPage() {
     setSubmitting(true);
     setMessage(null);
 
+    // Global ID Uniqueness Check
+    const uniqueness = await checkIdUniqueness(formData.customId);
+    if (!uniqueness.isUnique) {
+      setMessage({ type: 'error', text: `ABORTED: The User ID "${formData.customId}" is already taken by a profile in the ${uniqueness.existingDept} department. Please choose a different ID.` });
+      setSubmitting(false);
+      return;
+    }
+
     try {
       // Check for existing admin
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
@@ -369,6 +460,17 @@ export default function ManagerUsersPage() {
     setSubmitting(true);
     setMessage(null);
     setLastCreated(null);
+
+    // Global ID Uniqueness Check
+    const targetUserId = formData.userId || formData.customId;
+    if (targetUserId) {
+      const uniqueness = await checkIdUniqueness(targetUserId);
+      if (!uniqueness.isUnique) {
+        setMessage({ type: 'error', text: `ABORTED: The User ID "${targetUserId}" is already taken by a profile in the ${uniqueness.existingDept} department. Please choose a different ID.` });
+        setSubmitting(false);
+        return;
+      }
+    }
 
     try {
       const empId = formData.employeeId || generateEmployeeId();
@@ -467,6 +569,14 @@ export default function ManagerUsersPage() {
 
     setSubmitting(true);
     setMessage(null);
+
+    // Global ID Uniqueness Check
+    const uniqueness = await checkIdUniqueness(formData.customId);
+    if (!uniqueness.isUnique) {
+      setMessage({ type: 'error', text: `ABORTED: The User ID "${formData.customId}" is already taken by a profile in the ${uniqueness.existingDept} department. Please choose a different ID.` });
+      setSubmitting(false);
+      return;
+    }
 
     try {
       // Determine client collection and ID field name
@@ -1038,20 +1148,57 @@ export default function ManagerUsersPage() {
                         <div className="lg:col-span-2 space-y-4">
                           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Select Responsibilities / Duties</label>
                           <div className="flex flex-wrap gap-2">
-                            {COMMON_DUTIES.map(duty => (
+                             <button 
+                               onClick={() => setAddingConfig({ type: 'duty', mode: 'select' })}
+                               className="p-2.5 rounded-xl bg-purple-500 text-white hover:scale-105 transition-all shadow-lg shadow-purple-500/20"
+                             >
+                                <Plus size={14} />
+                             </button>
+
+                             {addingConfig?.type === 'duty' && (
+                               <div className={`p-4 rounded-2xl border w-full mb-4 transition-all ${darkMode ? 'bg-zinc-900 border-purple-500/30' : 'bg-white border-purple-200 shadow-xl shadow-purple-500/10'}`}>
+                                 <div className="flex flex-col gap-3">
+                                   {addingConfig.mode === 'select' ? (
+                                     <select 
+                                       className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${darkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
+                                       value={addingConfigSelection}
+                                       onChange={e => {
+                                         if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
+                                         else setAddingConfigSelection(e.target.value);
+                                       }}
+                                     >
+                                       <option value="" disabled>Select from presets...</option>
+                                       {availableDuties.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                       <option value="__custom__">+ Create New Item...</option>
+                                     </select>
+                                   ) : (
+                                     <input 
+                                       type="text" 
+                                       placeholder="Type new duty name..." 
+                                       autoFocus
+                                       className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-purple-500 transition-all ${darkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                                       value={addingConfigCustom}
+                                       onChange={e => setAddingConfigCustom(e.target.value)}
+                                     />
+                                   )}
+                                   <div className="flex gap-2">
+                                     <button onClick={handleAddConfig} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-purple-500 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                                     <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-zinc-500">Cancel</button>
+                                   </div>
+                                 </div>
+                               </div>
+                             )}
+
+                            {formData.duties.map(duty => (
                               <button
                                 key={duty}
                                 onClick={() => {
-                                  const exists = formData.duties.includes(duty);
                                   setFormData({
                                     ...formData,
-                                    duties: exists ? formData.duties.filter(d => d !== duty) : [...formData.duties, duty]
+                                    duties: formData.duties.filter(d => d !== duty)
                                   });
                                 }}
-                                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${formData.duties.includes(duty)
-                                    ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-500/30'
-                                    : 'bg-gray-100 border-gray-200 dark:bg-white/5 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
-                                  }`}
+                                className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-500/30"
                               >
                                 {duty}
                               </button>
@@ -1074,31 +1221,64 @@ export default function ManagerUsersPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-3">
-                        {ALL_DRESS_ITEMS.map((item) => {
-                          const isAssigned = formData.dressCode.includes(item);
-                          return (
+                         <button 
+                           onClick={() => setAddingConfig({ type: 'dress', mode: 'select' })}
+                           className="p-2.5 rounded-[1.25rem] bg-orange-500 text-white hover:scale-105 transition-all shadow-lg shadow-orange-500/20"
+                         >
+                            <Plus size={16} />
+                         </button>
+
+                         {addingConfig?.type === 'dress' && (
+                           <div className={`p-4 rounded-2xl border w-full mb-4 transition-all ${darkMode ? 'bg-zinc-900 border-orange-500/30' : 'bg-white border-orange-200 shadow-xl shadow-orange-500/10'}`}>
+                             <div className="flex flex-col gap-3">
+                               {addingConfig.mode === 'select' ? (
+                                 <select 
+                                   className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${darkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
+                                   value={addingConfigSelection}
+                                   onChange={e => {
+                                     if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
+                                     else setAddingConfigSelection(e.target.value);
+                                   }}
+                                 >
+                                   <option value="" disabled>Select from presets...</option>
+                                   {availableDress.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                   <option value="__custom__">+ Create New Item...</option>
+                                 </select>
+                               ) : (
+                                 <input 
+                                   type="text" 
+                                   placeholder="Type new dress item..." 
+                                   autoFocus
+                                   className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-orange-500 transition-all ${darkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100'}`}
+                                   value={addingConfigCustom}
+                                   onChange={e => setAddingConfigCustom(e.target.value)}
+                                 />
+                               )}
+                               <div className="flex gap-2">
+                                 <button onClick={handleAddConfig} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                                 <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-zinc-500">Cancel</button>
+                               </div>
+                             </div>
+                           </div>
+                         )}
+
+                        {formData.dressCode.map((item) => (
                             <button
                               key={item}
                               onClick={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  dressCode: isAssigned
-                                    ? prev.dressCode.filter(i => i !== item)
-                                    : [...prev.dressCode, item]
+                                  dressCode: prev.dressCode.filter(i => i !== item)
                                 }));
                               }}
-                              className={`flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all ${isAssigned
-                                  ? 'bg-orange-500/10 border-orange-500/30 text-orange-600'
-                                  : 'bg-gray-50 border-gray-100 dark:bg-white/5 dark:border-white/5 text-gray-400 opacity-40 hover:opacity-100'
-                                }`}
+                              className="flex items-center gap-3 px-5 py-3 rounded-2xl border border-orange-500/30 bg-orange-500/10 text-orange-600 transition-all"
                             >
-                              <div className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${isAssigned ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-300 dark:border-white/20'}`}>
-                                {isAssigned && <CheckCircle size={12} />}
+                              <div className="w-5 h-5 rounded-lg flex items-center justify-center bg-orange-500 text-white">
+                                <CheckCircle size={12} />
                               </div>
                               <span className="text-[10px] font-black uppercase tracking-widest">{item}</span>
                             </button>
-                          );
-                        })}
+                        ))}
                       </div>
 
                       <div className="mt-6 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 flex items-center gap-3">

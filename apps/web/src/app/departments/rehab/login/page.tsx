@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginRehab } from '@/lib/rehab/rehabAuth';
+import { loginUniversal } from '@/lib/hq/auth/universalAuth';
 import EyePasswordInput from '@/components/rehab/EyePasswordInput';
 
 export default function RehabLoginPage() {
@@ -30,43 +30,16 @@ export default function RehabLoginPage() {
     setError('');
 
     try {
-      console.log('Attempting login with ID:', customId);
-      
-      // loginRehab already handles Firestore fetch + isActive check
-      const userData = await loginRehab(customId, password);
-      console.log('Login success, user data:', userData);
-
-      const session = {
-        uid: userData.uid,
-        customId: userData.customId,
-        role: userData.role,
-        displayName: userData.displayName,
-        patientId: userData.patientId || null
-      };
-
-      localStorage.setItem('rehab_session', JSON.stringify(session));
-      localStorage.setItem('rehab_login_time', Date.now().toString());
-      console.log('Redirecting to role:', userData.role);
-
-      if (userData.role === 'family') {
-        router.push(`/departments/rehab/dashboard/family/${userData.patientId}`);
-      } else if (userData.role === 'staff') {
-        router.push('/departments/rehab/dashboard/staff');
-      } else if (userData.role === 'cashier') {
-        router.push('/departments/rehab/dashboard/cashier');
-      } else if (userData.role === 'admin') {
-        router.push('/departments/rehab/dashboard/admin');
-      } else if (userData.role === 'superadmin') {
-        router.push('/departments/rehab/dashboard/superadmin');
-      } else {
-        setError('Unknown role: ' + userData.role);
+      const result = await loginUniversal(customId, password);
+      if (!result.success) {
+        setError(result.error || 'Identity verification failed.');
+        setLoading(false);
+        return;
       }
+      // Redirection handled by loginUniversal
     } catch (err: any) {
-      console.error('Login error full object:', err);
-      console.error('Login error code:', err.code);
-      console.error('Login error message:', err.message);
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
+      console.error('[Rehab Login] Error:', err);
+      setError('System authentication error. Try again.');
       setLoading(false);
     }
   };
