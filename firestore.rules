@@ -207,21 +207,8 @@ service cloud.firestore {
         && (staffId == request.auth.uid || staffId == rehabStaffId());
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  HQ PORTAL HELPERS
-    //  HQ is the master dashboard — separate from rehab portal
-    //  Roles: superadmin, manager, superintendent
-    // ═══════════════════════════════════════════════════════════
 
-    function isHQAuth() {
-      return isHqAuth();
-    }
-    function isHQManagerOrAbove() {
-      return isHqSuperOrManager();
-    }
-    function isHQSuperAdmin() {
-      return isHqSuperAdmin();
-    }
+    // ── Rehab portal helpes ───────────────
 
     // ═══════════════════════════════════════════════════════════
     //  REHAB PORTAL COLLECTIONS
@@ -329,7 +316,7 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || isRehabRole('cashier')
         || (isRehabRole('staff') && rehabStaffId() == staffId)
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create, update: if isRehabAdminOrAbove();
       allow delete: if isRehabSuperAdmin();
     }
@@ -341,7 +328,7 @@ service cloud.firestore {
       allow read: if isRehabAdminOrAbove()
         || isRehabRole('cashier')
         || isRehabRole('staff')
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create: if isRehabRole('staff') || isRehabAdminOrAbove();
       allow update: if isRehabRole('staff') || isRehabAdminOrAbove();
       allow delete: if false;
@@ -619,9 +606,6 @@ service cloud.firestore {
     } 
     function isHqSuperAdmin() { 
       return isHqRole('superadmin'); 
-    } 
-    function isHqManager() { 
-      return isHqRole('manager'); 
     } 
     function isHqCashier() { 
       return isHqRole('cashier'); 
@@ -1015,33 +999,33 @@ service cloud.firestore {
     // Manager and superadmin can read and edit all staff.
     // Staff can read their own profile only.
     match /hq_staff/{staffId} {
-      allow read: if isHQManagerOrAbove();
-      allow create, update: if isHQManagerOrAbove();
-      allow delete: if isHQSuperAdmin();
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
     }
 
     // ── HQ Attendance ──────────────────────────────────
     // Manager and superadmin can read all attendance.
     // Nobody deletes attendance — full audit trail.
     match /hq_attendance/{docId} {
-      allow read: if isHQManagerOrAbove();
-      allow create, update: if isHQManagerOrAbove();
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
       allow delete: if false;
     }
 
     // ── Rehab Duty Logs ────────────────────────────────
     // Manager and superadmin can read all. Rehab admin can also read.
     match /rehab_duty_logs/{docId} {
-      allow read: if isRehabAdminOrAbove() || isHQManagerOrAbove();
-      allow create, update: if isRehabAdminOrAbove() || isHQManagerOrAbove();
+      allow read: if isRehabAdminOrAbove() || isHqSuperOrManager();
+      allow create, update: if isRehabAdminOrAbove() || isHqSuperOrManager();
       allow delete: if false;
     }
 
     // ── HQ Duty Logs ───────────────────────────────────
     // Manager and superadmin can read and write all.
     match /hq_duty_logs/{docId} {
-      allow read: if isHQManagerOrAbove();
-      allow create, update: if isHQManagerOrAbove();
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
       allow delete: if false;
     }
 
@@ -1159,7 +1143,7 @@ service cloud.firestore {
       allow read: if isHospitalAdminOrAbove()
         || isHospitalRole('cashier')
         || (isHospitalRole('staff') && hospitalStaffId() == staffId)
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create, update: if isHospitalAdminOrAbove();
       allow delete: if isHospitalSuperAdmin();
     }
@@ -1168,7 +1152,7 @@ service cloud.firestore {
       allow read: if isHospitalAdminOrAbove()
         || isHospitalRole('cashier')
         || isHospitalRole('staff')
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create: if isHospitalRole('staff') || isHospitalAdminOrAbove();
       allow update: if isHospitalRole('staff') || isHospitalAdminOrAbove();
       allow delete: if false;
@@ -1277,7 +1261,7 @@ service cloud.firestore {
       allow read: if isSukoonAdminOrAbove()
         || isSukoonRole('cashier')
         || (isSukoonRole('staff') && sukoonStaffId() == staffId)
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create, update: if isSukoonAdminOrAbove();
       allow delete: if isSukoonSuperAdmin();
     }
@@ -1286,7 +1270,7 @@ service cloud.firestore {
       allow read: if isSukoonAdminOrAbove()
         || isSukoonRole('cashier')
         || isSukoonRole('staff')
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create: if isSukoonRole('staff') || isSukoonAdminOrAbove();
       allow update: if isSukoonRole('staff') || isSukoonAdminOrAbove();
       allow delete: if false;
@@ -1395,7 +1379,7 @@ service cloud.firestore {
       allow read: if isWelfareAdminOrAbove()
         || isWelfareRole('cashier')
         || (isWelfareRole('staff') && welfareStaffId() == staffId)
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create, update: if isWelfareAdminOrAbove();
       allow delete: if isWelfareSuperAdmin();
     }
@@ -1404,7 +1388,7 @@ service cloud.firestore {
       allow read: if isWelfareAdminOrAbove()
         || isWelfareRole('cashier')
         || isWelfareRole('staff')
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create: if isWelfareRole('staff') || isWelfareAdminOrAbove();
       allow update: if isWelfareRole('staff') || isWelfareAdminOrAbove();
       allow delete: if false;
@@ -1603,7 +1587,7 @@ service cloud.firestore {
       allow read: if isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || (isJobCenterRole('staff') && jobCenterStaffId() == staffId)
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create, update: if isJobCenterAdminOrAbove();
       allow delete: if isJobCenterSuperAdmin();
     }
@@ -1612,7 +1596,7 @@ service cloud.firestore {
       allow read: if isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || (isJobCenterRole('staff') && jobCenterStaffId() == staffId)
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create, update: if isJobCenterAdminOrAbove();
       allow delete: if isJobCenterSuperAdmin();
     }
@@ -1621,7 +1605,7 @@ service cloud.firestore {
       allow read: if isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || isJobCenterRole('staff')
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create: if isJobCenterRole('staff') || isJobCenterAdminOrAbove();
       allow update: if isJobCenterRole('staff') || isJobCenterAdminOrAbove();
       allow delete: if false;
@@ -1631,7 +1615,7 @@ service cloud.firestore {
       allow read: if isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || isJobCenterRole('staff')
-        || isHQManagerOrAbove();
+        || isHqSuperOrManager();
       allow create: if isJobCenterRole('staff') || isJobCenterAdminOrAbove();
       allow update: if isJobCenterRole('staff') || isJobCenterAdminOrAbove();
       allow delete: if false;
