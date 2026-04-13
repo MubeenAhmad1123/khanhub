@@ -835,7 +835,12 @@ export default function StaffProfilePage() {
                        <div>
                           <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Uniform Items</h4>
                           <div className="space-y-2">
-                            {(staff?.dressCodeConfig || []).map((dress: any) => {
+                            {(staff?.dressCodeConfig?.length ? staff.dressCodeConfig : [
+                              { key: 'pant', label: 'Dress Pant' },
+                              { key: 'shirt', label: 'Uniform Shirt' },
+                              { key: 'shoes', label: 'Black Shoes' },
+                              { key: 'id_card', label: 'ID Card' }
+                            ]).map((dress: any) => {
                                const dayRecord = dressMap[todayStr];
                                const status = dayRecord?.items?.find((i: any) => i.key === dress.key)?.status || 'na';
                                return (
@@ -852,7 +857,12 @@ export default function StaffProfilePage() {
                        <div>
                           <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Operational Duties</h4>
                           <div className="space-y-2">
-                            {(staff?.dutyConfig || []).map((duty: any) => {
+                            {(staff?.dutyConfig?.length ? staff.dutyConfig : [
+                              { key: 'attendance_portal', label: 'Attendance Entry' },
+                              { key: 'patient_vitals', label: 'Patient Vitals' },
+                              { key: 'ward_round', label: 'Ward Round' },
+                              { key: 'cleanliness', label: 'Area Cleanliness' }
+                            ]).map((duty: any) => {
                                const dayRecord = dutyMap[todayStr];
                                const status = dayRecord?.duties?.find((i: any) => i.key === duty.key)?.status || 'na';
                                return (
@@ -1073,7 +1083,7 @@ export default function StaffProfilePage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(staff?.dressCodeConfig || [
+                        {(staff?.dressCodeConfig?.length ? staff.dressCodeConfig : [
                           { key: 'pant', label: 'Dress Pant' },
                           { key: 'shirt', label: 'Uniform Shirt' },
                           { key: 'shoes', label: 'Black Shoes' },
@@ -1127,7 +1137,7 @@ export default function StaffProfilePage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(staff?.dutyConfig || [
+                        {(staff?.dutyConfig?.length ? staff.dutyConfig : [
                           { key: 'attendance_portal', label: 'Attendance Entry' },
                           { key: 'patient_vitals', label: 'Patient Vitals' },
                           { key: 'ward_round', label: 'Ward Round' },
