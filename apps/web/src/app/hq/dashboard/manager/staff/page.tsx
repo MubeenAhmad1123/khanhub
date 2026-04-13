@@ -53,23 +53,26 @@ export default function ManagerStaffPage() {
     const fetchAllStaff = async () => {
       try {
         setLoading(true);
-        // Fetch from ALL departmental collections for a truly global view
+        // Fetch from ALL departmental collections with error resiliency
         const [rehabSnap, hqSnap, spimsSnap, hospSnap, sukoonSnap, welfareSnap, jobSnap] = await Promise.all([
-          getDocs(collection(db, 'rehab_staff')),
-          getDocs(collection(db, 'hq_staff')),
-          getDocs(collection(db, 'spims_staff')),
-          getDocs(collection(db, 'hospital_staff')),
-          getDocs(collection(db, 'sukoon_staff')),
-          getDocs(collection(db, 'welfare_staff')),
-          getDocs(collection(db, 'job_center_staff')),
+          getDocs(collection(db, 'rehab_staff')).catch(() => null),
+          getDocs(collection(db, 'hq_staff')).catch(() => null),
+          getDocs(collection(db, 'spims_staff')).catch(() => null),
+          getDocs(collection(db, 'hospital_staff')).catch(() => null),
+          getDocs(collection(db, 'sukoon_staff')).catch(() => null),
+          getDocs(collection(db, 'welfare_staff')).catch(() => null),
+          getDocs(collection(db, 'job_center_staff')).catch(() => null),
         ]);
 
-        const mapDocs = (snap: any, origin: string) => snap.docs.map((d: any) => ({ 
-          id: d.id, 
-          ...d.data(), 
-          _origin: origin,
-          department: d.data().department || origin 
-        }));
+        const mapDocs = (snap: any, origin: string) => {
+          if (!snap) return [];
+          return snap.docs.map((d: any) => ({ 
+            id: d.id, 
+            ...d.data(), 
+            _origin: origin,
+            department: d.data().department || origin 
+          }));
+        };
 
         const unified: any[] = [
           ...mapDocs(rehabSnap, 'rehab'),
@@ -94,13 +97,13 @@ export default function ManagerStaffPage() {
         
         const attendanceSnaps = await Promise.all(
           attendanceCollections.map(coll => 
-            getDocs(query(collection(db, coll), where('date', '==', todayStr), where('status', '==', 'present')))
+            getDocs(query(collection(db, coll), where('date', '==', todayStr), where('status', '==', 'present'))).catch(() => null)
           )
         );
 
         setStats({
           total: unified.length,
-          present: attendanceSnaps.reduce((acc, snap) => acc + snap.size, 0),
+          present: attendanceSnaps.reduce((acc, snap) => acc + (snap?.size || 0), 0),
           multiRole: unified.filter(s => (s.roles?.length > 1) || s.loginUserId === 'multi').length
         });
 
@@ -112,13 +115,15 @@ export default function ManagerStaffPage() {
         
         const dutySnaps = await Promise.all(
           dutyCollections.map(coll => 
-            getDocs(query(collection(db, coll), where('date', '>=', todayStr)))
+            getDocs(query(collection(db, coll), where('date', '>=', todayStr))).catch(() => null)
           )
         );
 
         const markedIds = new Set();
         dutySnaps.forEach(snap => {
-          snap.docs.forEach(d => markedIds.add(d.data().staffId));
+          if (snap) {
+            snap.docs.forEach(d => markedIds.add(d.data().staffId));
+          }
         });
 
         const unmarked = unified.filter(s => s.isActive !== false && !markedIds.has(s.id));

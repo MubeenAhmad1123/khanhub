@@ -1,5 +1,3 @@
-import type { Metadata, Viewport } from 'next'
-import { Sora, DM_Sans } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import '@/styles/globals.css'
 import { Analytics } from "@vercel/analytics/react"
@@ -139,18 +137,7 @@ export const metadata: Metadata = {
   },
 }
 
-// ─── Fonts ────────────────────────────────────────────────────────────────────
-const sora = Sora({
-  subsets: ['latin'],
-  variable: '--font-display',
-  display: 'swap',
-})
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  variable: '--font-body',
-  display: 'swap',
-})
 
 // ─── Root Layout ──────────────────────────────────────────────────────────────
 export default function RootLayout({
@@ -159,7 +146,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${sora.variable} ${dmSans.variable}`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className="antialiased selection:bg-primary-100 selection:text-primary-900">
         <ThemeProvider
           attribute="class"
