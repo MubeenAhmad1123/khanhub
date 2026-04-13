@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import '@/styles/globals.css'
 import { Analytics } from "@vercel/analytics/react"
