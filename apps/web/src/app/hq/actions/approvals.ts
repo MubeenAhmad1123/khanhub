@@ -30,7 +30,7 @@ function getAdminApp(): App {
 function txCollection(dept: Dept) {
   if (dept === 'rehab') return 'rehab_transactions';
   if (dept === 'spims') return 'spims_transactions';
-  return 'jobcenter_transactions';
+  return 'job_center_transactions';
 }
 
 async function updateEntityTotals(
@@ -44,7 +44,7 @@ async function updateEntityTotals(
   let col = '';
   if (dept === 'rehab') col = 'rehab_patients';
   else if (dept === 'spims') col = 'spims_students';
-  else col = 'jobcenter_seekers';
+  else col = 'job_center_seekers';
 
   const ref = adminDb.collection(col).doc(entityId);
   const snap = await ref.get();

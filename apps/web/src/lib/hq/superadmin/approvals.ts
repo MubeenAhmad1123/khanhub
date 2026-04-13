@@ -360,7 +360,7 @@ export function subscribeApprovalsFeed(
       return;
     }
 
-    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : 'jobcenter_transactions';
+    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : 'job_center_transactions';
     const queries = buildQueriesForTab(tab, col);
 
     queries.forEach((q) => {
@@ -416,7 +416,7 @@ export function subscribeEntityTransactions({
     field: 'patientId' | 'studentId' | 'seekerId',
     id: string
   ) => {
-    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : 'jobcenter_transactions';
+    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : 'job_center_transactions';
     const q = query(
       collection(db, col),
       where(field, '==', id),
@@ -472,7 +472,7 @@ export function subscribePendingApprovalsCount({
     limit(500)
   );
   const qJ = query(
-    collection(db, 'jobcenter_transactions'),
+    collection(db, 'job_center_transactions'),
     where('status', 'in', [...PENDING_STATUSES]),
     orderBy('createdAt', 'desc'),
     limit(500)
@@ -519,7 +519,7 @@ export async function searchEntitiesByNamePrefix({
 }): Promise<Array<{ id: string; name: string; dept: 'rehab' | 'spims' | 'job-center' }>> {
   const p = namePrefix.trim();
   if (!p) return [];
-  const col = dept === 'rehab' ? 'rehab_patients' : dept === 'spims' ? 'spims_students' : 'jobcenter_seekers';
+  const col = dept === 'rehab' ? 'rehab_patients' : dept === 'spims' ? 'spims_students' : 'job_center_seekers';
   const field = 'name';
   const q = query(
     collection(db, col),

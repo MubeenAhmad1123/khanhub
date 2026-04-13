@@ -891,7 +891,7 @@ export default function HqApprovalsPage() {
       for (const [, v] of need) {
         const k = `${v.dept}_${v.id}`;
         try {
-          const coll = v.dept === 'rehab' ? 'rehab_patients' : v.dept === 'spims' ? 'spims_students' : 'jobcenter_seekers';
+          const coll = v.dept === 'rehab' ? 'rehab_patients' : v.dept === 'spims' ? 'spims_students' : 'job_center_seekers';
           const ref = doc(db, coll, v.id);
           const snap = await getDoc(ref);
           if (!snap.exists() || cancelled) continue;

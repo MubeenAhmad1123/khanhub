@@ -33,7 +33,7 @@ const COLLECTION_BY_PORTAL: Record<Portal, string> = {
   spims: 'spims_users',
   hospital: 'hospital_users',
   sukoon: 'sukoon_users',
-  'job-center': 'jobcenter_users',
+  'job-center': 'job_center_users',
   welfare: 'welfare_users',
 };
 

@@ -42,6 +42,11 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     where('createdAt', '>=', from),
     where('createdAt', '<=', to)
   );
+  const jobCenterSeekersQ = query(
+    collection(db, 'job_center_seekers'),
+    where('createdAt', '>=', from),
+    where('createdAt', '<=', to)
+  );
 
   const PENDING_LIST = ['pending', 'pending_cashier'];
 
@@ -53,17 +58,30 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     collection(db, 'spims_transactions'),
     where('status', 'in', PENDING_LIST)
   );
+  const pendingJobTxQ = query(
+    collection(db, 'job_center_transactions'),
+    where('status', 'in', PENDING_LIST)
+  );
 
   const pendingRecsQ = query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'));
 
-  const [rehabPatientsCount, spimsStudentsCount, pendingRehab, pendingSpims, pendingRecs] =
-    await Promise.all([
-      getCountFromServer(rehabPatientsQ).then((r) => r.data().count).catch(() => 0),
-      getCountFromServer(spimsStudentsQ).then((r) => r.data().count).catch(() => 0),
-      getCountFromServer(pendingRehabTxQ).then((r) => r.data().count).catch(() => 0),
-      getCountFromServer(pendingSpimsTxQ).then((r) => r.data().count).catch(() => 0),
-      getCountFromServer(pendingRecsQ).then((r) => r.data().count).catch(() => 0),
-    ]);
+  const [
+    rehabPatientsCount,
+    spimsStudentsCount,
+    jobCenterSeekersCount,
+    pendingRehab,
+    pendingSpims,
+    pendingJob,
+    pendingRecs,
+  ] = await Promise.all([
+    getCountFromServer(rehabPatientsQ).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(spimsStudentsQ).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(jobCenterSeekersQ).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(pendingRehabTxQ).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(pendingSpimsTxQ).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(pendingJobTxQ).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(pendingRecsQ).then((r) => r.data().count).catch(() => 0),
+  ]);
 
   // “Total transactions today (combined amount)” uses approved + pending, for today only.
   const txToday = await fetchTodayTxAmount();
@@ -72,9 +90,9 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
   const activeStaffCount = await fetchActiveStaffCount();
 
   return {
-    rehabPatientsToday: rehabPatientsCount,
+    rehabPatientsToday: rehabPatientsCount + jobCenterSeekersCount, // Combined count for dashboard card or separate if needed
     spimsStudentsToday: spimsStudentsCount,
-    pendingApprovals: pendingRehab + pendingSpims,
+    pendingApprovals: pendingRehab + pendingSpims + pendingJob,
     txAmountToday: txToday,
     activeStaffCount,
     pendingReconciliations: pendingRecs,
@@ -87,11 +105,14 @@ export async function fetchTodayTxAmount(): Promise<number> {
 
   // Many tx docs have `date`/`transactionDate`/`createdAt`. We try `createdAt` first for consistent indexing.
   // For speed and to avoid extra indexes, we query a small window: latest N and filter client-side by dayKey.
-  const [rehabSnap, spimsSnap] = await Promise.all([
+  const [rehabSnap, spimsSnap, jobSnap] = await Promise.all([
     getDocs(query(collection(db, 'rehab_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
       () => ({ docs: [] } as any)
     ),
     getDocs(query(collection(db, 'spims_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
+      () => ({ docs: [] } as any)
+    ),
+    getDocs(query(collection(db, 'job_center_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
       () => ({ docs: [] } as any)
     ),
   ]);
@@ -105,15 +126,16 @@ export async function fetchTodayTxAmount(): Promise<number> {
       return acc + (Number(data.amount) || 0);
     }, 0);
 
-  return sum(rehabSnap.docs) + sum(spimsSnap.docs);
+  return sum(rehabSnap.docs) + sum(spimsSnap.docs) + sum(jobSnap.docs);
 }
 
 export async function fetchActiveStaffCount(): Promise<number> {
-  const [hq, rehab, spims] = await Promise.all([
+  const [hq, rehab, spims, job] = await Promise.all([
     getCountFromServer(query(collection(db, 'hq_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
     getCountFromServer(query(collection(db, 'rehab_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
     getCountFromServer(query(collection(db, 'spims_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'job_center_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
   ]);
-  return hq + rehab + spims;
+  return hq + rehab + spims + job;
 }
 

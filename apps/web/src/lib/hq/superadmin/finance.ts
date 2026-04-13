@@ -54,7 +54,7 @@ export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'h
   let col = '';
   if (dept === 'rehab') col = 'rehab_transactions';
   else if (dept === 'spims') col = 'spims_transactions';
-  else if (dept === 'job-center') col = 'jobcenter_transactions';
+  else if (dept === 'job-center') col = 'job_center_transactions';
   else col = 'cashierTransactions';
 
   const snap = await getDocs(
@@ -108,12 +108,12 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   const [rehabPending, spimsPending, jcPending, hqPending, recPending, rehabPat, spimsStu, jcSeek] = await Promise.all([
     getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
-    getDocs(query(collection(db, 'jobcenter_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
+    getDocs(query(collection(db, 'job_center_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any)),
     getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any)),
-    getDocs(query(collection(db, 'jobcenter_seekers'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any)),
+    getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any)),
   ]);
 
   const outstandingTotal = [...rehabPat.docs, ...spimsStu.docs, ...jcSeek.docs].reduce((acc, d: any) => {
@@ -235,7 +235,7 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
   const [rehabEntities, spimsEntities, jcEntities] = await Promise.all([
     tab !== 'rehab' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'rehab' }))),
     tab !== 'spims' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'spims' }))),
-    tab !== 'job-center' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'jobcenter_seekers'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'job-center' }))),
+    tab !== 'job-center' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'job-center' }))),
   ]);
 
   const top: TopOutstandingRow[] = [...rehabEntities, ...spimsEntities, ...jcEntities]
@@ -271,7 +271,7 @@ export async function fetchFinanceReport(tab: FinanceTab, start: Date, end: Date
   const deptList = tab === 'combined' ? (['rehab', 'spims', 'job-center', 'hq'] as const) : ([tab] as const);
   
   const results = await Promise.all(deptList.map(async (dept) => {
-    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : dept === 'job-center' ? 'jobcenter_transactions' : 'cashierTransactions';
+    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : dept === 'job-center' ? 'job_center_transactions' : 'cashierTransactions';
     // Use createdAt for range filter as the field exists in all
     const q = query(
       collection(db, col),
