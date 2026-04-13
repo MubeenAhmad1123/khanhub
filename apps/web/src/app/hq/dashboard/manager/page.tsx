@@ -72,49 +72,78 @@ export default function ManagerOverviewPage() {
         const today = new Date().toISOString().split('T')[0];
         const now = Date.now();
 
-        // 1. Fetch Staff (Unified)
-        const [hqStaffSnap, rehabStaffSnap] = await Promise.all([
-          getDocs(query(collection(db, 'hq_staff'), where('isActive', '==', true))),
-          getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)))
-        ]);
+        // 1. Fetch Staff (All 7 Departments)
+        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+        const staffSnaps = await Promise.all(
+          depts.map(d => getDocs(query(collection(db, d === 'hq' ? 'hq_staff' : `${d.replace('-', '_')}_staff`), where('isActive', '==', true))))
+        );
 
-        const totalStaff = hqStaffSnap.size + rehabStaffSnap.size;
+        let totalStaff = 0;
+        staffSnaps.forEach(s => totalStaff += s.size);
 
-        // 2. Fetch Attendance (Unified)
-        const [hqAttSnap, rehabAttSnap] = await Promise.all([
-          getDocs(query(collection(db, 'hq_attendance'), where('date', '==', today))),
-          getDocs(query(collection(db, 'rehab_attendance'), where('date', '==', today)))
-        ]);
+        // 2. Fetch Attendance (All 7 Departments)
+        const attSnaps = await Promise.all(
+          depts.map(d => getDocs(query(collection(db, d === 'hq' ? 'hq_attendance' : `${d.replace('-', '_')}_attendance`), where('date', '==', today))))
+        );
 
         const attendanceMap = new Map<string, string>();
-        hqAttSnap.docs.forEach(d => attendanceMap.set(d.data().staffId, d.data().status));
-        rehabAttSnap.docs.forEach(d => attendanceMap.set(d.data().staffId, d.data().status));
+        attSnaps.forEach(snap => {
+          snap.docs.forEach(d => attendanceMap.set(d.data().staffId, d.data().status));
+        });
 
         let presentCount = 0;
         let absentCount = 0;
         
-        // Count from both snaps
-        [...hqStaffSnap.docs, ...rehabStaffSnap.docs].forEach(d => {
-          const status = attendanceMap.get(d.id);
-          if (status === 'present') presentCount++;
-          else if (status === 'absent') absentCount++;
+        staffSnaps.forEach(snap => {
+          snap.docs.forEach(d => {
+            const status = attendanceMap.get(d.id);
+            if (status === 'present') presentCount++;
+            else if (status === 'absent') absentCount++;
+          });
         });
 
-        const [pendingSnap] = await Promise.all([
-          getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
-        ]);
+        // 3. Fetch Contributions (Pending)
+        const snaps = await Promise.all(
+          depts.map(d => getDocs(query(collection(db, `${d.replace('-', '_')}_contributions`), where('isApproved', '==', false))))
+        );
 
-        const pending = pendingSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        pending.sort((a, b) => {
-          const dateA = a.createdAt ? (a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
-          const dateB = b.createdAt ? (b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
+        let allContribs: any[] = [];
+        for (let i = 0; i < depts.length; i++) {
+          const dept = depts[i];
+          const snap = snaps[i];
+          const docs = snap.docs.map(docSnap => ({ 
+            id: docSnap.id, 
+            ...docSnap.data(), 
+            dept 
+          }));
+          allContribs = [...allContribs, ...docs];
+        }
+
+        // Fetch Staff Names for the recent list
+        const staffMap: Record<string, string> = {};
+        const recentContribs = allContribs.sort((a, b) => {
+          const dateA = a.createdAt?.seconds || 0;
+          const dateB = b.createdAt?.seconds || 0;
           return dateB - dateA;
-        });
+        }).slice(0, 5);
 
-        const urgent = pending.filter(p => {
-          if (!p.createdAt) return false;
-          const ts = p.createdAt instanceof Timestamp ? p.createdAt.toMillis() : new Date(p.createdAt).getTime();
-          return (now - ts) > 48 * 60 * 60 * 1000;
+        await Promise.all(depts.map(async (d) => {
+          const col = d === 'hq' ? 'hq_staff' : `${d.replace('-', '_')}_staff`;
+          const staffSnap = await getDocs(collection(db, col));
+          staffSnap.docs.forEach(docSnap => {
+            staffMap[docSnap.id] = docSnap.data().name || 'Staff';
+          });
+        }));
+
+        const enrichedList = recentContribs.map(c => ({
+          ...c,
+          staffName: staffMap[c.staffId] || 'Staff'
+        }));
+
+        const pendingCount = allContribs.length;
+        const urgent = allContribs.filter(p => {
+          if (!p.createdAt?.seconds) return false;
+          return (now - (p.createdAt.seconds * 1000)) > 48 * 60 * 60 * 1000;
         });
 
         setStats({
@@ -122,11 +151,11 @@ export default function ManagerOverviewPage() {
           presentToday: presentCount,
           absentToday: absentCount,
           notMarkedToday: totalStaff - presentCount - absentCount,
-          pendingApprovals: pending.length,
+          pendingApprovals: pendingCount,
           urgentApprovals: urgent.length,
         });
 
-        setPendingList(pending.slice(0, 5));
+        setPendingList(enrichedList);
       } catch (err) {
         console.error('Fetch error:', err);
       } finally {
@@ -196,28 +225,19 @@ export default function ManagerOverviewPage() {
                   isDark ? 'bg-zinc-900/30 border-zinc-800/50' : 'bg-white border-gray-100'
                 }`}>
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border whitespace-nowrap flex-shrink-0 ${
-                      p?.type === 'income' 
-                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                    }`}>
-                      {p?.type || 'N/A'}
+                    <span className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border whitespace-nowrap flex-shrink-0 bg-purple-500/10 text-purple-500 border-purple-500/20`}>
+                      {p.dept}
                     </span>
                     <div className="min-w-0">
-                      <p className={`font-black text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{p?.category || 'General'}</p>
-                      <p className="text-gray-500 text-[9px] font-black truncate">{p?.patientName || p?.studentName || 'N/A'}</p>
+                      <p className={`font-black text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{p.title}</p>
+                      <p className="text-gray-500 text-[9px] font-black truncate">By {p.staffName}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-right">
-                      <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{p?.amount?.toLocaleString() || 0}</p>
-                      <p className="text-gray-500 text-[9px] font-black">{timeAgo(p?.createdAt)}</p>
+                      <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>+1 Point</p>
+                      <p className="text-gray-500 text-[9px] font-black">{timeAgo(p.createdAt)}</p>
                     </div>
-                    {p.createdAt && (Date.now() - (p.createdAt instanceof Timestamp ? p.createdAt.toMillis() : new Date(p.createdAt).getTime())) > 48 * 60 * 60 * 1000 && (
-                      <span className="px-2 py-1 rounded-lg bg-rose-500 text-white text-[9px] font-black uppercase tracking-widest animate-pulse">
-                        Urgent
-                      </span>
-                    )}
                   </div>
                 </div>
             ))}
