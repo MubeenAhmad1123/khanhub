@@ -746,10 +746,10 @@ service cloud.firestore {
 
     // hq_salary_records — staff salary payment records 
     match /hq_salary_records/{docId} { 
-      allow read: if isHqSuperOrManager() 
+      allow read: if isHqTier1() 
         || (request.auth != null && resource.data.staffId == request.auth.uid); 
-      allow create: if isHqSuperOrManager(); 
-      allow update: if isHqSuperOrManager(); 
+      allow create: if isHqTier1(); 
+      allow update: if isHqTier1(); 
       allow delete: if isHqSuperAdmin(); 
     } 
 
@@ -1032,9 +1032,9 @@ service cloud.firestore {
     // ── Future departments staff-management (manager/superadmin only) ────────
     // Any new department that follows naming:
     //   {dept}_staff, {dept}_attendance, {dept}_duty_logs
-    // is automatically manageable from HQ by manager/superadmin.
+    // is automatically manageable from HQ by manager/superadmin/cashier.
     match /{collectionId}/{docId} {
-      allow read, create, update: if isHqSuperOrManager()
+      allow read: if isHqTier1()
         && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_attendance$')
@@ -1044,6 +1044,21 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_users$')
           || collectionId.matches('^[a-z0-9_-]+_debtors$')
           || collectionId.matches('^[a-z0-9_-]+_audit$')
+          || collectionId.matches('^[a-z0-9_-]+_contributions$')
+          || collectionId.matches('^[a-z0-9_-]+_salary_records$')
+        );
+      allow create, update: if (isHqSuperOrManager() || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$')))
+        && (
+          collectionId.matches('^[a-z0-9_-]+_staff$')
+          || collectionId.matches('^[a-z0-9_-]+_attendance$')
+          || collectionId.matches('^[a-z0-9_-]+_duty_logs$')
+          || collectionId.matches('^[a-z0-9_-]+_fines$')
+          || collectionId.matches('^[a-z0-9_-]+_growth_points$')
+          || collectionId.matches('^[a-z0-9_-]+_users$')
+          || collectionId.matches('^[a-z0-9_-]+_debtors$')
+          || collectionId.matches('^[a-z0-9_-]+_audit$')
+          || collectionId.matches('^[a-z0-9_-]+_contributions$')
+          || collectionId.matches('^[a-z0-9_-]+_salary_records$')
         );
       allow delete: if isHqSuperAdmin()
         && (
