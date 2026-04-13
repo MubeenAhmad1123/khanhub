@@ -701,15 +701,32 @@ export default function StaffProfilePage() {
                </div>
 
                <div className="w-full grid grid-cols-2 gap-4 mt-4">
-                  <div className={`rounded-2xl p-4 ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
+                  <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status</p>
                      <p className={`font-black text-xs uppercase ${staff?.isActive !== false ? 'text-teal-500' : 'text-rose-500'}`}>
                        {staff?.isActive !== false ? 'Active' : 'Inactive'}
                      </p>
                   </div>
-                  <div className={`rounded-2xl p-4 ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
+                  <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Salary</p>
                      <p className={`font-black text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number(staff?.monthlySalary || 0).toLocaleString()}</p>
+                  </div>
+               </div>
+
+               <div className={`w-full mt-4 rounded-2xl p-4 text-left border ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-amber-50/50 border-amber-100'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                     <Lock className={`w-3 h-3 ${isDark ? 'text-zinc-500' : 'text-amber-500'}`} />
+                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Portal Credentials</p>
+                  </div>
+                  <div className="space-y-2">
+                     <div>
+                       <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Login Email / ID</p>
+                       <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.email || staff?.customId || 'No Email Registered'}</p>
+                     </div>
+                     <div>
+                       <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Password</p>
+                       <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.defaultPassword || 'Custom (Reset Required)'}</p>
+                     </div>
                   </div>
                </div>
             </div>

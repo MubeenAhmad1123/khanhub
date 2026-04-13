@@ -162,6 +162,7 @@ export type StaffProfile = StaffCardRow & {
   joiningDate?: any;
   lastLoginAt?: any;
   photoUrl?: string;
+  defaultPassword?: string;
   dutyConfig?: { key: string; label: string }[];
   dressCodeConfig?: { key: string; label: string }[];
 };
@@ -213,6 +214,7 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     totalFines: fines,
     lastDutyLabel: lastDuty,
     monthlySalary: Number(data.monthlySalary || 0),
+    defaultPassword: data.defaultPassword || data.password || undefined,
     dutyConfig: data.dutyConfig || [],
     dressCodeConfig: data.dressCodeConfig || [],
   };
