@@ -33,8 +33,13 @@ import {
   HqDailyDressCodeRecord, 
   HqDailyDutyRecord,
   HqDressCodeItem,
-  HqDutyItem
+  HqDutyItem,
+  HqSpecialTask,
+  SalarySlip
 } from '@/types/hq';
+
+// Define unified icons for tasks
+import { Sparkles, Save, X } from 'lucide-react';
 
 interface Staff {
   id?: string;
@@ -66,14 +71,6 @@ interface AttendanceLog {
   departureTime?: string;
 }
 
-interface SalarySlip {
-  id: string;
-  month: string;
-  amount: number;
-  status: string;
-  deductions: number;
-  bonuses: number;
-}
 
 function formatStaffDate(input: any): string {
   if (!input) return 'N/A';
@@ -125,6 +122,25 @@ export default function StaffProfilePage() {
   // Duty Marking State
   const [markingDuty, setMarkingDuty] = useState(false);
   const [dutyForm, setDutyForm] = useState({ type: 'morning_shift', status: 'completed', comment: '' });
+
+  // Special Tasks State
+  const [specialTasks, setSpecialTasks] = useState<HqSpecialTask[]>([]);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [creatingTask, setCreatingTask] = useState(false);
+
+  // Payroll Form State
+  const [showPayrollModal, setShowPayrollModal] = useState(false);
+  const [payrollForm, setPayrollForm] = useState({
+     month: new Date().toISOString().slice(0, 7),
+     basicSalary: 0,
+     presentDays: 30,
+     bonuses: 0,
+     bonusReason: '',
+     deductions: 0,
+     deductionReason: '',
+  });
+
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   // ─── Monthly Grid Logic ───────────────────────────────────────────────────
   
@@ -193,12 +209,13 @@ export default function StaffProfilePage() {
       const start = days[0];
       const end = days[days.length - 1];
 
-      const [attSnap, dressSnap, dutySnap, pointsSnap, salarySnap] = await Promise.all([
+      const [attSnap, dressSnap, dutySnap, pointsSnap, salarySnap, tasksSnap] = await Promise.all([
         getDocs(query(collection(db, `${slug}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${slug}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${slug}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), limit(1))),
-        getDocs(query(collection(db, 'hq_salary_records'), where('staffId', '==', uid)))
+        getDocs(query(collection(db, 'hq_salary_records'), where('staffId', '==', uid))),
+        getDocs(query(collection(db, `${slug}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc')))
       ]);
 
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
@@ -215,6 +232,7 @@ export default function StaffProfilePage() {
 
       if (!pointsSnap.empty) setGrowthPoints(pointsSnap.docs[0].data());
       setSalaryRecords(salarySnap.docs.map(d => ({ id: d.id, ...d.data() } as SalarySlip)));
+      setSpecialTasks(tasksSnap.docs.map(d => ({ id: d.id, ...d.data() } as HqSpecialTask)));
 
       // Fetch growth history (all months)
       const historySnap = await getDocs(
@@ -377,6 +395,89 @@ export default function StaffProfilePage() {
       toast.error("Update failed");
       fetchData();
     }
+  };
+
+  const handleCreateSpecialTask = async () => {
+    if (!newTaskText.trim() || !staff) return;
+    try {
+      setCreatingTask(true);
+      const slug = staff.dept.replace('-', '_');
+      const newTask: Partial<HqSpecialTask> = {
+        staffId: staff.staffId,
+        description: newTaskText,
+        status: 'assigned',
+        assignedBy: session?.uid || '',
+        assignedByName: session?.name || '',
+        createdAt: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, `${slug}_special_tasks`), newTask);
+      setSpecialTasks([{ id: docRef.id, ...newTask } as HqSpecialTask, ...specialTasks]);
+      setNewTaskText('');
+      toast.success("Special Task Assigned!");
+    } catch (e) {
+      toast.error("Failed to assign task");
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
+  const handleTaskActionManager = async (taskId: string, newStatus: 'assigned' | 'acknowledged' | 'completed') => {
+    try {
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      await updateDoc(doc(db, `${slug}_special_tasks`, taskId), {
+        status: newStatus,
+        ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : {})
+      });
+      if (newStatus === 'completed') {
+         await updateDoc(doc(db, `${slug}_growth_points`, `${staff.staffId}_${new Date().toISOString().slice(0,7)}`), {
+           extra: increment(1),
+           total: increment(1)
+         }).catch(e => console.log('Growth doc might not exist yet', e));
+      }
+      toast.success(`Task marked as ${newStatus}`);
+      fetchData();
+    } catch (e) {
+      toast.error("Failed to update task");
+    }
+  };
+
+  const handleGenerateSlip = async () => {
+     try {
+       if (!staff) return;
+       const [y, m] = payrollForm.month.split('-');
+       const workingDays = new Date(Number(y), Number(m), 0).getDate();
+       const netSalary = Math.round((payrollForm.basicSalary / workingDays) * payrollForm.presentDays) + payrollForm.bonuses - payrollForm.deductions;
+       
+       const slip: Partial<SalarySlip> = {
+          staffId: staff.staffId,
+          employeeId: staff.customId || '',
+          staffName: staff.name || '',
+          department: staff.dept,
+          month: payrollForm.month,
+          basicSalary: payrollForm.basicSalary,
+          dailyWage: Math.round(payrollForm.basicSalary / workingDays),
+          workingDays,
+          presentDays: payrollForm.presentDays,
+          absentDays: workingDays - payrollForm.presentDays,
+          leaveDays: 0,
+          absentDeduction: 0,
+          bonus: payrollForm.bonuses,
+          bonusReason: payrollForm.bonusReason,
+          otherDeductions: payrollForm.deductions,
+          deductionReason: payrollForm.deductionReason,
+          netSalary,
+          status: 'draft',
+          createdAt: new Date().toISOString(),
+          createdBy: session?.uid || ''
+       };
+       await addDoc(collection(db, 'hq_salary_records'), slip);
+       toast.success("Salary Slip Generated");
+       setShowPayrollModal(false);
+       fetchData();
+     } catch (e) {
+       toast.error("Failed to generate slip");
+     }
   };
 
   useEffect(() => {
@@ -659,7 +760,123 @@ export default function StaffProfilePage() {
 
             {/* Panels */}
             {activeTab === 'overview' && (
-               <div className="space-y-4">
+               <div className="space-y-6">
+
+                  {/* Special Tasks Module */}
+                  <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
+                    isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                  }`}>
+                    <div className="flex items-center justify-between mb-6">
+                       <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                         <Sparkles className="text-purple-500" /> Special Tasks & Missions
+                       </h3>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                       <input 
+                         type="text" 
+                         className={`flex-1 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${
+                                  isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
+                         }`}
+                         placeholder="Describe the temporary task..."
+                         value={newTaskText}
+                         onChange={e => setNewTaskText(e.target.value)}
+                       />
+                       <button
+                         onClick={handleCreateSpecialTask}
+                         disabled={creatingTask || !newTaskText.trim()}
+                         className="px-6 py-3 rounded-2xl bg-purple-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all disabled:opacity-50"
+                       >
+                         Assign Task
+                       </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {specialTasks.length === 0 ? (
+                         <div className="py-6 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No active tasks</div>
+                      ) : (
+                         specialTasks.map(task => (
+                           <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${
+                             task.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100') : 
+                             isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-100'
+                           }`}>
+                             <div>
+                                <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Assigned by {task.assignedByName}</p>
+                             </div>
+                             <div className="flex items-center gap-2">
+                                <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                  task.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600' :
+                                  task.status === 'acknowledged' ? 'bg-blue-500/20 text-blue-600' : 'bg-amber-500/20 text-amber-600'
+                                }`}>
+                                  {task.status}
+                                </span>
+                             </div>
+                           </div>
+                         ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Today's Quick Operations Assessment */}
+                  <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
+                    isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                  }`}>
+                     <div className="flex flex-col sm:flex-row justify-between mb-8">
+                       <div>
+                         <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                           <Award className="text-indigo-500" /> Today&apos;s Daily Checklist
+                         </h3>
+                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{formatDateDMY(new Date(todayStr))}</p>
+                       </div>
+                     </div>
+                     
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       {/* Dress Code Section */}
+                       <div>
+                          <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Uniform Items</h4>
+                          <div className="space-y-2">
+                            {(staff?.dressCodeConfig || []).map((dress: any) => {
+                               const dayRecord = dressMap[todayStr];
+                               const status = dayRecord?.items?.find((i: any) => i.key === dress.key)?.status || 'na';
+                               return (
+                                 <div key={dress.key} className="flex items-center justify-between">
+                                    <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{dress.label}</span>
+                                    <HqCheckCell type="dresscode" size="md" value={status} onToggle={(next) => toggleDress(todayStr, dress.key, next)} />
+                                 </div>
+                               );
+                            })}
+                          </div>
+                       </div>
+                       
+                       {/* Duties Section */}
+                       <div>
+                          <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Operational Duties</h4>
+                          <div className="space-y-2">
+                            {(staff?.dutyConfig || []).map((duty: any) => {
+                               const dayRecord = dutyMap[todayStr];
+                               const status = dayRecord?.duties?.find((i: any) => i.key === duty.key)?.status || 'na';
+                               return (
+                                 <div key={duty.key} className="flex items-center justify-between">
+                                    <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{duty.label}</span>
+                                    <HqCheckCell type="duty" size="md" value={status} onToggle={(next) => toggleDuty(todayStr, duty.key, next)} />
+                                 </div>
+                               );
+                            })}
+                          </div>
+                       </div>
+                     </div>
+                     
+                     <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Attendance</span>
+                        <div className="flex flex-wrap gap-2">
+                           <button onClick={() => toggleAttendance(todayStr, 'present')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'present' ? 'bg-teal-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Present</button>
+                           <button onClick={() => toggleAttendance(todayStr, 'absent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Absent</button>
+                           <button onClick={() => toggleAttendance(todayStr, 'paid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'paid_leave' ? 'bg-blue-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Paid Leave</button>
+                           <button onClick={() => toggleAttendance(todayStr, 'unpaid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-purple-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Unpd Leave</button>
+                        </div>
+                     </div>
+                  </div>
+
                   {/* Mark Duty Module */}
                   <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
                     isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
@@ -1149,11 +1366,59 @@ export default function StaffProfilePage() {
               <div className="space-y-6">
                 <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                   <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
-                       <DollarSign size={16}/> Payroll History
-                    </h3>
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Financial Performance Audit</p>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
+                         <DollarSign size={16}/> Payroll History
+                      </h3>
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Financial Performance Audit</p>
+                    </div>
+                    <button 
+                       onClick={() => {
+                          setPayrollForm(p => ({ ...p, basicSalary: staff?.monthlySalary || 0 }));
+                          setShowPayrollModal(!showPayrollModal);
+                       }}
+                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : (isDark ? 'bg-zinc-800 text-amber-500' : 'bg-amber-50 text-amber-600')}`}
+                    >
+                       {showPayrollModal ? 'Cancel' : 'Generate Slip'}
+                    </button>
                   </div>
+
+                  {showPayrollModal && (
+                    <div className={`p-6 rounded-3xl border mb-8 ${isDark ? 'bg-amber-500/5 border-amber-500/10' : 'bg-amber-50/50 border-amber-100'}`}>
+                       <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-4">Draft New Salary Record</h4>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                         <div>
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Month (YYYY-MM)</label>
+                            <input type="month" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.month} onChange={e => setPayrollForm({...payrollForm, month: e.target.value})} />
+                         </div>
+                         <div>
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Basic Salary (PKR)</label>
+                            <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.basicSalary} onChange={e => setPayrollForm({...payrollForm, basicSalary: Number(e.target.value)})} />
+                         </div>
+                         <div>
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Present Days</label>
+                            <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.presentDays} onChange={e => setPayrollForm({...payrollForm, presentDays: Number(e.target.value)})} />
+                         </div>
+                         <div>
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Bonuses (PKR)</label>
+                            <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonuses} onChange={e => setPayrollForm({...payrollForm, bonuses: Number(e.target.value)})} />
+                         </div>
+                         <div>
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Bonus Reason</label>
+                            <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonusReason} onChange={e => setPayrollForm({...payrollForm, bonusReason: e.target.value})} placeholder="e.g. Performance" />
+                         </div>
+                         <div>
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Deductions (PKR)</label>
+                            <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductions} onChange={e => setPayrollForm({...payrollForm, deductions: Number(e.target.value)})} />
+                         </div>
+                         <div className="sm:col-span-2">
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Deduction Reason</label>
+                            <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductionReason} onChange={e => setPayrollForm({...payrollForm, deductionReason: e.target.value})} placeholder="e.g. Absences" />
+                         </div>
+                       </div>
+                       <button onClick={handleGenerateSlip} className="w-full py-3 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20">Finalize Slip</button>
+                    </div>
+                  )}
 
                   {salaryRecords.length === 0 ? (
                     <div className="py-20 text-center">
@@ -1197,7 +1462,7 @@ export default function StaffProfilePage() {
                             </div>
 
                             <div className="md:text-right">
-                              <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number((record as any).netSalary || record.amount || 0).toLocaleString()}</p>
+                              <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number((record as any).netSalary || (record as any).amount || 0).toLocaleString()}</p>
                               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Net Payable Amount</p>
                             </div>
                           </div>

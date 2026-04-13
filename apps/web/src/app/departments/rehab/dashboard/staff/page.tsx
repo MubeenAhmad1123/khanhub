@@ -10,9 +10,10 @@ import {
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/rehab';
+import type { HqSpecialTask } from '@/types/hq';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
-  Lightbulb, Send, Star, List, Loader2
+  Lightbulb, Send, Star, List, Loader2, Sparkles
 } from 'lucide-react';
 
 // Helper for robust timestamp handling
@@ -35,6 +36,7 @@ export default function StaffSelfPage() {
   const [loading, setLoading] = useState(true);
   const [checkLoading, setCheckLoading] = useState(false);
   const [contribLoading, setContribLoading] = useState(false);
+  const [specialTasks, setSpecialTasks] = useState<HqSpecialTask[]>([]);
   const [monthlySummary, setMonthlySummary] = useState({ present: 0, absent: 0, leave: 0 });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [submitted, setSubmitted] = useState(false);
@@ -116,6 +118,10 @@ export default function StaffSelfPage() {
       const leaveCount   = monthlySnap.docs.filter(d => d.data().status === 'leave').length;
 
       setMonthlySummary({ present: presentCount, absent: absentCount, leave: leaveCount });
+
+      // Special tasks
+      const tasksSnap = await getDocs(query(collection(db, 'rehab_special_tasks'), where('staffId', '==', staffId)));
+      setSpecialTasks(tasksSnap.docs.map(d => ({ id: d.id, ...d.data() } as HqSpecialTask)).filter(t => t.status !== 'completed'));
     } catch (err) {
       console.error(err);
     } finally {
@@ -226,6 +232,26 @@ export default function StaffSelfPage() {
     setContribLoading(false);
   };
 
+  const handleTaskUpdate = async (taskId: string, newStatus: 'acknowledged' | 'completed') => {
+     try {
+       await updateDoc(doc(db, 'rehab_special_tasks', taskId), {
+         status: newStatus,
+         ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : {})
+       });
+       if (newStatus === 'completed') {
+         // Optionally, the staff claiming it's completed is enough for the bonus point, 
+         // or it awaits manager approval. User said "when that complete a bonus point will be given".
+         showMsg('success', 'Task Completed! Manager has been notified.');
+         setSpecialTasks(prev => prev.filter(t => t.id !== taskId));
+       } else {
+         showMsg('success', 'Task Acknowledged.');
+         setSpecialTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+       }
+     } catch (e) {
+       showMsg('error', 'Failed to update task.');
+     }
+  };
+
   const checkedIn    = !!todayRecord?.checkInTime;
   const checkedOut   = !!todayRecord?.checkOutTime;
   const isOverridden = !!todayRecord?.overriddenBy;
@@ -333,6 +359,31 @@ export default function StaffSelfPage() {
             </button>
           )}
         </div>
+
+        {/* Special Tasks Override Card */}
+        {specialTasks.length > 0 && (
+          <div className="bg-purple-500/10 border-2 border-purple-500/30 rounded-2xl p-6 shadow-xl shadow-purple-500/10">
+            <div className="flex items-center gap-2 mb-4">
+               <Sparkles size={20} className="text-purple-400" />
+               <h2 className="font-black text-white text-lg tracking-wide uppercase">Special Task Assigned</h2>
+            </div>
+            <div className="space-y-4">
+               {specialTasks.map(task => (
+                 <div key={task.id} className="bg-white/5 border border-purple-500/20 rounded-xl p-4 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent opacity-50" />
+                    <p className="text-sm font-bold text-white relative z-10">{task.description}</p>
+                    <p className="text-[10px] text-purple-300 font-black uppercase tracking-widest mt-1 relative z-10 mb-4">By {task.assignedByName}</p>
+                    
+                    {task.status === 'assigned' ? (
+                      <button onClick={() => task.id && handleTaskUpdate(task.id, 'acknowledged')} className="relative z-10 w-full py-3 rounded-xl bg-purple-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-purple-600 transition-colors shadow-lg">Acknowledge Read</button>
+                    ) : (
+                      <button onClick={() => task.id && handleTaskUpdate(task.id, 'completed')} className="relative z-10 w-full py-3 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-colors shadow-lg flex justify-center items-center gap-2"><CheckCircle size={14}/> Mark Completed</button>
+                    )}
+                 </div>
+               ))}
+            </div>
+          </div>
+        )}
 
         {/* Monthly Summary Card */}
         <div className="bg-white/5 rounded-2xl border border-white/10 p-4">

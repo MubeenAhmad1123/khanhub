@@ -212,7 +212,7 @@ export interface SalarySlipSummary {
 export interface HqDailyAttendanceRecord {
   staffId: string;
   date: string; // 'YYYY-MM-DD'
-  status: 'present' | 'absent' | 'leave' | 'unmarked';
+  status: 'present' | 'absent' | 'leave' | 'unmarked' | 'paid_leave' | 'unpaid_leave';
   arrivalTime?: string;   // 'HH:MM'
   departureTime?: string; // 'HH:MM'
   isLate?: boolean;
@@ -311,4 +311,15 @@ export interface HqReconciliation {
   verifiedBy?: string;
   verifiedAt?: string;
   createdAt: string;
+}
+
+export interface HqSpecialTask {
+  id?: string;
+  staffId: string; // The user UID the task is assigned to
+  description: string;
+  status: 'assigned' | 'acknowledged' | 'completed';
+  assignedBy: string; // manager/superadmin uid
+  assignedByName?: string;
+  createdAt: string; // ISO string 
+  completedAt?: string; // ISO string
 }

@@ -9,7 +9,7 @@ import { useState } from 'react';
 
 export type CheckState = 'yes' | 'no' | 'na';
 export type DutyState = 'done' | 'not_done' | 'na';
-export type AttendanceState = 'present' | 'absent' | 'leave' | 'unmarked';
+export type AttendanceState = 'present' | 'absent' | 'leave' | 'paid_leave' | 'unpaid_leave' | 'unmarked';
 
 interface HqCheckCellProps {
   value: CheckState | DutyState | AttendanceState;
@@ -21,7 +21,7 @@ interface HqCheckCellProps {
 
 const DRESSCODE_CYCLE: CheckState[] = ['yes', 'no', 'na'];
 const DUTY_CYCLE: DutyState[] = ['done', 'not_done', 'na'];
-const ATTENDANCE_CYCLE: AttendanceState[] = ['present', 'absent', 'leave', 'unmarked'];
+const ATTENDANCE_CYCLE: AttendanceState[] = ['present', 'absent', 'leave', 'paid_leave', 'unpaid_leave', 'unmarked'];
 
 const CONFIG = {
   dresscode: {
@@ -81,6 +81,18 @@ const CONFIG = {
       bg: 'bg-amber-400',
       border: 'border-amber-400',
       icon: 'L',
+      textColor: 'text-white',
+    },
+    paid_leave: {
+      bg: 'bg-blue-500',
+      border: 'border-blue-500',
+      icon: 'PL',
+      textColor: 'text-white',
+    },
+    unpaid_leave: {
+      bg: 'bg-purple-500',
+      border: 'border-purple-500',
+      icon: 'UL',
       textColor: 'text-white',
     },
     unmarked: {
