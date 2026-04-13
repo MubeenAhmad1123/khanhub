@@ -4,7 +4,7 @@ import { collection, getDocs, limit, orderBy, query, where } from 'firebase/fire
 import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
 
-export type StaffDept = 'hq' | 'rehab' | 'spims';
+export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'other';
 
 export type StaffCardRow = {
@@ -19,6 +19,10 @@ export type StaffCardRow = {
   lateCount: number;
   growthPointsTotal: number;
   totalFines: number;
+  employeeId?: string;
+  designation?: string;
+  photoUrl?: string;
+  monthlySalary?: number;
   lastDutyLabel?: string;
 };
 
@@ -30,7 +34,8 @@ function normalizeRole(raw: any): StaffRole {
 
 async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: string) {
   if (dept === 'hq') return { present: 0, absent: 0, late: 0 };
-  const col = dept === 'rehab' ? 'rehab_attendance' : 'spims_attendance';
+  const slug = dept.replace('-', '_');
+  const col = `${slug}_attendance`;
   const snap = await getDocs(
     query(collection(db, col), where('staffId', '==', staffId), where('month', '==', monthKey))
   ).catch(() => ({ docs: [] } as any));
@@ -47,7 +52,8 @@ async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: s
 
 async function loadGrowthPoints(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return 0;
-  const col = dept === 'rehab' ? 'rehab_growth_points' : 'spims_growth_points';
+  const slug = dept.replace('-', '_');
+  const col = `${slug}_growth_points`;
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(200))).catch(
     () => ({ docs: [] } as any)
   );
@@ -56,14 +62,16 @@ async function loadGrowthPoints(dept: StaffDept, staffId: string) {
 
 async function loadFinesTotal(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return 0;
-  const col = dept === 'rehab' ? 'rehab_fines' : 'spims_fines';
+  const slug = dept.replace('-', '_');
+  const col = `${slug}_fines`;
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId))).catch(() => ({ docs: [] } as any));
   return snap.docs.reduce((acc: number, d: any) => acc + (Number(d.data()?.amount) || 0), 0);
 }
 
 async function loadLastDuty(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return undefined;
-  const col = dept === 'rehab' ? 'rehab_duty_logs' : 'spims_duty_logs';
+  const slug = dept.replace('-', '_');
+  const col = `${slug}_duty_logs`;
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(1))).catch(
     () => ({ docs: [] } as any)
   );
@@ -84,11 +92,14 @@ export async function listStaffCards({
 }): Promise<StaffCardRow[]> {
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const targetDepts: StaffDept[] = dept === 'all' ? ['hq', 'rehab', 'spims'] : [dept];
+  const targetDepts: StaffDept[] = dept === 'all' 
+    ? ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'] 
+    : [dept];
 
   const base = await Promise.all(
     targetDepts.map(async (d) => {
-      const col = d === 'hq' ? 'hq_users' : d === 'rehab' ? 'rehab_users' : 'spims_users';
+      const slug = d.replace('-', '_');
+      const col = d === 'hq' ? 'hq_users' : `${slug}_users`;
       const snap = await getDocs(query(collection(db, col), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any));
       return snap.docs.map((docSnap: any) => ({ _dept: d, id: docSnap.id, ...docSnap.data() }));
     })
@@ -126,6 +137,10 @@ export async function listStaffCards({
         lateCount: att.late,
         growthPointsTotal: gp,
         totalFines: fines,
+        employeeId: s.employeeId || s.customId || '—',
+        designation: s.designation || s.role || 'Staff Member',
+        photoUrl: s.photoUrl || s.photoURL,
+        monthlySalary: Number(s.monthlySalary || 0),
         lastDutyLabel: lastDuty,
       } as StaffCardRow;
     })
@@ -143,6 +158,8 @@ export type StaffProfile = StaffCardRow & {
   joiningDate?: any;
   lastLoginAt?: any;
   photoUrl?: string;
+  dutyConfig?: { key: string; label: string }[];
+  dressCodeConfig?: { key: string; label: string }[];
 };
 
 export async function fetchStaffProfile(compositeId: string): Promise<StaffProfile | null> {
@@ -151,9 +168,10 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
   const dept = compositeId.slice(0, idx) as StaffDept;
   const uid = compositeId.slice(idx + 1);
 
-  if (!['hq', 'rehab', 'spims'].includes(dept)) return null;
+  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].includes(dept)) return null;
 
-  const col = dept === 'hq' ? 'hq_users' : dept === 'rehab' ? 'rehab_users' : 'spims_users';
+  const slug = dept.replace('-', '_');
+  const col = dept === 'hq' ? 'hq_users' : `${slug}_users`;
   const { getDoc, doc } = await import('firebase/firestore');
   const snap = await getDoc(doc(db, col, uid)).catch(() => null);
   if (!snap || !snap.exists()) return null;
@@ -190,6 +208,9 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     growthPointsTotal: gp,
     totalFines: fines,
     lastDutyLabel: lastDuty,
+    monthlySalary: Number(data.monthlySalary || 0),
+    dutyConfig: data.dutyConfig || [],
+    dressCodeConfig: data.dressCodeConfig || [],
   };
 }
 
@@ -202,9 +223,10 @@ export async function updateStaffProfile(
   const dept = compositeId.slice(0, idx) as StaffDept;
   const uid = compositeId.slice(idx + 1);
 
-  if (!['hq', 'rehab', 'spims'].includes(dept)) return { success: false, error: 'Invalid department' };
+  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].includes(dept)) return { success: false, error: 'Invalid department' };
 
-  const col = dept === 'hq' ? 'hq_users' : dept === 'rehab' ? 'rehab_users' : 'spims_users';
+  const slug = dept.replace('-', '_');
+  const col = dept === 'hq' ? 'hq_users' : `${slug}_users`;
   const { updateDoc, doc: firestoreDoc } = await import('firebase/firestore');
 
   try {

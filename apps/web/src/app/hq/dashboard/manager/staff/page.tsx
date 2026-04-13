@@ -3,22 +3,21 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import { 
-  Loader2, Users, Search, Filter, 
-  MapPin, Shield, Star, Clock, 
-  ArrowRight, CheckCircle2, AlertCircle,
-  Building2, UserCheck, Moon, Sun
+  Users, Search, Shield, ArrowRight,
+  Filter, Plus, Download, LayoutGrid, List as ListIcon,
+  Activity, Clock, Star, Loader2, AlertCircle
 } from 'lucide-react';
+import { listStaffCards, type StaffCardRow } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
 
 export default function ManagerStaffPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
-  const [staff, setStaff] = useState<any[]>([]);
+  const [staff, setStaff] = useState<StaffCardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<string>('all');
@@ -53,85 +52,31 @@ export default function ManagerStaffPage() {
     const fetchAllStaff = async () => {
       try {
         setLoading(true);
-        // Fetch from ALL departmental collections with error resiliency
-        const [rehabSnap, hqSnap, spimsSnap, hospSnap, sukoonSnap, welfareSnap, jobSnap] = await Promise.all([
-          getDocs(collection(db, 'rehab_staff')).catch(() => null),
-          getDocs(collection(db, 'hq_staff')).catch(() => null),
-          getDocs(collection(db, 'spims_staff')).catch(() => null),
-          getDocs(collection(db, 'hospital_staff')).catch(() => null),
-          getDocs(collection(db, 'sukoon_staff')).catch(() => null),
-          getDocs(collection(db, 'welfare_staff')).catch(() => null),
-          getDocs(collection(db, 'job_center_staff')).catch(() => null),
-        ]);
-
-        const mapDocs = (snap: any, origin: string) => {
-          if (!snap) return [];
-          return snap.docs.map((d: any) => ({ 
-            id: d.id, 
-            ...d.data(), 
-            _origin: origin,
-            department: d.data().department || origin 
-          }));
-        };
-
-        const unified: any[] = [
-          ...mapDocs(rehabSnap, 'rehab'),
-          ...mapDocs(hqSnap, 'hq'),
-          ...mapDocs(spimsSnap, 'spims'),
-          ...mapDocs(hospSnap, 'hospital'),
-          ...mapDocs(sukoonSnap, 'sukoon'),
-          ...mapDocs(welfareSnap, 'welfare'),
-          ...mapDocs(jobSnap, 'job-center'),
-        ];
+        // Unified personnel registry fetch (7 departments)
+        const unified = await listStaffCards({ 
+          dept: 'all', 
+          status: 'all', 
+          role: 'all' 
+        });
         
         // Final sort
         unified.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         setStaff(unified);
 
-        // Fetch Attendance for Stats (Today) - Global
-        const todayStr = new Date().toISOString().split('T')[0];
-        const attendanceCollections = [
-          'rehab_attendance', 'hq_attendance', 'spims_attendance', 
-          'hospital_attendance', 'sukoon_attendance', 'welfare_attendance', 'job_center_attendance'
-        ];
-        
-        const attendanceSnaps = await Promise.all(
-          attendanceCollections.map(coll => 
-            getDocs(query(collection(db, coll), where('date', '==', todayStr), where('status', '==', 'present'))).catch(() => null)
-          )
-        );
-
+        // Stats Aggregation
         setStats({
           total: unified.length,
-          present: attendanceSnaps.reduce((acc, snap) => acc + (snap?.size || 0), 0),
-          multiRole: unified.filter(s => (s.roles?.length > 1) || s.loginUserId === 'multi').length
+          present: unified.filter(s => s.isActive).length,
+          multiRole: unified.filter(s => s.role === 'admin' || s.role === 'manager').length
         });
 
-        // 3. Find Unmarked Duties (Last 24h approximation)
-        const dutyCollections = [
-          'rehab_duty_logs', 'hq_duty_logs', 'spims_duty_logs',
-          'hospital_duty_logs', 'sukoon_duty_logs', 'welfare_duty_logs', 'job_center_duty_logs'
-        ];
-        
-        const dutySnaps = await Promise.all(
-          dutyCollections.map(coll => 
-            getDocs(query(collection(db, coll), where('date', '>=', todayStr))).catch(() => null)
-          )
-        );
-
-        const markedIds = new Set();
-        dutySnaps.forEach(snap => {
-          if (snap) {
-            snap.docs.forEach(d => markedIds.add(d.data().staffId));
-          }
-        });
-
-        const unmarked = unified.filter(s => s.isActive !== false && !markedIds.has(s.id));
+        // Duty Mapping (Last Activity)
+        const unmarked = unified.filter(s => s.isActive && !s.lastDutyLabel);
         setUnmarkedStaff(unmarked);
 
       } catch (err) {
         console.error(err);
-        toast.error("Failed to fetch staff directory");
+        toast.error("Failed to sync personnel matrix");
       } finally {
         setLoading(false);
       }
@@ -147,7 +92,7 @@ export default function ManagerStaffPage() {
         (s.employeeId || '').toLowerCase().includes(search.toLowerCase()) ||
         (s.designation || '').toLowerCase().includes(search.toLowerCase());
       
-      const matchesDept = deptFilter === 'all' || s.department === deptFilter;
+      const matchesDept = deptFilter === 'all' || s.dept === deptFilter;
       const matchesStatus = statusFilter === 'all' ||
         (statusFilter === 'active' && s.isActive !== false) ||
         (statusFilter === 'inactive' && s.isActive === false);
@@ -281,7 +226,7 @@ export default function ManagerStaffPage() {
           {filtered.map(s => (
             <Link 
               key={s.id} 
-              href={`/hq/dashboard/manager/staff/${s.id}?collection=${s._origin}`}
+              href={`/hq/dashboard/manager/staff/${s.id}`}
               className={`group rounded-2xl md:rounded-[2.5rem] p-5 md:p-6 border transition-all duration-500 flex flex-col relative overflow-hidden ${
                 darkMode 
                   ? 'bg-white/[0.03] border-white/5 hover:border-teal-500/50 hover:bg-white/[0.06] hover:shadow-2xl hover:shadow-teal-900/20' 
@@ -318,11 +263,11 @@ export default function ManagerStaffPage() {
                      {s.employeeId || 'N/A'}
                    </span>
                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
-                     s.department === 'rehab' ? (darkMode ? 'bg-blue-400/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-100') :
-                     s.department === 'spims' ? (darkMode ? 'bg-green-400/10 text-green-400 border-green-500/20' : 'bg-green-50 text-green-600 border-green-100') :
+                     s.dept === 'rehab' ? (darkMode ? 'bg-blue-400/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-100') :
+                     s.dept === 'spims' ? (darkMode ? 'bg-green-400/10 text-green-400 border-green-500/20' : 'bg-green-50 text-green-600 border-green-100') :
                      (darkMode ? 'bg-white/5 text-slate-400 border-white/5' : 'bg-gray-50 text-gray-600 border-gray-100')
                    }`}>
-                     {s.department}
+                     {s.dept}
                    </span>
                 </div>
               </div>
@@ -331,11 +276,11 @@ export default function ManagerStaffPage() {
               <div className={`grid grid-cols-2 gap-2 mt-auto pt-4 border-t transition-colors ${darkMode ? 'border-white/5' : 'border-gray-50'}`}>
                 <div className={`rounded-xl p-2.5 flex flex-col items-center transition-colors ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
                    <p className={`text-[8px] font-black uppercase tracking-tighter ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>Growth</p>
-                   <p className={`text-sm font-black transition-colors ${darkMode ? 'text-slate-200' : 'text-gray-900'}`}>{(s.growthPoints?.totalPoints || 0)} pts</p>
+                   <p className={`text-sm font-black transition-colors ${darkMode ? 'text-slate-200' : 'text-gray-900'}`}>{s.growthPointsTotal} pts</p>
                 </div>
                 <div className={`rounded-xl p-2.5 flex flex-col items-center transition-colors ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
                    <p className={`text-[8px] font-black uppercase tracking-tighter ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>Attendance</p>
-                   <p className="text-sm font-black text-teal-600">{(s.stats?.attendanceRate || 0)}%</p>
+                   <p className="text-sm font-black text-teal-600">{(s.presentCount / 30 * 100).toFixed(0)}%</p>
                 </div>
               </div>
 

@@ -18,10 +18,13 @@ import {
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle,
   ChevronLeft, ChevronRight, Star, Plus, Trash2
 } from 'lucide-react';
-import { increment } from 'firebase/firestore';
+import { 
+  fetchStaffProfile, 
+  updateStaffProfile,
+  type StaffProfile 
+} from '@/lib/hq/superadmin/staff';
+import { Timestamp, increment } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { recalculateGrowthPoints } from '@/lib/rehab/growthPoints';
-import { Timestamp } from 'firebase/firestore';
 import ScoreCard from '@/components/rehab/ScoreCard';
 import { SCORE_CATEGORIES, MONTHLY_REWARDS, WEEKLY_RULE } from '@/data/scoreRules';
 import { HqCheckCell } from '@/components/hq/HqCheckCell';
@@ -71,12 +74,10 @@ function formatStaffDate(input: any): string {
 export default function StaffProfilePage() {
   const router = useRouter();
   const params = useParams();
-  const searchParams = useSearchParams();
-  const staffId = params.id as string;
-  const colPrefix = searchParams.get('collection') || 'rehab';
+  const staffId = params.id as string; // Expected: dept_UID
   const { session, loading: sessionLoading } = useHqSession();
   
-  const [staff, setStaff] = useState<Staff | null>(null);
+  const [staff, setStaff] = useState<StaffProfile | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit'>('overview');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,52 +143,51 @@ export default function StaffProfilePage() {
     if (!staffId) return;
     try {
       setLoading(true);
-      const collectionName = colPrefix === 'hq' ? 'hq_staff' : 'rehab_staff';
-      const staffDoc = await getDoc(doc(db, collectionName, staffId));
+      const profile = await fetchStaffProfile(staffId);
       
-      if (!staffDoc.exists()) {
+      if (!profile) {
         toast.error("Staff member not found");
         router.push('/hq/dashboard/manager/staff');
         return;
       }
       
-      const sData = { id: staffDoc.id, ...staffDoc.data() } as Staff;
-      setStaff(sData);
+      setStaff(profile);
       setEditForm({
-        name: sData.name || '',
-        designation: sData.designation || '',
-        monthlySalary: Number(sData.monthlySalary || 0),
-        dutyStartTime: sData.dutyStartTime || '',
-        dutyEndTime: sData.dutyEndTime || '',
-        isActive: sData.isActive !== false,
-        phone: sData.phone || '',
-        employeeId: sData.employeeId || '',
-        userId: sData.userId || '',
-        dressCodeConfig: sData.dressCodeConfig || [
+        name: profile.name || '',
+        designation: profile.role || '',
+        monthlySalary: Number(profile.monthlySalary || 0),
+        dutyStartTime: '09:00',
+        dutyEndTime: '17:00',
+        isActive: profile.isActive !== false,
+        phone: profile.phone || '',
+        employeeId: profile.customId || '',
+        userId: profile.staffId || '',
+        dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : [
           { key: 'pant', label: 'Dress Pant' },
           { key: 'shirt', label: 'Uniform Shirt' },
           { key: 'shoes', label: 'Black Shoes' },
           { key: 'id_card', label: 'ID Card' }
-        ],
-        dutyConfig: sData.dutyConfig || [
+        ]),
+        dutyConfig: (profile.dutyConfig?.length ? profile.dutyConfig : [
           { key: 'attendance_portal', label: 'Attendance Entry' },
           { key: 'patient_vitals', label: 'Patient Vitals' },
           { key: 'ward_round', label: 'Ward Round' },
           { key: 'cleanliness', label: 'Area Cleanliness' }
-        ]
+        ])
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
-      const prefix = colPrefix;
+      const slug = profile.dept.replace('-', '_');
+      const uid = profile.staffId;
       const days = daysInMonth();
       const start = days[0];
       const end = days[days.length - 1];
 
       const [attSnap, dressSnap, dutySnap, pointsSnap] = await Promise.all([
-        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', staffId), where('date', '>=', start), where('date', '<=', end))),
-        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', staffId), where('date', '>=', start), where('date', '<=', end))),
-        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', staffId), where('date', '>=', start), where('date', '<=', end))),
-        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', staffId), limit(1)))
+        getDocs(query(collection(db, `${slug}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
+        getDocs(query(collection(db, `${slug}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
+        getDocs(query(collection(db, `${slug}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
+        getDocs(query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), limit(1)))
       ]);
 
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
@@ -206,7 +206,7 @@ export default function StaffProfilePage() {
 
       // Fetch growth history (all months)
       const historySnap = await getDocs(
-        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', staffId), orderBy('month', 'desc'))
+        query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), orderBy('month', 'desc'))
       );
       setGrowthHistory(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
@@ -216,15 +216,17 @@ export default function StaffProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [staffId, colPrefix, router, daysInMonth]);
+  }, [staffId, router, daysInMonth]);
 
   const toggleAttendance = async (date: string, next: any) => {
     try {
-      const prefix = colPrefix;
-      const ref = doc(db, `${prefix}_attendance`, `${staffId}_${date}`);
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      const uid = staff.staffId;
+      const ref = doc(db, `${slug}_attendance`, `${uid}_${date}`);
       
       const newRecord: HqDailyAttendanceRecord = {
-        staffId,
+        staffId: uid,
         date,
         status: next,
         markedBy: session?.uid,
@@ -260,8 +262,10 @@ export default function StaffProfilePage() {
     
     try {
       setSaving(true);
-      const prefix = colPrefix;
-      const ref = doc(db, `${prefix}_attendance`, `${staffId}_${timePopup.date}`);
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      const uid = staff.staffId;
+      const ref = doc(db, `${slug}_attendance`, `${uid}_${timePopup.date}`);
       
       // Payloads are PURELY strings, NO date objects used to prevent double-day entries
       const payload = {
@@ -274,7 +278,7 @@ export default function StaffProfilePage() {
       const newRecord: HqDailyAttendanceRecord = {
         ...(attendanceMap[timePopup.date] || {}),
         ...payload,
-        staffId,
+        staffId: uid,
         date: timePopup.date,
         status: 'present'
       };
@@ -299,8 +303,10 @@ export default function StaffProfilePage() {
 
   const toggleDress = async (date: string, itemKey: string, next: any) => {
     try {
-      const prefix = colPrefix;
-      const ref = doc(db, `${prefix}_dress_logs`, `${staffId}_${date}`);
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      const uid = staff.staffId;
+      const ref = doc(db, `${slug}_dress_logs`, `${uid}_${date}`);
       const current = dressMap[date]?.items || [];
       const exists = current.find(i => i.key === itemKey);
       
@@ -313,7 +319,7 @@ export default function StaffProfilePage() {
       }
 
       const newRecord: HqDailyDressCodeRecord = {
-        staffId,
+        staffId: uid,
         date,
         items: nextItems,
         markedBy: session?.uid,
@@ -330,8 +336,10 @@ export default function StaffProfilePage() {
 
   const toggleDuty = async (date: string, dutyKey: string, next: any) => {
     try {
-      const prefix = colPrefix;
-      const ref = doc(db, `${prefix}_duty_logs`, `${staffId}_${date}`);
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      const uid = staff.staffId;
+      const ref = doc(db, `${slug}_duty_logs`, `${uid}_${date}`);
       const current = dutyMap[date]?.duties || [];
       const exists = current.find(d => d.key === dutyKey);
 
@@ -344,7 +352,7 @@ export default function StaffProfilePage() {
       }
 
       const newRecord: HqDailyDutyRecord = {
-        staffId,
+        staffId: uid,
         date,
         duties: nextDuties,
         markedBy: session?.uid,
@@ -371,9 +379,11 @@ export default function StaffProfilePage() {
   const handleMarkDuty = async () => {
     try {
       setMarkingDuty(true);
-      const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
-      await addDoc(collection(db, `${prefix}_duty_logs`), {
-        staffId,
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      const uid = staff.staffId;
+      await addDoc(collection(db, `${slug}_duty_logs`), {
+        staffId: uid,
         dutyType: dutyForm.type,
         status: dutyForm.status,
         comment: dutyForm.comment,
@@ -395,10 +405,12 @@ export default function StaffProfilePage() {
 
   const handleMarkAttendance = async (dateStr: string, status: 'present' | 'absent' | 'leave') => {
     try {
-      const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
-      const attId = `${staffId}_${dateStr}`;
-      await setDoc(doc(db, `${prefix}_attendance`, attId), {
-        staffId,
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      const uid = staff.staffId;
+      const attId = `${uid}_${dateStr}`;
+      await setDoc(doc(db, `${slug}_attendance`, attId), {
+        staffId: uid,
         date: dateStr,
         status,
         markedAt: serverTimestamp(),
@@ -415,10 +427,12 @@ export default function StaffProfilePage() {
 
   const handleMarkDress = async (dateStr: string, isCompliant: boolean) => {
     try {
-      const prefix = colPrefix === 'hq' ? 'hq' : 'rehab';
-      const logId = `${staffId}_${dateStr}`;
-      await setDoc(doc(db, `${prefix}_dress_logs`, logId), {
-        staffId,
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      const uid = staff.staffId;
+      const logId = `${uid}_${dateStr}`;
+      await setDoc(doc(db, `${slug}_dress_logs`, logId), {
+        staffId: uid,
         date: dateStr,
         isCompliant,
         markedAt: serverTimestamp(),
@@ -433,9 +447,11 @@ export default function StaffProfilePage() {
 
   const handleRecalculate = async () => {
     try {
+      if (!staff) return;
       toast.loading("Recalculating points...", { id: 'recalc' });
       const month = selectedMonth || new Date().toISOString().slice(0, 7);
-      await recalculateGrowthPoints(staffId, month, colPrefix || 'rehab');
+      const { recalculateGrowthPoints } = await import('@/lib/rehab/growthPoints');
+      await recalculateGrowthPoints(staff.staffId, month, staff.dept);
       toast.success("Points updated", { id: 'recalc' });
       fetchData();
     } catch (error) {
@@ -452,6 +468,7 @@ export default function StaffProfilePage() {
     formData.append('upload_preset', 'khanhub_profiles'); 
 
     try {
+      if (!staff) return;
       toast.loading("Uploading photo...", { id: 'upload' });
       const res = await fetch('https://api.cloudinary.com/v1_1/dr6m99scu/image/upload', {
         method: 'POST',
@@ -459,8 +476,9 @@ export default function StaffProfilePage() {
       });
       const data = await res.json();
       
-      const collectionName = colPrefix === 'hq' ? 'hq_staff' : 'rehab_staff';
-      await updateDoc(doc(db, collectionName, staffId), {
+      const slug = staff.dept.replace('-', '_');
+      const collectionName = staff.dept === 'hq' ? 'hq_users' : `${slug}_users`;
+      await updateDoc(doc(db, collectionName, staff.staffId), {
         photoUrl: data.secure_url
       });
 
@@ -474,11 +492,15 @@ export default function StaffProfilePage() {
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
-      const collectionName = colPrefix === 'hq' ? 'hq_staff' : 'rehab_staff';
-      await updateDoc(doc(db, collectionName, staffId), {
+      if (!staff) return;
+      
+      const res = await updateStaffProfile(staff.id, {
         ...editForm,
         updatedAt: serverTimestamp()
       });
+      
+      if (!res.success) throw new Error(res.error);
+      
       toast.success("Profile updated successfully");
       fetchData();
     } catch (error) {
@@ -499,9 +521,9 @@ export default function StaffProfilePage() {
       {/* Dynamic Header */}
       <div className={`border-b sticky top-0 z-20 shadow-sm transition-colors ${isDark ? 'bg-zinc-900/90 backdrop-blur-xl border-zinc-800' : 'bg-white border-gray-100'}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link href="/hq/dashboard/manager/users" className={`flex items-center gap-2 group transition-colors ${isDark ? 'text-zinc-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
+          <Link href="/hq/dashboard/manager/staff" className={`flex items-center gap-2 group transition-colors ${isDark ? 'text-zinc-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
             <div className={`p-2 rounded-xl ${isDark ? 'group-hover:bg-zinc-800' : 'group-hover:bg-gray-100'}`}><ArrowLeft size={18} /></div>
-            <span className="text-xs font-black uppercase tracking-widest leading-none">Management</span>
+            <span className="text-xs font-black uppercase tracking-widest leading-none">Directory</span>
           </Link>
 
           <div className="flex items-center gap-4">
@@ -556,12 +578,12 @@ export default function StaffProfilePage() {
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
                     isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-400' : 'bg-gray-50 border-gray-100 text-gray-500'
                   }`}>
-                    ID: {staff?.employeeId || 'N/A'}
+                    ID: {staff?.customId || 'N/A'}
                   </span>
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                     staff?.department === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : (isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-gray-50 text-gray-600')
+                     staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : (isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-gray-50 text-gray-600')
                   }`}>
-                    {staff?.department || 'General'}
+                    {staff?.dept || 'General'}
                   </span>
                </div>
 
@@ -826,21 +848,21 @@ export default function StaffProfilePage() {
                           { key: 'shirt', label: 'Uniform Shirt' },
                           { key: 'shoes', label: 'Black Shoes' },
                           { key: 'id_card', label: 'ID Card' }
-                        ]).map((item) => (
-                          <tr key={item.key} className="border-t border-zinc-800/10">
+                        ]).map((dress: { key: string; label: string }) => (
+                          <tr key={dress.key} className="border-t border-zinc-800/10">
                             <td className="sticky left-0 z-10 bg-inherit pr-8 py-6 text-left">
-                              <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{item.label}</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{dress.label}</span>
                             </td>
                             {daysInMonth().map(d => {
                               const dayRecord = dressMap[d];
-                              const itemStatus = dayRecord?.items?.find(i => i.key === item.key)?.status || 'na';
+                              const dressStatus = dayRecord?.items?.find(i => i.key === dress.key)?.status || 'na';
                               return (
                                 <td key={d} className="px-1 py-6 text-center">
                                   <HqCheckCell 
                                     type="dresscode"
                                     size="md"
-                                    value={itemStatus as any} 
-                                    onToggle={(next) => toggleDress(d, item.key, next)}
+                                    value={dressStatus as any} 
+                                    onToggle={(next) => toggleDress(d, dress.key, next)}
                                   />
                                 </td>
                               );
@@ -880,7 +902,7 @@ export default function StaffProfilePage() {
                           { key: 'patient_vitals', label: 'Patient Vitals' },
                           { key: 'ward_round', label: 'Ward Round' },
                           { key: 'cleanliness', label: 'Area Cleanliness' }
-                        ]).map((duty) => (
+                        ]).map((duty: { key: string; label: string }) => (
                           <tr key={duty.key} className="border-t border-zinc-800/10">
                             <td className="sticky left-0 z-10 bg-inherit pr-8 py-6 text-left">
                               <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{duty.label}</span>
