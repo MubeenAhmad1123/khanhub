@@ -56,7 +56,7 @@ export default function ManagerStaffPage() {
         const unified = await listStaffCards({ 
           dept: 'all', 
           status: 'all', 
-          role: 'all' 
+          role: 'personnel' 
         });
         
         // Final sort

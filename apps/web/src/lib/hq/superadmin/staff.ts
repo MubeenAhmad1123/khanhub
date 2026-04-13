@@ -88,7 +88,7 @@ export async function listStaffCards({
 }: {
   dept: 'all' | StaffDept;
   status: 'all' | 'active' | 'inactive';
-  role: 'all' | 'admin' | 'staff' | 'cashier';
+  role: 'all' | 'admin' | 'staff' | 'cashier' | 'personnel';
 }): Promise<StaffCardRow[]> {
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -110,7 +110,11 @@ export async function listStaffCards({
     if (status === 'active' && !active) return false;
     if (status === 'inactive' && active) return false;
     const normalizedRole = normalizeRole(s.role);
-    if (role !== 'all' && normalizedRole !== role) return false;
+    if (role === 'personnel') {
+      if (normalizedRole !== 'admin' && normalizedRole !== 'staff') return false;
+    } else if (role !== 'all' && normalizedRole !== role) {
+      return false;
+    }
     return true;
   });
 

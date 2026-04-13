@@ -8,7 +8,7 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
 import { Loader2, CheckCircle, XCircle, AlertTriangle, Filter } from 'lucide-react';
 
-type FilterType = 'all' | 'rehab' | 'spims' | 'urgent';
+type FilterType = 'all' | 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'urgent';
 
 function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -45,22 +45,49 @@ export default function ManagerApprovalsPage() {
 
     const fetchData = async () => {
       try {
-        const [rehabSnap, spimsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))),
-          getDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))).catch(() => ({ docs: [] })),
-        ]);
+        setLoading(true);
+        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+        
+        const snaps = await Promise.all(
+          depts.map(d => getDocs(query(collection(db, `${d.replace('-', '_')}_contributions`), where('isApproved', '==', false))))
+        );
 
-        const rehab = rehabSnap.docs.map(d => ({ id: d.id, ...d.data(), dept: 'rehab' } as any));
-        const spims = spimsSnap.docs.map(d => ({ id: d.id, ...d.data(), dept: 'spims' } as any));
-        const all = [...rehab, ...spims];
+        let allContribs: any[] = [];
+        for (let i = 0; i < depts.length; i++) {
+          const dept = depts[i];
+          const snap = snaps[i];
+          const docs = snap.docs.map(docSnap => ({ 
+            id: docSnap.id, 
+            ...docSnap.data(), 
+            dept 
+          }));
+          allContribs = [...allContribs, ...docs];
+        }
 
-        all.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        // Fetch Staff Names
+        const staffIds = Array.from(new Set(allContribs.map(c => c.staffId).filter(Boolean)));
+        const staffMap: Record<string, string> = {};
+        
+        await Promise.all(depts.map(async (d) => {
+          const col = d === 'hq' ? 'hq_staff' : `${d.replace('-', '_')}_staff`;
+          const staffSnap = await getDocs(collection(db, col));
+          staffSnap.docs.forEach(docSnap => {
+            staffMap[docSnap.id] = docSnap.data().name || 'Unknown Staff';
+          });
+        }));
+
+        const enriched = allContribs.map(c => ({
+          ...c,
+          staffName: staffMap[c.staffId] || 'Unknown Staff'
+        }));
+
+        enriched.sort((a, b) => {
+          const dateA = a.createdAt?.seconds || 0;
+          const dateB = b.createdAt?.seconds || 0;
           return dateB - dateA;
         });
 
-        setTransactions(all);
+        setTransactions(enriched);
       } catch (err) {
         console.error(err);
       } finally {
@@ -74,14 +101,15 @@ export default function ManagerApprovalsPage() {
   const handleApprove = async (id: string, dept: string) => {
     setActionLoading(id);
     try {
-      const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+      const col = `${dept.replace('-', '_')}_contributions`;
       await updateDoc(doc(db, col, id), {
-        status: 'approved',
+        isApproved: true,
+        points: 1,
         approvedBy: session?.customId,
         approvedAt: new Date().toISOString(),
       });
       setTransactions(prev => prev.filter(t => t.id !== id));
-      setMessage({ type: 'success', text: 'Transaction approved' });
+      setMessage({ type: 'success', text: 'Contribution approved (+1 point awarded)' });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
     } finally {
@@ -93,15 +121,16 @@ export default function ManagerApprovalsPage() {
     if (!rejectReason.trim()) return;
     setActionLoading(id);
     try {
-      const col = dept === 'rehab' ? 'rehab_transactions' : 'spims_transactions';
+      const col = `${dept.replace('-', '_')}_contributions`;
       await updateDoc(doc(db, col, id), {
+        isApproved: false,
         status: 'rejected',
         rejectionReason: rejectReason,
       });
       setTransactions(prev => prev.filter(t => t.id !== id));
       setRejectingId(null);
       setRejectReason('');
-      setMessage({ type: 'success', text: 'Transaction rejected' });
+      setMessage({ type: 'success', text: 'Contribution rejected' });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
     } finally {
@@ -119,9 +148,17 @@ export default function ManagerApprovalsPage() {
 
   const counts = {
     all: transactions.length,
+    hq: transactions.filter(t => t.dept === 'hq').length,
     rehab: transactions.filter(t => t.dept === 'rehab').length,
     spims: transactions.filter(t => t.dept === 'spims').length,
-    urgent: transactions.filter(t => t.createdAt && (Date.now() - new Date(t.createdAt).getTime()) > 48 * 60 * 60 * 1000).length,
+    hospital: transactions.filter(t => t.dept === 'hospital').length,
+    sukoon: transactions.filter(t => t.dept === 'sukoon').length,
+    welfare: transactions.filter(t => t.dept === 'welfare').length,
+    'job-center': transactions.filter(t => t.dept === 'job-center').length,
+    urgent: transactions.filter(t => {
+      const time = t.createdAt?.seconds ? t.createdAt.seconds * 1000 : 0;
+      return time && (Date.now() - time) > 48 * 60 * 60 * 1000;
+    }).length,
   };
 
   if (sessionLoading || loading) {
@@ -135,8 +172,8 @@ export default function ManagerApprovalsPage() {
   return (
     <div className="space-y-8 pb-32 p-4 md:p-8 bg-gray-50 dark:bg-[#0A0A0A] min-h-screen overflow-x-hidden w-full max-w-full">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">Approvals</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Review and approve pending transactions</p>
+        <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">Staff Contribs</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Review and approve employee contributions</p>
       </div>
 
       {message.text && (
@@ -150,7 +187,7 @@ export default function ManagerApprovalsPage() {
       )}
 
       <div className="flex flex-wrap gap-2 p-1 bg-white/50 dark:bg-white/5 rounded-2xl w-full">
-        {(['all', 'rehab', 'spims', 'urgent'] as FilterType[]).map(f => (
+        {(['all', 'hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'urgent'] as FilterType[]).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -161,7 +198,7 @@ export default function ManagerApprovalsPage() {
             }`}
           >
             <Filter size={10} />
-            {f.charAt(0).toUpperCase() + f.slice(1)}
+            {f === 'job-center' ? 'Job Center' : f.charAt(0).toUpperCase() + f.slice(1)}
             <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[8px] ${
               filter === f ? 'bg-white/20 dark:bg-black/10' : 'bg-gray-100 dark:bg-white/10'
             }`}>
@@ -194,18 +231,11 @@ export default function ManagerApprovalsPage() {
                   <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                     <div className="flex flex-wrap gap-2">
                       <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
-                        t.dept === 'rehab' 
-                          ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-500/20' 
-                          : 'bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-100 dark:border-green-500/20'
+                        t.dept === 'rehab' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-500/20' :
+                        t.dept === 'spims' ? 'bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-100 dark:border-green-500/20' :
+                        'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-500/20'
                       }`}>
                         {t.dept}
-                      </span>
-                      <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
-                        t.type === 'income' 
-                          ? 'bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-100 dark:border-green-500/20' 
-                          : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-100 dark:border-red-500/20'
-                      }`}>
-                        {t.type}
                       </span>
                       {isUrgent && (
                         <span className="px-3 py-1 rounded-xl bg-red-500 text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg shadow-red-500/20">
@@ -214,34 +244,26 @@ export default function ManagerApprovalsPage() {
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-2xl text-gray-900 dark:text-white tracking-tight">₨{t.amount?.toLocaleString()}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">{timeAgo(t.createdAt)}</p>
+                      <p className="font-black text-xl text-gray-900 dark:text-white tracking-tight">{t.title}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">{t.createdAt?.seconds ? timeAgo(new Date(t.createdAt.seconds * 1000).toISOString()) : 'Just now'}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-5 bg-gray-50 dark:bg-white/5 rounded-3xl mb-6">
+                  <div className="grid grid-cols-2 gap-4 p-5 bg-gray-50 dark:bg-white/5 rounded-3xl mb-6">
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Category</p>
-                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{t.category}</p>
+                      <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Contributor</p>
+                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{t.staffName}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Entity</p>
-                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{t.patientName || t.studentName || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Cashier</p>
-                      <p className="font-mono font-bold text-gray-900 dark:text-gray-100 text-sm">{t.cashierId}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Date</p>
-                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{t.date ? formatDateDMY(t.date) : '—'}</p>
+                      <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Submission Date</p>
+                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{t.createdAt?.seconds ? formatDateDMY(new Date(t.createdAt.seconds * 1000).toISOString()) : '—'}</p>
                     </div>
                   </div>
 
-                  {t.note && (
+                  {t.content && (
                     <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-white/5 p-4 rounded-3xl mb-6 border border-gray-100 dark:border-white/5">
-                      <p className="font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-[9px] mb-1">Note</p>
-                      <p className="font-medium leading-relaxed">{t.note}</p>
+                      <p className="font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-[9px] mb-1">Description</p>
+                      <p className="font-medium leading-relaxed">{t.content}</p>
                     </div>
                   )}
 
