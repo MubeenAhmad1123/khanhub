@@ -267,20 +267,41 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
   return { daily, types, weeks, topOutstanding: top, recentReconciliations };
 }
 
-export async function fetchFinanceReport(tab: FinanceTab, start: Date, end: Date) {
+export async function fetchFinanceReport(tab: FinanceTab, startDate: Date, endDate: Date) {
   const deptList = tab === 'combined' ? (['rehab', 'spims', 'job-center', 'hq'] as const) : ([tab] as const);
   
+  // Normalize dates for proper range coverage
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
   const results = await Promise.all(deptList.map(async (dept) => {
-    const col = dept === 'rehab' ? 'rehab_transactions' : dept === 'spims' ? 'spims_transactions' : dept === 'job-center' ? 'job_center_transactions' : 'cashierTransactions';
-    // Use createdAt for range filter as the field exists in all
+    let col = '';
+    if (dept === 'rehab') col = 'rehab_transactions';
+    else if (dept === 'spims') col = 'spims_transactions';
+    else if (dept === 'job-center') col = 'job_center_transactions';
+    else col = 'cashierTransactions';
+
+    // We use createdAt as our primary indexed time field
     const q = query(
       collection(db, col),
       where('status', '==', 'approved'),
       where('createdAt', '>=', Timestamp.fromDate(start)),
       where('createdAt', '<=', Timestamp.fromDate(end))
     );
-    const snap = await getDocs(q).catch(() => ({ docs: [] } as any));
-    return snap.docs.map((d: any) => ({ id: d.id, ...d.data(), _dept: dept }));
+    
+    const snap = await getDocs(q).catch((err) => {
+      console.error(`Failed to fetch ${dept} report data:`, err);
+      return { docs: [] } as any;
+    });
+    
+    return snap.docs.map((d: any) => ({ 
+      id: d.id, 
+      ...d.data(), 
+      _dept: dept,
+      _date: toDate(d.data().createdAt || d.data().date)
+    }));
   }));
 
   const rows = results.flat();
@@ -292,16 +313,20 @@ export async function fetchFinanceReport(tab: FinanceTab, start: Date, end: Date
     const amt = Number(r.amount) || 0;
     const isExp = r.type === 'expense' || String(r.categoryName || r.category || '').toLowerCase().includes('expense');
     if (isExp) expense += amt; else income += amt;
-    const cat = r.categoryName || r.category || 'Other';
+    
+    const cat = r.categoryName || r.category || 'Revenue';
     categories[cat] = (categories[cat] || 0) + amt;
   }
+
+  // Sort by date descending
+  const transactions = rows.sort((a, b) => b._date.getTime() - a._date.getTime());
 
   return {
     income,
     expense,
     net: income - expense,
     categories,
-    transactions: rows.sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime()),
+    transactions,
     start,
     end
   };

@@ -15,6 +15,7 @@ import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
 import { HqNotificationPermissionBanner } from '@/components/hq/HqNotificationPermissionBanner';
+import { ThemeToggle } from '@/components/hq/ThemeToggle';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 43200000;
@@ -210,7 +211,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     const [portalOpen, setPortalOpen] = useState(false);
     
     return (
-      <div className="flex flex-col h-full bg-gray-900 text-white">
+      <div className="flex flex-col h-full bg-white dark:bg-black text-black dark:text-white border-r border-gray-100 dark:border-white/5">
         {/* Header / Branding */}
         <div className="px-6 pt-7 pb-6 border-b border-gray-800">
           <div className="flex items-center gap-3 mb-6">
@@ -218,10 +219,10 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               <Shield size={22} strokeWidth={2.5} />
             </div>
             <div>
-              <p className="font-black tracking-tight text-base leading-none text-white">
+              <p className="font-black tracking-tight text-base leading-none text-black dark:text-white">
                 {viewMode === 'hq' ? 'KhanHub HQ' : DEPT_INFO[viewMode]?.label}
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest mt-1.5 text-gray-500">
+              <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-gray-400 dark:text-gray-500">
                 {viewMode === 'hq' ? 'Central Console' : 'Management'}
               </p>
             </div>
@@ -368,8 +369,8 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden bg-gray-950">
-      <aside className="hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 bg-gray-900 border-gray-800">
+    <div className="min-h-screen flex overflow-x-hidden bg-white dark:bg-black">
+      <aside className="hidden lg:flex flex-col w-64 border-r fixed left-0 top-0 h-screen z-30 bg-white dark:bg-black border-gray-100 dark:border-white/10">
         <SidebarContent />
       </aside>
 
@@ -423,29 +424,31 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur border-b px-8 py-4 items-center justify-between bg-gray-900/80 border-gray-800">
+        <header className="hidden lg:flex sticky top-0 z-20 backdrop-blur-md border-b px-8 py-4 items-center justify-between bg-white/80 dark:bg-black/80 border-gray-100 dark:border-white/5">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-950 dark:hover:text-gray-100"
               title="Go back"
             >
               <ChevronLeft size={15} />
               Back
             </button>
-            <span className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
               KhanHub HQ Portal
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <div className="w-px h-6 bg-gray-100 dark:bg-white/10 mx-1" />
             {user ? <HqNotificationBell session={user} /> : null}
             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_COLORS[role]}`}>
               {ROLE_LABELS[role]}
             </span>
-            <div className="w-8 h-8 bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl flex items-center justify-center text-gray-300 font-black text-sm">
+            <div className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-xl flex items-center justify-center text-gray-900 dark:text-gray-300 font-black text-sm">
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
-            <span className="text-gray-200 text-sm font-semibold hidden xl:inline">{user?.name}</span>
+            <span className="text-gray-900 dark:text-gray-200 text-sm font-black hidden xl:inline">{user?.name}</span>
           </div>
         </header>
 

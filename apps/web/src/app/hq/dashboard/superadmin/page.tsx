@@ -26,25 +26,25 @@ const DEPT_LABELS: Record<string, string> = {
 };
 
 const SOURCE_BADGE_STYLES: Record<string, string> = {
-  hq:          'bg-gray-100/10 text-gray-400',
-  rehab:       'bg-rose-500/10 text-rose-400',
-  spims:       'bg-teal-500/10 text-teal-400',
-  hospital:    'bg-blue-500/10 text-blue-400',
-  sukoon:      'bg-purple-500/10 text-purple-400',
-  welfare:     'bg-amber-500/10 text-amber-400',
-  job_center:  'bg-orange-500/10 text-orange-400',
-  'job-center':'bg-orange-500/10 text-orange-400',
+  hq:          'bg-black dark:bg-white text-white dark:text-black font-black',
+  rehab:       'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
+  spims:       'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
+  hospital:    'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold border border-black/5 dark:border-white/5',
+  sukoon:      'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
+  welfare:     'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
+  job_center:  'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
+  'job-center':'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
 };
 
 const ACTION_BADGE_STYLES: Record<string, string> = {
-  created:   'bg-green-500/15 text-green-400',
-  registered:'bg-green-500/15 text-green-400',
-  approved:  'bg-blue-500/15 text-blue-400',
-  login:     'bg-purple-500/15 text-purple-400',
-  rejected:  'bg-red-500/15 text-red-400',
-  reset:     'bg-amber-500/15 text-amber-400',
-  updated:   'bg-sky-500/15 text-sky-400',
-  other:     'bg-gray-500/15 text-gray-400',
+  created:   'bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-tighter',
+  registered:'bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-tighter',
+  approved:  'bg-black/5 dark:bg-white/5 text-black dark:text-white font-black border border-black dark:border-white',
+  login:     'bg-gray-50 dark:bg-gray-900 text-gray-400 font-bold',
+  rejected:  'bg-gray-200 dark:bg-gray-800 text-gray-500 line-through font-bold decoration-black dark:decoration-white',
+  reset:     'bg-gray-100 dark:bg-white/10 text-gray-400 font-bold',
+  updated:   'bg-gray-50 dark:bg-white/5 text-gray-500 font-bold underline decoration-2 underline-offset-4',
+  other:     'bg-gray-100/5 text-gray-300',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -121,14 +121,14 @@ function DetailRow({
   const badgeStyle = badge && actionColor ? (ACTION_BADGE_STYLES[actionColor] || ACTION_BADGE_STYLES.other) : '';
 
   return (
-    <div className={`flex items-start justify-between gap-4 px-4 py-3 ${!last ? 'border-b border-white/[0.04]' : ''}`}>
-      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 shrink-0 pt-0.5 w-28">{label}</span>
+    <div className={`flex items-start justify-between gap-4 px-4 py-3 ${!last ? 'border-b border-gray-100 dark:border-white/[0.04]' : ''}`}>
+      <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 shrink-0 pt-0.5 w-28 italic">{label}</span>
       {badge ? (
-        <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wide ${badgeStyle}`}>
+        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border ${badgeStyle}`}>
           {display}
         </span>
       ) : (
-        <span className={`text-[13px] font-semibold text-gray-100 text-right leading-snug ${capitalize ? 'capitalize' : ''} ${mono ? 'font-mono text-[11px] text-gray-300' : ''}`}>
+        <span className={`text-[13px] font-bold text-black dark:text-white text-right leading-snug ${capitalize ? 'capitalize' : ''} ${mono ? 'font-mono text-[11px] text-gray-500 dark:text-gray-400' : ''}`}>
           {display}
         </span>
       )}
@@ -159,9 +159,9 @@ function MoreDetailsSection({ raw }: { raw: any }) {
   if (extras.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.03] overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-white/5 bg-white/5">
-        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">More Details</p>
+    <div className="rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/[0.03] overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-gray-100 dark:border-white/5 bg-gray-100 dark:bg-white/5">
+        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">More Details</p>
       </div>
       <div className="divide-y divide-white/[0.04]">
         {extras.map(([key, val], i) => {
@@ -353,14 +353,14 @@ export default function HqSuperadminPage() {
       {/* ── Activity Detail Modal ─────────────────────────────────────────── */}
       {selectedAudit && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedAudit(null); }}
         >
-          <div className="w-full max-w-[480px] overflow-hidden rounded-2xl border border-white/10 bg-gray-950 shadow-2xl animate-in zoom-in-95">
+          <div className="w-full max-w-[480px] overflow-hidden rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black shadow-2xl animate-in zoom-in-95">
 
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-white/5 bg-white/5 px-6 py-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-white">Activity Details</h3>
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5 px-6 py-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-black dark:text-white">Activity Details</h3>
               <button
                 onClick={() => setSelectedAudit(null)}
                 className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
@@ -370,11 +370,11 @@ export default function HqSuperadminPage() {
             </div>
 
             {/* Body */}
-            <div className="max-h-[75vh] overflow-y-auto divide-y divide-white/[0.04] custom-scrollbar">
+            <div className="max-h-[75vh] overflow-y-auto divide-y divide-gray-100 dark:divide-white/[0.04] custom-scrollbar">
 
               {/* Section 1 — Summary */}
               <div className="p-5">
-                <p className="text-[15px] font-black text-white leading-snug">
+                <p className="text-[15px] font-black text-black dark:text-white leading-snug">
                   {selectedAudit.readableMessage}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -388,9 +388,9 @@ export default function HqSuperadminPage() {
               {/* Section 2 — User Details */}
               <div>
                 <div className="px-5 pt-4 pb-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">User Details</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 italic">User Details</p>
                 </div>
-                <div className="divide-y divide-white/[0.04]">
+                <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
                   <DetailRow label="Full Name"   value={selectedAudit._raw?.details?.displayName || selectedAudit._raw?.details?.name || selectedAudit._raw?.name || selectedAudit._raw?.displayName || selectedAudit.entityLabel} />
                   <DetailRow label="Role"        value={selectedAudit._raw?.details?.role || selectedAudit._raw?.details?.type || selectedAudit._raw?.role || selectedAudit._raw?.type} capitalize />
                   <DetailRow label="Custom ID"   value={selectedAudit._raw?.details?.customId || selectedAudit._raw?.details?.userId || selectedAudit._raw?.customId || selectedAudit._raw?.userId || selectedAudit._raw?.staffId || selectedAudit._raw?.patientId || selectedAudit._raw?.clientId} mono />
@@ -401,9 +401,9 @@ export default function HqSuperadminPage() {
               {/* Section 3 — Action Info */}
               <div>
                 <div className="px-5 pt-4 pb-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Action Info</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 italic">Action Info</p>
                 </div>
-                <div className="divide-y divide-white/[0.04]">
+                <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
                   <DetailRow label="Action Type"   value={formatAction(selectedAudit.action)} badge actionColor={selectedAudit.action} />
                   <DetailRow label="Performed By"  value={!selectedAudit.actorName || selectedAudit.actorName === 'System' || selectedAudit.actorName === 'server_action' ? 'System (Automated)' : selectedAudit.actorName} />
                   <DetailRow label="Timestamp"     value={formatTimestamp(selectedAudit.whenMs)} />
@@ -418,12 +418,12 @@ export default function HqSuperadminPage() {
 
               {/* Section 5 — Full Profile (Dynamic) */}
               <div className="p-5">
-                <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 overflow-hidden">
-                  <div className="px-4 py-2.5 border-b border-indigo-500/10 bg-indigo-500/10 flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-400">Full Profile Record</p>
+                <div className="rounded-2xl border border-indigo-500/10 dark:border-indigo-500/20 bg-indigo-500/5 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-indigo-500/10 bg-indigo-500/5 flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-500">Full Profile Record</p>
                     {profileLoading && <span className="w-3 h-3 border-2 border-indigo-500/30 border-t-indigo-400 rounded-full animate-spin"></span>}
                   </div>
-                  <div className="divide-y divide-white/[0.04]">
+                  <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
                     {profileLoading && (
                       <div className="px-4 py-6 text-center text-xs font-semibold text-gray-500 tracking-wider uppercase">Searching database...</div>
                     )}
@@ -472,13 +472,13 @@ export default function HqSuperadminPage() {
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-white">HQ Superadmin</h1>
-          <p className="mt-1 text-sm text-gray-400">Everything in one place. Tap a card to drill in.</p>
+          <h1 className="text-2xl font-black tracking-tight text-black dark:text-white">HQ Superadmin</h1>
+          <p className="mt-1 text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Global Governance Hub</p>
         </div>
         <div className="flex gap-2">
           <Link
             href="/hq/dashboard/superadmin/approvals"
-            className="rounded-xl bg-white px-4 py-2 text-sm font-black text-gray-900 active:scale-[0.99]"
+            className="rounded-xl bg-black dark:bg-white px-5 py-3 text-xs font-black uppercase tracking-widest text-white dark:text-black hover:opacity-90 active:scale-95 shadow-lg"
           >
             Review approvals
           </Link>
@@ -505,20 +505,20 @@ export default function HqSuperadminPage() {
       {/* ── Bottom Grid ─────────────────────────────────────────────────────── */}
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Quick Actions */}
-        <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm flex flex-col">
+        <div className="h-full rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-black text-white px-2 border-l-4 border-amber-500">Quick actions</h2>
+            <h2 className="text-[10px] font-black text-black dark:text-white px-2 border-l-4 border-black dark:border-white uppercase tracking-widest">Execution Terminal</h2>
           </div>
-          <div className="grid grid-cols-2 gap-2 flex-grow">
+          <div className="grid grid-cols-2 gap-3 flex-grow">
             {[
               { label: 'Manage Users',    href: '/hq/dashboard/superadmin/users' },
-              { label: 'System Settings', href: '/hq/dashboard/superadmin/settings' },
+              { label: 'Analytics Hub',   href: '/hq/dashboard/superadmin/analytics' },
               { label: 'Departments Hub', href: '/hq/dashboard/superadmin/departments' },
               { label: 'Audit Logs',      href: '/hq/dashboard/superadmin/audit' },
             ].map((btn) => (
               <Link
                 key={btn.label}
-                className="flex items-center justify-center rounded-2xl border border-white/5 bg-white/5 px-3 py-6 text-xs font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95"
+                className="flex items-center justify-center text-center rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5 px-3 py-6 text-[10px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all active:scale-95"
                 href={btn.href}
               >
                 {btn.label}
@@ -528,10 +528,10 @@ export default function HqSuperadminPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-4 px-2">
-            <h2 className="text-sm font-black text-white border-l-4 border-indigo-500 pl-2">Recent activity</h2>
-            <Link href="/hq/dashboard/superadmin/audit" className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors">
+        <div className="h-full rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-6 px-2">
+            <h2 className="text-[10px] font-black text-black dark:text-white px-2 border-l-4 border-black dark:border-white uppercase tracking-widest">Intelligence Feed</h2>
+            <Link href="/hq/dashboard/superadmin/audit" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black dark:hover:text-white transition-colors">
               View All
             </Link>
           </div>
@@ -540,35 +540,29 @@ export default function HqSuperadminPage() {
               <InlineLoading label="Listening for updates…" />
             </div>
           ) : (
-            <div className="space-y-2 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
+            <div className="space-y-3 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
               {activity.map((a) => (
                 <button
                   key={a.id}
                   onClick={() => setSelectedAudit(a)}
-                  className={`group relative w-full text-left overflow-hidden rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/[0.07] border-l-4 ${
-                    a.action === 'created'    ? 'border-l-green-500' :
-                    a.action === 'approved'   ? 'border-l-blue-500'  :
-                    a.action === 'rejected'   ? 'border-l-red-500'   :
-                    a.action === 'login'      ? 'border-l-purple-500':
-                    'border-l-gray-600'
-                  }`}
+                  className="group relative w-full text-left overflow-hidden rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-200/40 dark:bg-white/5 p-4 transition-all hover:bg-white dark:hover:bg-white/10 border-l-4 border-l-black dark:border-l-white"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-white leading-tight group-hover:text-amber-400 transition-colors">
+                      <p className="text-sm font-bold text-black dark:text-white leading-tight transition-colors">
                         {a.readableMessage}
                       </p>
                       <div className="mt-2 flex items-center flex-wrap gap-2">
-                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${SOURCE_BADGE_STYLES[a.source] || 'bg-white/5 text-gray-400'}`}>
+                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider border ${SOURCE_BADGE_STYLES[a.source] || 'bg-white/5 text-gray-400'}`}>
                           {a.source}
                         </span>
-                        <span className="text-[10px] font-bold text-gray-500">
-                          by <span className="text-gray-300">{a.actorName}</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase">
+                          by <span className="text-gray-600 dark:text-gray-300">{a.actorName}</span>
                         </span>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <span className="text-[10px] font-black uppercase text-gray-500">
+                      <span className="text-[9px] font-black uppercase text-gray-400 italic">
                         {getRelativeTime(a.whenMs)}
                       </span>
                     </div>

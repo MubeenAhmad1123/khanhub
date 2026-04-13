@@ -53,55 +53,73 @@ export default function ManagerStaffPage() {
     const fetchAllStaff = async () => {
       try {
         setLoading(true);
-        // Fetch from both collections for global view
-        const [rehabSnap, hqSnap] = await Promise.all([
+        // Fetch from ALL departmental collections for a truly global view
+        const [rehabSnap, hqSnap, spimsSnap, hospSnap, sukoonSnap, welfareSnap, jobSnap] = await Promise.all([
           getDocs(collection(db, 'rehab_staff')),
-          getDocs(collection(db, 'hq_staff'))
+          getDocs(collection(db, 'hq_staff')),
+          getDocs(collection(db, 'spims_staff')),
+          getDocs(collection(db, 'hospital_staff')),
+          getDocs(collection(db, 'sukoon_staff')),
+          getDocs(collection(db, 'welfare_staff')),
+          getDocs(collection(db, 'job_center_staff')),
         ]);
 
-        const rehabList = rehabSnap.docs.map(d => ({ 
+        const mapDocs = (snap: any, origin: string) => snap.docs.map((d: any) => ({ 
           id: d.id, 
           ...d.data(), 
-          _origin: 'rehab',
-          department: d.data().department || 'rehab' 
-        }));
-        
-        const hqList = hqSnap.docs.map(d => ({ 
-          id: d.id, 
-          ...d.data(), 
-          _origin: 'hq',
-          department: d.data().department || 'hq' 
+          _origin: origin,
+          department: d.data().department || origin 
         }));
 
-        const unified: any[] = [...rehabList, ...hqList];
+        const unified: any[] = [
+          ...mapDocs(rehabSnap, 'rehab'),
+          ...mapDocs(hqSnap, 'hq'),
+          ...mapDocs(spimsSnap, 'spims'),
+          ...mapDocs(hospSnap, 'hospital'),
+          ...mapDocs(sukoonSnap, 'sukoon'),
+          ...mapDocs(welfareSnap, 'welfare'),
+          ...mapDocs(jobSnap, 'job-center'),
+        ];
         
         // Final sort
         unified.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         setStaff(unified);
 
-        // Fetch Attendance for Stats (Today)
+        // Fetch Attendance for Stats (Today) - Global
         const todayStr = new Date().toISOString().split('T')[0];
-        const [rehabAtt, hqAtt] = await Promise.all([
-          getDocs(query(collection(db, 'rehab_attendance'), where('date', '==', todayStr), where('status', '==', 'present'))),
-          getDocs(query(collection(db, 'hq_attendance'), where('date', '==', todayStr), where('status', '==', 'present')))
-        ]);
+        const attendanceCollections = [
+          'rehab_attendance', 'hq_attendance', 'spims_attendance', 
+          'hospital_attendance', 'sukoon_attendance', 'welfare_attendance', 'job_center_attendance'
+        ];
+        
+        const attendanceSnaps = await Promise.all(
+          attendanceCollections.map(coll => 
+            getDocs(query(collection(db, coll), where('date', '==', todayStr), where('status', '==', 'present')))
+          )
+        );
 
         setStats({
           total: unified.length,
-          present: rehabAtt.size + hqAtt.size,
-          multiRole: unified.filter(s => (s.roles?.length > 1) || s.loginUserId === 'multi').length // Placeholder logic
+          present: attendanceSnaps.reduce((acc, snap) => acc + snap.size, 0),
+          multiRole: unified.filter(s => (s.roles?.length > 1) || s.loginUserId === 'multi').length
         });
 
-        // 3. Find Unmarked Duties
-        const [rehabDutyLogs, hqDutyLogs] = await Promise.all([
-          getDocs(query(collection(db, 'rehab_duty_logs'), where('date', '>=', todayStr))),
-          getDocs(query(collection(db, 'hq_duty_logs'), where('date', '>=', todayStr)))
-        ]);
+        // 3. Find Unmarked Duties (Last 24h approximation)
+        const dutyCollections = [
+          'rehab_duty_logs', 'hq_duty_logs', 'spims_duty_logs',
+          'hospital_duty_logs', 'sukoon_duty_logs', 'welfare_duty_logs', 'job_center_duty_logs'
+        ];
+        
+        const dutySnaps = await Promise.all(
+          dutyCollections.map(coll => 
+            getDocs(query(collection(db, coll), where('date', '>=', todayStr)))
+          )
+        );
 
-        const markedIds = new Set([
-          ...rehabDutyLogs.docs.map(d => d.data().staffId),
-          ...hqDutyLogs.docs.map(d => d.data().staffId)
-        ]);
+        const markedIds = new Set();
+        dutySnaps.forEach(snap => {
+          snap.docs.forEach(d => markedIds.add(d.data().staffId));
+        });
 
         const unmarked = unified.filter(s => s.isActive !== false && !markedIds.has(s.id));
         setUnmarkedStaff(unmarked);
@@ -230,10 +248,14 @@ export default function ManagerStaffPage() {
               value={deptFilter}
               onChange={e => setDeptFilter(e.target.value)}
             >
-              <option value="all">All Depts</option>
-              <option value="rehab">Rehab</option>
-              <option value="spims">SPIMS</option>
-              <option value="hq">HQ</option>
+              <option value="all">Global Matrix</option>
+              <option value="hq">KhanHub HQ</option>
+              <option value="rehab">Rehab Center</option>
+              <option value="spims">SPIMS Academy</option>
+              <option value="hospital">Hospital</option>
+              <option value="sukoon">Sukoon Center</option>
+              <option value="welfare">Welfare</option>
+              <option value="job-center">Job Center</option>
             </select>
             <select 
               className={`border-none rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer transition-colors flex-shrink-0 ${

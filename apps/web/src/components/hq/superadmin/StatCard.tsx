@@ -30,29 +30,29 @@ export function StatCard({
 }) {
   const toneStyles =
     tone === 'rehab'
-      ? 'from-green-500/10 to-green-500/0 border-green-500/20'
+      ? 'from-emerald-500/10 dark:from-emerald-500/20 to-transparent border-emerald-500/20 dark:border-emerald-500/30'
       : tone === 'spims'
-        ? 'from-blue-500/10 to-blue-500/0 border-blue-500/20'
+        ? 'from-blue-500/10 dark:from-blue-500/20 to-transparent border-blue-500/20 dark:border-blue-500/30'
         : tone === 'hq'
-          ? 'from-purple-500/10 to-purple-500/0 border-purple-500/20'
+          ? 'from-purple-500/10 dark:from-purple-500/20 to-transparent border-purple-500/20 dark:border-purple-500/30'
     : tone === 'primary'
-      ? 'from-gray-900/10 to-gray-900/0 border-white/15'
+      ? 'from-gray-500/5 dark:from-white/5 to-transparent border-gray-200 dark:border-white/10'
     : tone === 'warning'
-      ? 'from-amber-500/10 to-amber-500/0 border-amber-500/20'
+      ? 'from-amber-500/10 dark:from-amber-500/20 to-transparent border-amber-500/20 dark:border-amber-500/30'
     : tone === 'danger'
-      ? 'from-red-500/10 to-red-500/0 border-red-500/20'
-          : 'from-gray-900/5 to-gray-900/0 border-white/10';
+      ? 'from-red-500/10 dark:from-red-500/20 to-transparent border-red-500/20 dark:border-red-500/30'
+          : 'from-gray-100 dark:from-white/5 to-transparent border-gray-200 dark:border-white/10';
 
   const badgeStyles = (bTone: string | undefined) => {
     switch (bTone) {
       case 'danger':
-        return 'bg-red-500/20 text-red-200';
+        return 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-300';
       case 'warning':
-        return 'bg-amber-500/20 text-amber-200';
+        return 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300';
       case 'success':
-        return 'bg-green-500/20 text-green-200';
+        return 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300';
       default:
-        return 'bg-blue-500/20 text-blue-200';
+        return 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300';
     }
   };
 
@@ -64,23 +64,23 @@ export function StatCard({
   const Card = (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <div className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">{title}</div>
-        <div className="mt-2 text-3xl font-black text-white break-words">{displayValue}</div>
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">{title}</div>
+        <div className="mt-2 text-3xl font-black text-black dark:text-white break-words tracking-tight">{displayValue}</div>
         {trend && (
-          <div className={`mt-1 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {trend.isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            {trend.isUp ? <TrendingUp size={12} strokeWidth={3} /> : <TrendingDown size={12} strokeWidth={3} />}
             {Math.abs(trend.value).toFixed(1)}%
           </div>
         )}
-        {subtitle ? <div className="mt-1 text-sm font-semibold text-gray-300">{subtitle}</div> : null}
+        {subtitle ? <div className="mt-1 text-sm font-bold text-gray-600 dark:text-gray-400">{subtitle}</div> : null}
       </div>
       {Icon ? (
-        <div className="shrink-0">
-          <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-gray-100" />
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          <div className="w-11 h-11 rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm">
+            <Icon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </div>
           {badge ? (
-            <div className={`mt-2 inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${badgeStyles(badge.tone)}`}>
+            <div className={`inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-transparent ${badgeStyles(badge.tone)}`}>
               {badge.label}
             </div>
           ) : null}
@@ -89,7 +89,7 @@ export function StatCard({
     </div>
   );
 
-  const className = `block rounded-3xl border bg-gradient-to-br ${toneStyles} bg-gray-950 p-5 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all`;
+  const className = `block rounded-[2rem] border bg-gradient-to-br ${toneStyles} bg-white dark:bg-black p-6 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-300`;
 
   return href ? (
     <Link href={href} className={className}>

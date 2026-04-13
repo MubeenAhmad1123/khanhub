@@ -58,16 +58,16 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
-        <InlineLoading label="Loading student…" />
+      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
+        <InlineLoading label="Syncing Subject Matrix…" />
       </div>
     );
   }
 
   if (!student) {
     return (
-      <div className="min-h-screen bg-[#0f172a] p-8 flex items-center justify-center">
-        <EmptyState title="Not found" message="Student record does not exist." />
+      <div className="min-h-screen bg-white dark:bg-black p-8 flex items-center justify-center transition-colors duration-300">
+        <EmptyState title="Access Restricted" message="Subject record not found in central terminal." />
       </div>
     );
   }
@@ -99,52 +99,52 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
   const additionalFields = Object.entries(student).filter(([k]) => !explicitKeys.includes(k));
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 md:p-8">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white py-12 px-4 md:px-8 transition-colors duration-300">
+      <div className="max-w-5xl mx-auto space-y-10">
         <button
           type="button"
           onClick={() => router.back()}
-          className="min-h-[44px] inline-flex items-center gap-2 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-colors"
+          className="min-h-[44px] inline-flex items-center gap-3 text-black dark:text-white bg-white dark:bg-black border border-gray-100 dark:border-white/10 px-6 py-2 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-sm hover:scale-105 active:scale-95"
         >
-          <ArrowLeft size={14} /> Back
+          <ArrowLeft size={16} /> REVERT TO DIRECTORY
         </button>
 
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-3xl p-6 md:p-8 shadow-xl">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 shrink-0">
-                <User size={28} />
+        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
+          <div className="flex flex-col lg:flex-row items-start justify-between gap-8 mb-12">
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 rounded-[1.5rem] bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-xl transition-transform hover:rotate-6">
+                <User size={40} />
               </div>
               <div className="min-w-0">
-                <h1 className="text-2xl md:text-3xl font-black text-white truncate">
-                  {student?.name || 'Student'}
+                <h1 className="text-4xl md:text-5xl font-black text-black dark:text-white uppercase tracking-tighter truncate">
+                  {student?.name || 'SUBJECT NODE'}
                 </h1>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">
-                  SPIMS Student Profile - HQ Read View
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-2 italic">
+                  Command Authorization Level Alpha • SPIMS Architecture
                 </p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 bg-teal-500/10 border border-teal-500/20 text-teal-300 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">
-              <ShieldCheck size={14} /> Verified HQ Access
+            <div className="inline-flex items-center gap-3 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl">
+              <ShieldCheck size={18} /> Authenticated Secure Access
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 box-border">
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Remaining Details</div>
-              <div className="mt-1 text-sm font-black text-amber-400">{formatPKR(remaining)}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+            <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Liabilities</div>
+              <div className="text-xl font-black text-black dark:text-white tracking-tighter">{formatPKR(remaining)}</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 box-border">
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Paid (Approved)</div>
-              <div className="mt-1 text-sm font-black text-white">{formatPKR(totals.totalApproved)}</div>
+            <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Total Cleared</div>
+              <div className="text-xl font-black text-black dark:text-white tracking-tighter">{formatPKR(totals.totalApproved)}</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 box-border">
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pending Txs</div>
-              <div className="mt-1 text-sm font-black text-white">{totals.pendingCount}</div>
+            <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Queue Count</div>
+              <div className="text-xl font-black text-black dark:text-white tracking-tighter">{totals.pendingCount}</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 box-border">
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Student ID</div>
-              <div className="mt-1 text-xs font-mono text-slate-300 break-all">{studentId}</div>
+            <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm transition-all hover:border-black dark:hover:border-white">
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">ID Fragment</div>
+              <div className="text-[10px] font-black font-mono text-gray-400 dark:text-gray-500 break-all">{studentId.substring(0, 16)}...</div>
             </div>
           </div>
 
@@ -152,101 +152,117 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* Identity & Basic Info */}
-            <div className="bg-slate-900/40 border border-slate-700/40 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4 text-teal-400">
-                <Info size={16} />
-                <p className="text-[11px] font-black uppercase tracking-widest">Identity Info</p>
+            <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
+                  <Info size={16} />
+                </div>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Identity Matrix</p>
               </div>
-              <div className="space-y-3 text-sm">
+              <div className="space-y-6 text-sm">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500">Father / Guardian Name</span>
-                  <span className="font-bold text-slate-200">{getVal(['fatherName', 'guardianName'])}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Authorized Guardian</span>
+                  <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['fatherName', 'guardianName'])}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500">CNIC / B-Form</span>
-                  <span className="font-bold text-slate-200">{getVal(['cnic', 'cnicNo'])}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Registry ID (CNIC)</span>
+                  <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['cnic', 'cnicNo'])}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500">Date of Birth / Age</span>
-                  <span className="font-bold text-slate-200">{getVal(['dob', 'age'])}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Chrono Data (DOB/Age)</span>
+                  <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['dob', 'age'])}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500">Gender</span>
-                  <span className="font-bold text-slate-200 capitalize">{getVal(['gender'])}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Gender Allocation</span>
+                  <span className="font-black text-black dark:text-white uppercase mt-1">{getVal(['gender'])}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500">Status</span>
-                  <span className="font-bold text-slate-200 uppercase tracking-wider">{getVal(['status', 'isActive'])}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Node Status</span>
+                  <span className="font-black text-black dark:text-white uppercase mt-1 tracking-wider">{getVal(['status', 'isActive'])}</span>
                 </div>
               </div>
             </div>
 
             {/* Academic & Contact Info */}
-            <div className="bg-slate-900/40 border border-slate-700/40 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4 text-teal-400">
-                <User size={16} />
-                <p className="text-[11px] font-black uppercase tracking-widest">Enrollment & Contact</p>
+            <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
+                  <User size={16} />
+                </div>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Lifecycle & Contact</p>
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <Calendar size={16} className="text-slate-500 shrink-0" />
+              <div className="space-y-6 text-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
+                    <Calendar size={18} className="text-gray-400" />
+                  </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black text-slate-500 uppercase">Admission Date</span>
-                    <span className="font-bold text-slate-200">{getVal(['admissionDate', 'createdAt'])}</span>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Enrollment Sequence</span>
+                    <span className="font-black text-black dark:text-white uppercase">{getVal(['admissionDate', 'createdAt'])}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Phone size={16} className="text-slate-500 shrink-0" />
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
+                    <Phone size={18} className="text-gray-400" />
+                  </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black text-slate-500 uppercase">Contact Number</span>
-                    <span className="font-bold text-slate-200">{getVal(['phone', 'contactNumber', 'contact'])}</span>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Comm Node</span>
+                    <span className="font-black text-black dark:text-white uppercase">{getVal(['phone', 'contactNumber', 'contact'])}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <MapPin size={16} className="text-slate-500 shrink-0" />
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
+                    <MapPin size={18} className="text-gray-400" />
+                  </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black text-slate-500 uppercase">Address</span>
-                    <span className="font-bold text-slate-200 line-clamp-3">{getVal(['address'])}</span>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Geo Location</span>
+                    <span className="font-black text-black dark:text-white uppercase text-[11px] line-clamp-2">{getVal(['address'])}</span>
                   </div>
                 </div>
-                <div className="flex flex-col mt-3 pt-3 border-t border-white/5">
-                  <span className="text-xs font-bold text-slate-500">Department</span>
-                  <span className="font-bold text-teal-400 tracking-wider">SPIMS</span>
+                <div className="pt-6 border-t border-gray-100 dark:border-white/5 grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Department</span>
+                    <span className="font-black text-black dark:text-white uppercase">SPIMS</span>
+                  </div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Classification</span>
+                    <span className="font-black text-black dark:text-white uppercase">{getVal(['course', 'class'])}</span>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500">Course / Class</span>
-                  <span className="font-bold text-slate-200">{getVal(['course', 'class'])}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500">Student Roll / No</span>
-                  <span className="font-bold text-slate-200">{getVal(['studentNumber', 'rollNo'])}</span>
+                <div className="bg-black dark:bg-white p-4 rounded-2xl">
+                  <span className="text-[9px] font-black text-white/40 dark:text-black/40 uppercase tracking-widest block mb-1">Authorization Sequence</span>
+                  <span className="font-black text-white dark:text-black uppercase break-all">{getVal(['studentNumber', 'rollNo'])}</span>
                 </div>
               </div>
             </div>
 
             {/* Notes Section */}
-            <div className="md:col-span-2 bg-slate-900/40 border border-slate-700/40 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-3 text-teal-400">
-                <Heart size={16} />
-                <p className="text-[11px] font-black uppercase tracking-widest">Notes / Remarks</p>
+            <div className="md:col-span-2 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
+                  <Heart size={16} />
+                </div>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Observations & Remarks</p>
               </div>
-              <p className="text-sm font-bold text-slate-300 whitespace-pre-wrap leading-relaxed">
+              <p className="text-[13px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest whitespace-pre-wrap leading-[2] italic">
                 {getVal(['notes', 'remarks'])}
               </p>
             </div>
             
-            {/* Dynamic Database Record Dump (to guarantee NO field is left behind) */}
+            {/* Dynamic Database Record Dump */}
             {additionalFields.length > 0 && (
-              <div className="md:col-span-2 bg-slate-900/40 border border-indigo-500/20 rounded-2xl p-5 mb-4">
-                <div className="flex items-center gap-2 mb-4 text-indigo-400">
-                  <Database size={16} />
-                  <p className="text-[11px] font-black uppercase tracking-widest">Additional Database Fields</p>
+              <div className="md:col-span-2 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-8 mt-4 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
+                    <Database size={16} />
+                  </div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Residual Database Fragments</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {additionalFields.map(([key, val]) => (
-                    <div key={key} className="flex flex-col bg-slate-800/50 p-3 rounded-xl border border-white/5">
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate" title={key}>{key}</span>
-                      <span className="font-medium text-xs text-slate-300 break-all mt-1">{renderValue(val)}</span>
+                    <div key={key} className="flex flex-col bg-white dark:bg-black p-4 rounded-2xl border border-gray-50 dark:border-white/5 shadow-sm">
+                      <span className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest truncate" title={key}>{key}</span>
+                      <span className="font-black text-[10px] text-black dark:text-white uppercase mt-1.5 break-all">{renderValue(val)}</span>
                     </div>
                   ))}
                 </div>
@@ -255,43 +271,43 @@ export default function SuperadminSpimsStudentProfilePage({ params }: { params: 
           </div>
 
           {/* Payment History */}
-          <div className="mt-8">
-            <h2 className="text-lg font-black text-white mb-4">Complete Payment History</h2>
+          <div className="mt-12">
+            <h2 className="text-2xl font-black text-black dark:text-white uppercase tracking-tighter mb-8 px-2">Ledger Stream</h2>
             {!tx.length ? (
-              <div className="bg-slate-900/40 border border-slate-700/40 rounded-2xl p-8 text-center text-slate-400 text-sm font-medium">
-                No past transactions found for this student.
+              <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] p-12 text-center text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest italic shadow-inner">
+                Zero authenticated activities logged in fragment stream.
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {tx.map((t) => {
                   const dateStr = t.createdAt ? renderValue(t.createdAt) : 'Unknown Date';
                   const isApproved = String(t.status) === 'approved';
                   const isRejected = String(t.status) === 'rejected';
                   return (
-                    <div key={t.id} className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 hover:bg-slate-900/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div key={t.id} className="group rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 hover:shadow-2xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-6 hover:scale-[1.01]">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <p className="truncate text-base font-black text-white">
-                            {String(t.transactionType || t.categoryName || t.category || t.type || 'Transaction')}
+                        <div className="flex items-center gap-4 mb-2">
+                          <p className="truncate text-lg font-black text-black dark:text-white uppercase tracking-tight group-hover:translate-x-1 transition-transform">
+                            {String(t.transactionType || t.categoryName || t.category || t.type || 'Activity Node')}
                           </p>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                            isApproved ? 'bg-emerald-500/20 text-emerald-400' :
-                            isRejected ? 'bg-red-500/20 text-red-400' :
-                            'bg-amber-500/20 text-amber-400'
+                          <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm ${
+                            isApproved ? 'bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white' :
+                            isRejected ? 'bg-rose-500 text-white' :
+                            'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 border border-gray-100 dark:border-white/10'
                           }`}>
-                            {String(t.status || 'Pending')}
+                            {String(t.status || 'Syncing')}
                           </span>
                         </div>
-                        <p className="text-xs font-medium text-slate-400 flex items-center gap-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 flex flex-wrap items-center gap-4">
                           <span>{dateStr}</span>
-                          {t.receiptNo && <span className="font-mono text-[10px] text-slate-500">#{t.receiptNo}</span>}
-                          {t.cashierName && <span>By: {t.cashierName}</span>}
+                          {t.receiptNo && <span className="text-black dark:text-white opacity-40">FRAGMENT #{t.receiptNo}</span>}
+                          {t.cashierName && <span className="italic">Authorized By: {t.cashierName.toUpperCase()}</span>}
                         </p>
-                        {t.notes && <p className="mt-2 text-xs text-slate-500 italic">Note: {t.notes}</p>}
+                        {t.notes && <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-gray-300 dark:text-gray-600 line-clamp-1 italic">Memo: {t.notes}</p>}
                       </div>
-                      <div className="shrink-0 sm:text-right">
-                        <p className="text-lg font-black text-white">{formatPKR(Number(t.amount || 0))}</p>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">Amount</p>
+                      <div className="shrink-0 sm:text-right flex flex-col items-start sm:items-end">
+                        <p className="text-2xl font-black text-black dark:text-white tracking-tighter">{formatPKR(Number(t.amount || 0))}</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-1">Value Clearance</p>
                       </div>
                     </div>
                   )

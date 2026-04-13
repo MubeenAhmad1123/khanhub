@@ -43,23 +43,23 @@ export default function SuperadminStaffPage() {
   }, [rows, q]);
 
   return (
-    <div className="min-h-screen py-6 bg-gray-950">
+    <div className="min-h-screen py-12 bg-white dark:bg-black transition-colors duration-300">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <div>
-          <h1 className="text-xl font-black tracking-tight text-white">Staff</h1>
-          <p className="mt-1 text-sm text-gray-400 font-medium">Merged staff directory + quick metrics.</p>
+        <div className="mb-10">
+          <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase">Personnel Core</h1>
+          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Global staff registry • Operational performance matrix</p>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-3">
           {(['all', 'hq', 'rehab', 'spims'] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setDept(t as any)}
-              className={`h-9 px-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+              className={`h-11 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${
                 dept === t 
-                  ? 'bg-white text-slate-900 shadow-xl' 
-                  : 'bg-white/5 border border-transparent text-gray-200 hover:bg-white/10'
+                  ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white' 
+                  : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
               }`}
             >
               {t}
@@ -67,14 +67,14 @@ export default function SuperadminStaffPage() {
           ))}
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-md">
+        <div className="mt-1 grid grid-cols-2 gap-3 sm:max-w-md">
           <button
             type="button"
             onClick={() => setStatus(status === 'active' ? 'all' : 'active')}
-            className={`h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            className={`h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${
               status === 'active'
-                ? 'bg-blue-500/20 border border-blue-500/20 text-blue-400'
-                : 'bg-white/5 border border-transparent text-gray-200 hover:bg-white/10'
+                ? 'bg-black text-white border-black dark:bg-white dark:text-black'
+                : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10'
             }`}
           >
             {status === 'active' ? 'Active only' : 'All status'}
@@ -82,51 +82,51 @@ export default function SuperadminStaffPage() {
           <button
             type="button"
             onClick={() => setRole(role === 'staff' ? 'all' : 'staff')}
-            className={`h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            className={`h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${
               role === 'staff'
-                ? 'bg-blue-500/20 border border-blue-500/20 text-blue-400'
-                : 'bg-white/5 border border-transparent text-gray-200 hover:bg-white/10'
+                ? 'bg-black text-white border-black dark:bg-white dark:text-black'
+                : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10'
             }`}
           >
             {role === 'staff' ? 'Staff only' : 'All roles'}
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-all shadow-sm focus-within:border-teal-500/50">
+        <div className="mt-6 rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-black px-6 py-4 transition-all shadow-sm focus-within:border-black dark:focus-within:border-white/40">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search staff…"
-            className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-400"
+            placeholder="Search personnel sequence…"
+            className="w-full bg-transparent text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase tracking-widest text-[11px]"
           />
         </div>
 
-        <div className="mt-5">
+        <div className="mt-8">
           {loading ? (
-            <InlineLoading label="Loading staff…" />
+            <InlineLoading label="Syncing Personnel Hub…" />
           ) : !filtered.length ? (
-            <EmptyState title="No staff" message="No staff match your filters." />
+            <EmptyState title="Registry Empty" message="No personnel records match current filter parameters." />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-sm">
-              <div className="divide-y divide-white/5">
+            <div className="overflow-hidden rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black shadow-xl">
+              <div className="divide-y divide-gray-50 dark:divide-white/5">
                 {filtered.map((r) => (
                   <Link
                     key={r.id}
                     href={`/hq/dashboard/superadmin/staff/${r.id}`}
                     className="block p-4 transition-colors hover:bg-white/5 active:bg-white/10 cursor-pointer"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white">
-                          {r.name} <span className="text-gray-500">•</span> {String(r.dept).toUpperCase()}
+                        <p className="truncate text-base font-black text-black dark:text-white">
+                          {r.name} <span className="text-gray-300 dark:text-gray-700 mx-1">/</span> <span className="text-gray-400 dark:text-gray-500 text-xs">{String(r.dept).toUpperCase()}</span>
                         </p>
-                        <p className="mt-1 text-[11px] text-gray-400">
-                          Role: {r.role} • Present {r.presentCount} • Late {r.lateCount} • Absent {r.absentCount}
+                        <p className="mt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                          {r.role} • <span className="text-black dark:text-white">{r.presentCount}P</span> • <span className="text-gray-400 dark:text-gray-600">{r.lateCount}L</span> • <span className="text-gray-300 dark:text-gray-700">{r.absentCount}A</span>
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="text-xs font-black text-white">GP: {r.growthPointsTotal}</p>
-                        <p className="mt-1 text-xs font-black text-amber-400">Fines: PKR {Number(r.totalFines || 0).toLocaleString('en-PK')}</p>
+                        <p className="text-xs font-black text-black dark:text-white">GP: {r.growthPointsTotal}</p>
+                        <p className="mt-1 text-[10px] font-black text-black dark:text-white uppercase tracking-widest italic opacity-40">Fines: {Number(r.totalFines || 0).toLocaleString('en-PK')}</p>
                       </div>
                     </div>
                     {r.lastDutyLabel ? (

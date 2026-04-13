@@ -123,68 +123,68 @@ export default function SuperadminFeeRequestsPage() {
 
   if (sessionLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
+        <Loader2 className="w-10 h-10 animate-spin text-black dark:text-white" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden w-full max-w-full">
-      <div className="space-y-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">Fee Requests</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
-            Create an admin-added fee that must be “Added” by cashier, then approved to apply on patient profile.
+    <div className="min-h-screen bg-white dark:bg-black overflow-x-hidden w-full max-w-full transition-colors duration-300 py-12">
+      <div className="space-y-10">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl lg:text-4xl font-black text-black dark:text-white uppercase tracking-tighter">Protocol Requests</h1>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">
+            Manual Authorization Cascade • Global Ledger Injection
           </p>
         </div>
 
-        <div className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/5 rounded-3xl p-6 overflow-hidden">
-          <form onSubmit={createFeeRequest} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-10 shadow-2xl overflow-hidden">
+          <form onSubmit={createFeeRequest} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Patient</p>
-                <div className="flex gap-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Subject Identification</p>
+                <div className="flex gap-3">
                   <input
                     value={patientQuery}
                     onChange={(e) => setPatientQuery(e.target.value)}
-                    placeholder="Search patient name..."
-                    className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white outline-none placeholder:text-gray-400"
+                    placeholder="SEARCH SUBJECT NAME..."
+                    className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase tracking-widest text-[11px]"
                   />
                   <button
                     type="button"
                     onClick={searchPatients}
-                    className="px-4 py-3 rounded-2xl bg-teal-600 text-white font-black"
+                    className="px-6 py-4 rounded-2xl bg-black text-white dark:bg-white dark:text-black font-black active:scale-95 transition-all shadow-xl"
                   >
-                    {patientSearchLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                    {patientSearchLoading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
                   </button>
                 </div>
 
                 {selectedPatient ? (
-                  <div className="mt-3 p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20">
-                    <p className="text-sm font-black text-gray-900 dark:text-white truncate">{selectedPatient.name}</p>
-                    <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">
+                  <div className="mt-4 p-6 rounded-3xl bg-black dark:bg-white text-white dark:text-black shadow-xl border border-black dark:border-white transform scale-[1.02] transition-all">
+                    <p className="text-lg font-black uppercase tracking-tight truncate">{selectedPatient.name}</p>
+                    <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-1">
                       {selectedPatient.inpatientNumber || selectedPatient.id}
                     </p>
                     <button
                       type="button"
-                      className="mt-3 text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-400"
+                      className="mt-4 text-[9px] font-black uppercase tracking-[0.2em] border-b border-white/40 dark:border-black/40 hover:border-white dark:hover:border-black transition-all"
                       onClick={() => setSelectedPatient(null)}
                     >
-                      Change patient
+                      Reset Selection
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-3 space-y-2 max-h-56 overflow-y-auto">
+                  <div className="mt-4 space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                     {patientResults.map((p) => (
                       <button
                         key={p.id}
                         type="button"
                         onClick={() => setSelectedPatient(p)}
-                        className="w-full text-left p-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-teal-500/40"
+                        className="w-full text-left p-5 rounded-3xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white transform hover:translate-x-1 transition-all"
                       >
-                        <div className="text-sm font-black text-gray-900 dark:text-white truncate">{p.name}</div>
-                        <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate">{p.inpatientNumber || p.id}</div>
+                        <div className="text-sm font-black text-black dark:text-white uppercase tracking-tight">{p.name}</div>
+                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">{p.inpatientNumber || p.id}</div>
                       </button>
                     ))}
                   </div>
@@ -193,54 +193,54 @@ export default function SuperadminFeeRequestsPage() {
 
               <div className="space-y-4 min-w-0">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Assign Cashier</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Authorization Node</p>
                   <select
                     value={selectedCashierId}
                     onChange={(e) => setSelectedCashierId(e.target.value)}
                     disabled={cashiersLoading}
-                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-black text-gray-900 dark:text-white outline-none disabled:opacity-60"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-[11px] font-black uppercase tracking-widest text-black dark:text-white outline-none disabled:opacity-30 appearance-none shadow-sm cursor-pointer focus:border-black dark:focus:border-white/40"
                   >
                     {cashiers.map((c) => (
                       <option key={c.customId} value={c.customId}>
-                        {c.name} ({c.customId})
+                        {c.name.toUpperCase()} ({c.customId})
                       </option>
                     ))}
                   </select>
                   {cashiers.length === 0 && !cashiersLoading && (
-                    <p className="mt-2 text-xs font-bold text-amber-600">No cashier users found in `hq_users`.</p>
+                    <p className="mt-3 text-[9px] font-black text-rose-500 uppercase tracking-widest italic">Critical error: no active authorization nodes found.</p>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Date</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Ledger Date</p>
                     <input
                       type="date"
                       value={txDate}
                       onChange={(e) => setTxDate(e.target.value)}
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-black text-gray-900 dark:text-white outline-none"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-black dark:text-white outline-none focus:border-black dark:focus:border-white/40 shadow-sm"
                     />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Amount (PKR)</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Value (PKR)</p>
                     <input
                       type="number"
                       step="0.01"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0"
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-black text-gray-900 dark:text-white outline-none placeholder:text-gray-400"
+                      placeholder="0.00"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 shadow-sm focus:border-black dark:focus:border-white/40"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Note</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-4">Authorization Memo</p>
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Optional note shown in approvals…"
-                    className="w-full min-h-[110px] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white outline-none placeholder:text-gray-400 resize-none"
+                    placeholder="ENTER AUTHORIZATION SUMMARY..."
+                    className="w-full min-h-[140px] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[1.5rem] px-6 py-4 text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 resize-none uppercase tracking-widest text-[11px] shadow-sm focus:border-black dark:focus:border-white/40"
                   />
                 </div>
               </div>
@@ -249,24 +249,24 @@ export default function SuperadminFeeRequestsPage() {
             {message && (
               <div
                 className={cn(
-                  'p-3 rounded-2xl border flex items-center gap-2',
+                  'p-6 rounded-3xl border flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500',
                   message.type === 'success'
-                    ? 'bg-teal-500/10 border-teal-500/30 text-teal-700 dark:text-teal-300'
-                    : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300'
+                    ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
+                    : 'bg-rose-500 text-white border-rose-600'
                 )}
               >
-                {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                <p className="text-sm font-bold">{message.text}</p>
+                {message.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+                <p className="text-xs font-black uppercase tracking-[0.1em]">{message.text}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={!canSubmit || processing}
-              className="w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-white flex items-center justify-center gap-2 disabled:opacity-50 bg-teal-600 hover:bg-teal-700"
+              className="w-full h-16 rounded-[1.5rem] font-black uppercase tracking-[0.3em] text-[12px] flex items-center justify-center gap-3 disabled:opacity-30 bg-black text-white dark:bg-white dark:text-black hover:scale-[1.01] transition-all shadow-2xl active:scale-[0.98]"
             >
-              {processing ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-              Send to Cashier
+              {processing ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+              <span>Commit Protocol Task</span>
             </button>
           </form>
         </div>

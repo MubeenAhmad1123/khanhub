@@ -61,44 +61,52 @@ export default function SuperadminSpimsStudentsListPage() {
   }, [rows, q]);
 
   return (
-    <div className="min-h-screen py-6 bg-gray-950">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6">
-        <div>
-          <h1 className="text-xl font-black tracking-tight text-white">SPIMS Students</h1>
-          <p className="mt-1 text-sm text-gray-400 font-medium">Browse and open any student profile.</p>
+    <div className="min-h-screen py-12 bg-white dark:bg-black transition-colors duration-300">
+      <div className="mx-auto max-w-4xl px-4 sm:px-10">
+        <div className="mb-10">
+          <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase">Subject Directory</h1>
+          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Centralized SPIMS Enrollments • Global Ledger Status</p>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 focus-within:border-teal-500/50 transition-all shadow-sm">
+        <div className="mt-8 rounded-[1.5rem] border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 focus-within:border-black dark:focus-within:border-white/40 transition-all shadow-sm px-6 py-4">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search student…"
-            className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-400"
+            placeholder="AUTHORIZE SUBJECT SEARCH..."
+            className="w-full bg-transparent text-sm font-black text-black dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 uppercase tracking-widest text-[11px]"
           />
         </div>
 
-        <div className="mt-5">
+        <div className="mt-8">
           {loading ? (
-            <InlineLoading label="Loading students…" />
+            <div className="py-12 flex justify-center">
+              <InlineLoading label="Syncing Subject Matrix…" />
+            </div>
           ) : !filtered.length ? (
-            <EmptyState title="No students" message="No students match your search." />
+            <EmptyState title="Access Restricted" message="No matching subjects found in terminal." />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-sm">
-              <div className="divide-y divide-white/5">
+            <div className="overflow-hidden rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black shadow-2xl">
+              <div className="divide-y divide-gray-50 dark:divide-white/5">
                 {filtered.map((r) => (
                   <Link
                     key={r.id}
                     href={`/hq/dashboard/superadmin/spims/students/${r.id}`}
-                    className="block p-4 transition-colors hover:bg-white/5 active:bg-white/10"
+                    className="block p-6 transition-all hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.99] group"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-white">{r.name}</p>
-                        <p className="mt-1 text-xs text-gray-400">{r.className ? `Class: ${r.className}` : '—'}</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-5 min-w-0">
+                        <div className="w-12 h-12 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-sm font-black shadow-lg">
+                          {r.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black text-black dark:text-white uppercase tracking-tight group-hover:translate-x-1 transition-transform">{r.name}</p>
+                          <p className="mt-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{r.className ? `Classification: ${r.className}` : 'Unclassified'}</p>
+                        </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="text-xs font-black text-amber-400">
-                          Remaining: PKR {Number(r.remaining || 0).toLocaleString('en-PK')}
+                        <div className="text-[10px] font-black text-black dark:text-white uppercase tracking-widest opacity-40 mb-1">Outstanding</div>
+                        <div className="text-xs font-black text-black dark:text-white bg-gray-100 dark:bg-white/10 px-3 py-1.5 rounded-xl">
+                          PKR {Number(r.remaining || 0).toLocaleString('en-PK')}
                         </div>
                       </div>
                     </div>

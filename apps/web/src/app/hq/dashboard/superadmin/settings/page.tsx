@@ -72,44 +72,47 @@ export default function SuperadminSettingsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-        <InlineLoading label="Loading settings…" />
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 bg-white dark:bg-black min-h-screen">
+        <InlineLoading label="Syncing HQ Parameters…" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-      <div>
-        <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Department toggles, thresholds, and notifications.</p>
+    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-10 min-h-screen bg-white dark:bg-black transition-colors duration-300">
+      <div className="mb-10">
+        <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase">System Parameters</h1>
+        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Department architecture • Protocol thresholds • Global notifications</p>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-        <h2 className="text-sm font-black text-gray-900 dark:text-white">Departments</h2>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="mt-8 rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-8 shadow-sm">
+        <h2 className="text-sm font-black text-black dark:text-white uppercase tracking-widest mb-6">Department Matrix</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {deptEntries.map(([k, v]) => (
             <button
               key={k}
               type="button"
               onClick={() => toggleDept(k)}
-              className={`h-12 rounded-2xl border px-4 text-left text-sm font-black transition ${
+              className={`h-14 rounded-2xl border px-6 text-left text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-sm ${
                 v
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
-                  : 'border-gray-200 bg-gray-50 text-gray-800 dark:border-white/10 dark:bg-white/5 dark:text-gray-200'
+                  ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white transform scale-[1.02] z-10'
+                  : 'bg-white dark:bg-black text-gray-300 dark:text-gray-600 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'
               }`}
             >
-              {k} {v ? '(enabled)' : '(disabled)'}
+              <div className="flex items-center justify-between">
+                <span>{k}</span>
+                <span className="opacity-40">{v ? 'ENABLED' : 'OFFLINE'}</span>
+              </div>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-        <h2 className="text-sm font-black text-gray-900 dark:text-white">Approval thresholds</h2>
-        <div className="mt-3">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Require proof over (PKR)</label>
-          <div className="mt-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/5">
+      <div className="mt-6 rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-8 shadow-sm">
+        <h2 className="text-sm font-black text-black dark:text-white uppercase tracking-widest mb-6">Approval Governance</h2>
+        <div>
+          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Require cryptographic proof above amount (PKR)</label>
+          <div className="mt-4 rounded-2xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-6 py-4 transition-all focus-within:border-black dark:focus-within:border-white/40">
             <input
               type="number"
               value={settings.approvalThresholds?.requireProofOverPkr ?? 5000}
@@ -119,15 +122,15 @@ export default function SuperadminSettingsPage() {
                   approvalThresholds: { ...(s.approvalThresholds || { requireProofOverPkr: 5000 }), requireProofOverPkr: Number(e.target.value || 0) },
                 }))
               }
-              className="w-full bg-transparent text-sm font-semibold text-gray-900 outline-none dark:text-white"
+              className="w-full bg-transparent text-sm font-black text-black dark:text-white outline-none"
             />
           </div>
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-        <h2 className="text-sm font-black text-gray-900 dark:text-white">Notifications</h2>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="mt-6 rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-8 shadow-sm">
+        <h2 className="text-sm font-black text-black dark:text-white uppercase tracking-widest mb-6">Surveillance Alerts</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {(Object.entries(settings.notificationPrefs || {}) as Array<
             [keyof NonNullable<HqSettings['notificationPrefs']>, boolean]
           >).map(([k, v]) => (
@@ -140,36 +143,39 @@ export default function SuperadminSettingsPage() {
                   notificationPrefs: { ...(s.notificationPrefs || {}), [k]: !(s.notificationPrefs || {})[k] },
                 }))
               }
-              className={`h-12 rounded-2xl border px-4 text-left text-sm font-black transition ${
+              className={`h-14 rounded-2xl border px-6 text-left text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-sm ${
                 v
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
-                  : 'border-gray-200 bg-gray-50 text-gray-800 dark:border-white/10 dark:bg-white/5 dark:text-gray-200'
+                  ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
+                  : 'bg-white dark:bg-black text-gray-300 dark:text-gray-600 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'
               }`}
             >
-              {k} {v ? '(on)' : '(off)'}
+              <div className="flex items-center justify-between">
+                <span>{k.replace(/([A-Z])/g, ' $1')}</span>
+                <span className="opacity-40">{v ? 'ACTIVE' : 'MUTED'}</span>
+              </div>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-        <h2 className="text-sm font-black text-gray-900 dark:text-white">Save</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">A change note is required for auditing.</p>
-        <div className="mt-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/5">
+      <div className="mt-6 rounded-[2.5rem] border border-black dark:border-white bg-black dark:bg-white p-10 shadow-2xl">
+        <h2 className="text-sm font-black text-white dark:text-black uppercase tracking-[0.2em]">Commit State</h2>
+        <p className="mt-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest italic">A descriptive change note is mandatory for audit compliance.</p>
+        <div className="mt-6 rounded-2xl border border-white/10 dark:border-black/10 bg-white/5 dark:bg-black/5 px-6 py-4 transition-all focus-within:border-white dark:focus-within:border-black">
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="e.g. Enable SPIMS + raise proof threshold"
-            className="w-full bg-transparent text-sm font-semibold text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
+            placeholder="ENTER AUTHORIZED CHANGE NOTE..."
+            className="w-full bg-transparent text-sm font-black text-white dark:text-black outline-none placeholder:text-gray-600 dark:placeholder:text-gray-400 uppercase tracking-widest text-[11px]"
           />
         </div>
         <button
           type="button"
           disabled={saving || !note.trim()}
           onClick={save}
-          className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-gray-900 text-xs font-black uppercase tracking-widest text-white disabled:opacity-50 dark:bg-white dark:text-gray-900"
+          className="mt-6 inline-flex h-16 w-full items-center justify-center rounded-2xl bg-white dark:bg-black text-[11px] font-black uppercase tracking-[0.3em] text-black dark:text-white disabled:opacity-30 active:scale-95 transition-all shadow-xl"
         >
-          {saving ? 'Saving…' : 'Save settings'}
+          {saving ? 'UPDATING CORE...' : 'COMMIT CHANGES'}
         </button>
       </div>
     </div>

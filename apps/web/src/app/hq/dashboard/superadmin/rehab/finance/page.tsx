@@ -107,163 +107,167 @@ export default function HqRehabFinancePage() {
   const chartData = getMonthlyData();
   const maxVal = Math.max(...chartData.flatMap(d => [d.income, d.expense]), 1000);
 
-  if (sessionLoading) return <div className="min-h-screen bg-[#0f172a] flex items-center justify-center"><Loader2 className="animate-spin text-teal-500" /></div>;
+  if (sessionLoading) return (
+    <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
+      <Loader2 className="animate-spin text-black dark:text-white" />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 md:p-8">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white py-12 px-4 md:px-10 transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 mb-12">
           <div>
-            <h1 className="text-3xl font-black text-white flex items-center gap-3">
-              <BarChart3 className="text-teal-500" size={32} />
-              Rehab Financial Ledger
+            <h1 className="text-4xl font-black text-black dark:text-white uppercase tracking-tighter flex items-center gap-4">
+              <BarChart3 className="text-black dark:text-white" size={40} />
+              Rehab Ledger
             </h1>
-            <p className="text-slate-400 mt-1 font-medium text-sm">Revenue monitoring and expense authorization oversight</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mt-2 italic">Chrono-Financial Audit • Authorization Matrix • Flow Control</p>
           </div>
-          <button className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center gap-2 border border-slate-700 transition-all">
+          <button className="bg-black dark:bg-white text-white dark:text-black px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 shadow-xl transition-all hover:scale-105 active:scale-95">
             <Download size={18} />
-            Export Ledger
+            AUTHORIZE DATA EXPORT
           </button>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           <FinanceCard 
-            label="Total Revenue" 
+            label="Gross Liquidity" 
             value={summary.totalRevenue} 
-            icon={<TrendingUp className="text-emerald-500" />} 
-            color="emerald"
-            trend="Approved"
+            icon={<TrendingUp className="text-black dark:text-white" />} 
+            trend="AUTHENTICATED"
           />
           <FinanceCard 
-            label="Total Expenses" 
+            label="System Debits" 
             value={summary.totalExpenses} 
-            icon={<TrendingDown className="text-rose-500" />} 
-            color="rose"
-            trend="Approved"
+            icon={<TrendingDown className="text-black dark:text-white" />} 
+            trend="COMMITTED"
           />
           <FinanceCard 
-            label="Net Balance" 
+            label="Net Delta" 
             value={summary.netBalance} 
-            icon={<Wallet className="text-teal-500" />} 
-            color="teal"
-            trend="Actual"
+            icon={<Wallet className="text-black dark:text-white" />} 
+            trend="REALTIME"
           />
           <FinanceCard 
-            label="Pending Amount" 
+            label="Staged Values" 
             value={summary.pendingAmount} 
-            icon={<Clock className="text-amber-500" />} 
-            color="amber"
-            trend="Awaiting"
+            icon={<Clock className="text-black dark:text-white" />} 
+            trend="AWAITING"
             highlight={summary.pendingAmount > 0}
           />
         </div>
 
         {/* Chart Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10">
-          <div className="xl:col-span-2 bg-slate-800/40 border border-slate-700/50 p-8 rounded-3xl backdrop-blur-sm">
-            <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-10 flex items-center gap-2">
-              <PieChart size={16} className="text-teal-500" />
-              6-Month Financial Performance
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mb-12">
+          <div className="xl:col-span-2 bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-10 rounded-[3rem] shadow-2xl">
+            <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] mb-12 flex items-center gap-3">
+              <PieChart size={18} />
+              QUARTERLY FLOW PROJECTION
             </h3>
             
-            <div className="h-64 flex items-end justify-between gap-4 px-4">
+            <div className="h-72 flex items-end justify-between gap-6 px-4">
               {chartData.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-3 group relative">
-                  <div className="w-full flex justify-center gap-1.5 h-48 items-end">
+                <div key={i} className="flex-1 flex flex-col items-center gap-4 group relative">
+                  <div className="w-full flex justify-center gap-2 h-56 items-end">
                     {/* Income Bar */}
                     <div 
-                      className="w-1/3 bg-emerald-500/80 rounded-t-lg transition-all duration-500 hover:bg-emerald-400 relative group/bar"
+                      className="w-1/4 bg-black dark:bg-white rounded-t-xl transition-all duration-500 hover:scale-x-110 relative group/bar shadow-sm"
                       style={{ height: `${(d.income / maxVal) * 100}%` }}
                     >
-                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity whitespace-nowrap z-10">
-                        Inc: {d.income.toLocaleString()}
+                      <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-black dark:bg-white text-white dark:text-black text-[9px] font-black px-3 py-1.5 rounded-lg opacity-0 group-hover/bar:opacity-100 transition-all whitespace-nowrap z-10 shadow-xl uppercase tracking-widest">
+                        +{d.income.toLocaleString()}
                       </div>
                     </div>
                     {/* Expense Bar */}
                     <div 
-                      className="w-1/3 bg-rose-500/80 rounded-t-lg transition-all duration-500 hover:bg-rose-400 relative group/bar"
+                      className="w-1/4 bg-gray-200 dark:bg-white/20 rounded-t-xl transition-all duration-500 hover:scale-x-110 relative group/bar shadow-sm"
                       style={{ height: `${(d.expense / maxVal) * 100}%` }}
                     >
-                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity whitespace-nowrap z-10">
-                        Exp: {d.expense.toLocaleString()}
+                      <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-100 dark:bg-white text-black dark:text-black text-[9px] font-black px-3 py-1.5 rounded-lg opacity-0 group-hover/bar:opacity-100 transition-all whitespace-nowrap z-10 shadow-xl uppercase tracking-widest">
+                        -{d.expense.toLocaleString()}
                       </div>
                     </div>
                   </div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{d.month}</p>
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{d.month}</p>
                 </div>
               ))}
             </div>
             
-            <div className="mt-8 flex items-center justify-center gap-6 pt-6 border-t border-slate-700/50">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Revenue</span>
+            <div className="mt-10 flex items-center justify-center gap-8 pt-8 border-t border-gray-50 dark:border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-black dark:bg-white shadow-sm" />
+                <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Primary Revenue</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-rose-500" />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expenses</span>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-white/20 shadow-sm" />
+                <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">System Expenses</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-800/40 border border-slate-700/50 p-8 rounded-3xl backdrop-blur-sm">
-            <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6">Financial Controls</h3>
-            <div className="space-y-4">
-              <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-700/50">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Transaction Filtering</p>
-                <div className="space-y-3">
+          <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between">
+            <div className="space-y-8">
+              <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em]">Operational Filters</h3>
+              <div className="space-y-6">
+                <div className="relative group">
+                  <p className="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest mb-2 px-2">Lifecycle State</p>
                   <select 
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-teal-500"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 outline-none font-black text-[10px] uppercase tracking-widest text-black dark:text-white transition-all appearance-none cursor-pointer"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
+                    <option value="all">Global Matrix</option>
+                    <option value="pending">Awaiting Sync</option>
+                    <option value="approved">Validated Nodes</option>
+                    <option value="rejected">Decommissioned</option>
                   </select>
+                </div>
+
+                <div className="relative group">
+                  <p className="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest mb-2 px-2">Flow Categorization</p>
                   <select 
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-teal-500"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 outline-none font-black text-[10px] uppercase tracking-widest text-black dark:text-white transition-all appearance-none cursor-pointer"
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
                   >
-                    <option value="all">All Types</option>
-                    <option value="income">Income Only</option>
-                    <option value="expense">Expense Only</option>
+                    <option value="all">Unified Stream</option>
+                    <option value="income">Credits Only</option>
+                    <option value="expense">Debits Only</option>
                   </select>
                 </div>
               </div>
-              
-              <div className="p-4 bg-teal-500/5 rounded-2xl border border-teal-500/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <RefreshCw size={14} className="text-teal-500" />
-                  <p className="text-[10px] font-black text-teal-500 uppercase tracking-widest">Live Synchronization</p>
-                </div>
-                <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                  Ledger is currently synchronized with Rehab Center real-time transaction stream.
-                </p>
+            </div>
+            
+            <div className="mt-10 p-6 bg-black dark:bg-white text-white dark:text-black rounded-3xl shadow-xl hover:scale-[1.02] transition-transform">
+              <div className="flex items-center gap-4 mb-3">
+                <RefreshCw size={20} className="animate-spin-slow opacity-60" />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em]">Sub-Second Sync</p>
               </div>
+              <p className="text-[9px] font-black uppercase tracking-widest leading-loose opacity-60 italic">
+                Authorized financial nodes are currently synchronized with HQ core ledger stream.
+              </p>
             </div>
           </div>
         </div>
 
         {/* Ledger Table */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-3xl overflow-hidden backdrop-blur-sm">
+        <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 rounded-[3rem] overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-900/50 border-b border-slate-700/50">
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Description</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Amount</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Type</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Authorizer</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Date</th>
+                <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10">
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Transaction Description</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Amount</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Type</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Status</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Authority</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Temporal Node</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/50">
+              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-20 text-center">
@@ -273,50 +277,50 @@ export default function HqRehabFinancePage() {
                   </tr>
                 ) : filteredTransactions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center opacity-30 font-bold">No transactions found</td>
+                    <td colSpan={6} className="px-8 py-20 text-center text-[10px] font-black uppercase tracking-widest text-gray-300 dark:text-gray-600 italic">No historical nodes found in filtered stream</td>
                   </tr>
                 ) : (
                   filteredTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-slate-700/30 transition-colors">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                            {tx.type === 'income' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
+                    <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-all group">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${tx.type === 'income' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500'}`}>
+                            {tx.type === 'income' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
                           </div>
                           <div>
-                            <p className="font-bold text-white text-sm leading-none mb-1">{tx.description}</p>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{tx.category}</p>
+                            <p className="font-black text-black dark:text-white text-sm uppercase tracking-tight group-hover:translate-x-1 transition-transform">{tx.description}</p>
+                            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-1">{tx.category}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <p className={`font-black text-sm ${tx.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                          {tx.type === 'income' ? '+' : '-'} Rs. {Number(tx.amount).toLocaleString()}
+                      <td className="px-8 py-6">
+                        <p className={`font-black text-lg tracking-tighter ${tx.type === 'income' ? 'text-black dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {tx.type === 'income' ? '+' : '-'} {Number(tx.amount).toLocaleString()}
                         </p>
                       </td>
-                      <td className="px-6 py-5">
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${tx.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      <td className="px-8 py-6">
+                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${tx.type === 'income' ? 'text-black dark:text-white' : 'text-gray-300 dark:text-gray-600'}`}>
                           {tx.type}
                         </span>
                       </td>
-                      <td className="px-6 py-5">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
+                      <td className="px-8 py-6">
+                        <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-sm border ${
                           tx.status === 'approved' 
-                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                            ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' 
                             : tx.status === 'pending'
-                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                            : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                            ? 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 border-transparent'
+                            : 'bg-rose-500 text-white border-transparent'
                         }`}>
                           {tx.status}
                         </span>
                       </td>
-                      <td className="px-6 py-5">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                          {tx.approvedBy || tx.rejectedBy || '—'}
+                      <td className="px-8 py-6">
+                        <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest italic">
+                          {tx.approvedBy || tx.rejectedBy || 'System Alpha'}
                         </p>
                       </td>
-                      <td className="px-6 py-5">
-                        <p className="text-xs font-bold text-slate-500">
+                      <td className="px-8 py-6">
+                        <p className="text-[10px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest">
                           {formatDateDMY(tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : tx.createdAt)}
                         </p>
                       </td>
@@ -332,26 +336,32 @@ export default function HqRehabFinancePage() {
   );
 }
 
-function FinanceCard({ label, value, icon, color, trend, highlight }: {
+function FinanceCard({ label, value, icon, trend, highlight }: {
   label: string; 
   value: number; 
   icon: React.ReactNode; 
-  color: string;
   trend: string;
   highlight?: boolean;
 }) {
   return (
-    <div className={`bg-slate-800/40 border ${highlight ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-700/50'} p-6 rounded-3xl relative overflow-hidden group`}>
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-2 bg-slate-900/50 rounded-xl group-hover:scale-110 transition-transform duration-300">
+    <div className={`bg-white dark:bg-black border ${highlight ? 'border-black dark:border-white shadow-xl scale-[1.02]' : 'border-gray-100 dark:border-white/10 shadow-sm'} p-8 rounded-[2.5rem] relative overflow-hidden group transition-all hover:border-black dark:hover:border-white`}>
+      <div className="flex justify-between items-start mb-6">
+        <div className="w-12 h-12 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-sm">
           {icon}
         </div>
-        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${highlight ? 'bg-amber-500/20 text-amber-500' : 'bg-slate-900/50 text-slate-500'}`}>
+        <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${highlight ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' : 'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-500'}`}>
           {trend}
         </span>
       </div>
-      <p className="text-2xl font-black text-white mb-1">Rs. {value.toLocaleString()}</p>
-      <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">{label}</p>
+      <p className="text-3xl font-black text-black dark:text-white mb-2 tracking-tighter">RS. {value.toLocaleString()}</p>
+      <p className="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">{label}</p>
+      
+      {/* Decorative pulse if highlighted */}
+      {highlight && (
+        <div className="absolute top-0 right-0 p-4">
+          <div className="w-2 h-2 rounded-full bg-black dark:bg-white animate-ping" />
+        </div>
+      )}
     </div>
   );
 }

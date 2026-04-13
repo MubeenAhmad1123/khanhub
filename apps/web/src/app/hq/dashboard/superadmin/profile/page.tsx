@@ -124,76 +124,83 @@ export default function HqProfilePage() {
     }
   };
 
-  if (sessionLoading || loading) return <div className="min-h-screen bg-[#0f172a] flex items-center justify-center"><Loader2 className="animate-spin text-teal-500" /></div>;
+  if (sessionLoading || loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
+        <Loader2 className="animate-spin text-black dark:text-white" size={32} />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 p-4 md:p-8">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white transition-colors duration-300 py-12 px-4 md:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-black text-white flex items-center gap-3">
-            <User className="text-teal-500" size={32} />
-            My Profile
+        <div className="mb-12">
+          <h1 className="text-4xl font-black text-black dark:text-white flex items-center gap-4 uppercase tracking-tighter">
+            <div className="p-4 rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-xl">
+              <User size={32} />
+            </div>
+            Command Profile
           </h1>
-          <p className="text-slate-400 mt-1 font-medium text-sm">Manage your master account settings and security</p>
+          <p className="text-gray-400 dark:text-gray-500 mt-4 text-[10px] font-black uppercase tracking-[0.2em] italic">Identity orchestration • Central security nodes</p>
         </div>
 
         {/* Feedback Message */}
         {message.text && (
-          <div className={`mb-8 p-4 rounded-2xl flex items-center gap-3 border ${
-            message.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+          <div className={`mb-10 p-6 rounded-[2rem] flex items-center gap-4 border shadow-xl animate-in fade-in slide-in-from-top-4 duration-500 ${
+            message.type === 'success' ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' : 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-gray-200 dark:border-white/20'
           }`}>
-            <Info size={20} />
-            <p className="font-bold text-sm">{message.text}</p>
-            <button onClick={() => setMessage({type:'', text:''})} className="ml-auto opacity-50 hover:opacity-100 transition-opacity">
-              <X size={16} />
+            <Info size={24} />
+            <p className="font-black text-xs uppercase tracking-widest">{message.text}</p>
+            <button onClick={() => setMessage({type:'', text:''})} className="ml-auto hover:scale-125 transition-transform">
+              <X size={20} />
             </button>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Info & Session */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-slate-800/40 border border-slate-700/50 p-8 rounded-3xl text-center backdrop-blur-sm relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-500 to-emerald-600" />
-              <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-4xl font-black mx-auto mb-6 shadow-xl shadow-teal-900/20 group-hover:scale-105 transition-transform">
+          <div className="lg:col-span-1 space-y-8">
+            <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-10 rounded-[2.5rem] text-center shadow-xl relative overflow-hidden group">
+              <div className="w-24 h-24 rounded-[2rem] bg-black dark:bg-white flex items-center justify-center text-white dark:text-black text-4xl font-black mx-auto mb-8 shadow-2xl transition-all duration-500 group-hover:scale-110">
                 {userData?.name?.charAt(0)}
               </div>
-              <h2 className="text-xl font-black text-white">{userData?.name}</h2>
-              <p className="text-teal-500 text-xs font-black uppercase tracking-[0.2em] mt-1 mb-6">Master Account</p>
+              <h2 className="text-2xl font-black text-black dark:text-white uppercase tracking-tight">{userData?.name}</h2>
+              <p className="text-gray-400 dark:text-gray-500 text-[9px] font-black uppercase tracking-[0.3em] mt-2 mb-8 italic">Master Authentication Node</p>
               
-              <div className="space-y-4 text-left">
-                <div className="flex items-center gap-3 text-slate-400 text-sm">
-                  <Shield size={16} className="text-teal-500/50" />
-                  <span className="font-mono text-xs font-bold">{userData?.customId}</span>
+              <div className="space-y-5 text-left pt-8 border-t border-gray-50 dark:border-white/5">
+                <div className="flex items-center gap-4 text-gray-500">
+                  <Shield size={18} className="text-black dark:text-white opacity-40" />
+                  <span className="font-black text-[10px] uppercase tracking-widest">{userData?.customId}</span>
                 </div>
-                <div className="flex items-center gap-3 text-slate-400 text-sm">
-                  <Mail size={16} className="text-teal-500/50" />
-                  <span className="truncate">{userData?.email}</span>
+                <div className="flex items-center gap-4 text-gray-400">
+                  <Mail size={18} className="text-black dark:text-white opacity-40" />
+                  <span className="truncate text-[10px] font-bold uppercase tracking-widest">{userData?.email}</span>
                 </div>
-                <div className="flex items-center gap-3 text-slate-400 text-sm">
-                  <Calendar size={16} className="text-teal-500/50" />
-                  <span>Joined {userData?.createdAt ? formatDateDMY(userData.createdAt instanceof Timestamp ? userData.createdAt.toDate() : userData.createdAt) : 'N/A'}</span>
+                <div className="flex items-center gap-4 text-gray-400">
+                  <Calendar size={18} className="text-black dark:text-white opacity-40" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Enrolled {userData?.createdAt ? formatDateDMY(userData.createdAt instanceof Timestamp ? userData.createdAt.toDate() : userData.createdAt) : 'N/A'}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-800/40 border border-slate-700/50 p-6 rounded-3xl backdrop-blur-sm">
-              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Clock size={12} className="text-teal-500" />
-                Session Info
+            <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-8 rounded-[2rem] shadow-sm">
+              <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-3 italic">
+                <Clock size={14} className="text-black dark:text-white" />
+                Connectivity Status
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-500">Last Login</span>
-                  <span className="text-xs font-black text-slate-300">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Last Auth</span>
+                  <span className="text-[10px] font-black text-black dark:text-white uppercase">
                     {session?.loginTime ? new Date(session.loginTime).toLocaleTimeString() : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-500">Security Level</span>
-                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                    Level 3
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Security Clearance</span>
+                  <span className="text-[9px] font-black text-white dark:text-black uppercase tracking-[0.2em] bg-black dark:bg-white px-3 py-1 rounded-lg">
+                    Level Alpha
                   </span>
                 </div>
               </div>
@@ -201,45 +208,45 @@ export default function HqProfilePage() {
           </div>
 
           {/* Right Column: Settings */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Display Name Section */}
-            <div className="bg-slate-800/40 border border-slate-700/50 p-8 rounded-3xl backdrop-blur-sm">
-              <h3 className="text-lg font-black text-white mb-6 flex items-center gap-3">
-                <Edit2 size={20} className="text-teal-500" />
-                Account Identity
+          <div className="lg:col-span-2 space-y-10">
+            {/* Identity Modulation */}
+            <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-10 rounded-[2.5rem] shadow-sm">
+              <h3 className="text-xl font-black text-black dark:text-white mb-8 flex items-center gap-4 uppercase tracking-tight">
+                <Edit2 size={24} className="text-black dark:text-white opacity-40" />
+                Identity Modulation
               </h3>
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">Display Name</label>
+              <div className="space-y-6">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 block italic">Display Identity String</label>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <input 
                     disabled={!editingName || actionLoading}
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-2xl px-6 py-4 font-bold text-white outline-none focus:ring-2 focus:ring-teal-500/50 transition-all disabled:opacity-50"
+                    className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-8 py-5 font-black text-sm text-black dark:text-white outline-none focus:border-black dark:focus:border-white/40 transition-all disabled:opacity-30 uppercase tracking-widest"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                   />
                   {!editingName ? (
                     <button 
                       onClick={() => setEditingName(true)}
-                      className="bg-slate-700 hover:bg-slate-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                      className="bg-black dark:bg-white text-white dark:text-black px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all hover:scale-105 shadow-xl active:scale-95"
                     >
-                      Edit
+                      Modify
                     </button>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <button 
                         disabled={actionLoading}
                         onClick={handleUpdateName}
-                        className="flex-1 sm:flex-none bg-teal-600 hover:bg-teal-500 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                        className="flex-1 sm:flex-none bg-black dark:bg-white text-white dark:text-black px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95"
                       >
-                        {actionLoading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                        Save
+                        {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                        Commit
                       </button>
                       <button 
                         disabled={actionLoading}
                         onClick={() => { setEditingName(false); setNewName(userData.name); }}
-                        className="flex-1 sm:flex-none bg-slate-700 hover:bg-slate-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                        className="flex-1 sm:flex-none px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-gray-100 dark:border-white/10 text-gray-400 hover:text-black dark:hover:text-white"
                       >
-                        Cancel
+                        Abort
                       </button>
                     </div>
                   )}
@@ -248,36 +255,36 @@ export default function HqProfilePage() {
             </div>
 
             {/* Change Password Section */}
-            <div className="bg-slate-800/40 border border-slate-700/50 p-8 rounded-3xl backdrop-blur-sm">
-              <h3 className="text-lg font-black text-white mb-6 flex items-center gap-3">
-                <Key size={20} className="text-teal-500" />
-                Security Update
+            <div className="bg-white dark:bg-black border border-gray-100 dark:border-white/10 p-10 rounded-[2.5rem] shadow-sm">
+              <h3 className="text-xl font-black text-black dark:text-white mb-8 flex items-center gap-4 uppercase tracking-tight">
+                <Key size={24} className="text-black dark:text-white opacity-40" />
+                Security Synchronization
               </h3>
-              <form onSubmit={handleChangePassword} className="space-y-6">
+              <form onSubmit={handleChangePassword} className="space-y-8">
                 <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block mb-2">Current Password</label>
+                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 block mb-4 italic">Active Authorization Key</label>
                   <EyePasswordInput 
                     required
-                    className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-6 py-4 font-bold text-white outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-8 py-5 font-black text-black dark:text-white outline-none focus:border-black dark:focus:border-white/40 shadow-sm uppercase tracking-widest text-sm"
                     value={passwordForm.current}
                     onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   <div>
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block mb-2">New Password</label>
+                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 block mb-4 italic">Target Key</label>
                     <EyePasswordInput 
                       required
-                      className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-6 py-4 font-bold text-white outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-8 py-5 font-black text-black dark:text-white outline-none focus:border-black dark:focus:border-white/40 shadow-sm uppercase tracking-widest text-sm"
                       value={passwordForm.new}
                       onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block mb-2">Confirm New Password</label>
+                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1 block mb-4 italic">Verify Target Key</label>
                     <EyePasswordInput 
                       required
-                      className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-6 py-4 font-bold text-white outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-8 py-5 font-black text-black dark:text-white outline-none focus:border-black dark:focus:border-white/40 shadow-sm uppercase tracking-widest text-sm"
                       value={passwordForm.confirm}
                       onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
                     />
@@ -285,29 +292,28 @@ export default function HqProfilePage() {
                 </div>
                 <button 
                   disabled={actionLoading}
-                  className="w-full bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-teal-900/20 transition-all flex items-center justify-center gap-3"
+                  className="w-full h-16 bg-black dark:bg-white hover:scale-[1.01] disabled:opacity-30 text-white dark:text-black rounded-[1.5rem] font-black text-[12px] uppercase tracking-[0.3em] shadow-2xl transition-all flex items-center justify-center gap-4 active:scale-95"
                 >
-                  {actionLoading ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
-                  Update Security Credentials
+                  {actionLoading ? <Loader2 className="animate-spin" size={24} /> : <ShieldCheck size={24} />}
+                  <span>Rotate Security Keys</span>
                 </button>
               </form>
             </div>
 
             {/* Danger Zone */}
-            <div className="bg-rose-500/5 border border-rose-500/20 p-8 rounded-3xl backdrop-blur-sm">
-              <div className="flex items-center gap-4 mb-6 text-rose-500">
-                <AlertTriangle size={24} />
-                <h3 className="text-lg font-black uppercase tracking-widest">Account Terminal</h3>
+            <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 p-10 rounded-[2.5rem] shadow-sm">
+              <div className="flex items-center gap-5 mb-6 text-black dark:text-white">
+                <AlertTriangle size={32} />
+                <h3 className="text-xl font-black uppercase tracking-[0.2em]">Sovereign Terminal</h3>
               </div>
-              <p className="text-slate-400 text-sm font-medium mb-6">
-                Terminating your session will revoke access from this device immediately. 
-                All cached data will be cleared.
+              <p className="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest mb-8 leading-relaxed italic border-l-2 border-black dark:border-white pl-4">
+                TERMINATING THIS MASTER SESSION WILL REVOKE ALL ACCESS PRIVILEGES FROM THIS NODE IMMEDIATELY. ALL LOCAL CACHES WILL BE WIPED FOR SECURITY COMPLIANCE.
               </p>
               <button 
                 onClick={handleSignOut}
-                className="w-full sm:w-auto bg-rose-600 hover:bg-rose-500 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-lg shadow-rose-900/20"
+                className="w-full sm:w-auto bg-black dark:bg-white text-white dark:text-black px-12 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 hover:scale-105"
               >
-                <LogOut size={18} />
+                <LogOut size={20} />
                 Terminate Session
               </button>
             </div>

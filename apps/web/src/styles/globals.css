@@ -167,6 +167,25 @@
       background-position: 1000px 0;
     }
   }
+
+  /* ─── Monochromatic System Tokens ─── */
+  --surface-default: #ffffff;
+  --surface-subtle: #fafafa;
+  --surface-overlay: rgba(255, 255, 255, 0.9);
+  --border-subtle: #f1f1f1;
+  --text-primary: #000000;
+  --text-secondary: #6b7280;
+  --tooltip-bg: #ffffff;
+
+  :dark {
+    --surface-default: #000000;
+    --surface-subtle: rgba(255, 255, 255, 0.05);
+    --surface-overlay: rgba(0, 0, 0, 0.9);
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --text-primary: #ffffff;
+    --text-secondary: #9ca3af;
+    --tooltip-bg: #000000;
+  }
 }
 
 .shimmer {

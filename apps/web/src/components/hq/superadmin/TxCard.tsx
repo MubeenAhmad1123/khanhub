@@ -24,15 +24,15 @@ export type SuperadminTxCard = {
 };
 
 function deptBadge(dept: TxDepartment) {
-  if (dept === 'rehab') return 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200';
-  if (dept === 'spims') return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200';
-  return 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200';
+  if (dept === 'rehab') return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20';
+  if (dept === 'spims') return 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-100 dark:border-blue-500/20';
+  return 'bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 border-purple-100 dark:border-purple-500/20';
 }
 
 function statusBadge(status: TxStatus) {
-  if (status === 'approved') return 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200';
-  if (status === 'rejected' || status === 'rejected_cashier') return 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200';
-  return 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200';
+  if (status === 'approved') return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20';
+  if (status === 'rejected' || status === 'rejected_cashier') return 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-100 dark:border-red-500/20';
+  return 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border-amber-100 dark:border-amber-500/20';
 }
 
 export function TxCard({
@@ -53,23 +53,23 @@ export function TxCard({
   const [showProof, setShowProof] = useState(false);
 
   return (
-    <div className="rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-white/5 p-5">
+    <div className="rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start gap-3">
         {onCheckedChange ? (
           <input
             type="checkbox"
             checked={!!checked}
             onChange={(e) => onCheckedChange(e.target.checked)}
-            className="mt-1 w-5 h-5 accent-gray-900"
+            className="mt-1.5 w-5 h-5 accent-black dark:accent-white"
           />
         ) : null}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
-            <div className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${deptBadge(tx.dept)}`}>
+            <div className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${deptBadge(tx.dept)}`}>
               {tx.dept}
             </div>
-            <div className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${statusBadge(tx.status)}`}>
+            <div className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${statusBadge(tx.status)}`}>
               {tx.status.replace(/_/g, ' ')}
             </div>
           </div>
@@ -77,16 +77,16 @@ export function TxCard({
           <div className="mt-3 flex items-start justify-between gap-4">
             <div className="min-w-0">
               {tx.entityHref ? (
-                <Link href={tx.entityHref} className="text-lg font-black text-gray-900 dark:text-white hover:underline block truncate">
+                <Link href={tx.entityHref} className="text-xl font-black text-black dark:text-white hover:underline block truncate tracking-tight">
                   {tx.entityName}
                 </Link>
               ) : (
-                <div className="text-lg font-black text-gray-900 dark:text-white truncate">{tx.entityName}</div>
+                <div className="text-xl font-black text-black dark:text-white truncate tracking-tight">{tx.entityName}</div>
               )}
-              <div className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-300">{tx.typeLabel}</div>
+              <div className="mt-1 text-xs font-bold text-gray-500 dark:text-gray-400">{tx.typeLabel}</div>
             </div>
             <div className="shrink-0 text-right">
-              <div className="text-3xl font-black text-gray-900 dark:text-white">
+              <div className="text-3xl font-black text-black dark:text-white tracking-tighter">
                 PKR {Number(tx.amount || 0).toLocaleString('en-PK')}
               </div>
               <div className="mt-1 text-[11px] font-bold text-gray-400">{tx.submittedAtLabel}</div>
@@ -157,9 +157,9 @@ export function TxCard({
       {showProof && tx.proofUrl ? (
         <div className="fixed inset-0 z-[80]">
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowProof(false)} />
-          <div className="absolute inset-4 sm:inset-10 bg-white dark:bg-gray-950 rounded-3xl overflow-hidden border border-gray-100 dark:border-white/10">
+          <div className="absolute inset-4 sm:inset-10 bg-white dark:bg-black rounded-3xl overflow-hidden border border-gray-100 dark:border-white/10">
             <div className="p-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
-              <div className="text-sm font-black text-gray-900 dark:text-white">Proof</div>
+              <div className="text-sm font-black text-black dark:text-white">Proof</div>
               <button
                 type="button"
                 onClick={() => setShowProof(false)}

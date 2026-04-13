@@ -33,11 +33,14 @@ const HistoryIcon = ({ size = 16 }) => (
 
 const ActionIcon = ({ type, size = 10 }: { type: string; size?: number }) => {
   switch (type) {
-    case 'created': return <div className="p-2 rounded-full bg-green-500/10 text-green-500 border border-green-500/20"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
-    case 'approved': return <div className="p-2 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
-    case 'rejected': return <div className="p-2 rounded-full bg-red-500/10 text-red-500 border border-red-500/20"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
-    case 'login': return <div className="p-2 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
-    default: return <div className="p-2 rounded-full bg-gray-500/10 text-gray-500 border border-gray-500/20"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
+    case 'created':
+    case 'approved':
+    case 'login':
+      return <div className="p-2 rounded-full bg-black dark:bg-white text-white dark:text-black shadow-sm"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
+    case 'rejected':
+      return <div className="p-2 rounded-full bg-gray-200 dark:bg-white/20 text-gray-400 dark:text-gray-500"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
+    default:
+      return <div className="p-2 rounded-full border border-gray-100 dark:border-white/10 text-gray-300 dark:text-gray-700"><svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg></div>;
   }
 };
 
@@ -176,35 +179,35 @@ export default function SuperadminAuditPage() {
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       {/* Retention Settings Modal */}
       {showRetention && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md animate-in fade-in zoom-in-95 rounded-3xl border border-white/10 bg-gray-900 p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black tracking-tight text-white">Audit Log Retention</h2>
-              <button onClick={() => setShowRetention(false)} className="text-gray-400 hover:text-white transition"><CloseIcon /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md animate-in zoom-in-95 rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-8 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-black tracking-tight text-black dark:text-white uppercase">Retention Governance</h2>
+              <button onClick={() => setShowRetention(false)} className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"><CloseIcon /></button>
             </div>
-            <p className="text-sm text-gray-400 mb-6 font-semibold">Entries older than your selected period will be automatically purged by the system.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-8 font-bold italic">Entries older than your selected period will be automatically purged by the system to maintain peak performance.</p>
             
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[30, 45, 60, 90, null].map(val => (
                 <button
                   key={String(val)}
                   onClick={() => saveRetention(val)}
                   disabled={savingRetention}
-                  className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border transition-all ${
+                  className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl border transition-all ${
                     retentionDays === val 
-                      ? 'border-amber-400 bg-amber-400/10 text-amber-400' 
-                      : 'border-white/5 bg-white/5 text-gray-400 hover:border-white/20 hover:text-white'
+                      ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black' 
+                      : 'border-gray-100 bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-500 hover:border-black dark:hover:border-white active:scale-[0.98]'
                   }`}
                 >
-                  <span className="font-black text-sm uppercase tracking-widest">{val ? `${val} Days` : 'Never (Infinite)'}</span>
-                  {retentionDays === val && <div className="w-2 h-2 rounded-full bg-amber-400" />}
+                  <span className="font-black text-xs uppercase tracking-widest">{val ? `${val} Days` : 'Never (Infinite)'}</span>
+                  {retentionDays === val && <div className="w-2 h-2 rounded-full bg-current" />}
                 </button>
               ))}
             </div>
 
             <button 
               onClick={() => setShowRetention(false)}
-              className="mt-8 w-full py-4 rounded-2xl bg-white text-gray-900 font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition"
+              className="mt-8 w-full py-5 rounded-2xl border border-gray-100 dark:border-white/5 text-gray-400 dark:text-gray-500 font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
             >
               Cancel
             </button>
@@ -215,18 +218,18 @@ export default function SuperadminAuditPage() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-black tracking-tighter text-gray-900 dark:text-white">Audit Hub</h1>
-            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${retentionDays ? 'border-amber-400/30 text-amber-400' : 'border-white/10 text-gray-400'}`}>
-              Retention: {retentionDays ? `${retentionDays} days` : 'Never'}
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-black tracking-tight text-black dark:text-white uppercase px-2 py-1 border-l-8 border-black dark:border-white">Operation Audit</h1>
+            <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/10 dark:border-white/10 ${retentionDays ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-gray-400'}`}>
+              TTL: {retentionDays ? `${retentionDays} days` : 'Permanent'}
             </div>
           </div>
-          <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-400">Real-time cross-departmental operations feed.</p>
+          <p className="mt-2 text-[10px] font-black italic text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-4">Global Governance Feed • Real-time Cross-Departmental Surveillance</p>
         </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setShowRetention(true)}
-            className="flex items-center gap-2 h-11 px-5 rounded-xl border border-gray-100 bg-white text-[10px] font-black uppercase tracking-widest text-gray-600 dark:border-white/5 dark:bg-white/5 dark:text-gray-400 hover:text-amber-400 transition"
+            className="flex items-center gap-3 h-12 px-6 rounded-2xl border border-gray-100 bg-white shadow-sm text-[10px] font-black uppercase tracking-widest text-black dark:border-white/10 dark:bg-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all active:scale-95"
           >
             <SettingsIcon />
             Retention
@@ -238,14 +241,14 @@ export default function SuperadminAuditPage() {
       {/* Stats Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total Logs', value: stats.total, color: 'text-indigo-500' },
-          { label: 'Filtered Result', value: stats.filtered, color: 'text-amber-500' },
-          { label: 'Active Sources', value: dynamicSources.length - 1, color: 'text-teal-500' },
-          { label: 'Last Pulse', value: stats.lastActivity, color: 'text-rose-500' },
+          { label: 'Total Logs', value: stats.total, color: 'text-black dark:text-white' },
+          { label: 'Filtered Result', value: stats.filtered, color: 'text-black dark:text-white' },
+          { label: 'Active Sources', value: dynamicSources.length - 1, color: 'text-black dark:text-white' },
+          { label: 'Last Pulse', value: stats.lastActivity, color: 'text-gray-400 italic' },
         ].map((s, i) => (
-          <div key={i} className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/5 dark:bg-white/5">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">{s.label}</p>
-            <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
+          <div key={i} className="rounded-3xl border border-gray-100 bg-white p-6 dark:border-white/10 dark:bg-black shadow-sm">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">{s.label}</p>
+            <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -253,19 +256,19 @@ export default function SuperadminAuditPage() {
       {/* Filter Section */}
       <div className="flex flex-col gap-6 p-6 rounded-3xl border border-gray-100 bg-gray-50 dark:bg-white/5 dark:border-white/10">
         <section>
-          <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-            Portals
+          <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2 italic">
+            <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
+            Portal Matrix
           </h3>
           <div className="flex flex-wrap gap-2">
             {dynamicSources.map((t) => (
               <button
                 key={t}
                 onClick={() => setSourceFilter(t)}
-                className={`h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-2 shadow-sm ${
+                className={`h-12 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm border ${
                   sourceFilter === t
-                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 scale-105'
-                    : 'bg-white border border-gray-200 text-gray-600 dark:bg-white/5 dark:border-white/5 dark:text-gray-400 hover:border-gray-300'
+                    ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white transform scale-105 z-10'
+                    : 'bg-white border-gray-100 text-gray-400 dark:bg-black dark:border-white/5 dark:text-gray-500 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'
                 }`}
               >
                 {t}
@@ -276,24 +279,24 @@ export default function SuperadminAuditPage() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           <section>
-            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              Impact Level
+            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2 italic">
+              <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
+              Impact Vector
             </h3>
             <div className="flex flex-wrap gap-2">
               {['all', 'created', 'approved', 'rejected', 'login', 'other'].map((t) => (
                 <button
                   key={t}
                   onClick={() => setActionType(t)}
-                  className={`h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all gap-2 flex items-center ${
+                  className={`h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all gap-2 flex items-center border ${
                     actionType === t
-                      ? 'bg-amber-400 text-gray-900 shadow-xl shadow-amber-400/20'
-                      : 'bg-white border border-gray-100 text-gray-600 dark:bg-white/5 dark:border-white/5 dark:text-gray-400'
+                      ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-lg'
+                      : 'bg-white border-gray-100 text-gray-400 dark:bg-black dark:border-white/5 dark:text-gray-500 hover:border-black dark:hover:border-white'
                   }`}
                 >
                   {t}
                   {t !== 'all' && actionCounts[t] !== undefined && (
-                    <span className={`ml-1 px-1.5 py-0.5 rounded-lg text-[9px] font-black ${actionType === t ? 'bg-black/10' : 'bg-gray-500/10 text-gray-500'}`}>
+                    <span className={`ml-2 px-2 py-0.5 rounded-lg text-[9px] font-black ${actionType === t ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/10 text-gray-400'}`}>
                       {actionCounts[t] || 0}
                     </span>
                   )}
@@ -303,9 +306,9 @@ export default function SuperadminAuditPage() {
           </section>
 
           <section>
-            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-              Time Boundary
+            <h3 className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2 italic">
+              <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
+              Temporal Boundary
             </h3>
             <div className="flex flex-wrap gap-2">
               {[
@@ -317,10 +320,10 @@ export default function SuperadminAuditPage() {
                 <button
                   key={b.val}
                   onClick={() => setDateFilter(b.val as DateRange)}
-                  className={`h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  className={`h-11 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
                     dateFilter === b.val
-                      ? 'bg-rose-500 text-white shadow-xl shadow-rose-500/20'
-                      : 'bg-white border border-gray-100 text-gray-600 dark:bg-white/5 dark:border-white/5 dark:text-gray-400'
+                      ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-lg'
+                      : 'bg-white border-gray-100 text-gray-400 dark:bg-black dark:border-white/5 dark:text-gray-500 hover:border-black dark:hover:border-white'
                   }`}
                 >
                   {b.label}
@@ -330,15 +333,15 @@ export default function SuperadminAuditPage() {
           </section>
         </div>
 
-        <div className="relative mt-2">
-          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+        <div className="relative mt-2 group">
+          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-black dark:group-focus-within:text-white transition-colors">
             <SearchIcon />
           </div>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search activity, entity names, or staff ID..."
-            className="h-14 w-full rounded-2xl border border-gray-200 bg-white pl-14 pr-6 text-sm font-bold text-gray-900 outline-none transition-all placeholder:text-gray-300 dark:border-white/10 dark:bg-white/5 dark:text-white focus:border-indigo-500 dark:focus:border-indigo-500/50"
+            className="h-16 w-full rounded-[2rem] border border-gray-100 bg-white pl-16 pr-8 text-sm font-black text-black outline-none transition-all placeholder:text-gray-300 dark:border-white/5 dark:bg-black dark:text-white focus:border-black dark:focus:border-white/40 shadow-sm"
           />
         </div>
       </div>
@@ -347,16 +350,16 @@ export default function SuperadminAuditPage() {
       <div className="mt-8">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center">
-            <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4" />
-            <p className="text-sm font-black text-gray-500 uppercase tracking-widest">Hydrating audit stream...</p>
+            <div className="w-12 h-12 border-4 border-black/10 dark:border-white/10 border-t-black dark:border-t-white rounded-full animate-spin mb-6" />
+            <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[0.3em]">Syncing global audit stream...</p>
           </div>
         ) : !filtered.length ? (
-          <div className="rounded-3xl border border-dashed border-gray-200 py-20 text-center dark:border-white/10">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-50 dark:bg-white/5 text-gray-300 dark:text-gray-600 mb-4">
+          <div className="rounded-[2.5rem] border border-dashed border-gray-100 py-32 text-center dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02]">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-white dark:bg-black text-gray-200 dark:text-gray-800 mb-6 shadow-sm">
               <HistoryIcon size={32} />
             </div>
-            <h3 className="text-lg font-black text-gray-900 dark:text-white">Dead Silence</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold max-w-xs mx-auto mt-1">No activities found within the selected filters or search query.</p>
+            <h3 className="text-xl font-black text-black dark:text-white uppercase tracking-tight">Dead Silence</h3>
+            <p className="text-gray-400 dark:text-gray-500 text-xs font-black uppercase tracking-widest max-w-xs mx-auto mt-2 italic">Operation sequence empty for selection</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -367,12 +370,12 @@ export default function SuperadminAuditPage() {
             {filtered.map((r) => (
               <div
                 key={r.id}
-                className={`group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:translate-x-1 dark:border-white/5 dark:bg-white/5 border-l-4 ${
-                  r.action === 'created' ? 'border-l-green-500' :
-                  r.action === 'approved' ? 'border-l-blue-500' :
-                  r.action === 'rejected' ? 'border-l-red-500' :
-                  r.action === 'login' ? 'border-l-purple-500' :
-                  'border-l-gray-300 dark:border-l-white/20'
+                className={`group relative overflow-hidden rounded-[2rem] border border-gray-50 bg-white p-6 shadow-sm transition-all hover:translate-x-1 hover:border-black dark:hover:border-white dark:border-white/[0.02] dark:bg-white/[0.03] border-l-8 ${
+                  r.action === 'created' ? 'border-l-black dark:border-l-white opacity-90' :
+                  r.action === 'approved' ? 'border-l-black dark:border-l-white' :
+                  r.action === 'rejected' ? 'border-l-gray-300 dark:border-l-gray-700' :
+                  r.action === 'login' ? 'border-l-black dark:border-l-white opacity-80' :
+                  'border-l-gray-100 dark:border-l-white/10'
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -384,10 +387,10 @@ export default function SuperadminAuditPage() {
                       {r.readableMessage}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${
-                        r.source === 'hq' ? 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400' :
-                        r.source === 'rehab' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' :
-                        'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400'
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border border-black/5 dark:border-white/5 ${
+                        r.source === 'hq' ? 'bg-black dark:bg-white text-white dark:text-black' :
+                        r.source === 'rehab' ? 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400' :
+                        'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-500'
                       }`}>
                         {r.source}
                       </span>

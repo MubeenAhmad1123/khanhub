@@ -164,9 +164,9 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
       <div className="mb-8 flex items-center justify-between">
         <Link
           href={isSuperadmin ? "/hq/dashboard/superadmin/staff" : "/hq/dashboard/manager/staff"}
-          className="group flex items-center gap-2 text-sm font-bold text-gray-500 transition-colors hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
+          className="group flex items-center gap-2 text-sm font-bold text-gray-500 transition-colors hover:text-black dark:text-gray-400 dark:hover:text-white"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-orange-50 dark:bg-white/5 dark:group-hover:bg-orange-950/30">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 transition-all group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
             <ArrowLeft className="h-4 w-4" />
           </div>
           Back to Directory
@@ -175,7 +175,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           {canEdit && (
             <button
               onClick={() => setShowEdit(true)}
-              className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-black hover:scale-105 active:scale-95 dark:bg-orange-600 dark:hover:bg-orange-500"
+              className="flex items-center gap-2 rounded-xl bg-black dark:bg-white px-6 py-2.5 text-xs font-black uppercase tracking-widest text-white dark:text-black transition-all hover:scale-105 active:scale-95 shadow-xl"
             >
               <Edit2 className="h-4 w-4" />
               Edit Profile
@@ -197,29 +197,29 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
           <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-xl shadow-gray-200/50 dark:border-white/5 dark:bg-[#111] dark:shadow-none">
             <div className="flex flex-col items-center text-center">
               <div className="relative mb-4">
-                <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-4xl font-black text-white shadow-2xl">
+                <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-black dark:bg-white text-4xl font-black text-white dark:text-black shadow-2xl">
                   {staff.photoUrl ? (
                     <img src={staff.photoUrl} alt={staff.name} className="h-full w-full object-cover" />
                   ) : (
                     staff.name.charAt(0)
                   )}
                 </div>
-                <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 border-white dark:border-[#111] ${staff.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                <div className={`absolute bottom-2 right-2 h-6 w-6 rounded-full border-4 border-white dark:border-[#111] shadow-xl ${staff.isActive ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
               </div>
               
               <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white line-clamp-1">{staff.name}</h1>
               <div className="mt-2 flex flex-wrap justify-center gap-2">
-                <span className="inline-flex items-center rounded-lg bg-orange-100 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                <span className="inline-flex items-center rounded-lg bg-black dark:bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white dark:text-black shadow-sm">
                   {staff.dept}
                 </span>
-                <span className="inline-flex items-center rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-gray-700 dark:bg-white/10 dark:text-gray-300">
+                <span className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-gray-700 dark:bg-white/10 dark:text-gray-300 border border-gray-100 dark:border-white/5">
                   {staff.role}
                 </span>
               </div>
 
               <div className="mt-8 w-full space-y-4 text-left">
                 <div className="group flex items-center gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-orange-50 group-hover:text-orange-600 dark:bg-white/5">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
                     <Mail className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
@@ -229,7 +229,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                 </div>
 
                 <div className="group flex items-center gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-orange-50 group-hover:text-orange-600 dark:bg-white/5">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
                     <Phone className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
@@ -239,7 +239,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                 </div>
 
                 <div className="group flex items-center gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-orange-50 group-hover:text-orange-600 dark:bg-white/5">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-black group-hover:text-white dark:bg-white/5 dark:group-hover:bg-white dark:group-hover:text-black">
                     <MapPin className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
@@ -279,28 +279,28 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
         <div className="space-y-6 lg:col-span-2">
           {/* Performance Overview */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div className="group rounded-3xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-6 shadow-lg shadow-gray-200/40 transition-all hover:scale-[1.02] dark:border-white/5 dark:from-[#111] dark:to-white/5 dark:shadow-none">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-green-50 text-green-600 dark:bg-green-900/20">
-                <Calendar className="h-5 w-5" />
+            <div className="group rounded-[2rem] border border-gray-100 bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px] dark:border-white/5 dark:bg-[#111]">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
+                <Calendar className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Present (MTD)</div>
-              <div className="mt-1 text-2xl font-black text-gray-900 dark:text-white">{staff.presentCount}</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Attendance Stream (MTD)</div>
+              <div className="mt-2 text-3xl font-black text-black dark:text-white">{staff.presentCount}</div>
             </div>
 
-            <div className="group rounded-3xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-6 shadow-lg shadow-gray-200/40 transition-all hover:scale-[1.02] dark:border-white/5 dark:from-[#111] dark:to-white/5 dark:shadow-none">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-900/20">
-                <Award className="h-5 w-5" />
+            <div className="group rounded-[2rem] border border-gray-100 bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px] dark:border-white/5 dark:bg-[#111]">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
+                <Award className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Growth Points</div>
-              <div className="mt-1 text-2xl font-black text-gray-900 dark:text-white">{staff.growthPointsTotal}</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Growth Point Accumulation</div>
+              <div className="mt-2 text-3xl font-black text-black dark:text-white">{staff.growthPointsTotal}</div>
             </div>
 
-            <div className="group rounded-3xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-6 shadow-lg shadow-gray-200/40 transition-all hover:scale-[1.02] dark:border-white/5 dark:from-[#111] dark:to-white/5 dark:shadow-none">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-900/20">
-                <AlertTriangle className="h-5 w-5" />
+            <div className="group rounded-[2rem] border border-gray-100 bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px] dark:border-white/5 dark:bg-[#111]">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black shadow-lg">
+                <AlertTriangle className="h-6 w-6" />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Fines</div>
-              <div className="mt-1 text-2xl font-black text-gray-900 dark:text-white">Rs. {staff.totalFines}</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Financial Deductions</div>
+              <div className="mt-2 text-3xl font-black text-black dark:text-white">Rs. {staff.totalFines}</div>
             </div>
           </div>
 
@@ -327,19 +327,19 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Last Reported Status</p>
-                  <p className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${staff.isActive ? 'bg-green-100 text-green-700 dark:bg-green-900/30' : 'bg-gray-100 text-gray-600 dark:bg-white/10'}`}>
+                  <p className={`inline-flex items-center rounded-lg bg-black dark:bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white dark:text-black shadow-sm`}>
                     {staff.isActive ? 'Active Member' : 'Inactive'}
                   </p>
                 </div>
               </div>
               
               {staff.lastDutyLabel && (
-                <div className="mt-8 rounded-2xl bg-orange-50/50 p-4 dark:bg-orange-950/20">
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400 text-opacity-80">Last Duty Recorded</span>
-                    <History className="h-3 w-3 text-orange-400" />
+                <div className="mt-8 rounded-[1.5rem] bg-gray-50 p-6 dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-inner">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-white opacity-40">Last Duty Node</span>
+                    <History className="h-4 w-4 text-black dark:text-white opacity-20" />
                   </div>
-                  <p className="text-sm font-bold text-orange-900 dark:text-orange-200">{staff.lastDutyLabel}</p>
+                  <p className="text-sm font-bold text-black dark:text-white italic leading-relaxed">{staff.lastDutyLabel}</p>
                 </div>
               )}
             </div>
@@ -368,27 +368,27 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <button 
                   onClick={() => setShowReset(true)}
-                  className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-gray-100 bg-white p-8 text-center transition-all hover:border-orange-500 hover:shadow-xl dark:border-white/5 dark:bg-[#111]"
+                  className="flex flex-col items-center justify-center gap-4 rounded-[2.5rem] border border-gray-100 bg-white p-10 text-center transition-all hover:border-black hover:shadow-2xl dark:border-white/5 dark:bg-[#111] group overflow-hidden relative"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-900/20">
-                    <History className="h-6 w-6" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/10 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-all">
+                    <History className="h-7 w-7" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-gray-900 dark:text-white">Reset Password</h4>
-                    <p className="mt-1 text-[10px] text-gray-400 font-bold uppercase tracking-tight">Generate secure credentials</p>
+                    <h4 className="text-sm font-black text-black dark:text-white uppercase tracking-tight">Credential Reset</h4>
+                    <p className="mt-2 text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em] italic">Refresh authorization node</p>
                   </div>
                 </button>
 
                 <button 
                   onClick={handleImpersonate}
-                  className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-gray-100 bg-white p-8 text-center transition-all hover:border-orange-500 hover:shadow-xl dark:border-white/5 dark:bg-[#111]"
+                  className="flex flex-col items-center justify-center gap-4 rounded-[2.5rem] border border-gray-100 bg-white p-10 text-center transition-all hover:border-black hover:shadow-2xl dark:border-white/5 dark:bg-[#111] group overflow-hidden relative"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-900/20">
-                    <LogIn className="h-6 w-6" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/10 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-all">
+                    <LogIn className="h-7 w-7" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-gray-900 dark:text-white">Login as User</h4>
-                    <p className="mt-1 text-[10px] text-gray-400 font-bold uppercase tracking-tight">Access their dashboard view</p>
+                    <h4 className="text-sm font-black text-black dark:text-white uppercase tracking-tight">Active Impersonation</h4>
+                    <p className="mt-2 text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em] italic">Proxy session synchronization</p>
                   </div>
                 </button>
              </div>

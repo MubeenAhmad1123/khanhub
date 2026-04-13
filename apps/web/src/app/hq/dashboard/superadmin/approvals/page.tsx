@@ -148,11 +148,13 @@ function DesignTokensStyle() {
   return (
     <style>{`
       :root {
-        --rehab: #22c55e;
-        --spims: #3b82f6;
-        --pending: #eab308;
-        --approved: #22c55e;
-        --rejected: #ef4444;
+        --pending: #94a3b8;
+        --approved: #000000;
+        --rejected: #64748b;
+      }
+      .dark :root {
+        --approved: #ffffff;
+        --rejected: #475569;
       }
       @keyframes tx-approve-pop {
         0% { transform: scale(0); opacity: 0; }
@@ -184,8 +186,8 @@ function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: nu
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-2xl text-white text-sm font-bold shadow-xl toast-slide ${
-            t.color === 'green' ? 'bg-green-600' : 'bg-red-600'
+          className={`pointer-events-auto flex items-center gap-3 px-6 py-4 rounded-2xl text-white dark:text-black font-black text-[10px] uppercase tracking-widest shadow-2xl toast-slide ${
+            t.color === 'green' ? 'bg-black dark:bg-white' : 'bg-gray-500'
           }`}
         >
           {t.color === 'green' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <XCircle className="w-4 h-4 shrink-0" />}
@@ -219,10 +221,10 @@ function PillGroup<T extends string>({
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition border shadow-sm ${
+          className={`px-3 py-1.5 rounded-full text-xs font-black transition border shadow-sm ${
             value === opt 
-              ? 'bg-[#111827] text-white border-[#111827] dark:bg-gray-100 dark:text-gray-900' 
-              : 'bg-white dark:bg-[#111111] text-[#4B5563] dark:text-gray-300 border-[#D1D5DB] dark:border-white/10 hover:border-gray-400'
+              ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white' 
+              : 'bg-white dark:bg-black text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-black dark:hover:border-white'
           }`}
         >
           {labelMap?.[opt] ?? opt}
@@ -245,29 +247,33 @@ function RejectModal({
 }) {
   const [reason, setReason] = useState('');
   return (
-    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-[#111111] rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md mx-auto p-6 shadow-2xl z-10 max-h-[95vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-black text-[#111827] dark:text-white">Reject this transaction?</h2>
-          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:bg-white/10">
-            <X className="w-4 h-4 text-[#6B7280] dark:text-gray-400" />
+    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-black rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-md mx-auto p-8 shadow-2xl z-10 max-h-[95vh] overflow-y-auto animate-in zoom-in-95 border border-gray-100 dark:border-white/10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-black dark:text-white uppercase tracking-tight">Reject Capital Flow?</h2>
+          <button type="button" onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+            <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
-        <div className="mb-5 p-4 rounded-2xl bg-red-50 dark:bg-red-900/30 border border-red-200 shadow-inner">
-          <div className="text-sm font-bold text-red-800 dark:text-red-400">{entityName(tx)}</div>
-          <div className="text-2xl font-extrabold text-red-900 mt-1">{fmtPKR(tx.amount)}</div>
+        <div className="mb-6 p-10 rounded-[2.5rem] bg-black dark:bg-white text-white dark:text-black shadow-2xl relative overflow-hidden group">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 mb-4 italic">Authorization Target</div>
+          <div className="text-2xl font-black uppercase tracking-tight mb-2">{entityName(tx)}</div>
+          <div className="text-4xl font-black tracking-tighter">{fmtPKR(tx.amount)}</div>
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+            <XCircle size={80} />
+          </div>
         </div>
-        <div className="mb-3">
-          <div className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Preset reason</div>
+        <div className="mb-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 italic">Selection Reason</div>
           <div className="flex flex-wrap gap-2">
             {REJECT_PRESETS.map((p) => (
               <button
                 key={p}
                 type="button"
                 onClick={() => setReason(p)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold border transition ${
-                  reason === p ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-[#111111] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/10 hover:border-red-300'
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                  reason === p ? 'bg-black text-white border-black dark:bg-white dark:text-black' : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-200 dark:border-white/10 hover:border-black dark:hover:border-white'
                 }`}
               >
                 {p}
@@ -279,17 +285,17 @@ function RejectModal({
           rows={4}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Reason (required)…"
-          className="w-full rounded-2xl border border-gray-200 dark:border-white/10 p-3 text-sm text-gray-800 dark:text-gray-100 outline-none focus:border-red-400 resize-none"
+          placeholder="Detailed justification required…"
+          className="w-full rounded-2xl border border-gray-100 dark:border-white/10 p-4 text-sm font-bold bg-gray-50 dark:bg-white/5 text-black dark:text-white outline-none focus:border-rose-500/50 transition-colors resize-none placeholder:text-gray-300 dark:placeholder:text-gray-600"
         />
         <button
           type="button"
           onClick={() => reason.trim() && onConfirm(reason.trim())}
           disabled={!reason.trim() || busy}
-          className="mt-4 w-full min-h-[48px] rounded-2xl bg-red-600 text-white font-black text-sm uppercase tracking-widest hover:bg-red-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+          className="mt-6 w-full h-16 rounded-2xl bg-gray-200 dark:bg-white/10 text-black dark:text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all disabled:opacity-30 inline-flex items-center justify-center gap-3 shadow-xl active:scale-95"
         >
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-          Confirm Reject
+          {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
+          DECOMMISSION NODE
         </button>
       </div>
     </div>
@@ -312,38 +318,43 @@ function BulkConfirmModal({
   const items = selected.map((id) => txMap.get(id)).filter(Boolean) as UnifiedTx[];
   const total = items.reduce((s, t) => s + (t.amount || 0), 0);
   return (
-    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-[#111111] rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg mx-auto p-6 shadow-2xl z-10 max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-black text-[#111827] dark:text-white">Approve {selected.length} transactions?</h2>
-          <button type="button" onClick={onClose} aria-label="Close">
-            <X className="w-5 h-5 text-[#6B7280] dark:text-gray-500" />
+    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-black rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-lg mx-auto p-8 shadow-2xl z-10 max-h-[85vh] overflow-y-auto animate-in zoom-in-95 border border-gray-100 dark:border-white/10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-black dark:text-white uppercase tracking-tight">Batch Approval</h2>
+          <button type="button" onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+            <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
-        <ul className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto">
+        <ul className="space-y-3 mb-6 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
           {items.map((tx) => (
-            <li key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/10 gap-3">
+            <li key={tx.id} className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-white/5 gap-3 group">
               <div className="min-w-0">
-                <div className="text-sm font-bold text-[#111827] dark:text-gray-100 truncate">{entityName(tx)}</div>
-                <div className="text-xs text-[#6B7280] dark:text-gray-500 truncate">{typeLabel(tx)}</div>
+                <div className="text-sm font-black text-black dark:text-white truncate group-hover:text-primary-500 transition-colors">{entityName(tx)}</div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">{typeLabel(tx)}</div>
               </div>
-              <div className="text-sm font-extrabold text-[#111827] dark:text-white shrink-0">{fmtPKR(tx.amount)}</div>
+              <div className="text-sm font-black text-black dark:text-white shrink-0 font-mono">{fmtPKR(tx.amount)}</div>
             </li>
           ))}
         </ul>
-        <div className="p-3 rounded-2xl bg-green-50 dark:bg-green-900/30 border border-green-100 mb-5 flex items-center justify-between gap-3">
-          <span className="text-sm font-bold text-green-700">Total</span>
-          <span className="text-lg font-extrabold text-green-900">{fmtPKR(total)}</span>
+        <div className="p-10 rounded-[2.5rem] bg-black dark:bg-white text-white dark:text-black mb-8 flex items-center justify-between gap-6 shadow-2xl relative overflow-hidden group">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-50 block mb-2">Aggregate Value</span>
+            <span className="text-4xl font-black tracking-tighter">{fmtPKR(total)}</span>
+          </div>
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+            <CheckCircle2 size={80} />
+          </div>
         </div>
         <button
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="w-full min-h-[48px] rounded-2xl bg-green-600 text-white font-black text-sm uppercase tracking-widest hover:bg-green-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+          className="w-full h-16 rounded-2xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 text-black dark:text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all disabled:opacity-30 inline-flex items-center justify-center gap-3 shadow-xl active:scale-95"
         >
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-          Approve Selected
+          {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+          AUTHORIZE BATCH COMMAND
         </button>
       </div>
     </div>
@@ -464,29 +475,20 @@ function TxCard({
 
   const deptBadge =
     tx.dept === 'rehab'
-      ? 'bg-[color:var(--rehab)]/15 text-[color:var(--rehab)] border-[color:var(--rehab)]/30'
+      ? 'bg-black dark:bg-white text-white dark:text-black border-transparent'
       : tx.dept === 'spims'
-        ? 'bg-[color:var(--spims)]/15 text-[color:var(--spims)] border-[color:var(--spims)]/30'
-        : 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400';
+        ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-transparent'
+        : 'bg-gray-200 dark:bg-white/20 text-gray-500 dark:text-gray-400 border-transparent';
 
-  const typeColors =
-    typ.toLowerCase().includes('month') || typ.toLowerCase().includes('fee')
-      ? 'bg-teal-100 text-teal-800'
-      : typ.toLowerCase().includes('admission')
-        ? 'bg-orange-100 text-orange-800'
-        : typ.toLowerCase().includes('registration')
-          ? 'bg-indigo-100 text-indigo-800'
-          : typ.toLowerCase().includes('exam')
-            ? 'bg-rose-100 text-rose-800'
-            : 'bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-100';
+  const typeColors = 'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-500 border border-gray-100 dark:border-white/10';
 
   const st = tx.status;
   const statusUi =
     st === 'approved'
-      ? 'bg-green-100 text-green-800 dark:text-green-400 border-green-200'
+      ? 'bg-black dark:bg-white text-white dark:text-black border-transparent'
       : st === 'rejected' || st === 'rejected_cashier'
-        ? 'bg-red-100 text-red-800 dark:text-red-400 border-red-200'
-        : 'bg-amber-100 text-amber-900 border-amber-200';
+        ? 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 border-transparent'
+        : 'bg-white dark:bg-black text-gray-300 dark:text-gray-700 border-gray-100 dark:border-white/10';
 
   const runningPaid = enrich?.totalReceived;
   const pkg = enrich?.totalPackage;
@@ -499,12 +501,12 @@ function TxCard({
 
   return (
     <div
-      className={`relative rounded-2xl border transition-all duration-300 overflow-hidden max-w-[680px] mx-auto w-full mb-4 ${
+      className={`relative rounded-[2rem] border transition-all duration-300 overflow-hidden max-w-[680px] mx-auto w-full mb-4 ${
         phase === 'success' 
-          ? 'border-green-500 ring-2 ring-green-400/40 bg-white dark:bg-gray-900' 
+          ? 'border-emerald-500 ring-4 ring-emerald-500/10 bg-emerald-50 dark:bg-emerald-500/5' 
           : phase === 'fail' 
-            ? 'border-red-500 ring-2 ring-red-400/40 bg-white dark:bg-gray-900' 
-            : 'border-[#D1D5DB] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900'
+            ? 'border-rose-500 ring-4 ring-rose-500/10 bg-rose-50 dark:bg-rose-500/5' 
+            : 'border-gray-100 bg-white shadow-sm dark:border-white/10 dark:bg-black'
       } ${phase === 'idle' ? '' : 'tx-card-exit'}`}
     >
       {phase === 'success' ? (
@@ -537,10 +539,10 @@ function TxCard({
       <div className={`p-4 sm:p-6 ${showSelect ? 'pl-10 sm:pl-12' : ''}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 min-w-0">
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${deptBadge}`}>
+            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/10 dark:border-white/10 ${deptBadge}`}>
               {tx.dept === 'rehab' ? 'Rehab' : tx.dept === 'spims' ? 'SPIMS' : 'Job Center'}
             </span>
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${typeColors}`}>{typ}</span>
+            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-black/10 dark:border-white/10 ${typeColors}`}>{typ}</span>
           </div>
           <div className="text-right shrink-0">
             <div className="text-2xl font-extrabold text-[#111827] dark:text-white">{fmtPKR(tx.amount)}</div>
@@ -599,8 +601,8 @@ function TxCard({
               </div>
             ) : null}
             {phref ? (
-              <Link href={phref} className="inline-flex items-center justify-center w-full mt-2 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-black uppercase tracking-widest transition-colors shadow-sm">
-                View Profile & Payment History →
+              <Link href={phref} className="inline-flex items-center justify-center w-full mt-4 px-4 py-4 rounded-2xl bg-black dark:bg-white text-white dark:text-black border border-transparent hover:scale-[1.02] text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-xl active:scale-95">
+                VERIFY ENTITY RECORD →
               </Link>
             ) : null}
           </section>
@@ -679,22 +681,22 @@ function TxCard({
               <button
                 type="button"
                 onClick={() => setShowProof(true)}
-                className="w-full rounded-2xl border border-green-200 bg-green-50 dark:bg-green-900/30 p-3 flex items-start gap-3 hover:bg-green-100 transition text-left"
+                className="w-full rounded-[2rem] border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 flex items-center gap-6 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all group text-left shadow-sm"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={tx.proofUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0 border border-green-100" />
+                <img src={tx.proofUrl} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-transparent shadow-2xl group-hover:scale-110 transition-transform" />
                 <div>
-                  <div className="text-xs font-black text-green-700">Proof attached ✓</div>
-                  <div className="text-[10px] text-green-600">Tap for full screen</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em]">Credential Secured ✓</div>
+                  <div className="text-[9px] font-black opacity-40 uppercase mt-1">Tap to visualize evidentiary node</div>
                 </div>
               </button>
             ) : (
-              <div className="rounded-2xl border border-orange-200 bg-orange-50 p-3">
-                <div className="text-xs font-black text-orange-700">⚠ No proof attached</div>
+              <div className="rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black p-6 shadow-inner">
+                <div className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] italic">⚠ Evidence missing in transmission</div>
                 {tx.proofMissingReason ? (
-                  <p className="text-xs text-orange-800 mt-1">{tx.proofMissingReason}</p>
+                  <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-2 italic uppercase tracking-widest leading-relaxed">{tx.proofMissingReason}</p>
                 ) : tx.description ? (
-                  <p className="text-xs text-orange-700 mt-1">{tx.description}</p>
+                  <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-2 italic uppercase tracking-widest leading-relaxed">{tx.description}</p>
                 ) : null}
               </div>
             )}
@@ -704,24 +706,24 @@ function TxCard({
         </div>
 
         {showActions && isPending && (onApprove || onReject) ? (
-          <div className="mt-5 grid grid-cols-1 gap-3">
+          <div className="mt-5 grid grid-cols-1 gap-4">
             <button
               type="button"
               onClick={() => onApprove?.(tx)}
               disabled={isDisabled}
-              className="w-full min-h-[48px] rounded-2xl bg-green-600 text-white font-black text-sm uppercase tracking-widest hover:bg-green-700 disabled:opacity-40 inline-flex items-center justify-center gap-2"
+              className="w-full h-16 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-black text-[12px] uppercase tracking-[0.3em] hover:scale-[1.02] transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 shadow-2xl active:scale-95"
             >
               {isBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-              Approve
+              Authorize Flow
             </button>
             <button
               type="button"
               onClick={() => onReject?.(tx)}
               disabled={isDisabled}
-              className="w-full min-h-[48px] rounded-2xl bg-red-600 text-white font-black text-sm uppercase tracking-widest hover:bg-red-700 disabled:opacity-40 inline-flex items-center justify-center gap-2"
+              className="w-full h-16 rounded-2xl bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all disabled:opacity-40 inline-flex items-center justify-center gap-3 active:scale-95"
             >
               <XCircle className="w-5 h-5" />
-              Reject
+              Terminate Node
             </button>
           </div>
         ) : null}
@@ -1133,22 +1135,22 @@ export default function HqApprovalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-white/5 overflow-x-hidden w-full max-w-full pb-36 text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-white dark:bg-black overflow-x-hidden w-full max-w-full pb-36 text-black dark:text-white transition-colors duration-300">
       <DesignTokensStyle />
 
       <div className="max-w-6xl mx-auto px-3 sm:px-5 py-6 space-y-5">
         {/* 1 Title */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-[#111827] dark:text-white flex flex-wrap items-center gap-2">
-              Approvals
+            <h1 className="text-3xl font-black tracking-tight text-black dark:text-white flex flex-wrap items-center gap-3">
+              Financial Approvals
               {pendingCount > 0 ? (
-                <span className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-full bg-amber-400 text-[#111827] text-xs font-black">
+                <span className="inline-flex items-center justify-center min-w-[2.5rem] h-10 px-3 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-xs font-black border border-black/10 dark:border-white/10 shadow-lg">
                   {pendingCount > 99 ? '99+' : pendingCount}
                 </span>
               ) : null}
             </h1>
-            <p className="mt-1 text-sm text-[#6B7280] dark:text-gray-400 font-medium">Review incoming payments with confidence.</p>
+            <p className="mt-2 text-xs font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 italic">Governance Intelligence Hub</p>
           </div>
         </div>
 
