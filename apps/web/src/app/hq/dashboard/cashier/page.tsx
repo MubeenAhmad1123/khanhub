@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where } from 'firebase/firestore';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -533,6 +533,13 @@ export default function CashierStationPage() {
             >
               <LayoutDashboard size={14} className="text-indigo-400" />
               <span className="hidden md:inline">Daily Report</span>
+            </Link>
+            <Link 
+              href="/hq/dashboard/manager/salary"
+              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+            >
+              <DollarSign size={14} className="text-amber-400" />
+              <span className="hidden md:inline">Payroll</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/day-close"

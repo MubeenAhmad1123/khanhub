@@ -111,7 +111,7 @@ export async function listStaffCards({
     if (status === 'inactive' && active) return false;
     const normalizedRole = normalizeRole(s.role);
     if (role === 'personnel') {
-      if (normalizedRole !== 'admin' && normalizedRole !== 'staff') return false;
+      if (normalizedRole === 'other' || normalizedRole === 'superadmin') return false;
     } else if (role !== 'all' && normalizedRole !== role) {
       return false;
     }

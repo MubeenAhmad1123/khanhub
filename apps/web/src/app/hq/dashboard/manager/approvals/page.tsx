@@ -213,7 +213,7 @@ export default function ManagerApprovalsPage() {
           <div className="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
             <span className="text-3xl">🎉</span>
           </div>
-          <p className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest text-xs">No pending approvals found</p>
+          <p className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest text-xs">No pending contributions found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

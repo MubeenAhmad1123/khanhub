@@ -16,7 +16,7 @@ import {
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
   Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw,
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle,
-  ChevronLeft, ChevronRight, Star, Plus, Trash2
+  ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock
 } from 'lucide-react';
 import { 
   fetchStaffProfile, 
@@ -66,6 +66,15 @@ interface AttendanceLog {
   departureTime?: string;
 }
 
+interface SalarySlip {
+  id: string;
+  month: string;
+  amount: number;
+  status: string;
+  deductions: number;
+  bonuses: number;
+}
+
 function formatStaffDate(input: any): string {
   if (!input) return 'N/A';
   return formatDateDMY(input);
@@ -78,7 +87,7 @@ export default function StaffProfilePage() {
   const { session, loading: sessionLoading } = useHqSession();
   
   const [staff, setStaff] = useState<StaffProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll'>('overview');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -108,6 +117,7 @@ export default function StaffProfilePage() {
   const [dressLogs, setDressLogs] = useState<any[]>([]);
   const [growthPoints, setGrowthPoints] = useState<any>(null);
   const [growthHistory, setGrowthHistory] = useState<any[]>([]);
+  const [salaryRecords, setSalaryRecords] = useState<SalarySlip[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [loadingScore, setLoadingScore] = useState(false);
   const [openRule, setOpenRule] = useState<string | null>(null);
@@ -183,11 +193,12 @@ export default function StaffProfilePage() {
       const start = days[0];
       const end = days[days.length - 1];
 
-      const [attSnap, dressSnap, dutySnap, pointsSnap] = await Promise.all([
+      const [attSnap, dressSnap, dutySnap, pointsSnap, salarySnap] = await Promise.all([
         getDocs(query(collection(db, `${slug}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${slug}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
         getDocs(query(collection(db, `${slug}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
-        getDocs(query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), limit(1)))
+        getDocs(query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), limit(1))),
+        getDocs(query(collection(db, 'hq_salary_records'), where('staffId', '==', uid)))
       ]);
 
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
@@ -203,6 +214,7 @@ export default function StaffProfilePage() {
       setDutyMap(duMap);
 
       if (!pointsSnap.empty) setGrowthPoints(pointsSnap.docs[0].data());
+      setSalaryRecords(salarySnap.docs.map(d => ({ id: d.id, ...d.data() } as SalarySlip)));
 
       // Fetch growth history (all months)
       const historySnap = await getDocs(
@@ -625,6 +637,7 @@ export default function StaffProfilePage() {
                {[
                  { id: 'overview', label: 'History', icon: <Clock size={14}/> },
                  { id: 'attendance', label: 'Attendance', icon: <Calendar size={14}/> },
+                 { id: 'payroll', label: 'Payroll', icon: <DollarSign size={14}/> },
                  { id: 'dress', label: 'Dress Code', icon: <Shield size={14}/> },
                  { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={14}/> },
                  { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={14}/> },
@@ -1128,6 +1141,100 @@ export default function StaffProfilePage() {
                       ))}
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'payroll' && (
+              <div className="space-y-6">
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
+                       <DollarSign size={16}/> Payroll History
+                    </h3>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Financial Performance Audit</p>
+                  </div>
+
+                  {salaryRecords.length === 0 ? (
+                    <div className="py-20 text-center">
+                      <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
+                        <CreditCard className="text-gray-700" size={32} />
+                      </div>
+                      <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No salary slips recorded yet</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {salaryRecords.sort((a, b) => (b.month || '').localeCompare(a.month || '')).map(record => (
+                        <div key={record.id} className={`p-6 rounded-[2.5rem] border transition-all hover:scale-[1.01] ${
+                          isDark ? 'bg-zinc-800/30 border-zinc-700/50 hover:border-amber-500/30' : 'bg-gray-50 border-gray-100 hover:border-amber-200'
+                        }`}>
+                          <div className="flex flex-col md:flex-row justify-between gap-6">
+                            <div className="flex gap-4">
+                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
+                                record.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' :
+                                record.status === 'approved' ? 'bg-blue-500/10 text-blue-500' :
+                                'bg-amber-500/10 text-amber-500'
+                              }`}>
+                                <DollarSign size={24} />
+                              </div>
+                              <div>
+                                <h4 className={`text-lg font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>
+                                  {record.month ? new Date(record.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Unknown Month'}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                    record.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                    record.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                  }`}>
+                                    {record.status}
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                    {(record as any).presentDays || 0} Working Days
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="md:text-right">
+                              <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number((record as any).netSalary || record.amount || 0).toLocaleString()}</p>
+                              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Net Payable Amount</p>
+                            </div>
+                          </div>
+
+                          <div className={`mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-dashed ${isDark ? 'border-dashed border-zinc-700/50' : 'border-gray-200'}`}>
+                            <div>
+                              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Base Earnings</p>
+                              <p className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>
+                                ₨{Math.round(((record as any).basicSalary || 0) / 30 * ((record as any).presentDays || 0)).toLocaleString()}
+                              </p>
+                              <p className="text-[9px] text-gray-600 mt-1 uppercase font-black">Pro-rated attendance</p>
+                            </div>
+                            
+                            {((record as any).bonus > 0) && (
+                              <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Performance Bonus (+)</p>
+                                <p className={`text-xs font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                  ₨{(record as any).bonus.toLocaleString()}
+                                </p>
+                                <p className="text-[10px] text-emerald-500/60 mt-1 font-medium leading-tight">Reason: {(record as any).bonusReason || 'Incentive'}</p>
+                              </div>
+                            )}
+
+                            {((record as any).otherDeductions > 0) && (
+                              <div className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/10">
+                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Other Deductions (-)</p>
+                                <p className={`text-xs font-bold ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
+                                  ₨{(record as any).otherDeductions.toLocaleString()}
+                                </p>
+                                <p className="text-[10px] text-rose-500/60 mt-1 font-medium leading-tight">Reason: {(record as any).deductionReason || 'Adjustment'}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

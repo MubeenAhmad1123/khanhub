@@ -55,7 +55,7 @@ export interface HqAttendance {
   date: string;
   arrivalTime?: string;
   departureTime?: string;
-  status: 'present' | 'absent' | 'leave';
+  status: 'present' | 'absent' | 'leave' | 'paid_leave' | 'unpaid_leave';
   isLate: boolean;
   fine?: number;
   markedBy: string;
@@ -165,6 +165,8 @@ export interface SalarySlip {
   month: string;
   /** Basic salary amount (PKR) */
   basicSalary: number;
+  /** Pro-rated basic based on presence */
+  dailyWage: number;
   /** Number of working days in the month */
   workingDays: number;
   /** Number of days staff was present */
@@ -173,13 +175,17 @@ export interface SalarySlip {
   absentDays: number;
   /** Number of approved leave days */
   leaveDays: number;
+  paidLeaveDays?: number;
+  unpaidLeaveDays?: number;
   /** Total deduction = absentDays * ABSENTEE_DEDUCTION_PER_DAY */
   absentDeduction: number;
   /** Any additional bonuses or overtime */
   bonus: number;
+  bonusReason?: string;
   /** Any other approved deductions */
   otherDeductions: number;
-  /** Net payable = basicSalary – absentDeduction – otherDeductions + bonus */
+  deductionReason?: string;
+  /** Net payable = ((basicSalary / 30) * presentDays) - otherDeductions + bonus */
   netSalary: number;
   /** 'draft' until approved by manager/superadmin */
   status: 'draft' | 'approved' | 'paid';

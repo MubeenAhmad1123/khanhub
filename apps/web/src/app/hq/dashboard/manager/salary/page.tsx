@@ -23,22 +23,42 @@ export default function SalarySlipsPage() {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth());
   const [generating, setGenerating] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editingSlip, setEditingSlip] = useState<SalarySlip | null>(null);
+  const [editValues, setEditValues] = useState({ bonus: 0, bonusReason: '', otherDeductions: 0, deductionReason: '' });
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || !['manager', 'superadmin'].includes(session.role)) router.push('/hq/login');
+    if (!session || !['manager', 'superadmin', 'cashier'].includes(session.role)) router.push('/hq/login');
   }, [session, sessionLoading, router]);
 
   useEffect(() => {
     if (!session) return;
-    Promise.all([
-      getDocs(query(collection(db, 'hq_staff'), where('isActive', '==', true))),
-      getDocs(collection(db, 'hq_salary_records')),
-    ]).then(([staffSnap, slipsSnap]) => {
-      setStaff(staffSnap.docs.map(d => ({ id: d.id, ...d.data() } as HqStaff)));
-      setSlips(slipsSnap.docs.map(d => ({ id: d.id, ...d.data() } as SalarySlip)));
-      setLoading(false);
-    });
+    
+    const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+    
+    const fetchData = async () => {
+      try {
+        const staffPromises = depts.map(d => 
+          getDocs(query(collection(db, d === 'hq' ? 'hq_staff' : `${d.replace('-', '_')}_staff`), where('isActive', '==', true)))
+        );
+        const slipsSnap = await getDocs(collection(db, 'hq_salary_records'));
+        const staffSnaps = await Promise.all(staffPromises);
+        
+        let allStaff: HqStaff[] = [];
+        staffSnaps.forEach((snap, idx) => {
+          const dept = depts[idx];
+          allStaff = [...allStaff, ...snap.docs.map(d => ({ id: d.id, ...d.data(), department: dept } as HqStaff))];
+        });
+
+        setStaff(allStaff);
+        setSlips(slipsSnap.docs.map(d => ({ id: d.id, ...d.data() } as SalarySlip)));
+        setLoading(false);
+      } catch (err) {
+        console.error('Fetch error:', err);
+      }
+    };
+    
+    fetchData();
   }, [session]);
 
   const monthSlips = slips.filter(s => s.month === selectedMonth);
@@ -48,19 +68,31 @@ export default function SalarySlipsPage() {
     if (existing) return;
     setGenerating(member.id);
 
+    const dept = member.department || 'hq';
+    const colName = dept === 'hq' ? 'hq_attendance' : `${dept.replace('-', '_')}_attendance`;
+
     const attSnap = await getDocs(
-      query(collection(db, 'hq_attendance'), where('staffId', '==', member.id))
+      query(collection(db, colName), where('staffId', '==', member.id))
     );
     const monthAttendance = attSnap.docs
       .map(d => d.data())
       .filter(a => (a.date || '').startsWith(selectedMonth));
 
     const presentDays = monthAttendance.filter(a => a.status === 'present').length;
+    const paidLeaveDays = monthAttendance.filter(a => a.status === 'paid_leave').length;
+    const unpaidLeaveDays = monthAttendance.filter(a => a.status === 'unpaid_leave').length;
+    const legacyLeaveDays = monthAttendance.filter(a => a.status === 'leave').length;
     const absentDays = monthAttendance.filter(a => a.status === 'absent').length;
-    const leaveDays = monthAttendance.filter(a => a.status === 'leave').length;
-    const workingDays = presentDays + absentDays + leaveDays || 26;
-    const absentDeduction = absentDays * 500;
-    const netSalary = Math.max(0, (member.monthlySalary || 0) - absentDeduction);
+    
+    // Get actual days in the selected month
+    const [yearStr, monthStr] = selectedMonth.split('-');
+    const workingDays = new Date(Number(yearStr), Number(monthStr), 0).getDate();
+    
+    // Formula: (Basic / ActualDays) * Paid Days
+    const dailyWage = (member.monthlySalary || 0) / workingDays;
+    const totalPaidDays = presentDays + paidLeaveDays;
+    const basePay = Math.round(dailyWage * totalPaidDays);
+    const netSalary = basePay;
 
     const slip: Omit<SalarySlip, 'id'> = {
       staffId: member.id,
@@ -69,13 +101,18 @@ export default function SalarySlipsPage() {
       department: member.department,
       month: selectedMonth,
       basicSalary: member.monthlySalary || 0,
+      dailyWage,
       workingDays,
       presentDays,
       absentDays,
-      leaveDays,
-      absentDeduction,
+      leaveDays: paidLeaveDays + unpaidLeaveDays + legacyLeaveDays,
+      paidLeaveDays,
+      unpaidLeaveDays,
+      absentDeduction: 0, // Legacy field, keeping for schema safety
       bonus: 0,
+      bonusReason: '',
       otherDeductions: 0,
+      deductionReason: '',
       netSalary,
       status: 'draft',
       createdAt: new Date().toISOString(),
@@ -85,6 +122,37 @@ export default function SalarySlipsPage() {
     const newDoc = await addDoc(collection(db, 'hq_salary_records'), slip);
     setSlips(prev => [...prev, { id: newDoc.id, ...slip }]);
     setGenerating(null);
+  };
+
+  const handleUpdateAdjustments = async () => {
+    if (!editingSlip) return;
+    const { bonus, bonusReason, otherDeductions, deductionReason } = editValues;
+    
+    if (bonus > 0 && !bonusReason) {
+      alert('Please provide a reason for the bonus.');
+      return;
+    }
+    if (otherDeductions > 0 && !deductionReason) {
+      alert('Please provide a reason for the deduction.');
+      return;
+    }
+
+    setActionLoading(editingSlip.id);
+    const basePay = Math.round((editingSlip.dailyWage || 0) * (editingSlip.presentDays + (editingSlip.paidLeaveDays || 0)));
+    const netSalary = Math.round(basePay + Number(bonus) - Number(otherDeductions));
+
+    const updates = {
+      bonus: Number(bonus),
+      bonusReason,
+      otherDeductions: Number(otherDeductions),
+      deductionReason,
+      netSalary
+    };
+
+    await updateDoc(doc(db, 'hq_salary_records', editingSlip.id), updates);
+    setSlips(prev => prev.map(s => s.id === editingSlip.id ? { ...s, ...updates } : s));
+    setEditingSlip(null);
+    setActionLoading(null);
   };
 
   const handleApprove = async (slipId: string) => {
@@ -177,8 +245,8 @@ export default function SalarySlipsPage() {
                       <>
                         <div className="text-right">
                           <p className="text-white font-black text-sm">Rs{slip.netSalary?.toLocaleString()}</p>
-                          <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                            {slip.absentDays > 0 ? `-Rs${slip.absentDeduction} deducted` : 'No deductions'}
+                          <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest min-w-[120px]">
+                            {slip.presentDays} days · {slip.bonus > 0 ? `+Rs${slip.bonus} bonus` : slip.otherDeductions > 0 ? `-Rs${slip.otherDeductions} ded.` : 'No adj.'}
                           </p>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
@@ -186,13 +254,31 @@ export default function SalarySlipsPage() {
                           slip.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                           'bg-amber-500/10 text-amber-400 border-amber-500/20'
                         }`}>{slip.status}</span>
+                        
+                        {['manager', 'cashier'].includes(session?.role || '') && slip.status === 'draft' && (
+                          <button 
+                            onClick={() => {
+                              setEditingSlip(slip);
+                              setEditValues({
+                                bonus: slip.bonus || 0,
+                                bonusReason: slip.bonusReason || '',
+                                otherDeductions: slip.otherDeductions || 0,
+                                deductionReason: slip.deductionReason || ''
+                              });
+                            }}
+                            className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        )}
+
                         {session?.role === 'superadmin' && slip.status === 'draft' && (
                           <button disabled={!!actionLoading} onClick={() => { void handleApprove(slip.id); }} className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
                             {actionLoading === slip.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />} Approve
                           </button>
                         )}
                         {slip.status === 'approved' && (
-                          <button disabled={!!actionLoading} onClick={() => { void handleMarkPaid(slip.id); }} className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                          <button disabled={!!actionLoading} onClick={() => { void handleMarkPaid(slip.id); }} className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-blue-500/20 text-emerald-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
                             {actionLoading === slip.id ? <Loader2 size={10} className="animate-spin" /> : <DollarSign size={10} />} Mark Paid
                           </button>
                         )}
@@ -214,6 +300,84 @@ export default function SalarySlipsPage() {
           </div>
         </div>
       </div>
+
+      {editingSlip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-zinc-900 border border-white/10 rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-white uppercase tracking-tight">Adjust Salary</h2>
+                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">For {editingSlip.staffName} · {editingSlip.month}</p>
+                </div>
+                <button onClick={() => setEditingSlip(null)} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-colors">
+                  <Plus className="rotate-45" size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Bonus (PKR)</label>
+                    <input 
+                      type="number"
+                      value={editValues.bonus}
+                      onChange={(e) => setEditValues({ ...editValues, bonus: Number(e.target.value) })}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Deduction (PKR)</label>
+                    <input 
+                      type="number"
+                      value={editValues.otherDeductions}
+                      onChange={(e) => setEditValues({ ...editValues, otherDeductions: Number(e.target.value) })}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Bonus Reason</label>
+                  <textarea 
+                    value={editValues.bonusReason}
+                    onChange={(e) => setEditValues({ ...editValues, bonusReason: e.target.value })}
+                    placeholder="Why is this bonus being given?"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all min-h-[80px] resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Deduction Reason</label>
+                  <textarea 
+                    value={editValues.deductionReason}
+                    onChange={(e) => setEditValues({ ...editValues, deductionReason: e.target.value })}
+                    placeholder="Reason for deduction/fine?"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 transition-all min-h-[80px] resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => setEditingSlip(null)}
+                  className="flex-1 px-6 py-4 rounded-2xl border border-white/10 text-white font-black text-xs uppercase tracking-widest hover:bg-white/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleUpdateAdjustments}
+                  disabled={!!actionLoading}
+                  className="flex-[2] bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-black font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                  Save Adjustments
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

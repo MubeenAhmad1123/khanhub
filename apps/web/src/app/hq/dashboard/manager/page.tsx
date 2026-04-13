@@ -191,13 +191,13 @@ export default function ManagerOverviewPage() {
         <StatCard isDark={isDark} label="Present" value={stats.presentToday} icon={<CheckCircle size={16} />} color="bg-emerald-500/10 text-emerald-500" />
         <StatCard isDark={isDark} label="Absent" value={stats.absentToday} icon={<XCircle size={16} />} color="bg-rose-500/10 text-rose-500" />
         <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={16} />} color="bg-amber-500/10 text-amber-500" />
-        <StatCard isDark={isDark} label="Pending" value={stats.pendingApprovals} icon={<FileText size={16} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} />
+        <StatCard isDark={isDark} label="Pending Contribs" value={stats.pendingApprovals} icon={<FileText size={16} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[
           { href: '/hq/dashboard/manager/staff/attendance', label: 'Mark Attendance', sub: "Today's check-in" },
-          { href: '/hq/dashboard/manager/approvals', label: 'View Approvals', sub: 'Pending tasks' },
+          { href: '/hq/dashboard/manager/approvals', label: 'Contributions', sub: 'Pending tasks' },
           { href: '/hq/dashboard/manager/staff', label: 'Staff Roster', sub: 'All employees' },
           { href: '/hq/dashboard/manager/users', label: 'Create Users', sub: 'Add staff accounts' }
         ].map((link, idx) => (
@@ -217,7 +217,7 @@ export default function ManagerOverviewPage() {
       {pendingList.length > 0 && (
         <div>
           <h2 className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <AlertTriangle size={12} className="text-amber-500" /> Recent Pending Approvals
+            <AlertTriangle size={12} className="text-amber-500" /> Recent Pending Contributions
           </h2>
           <div className="space-y-3">
             {pendingList.map(p => (
