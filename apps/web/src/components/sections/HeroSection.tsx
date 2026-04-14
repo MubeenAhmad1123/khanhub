@@ -14,6 +14,7 @@ import { useState, useEffect, useRef, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 
 // Department images configuration
 const DEPARTMENT_IMAGES = [
@@ -59,7 +60,7 @@ const HeroStats = memo(function HeroStats() {
 });
 
 // Memoized CTA Buttons Component
-const HeroCTAs = memo(function HeroCTAs() {
+const HeroCTAs = memo(function HeroCTAs({ user }: { user: any }) {
   return (
     <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
       <Link
@@ -73,10 +74,10 @@ const HeroCTAs = memo(function HeroCTAs() {
       </Link>
 
       <Link
-        href="/departments"
+        href={user ? "/dashboard" : "/departments"}
         className="group relative px-6 sm:px-8 py-3 sm:py-4 bg-primary-500 hover:bg-primary-600 rounded-xl font-semibold text-white transition-all duration-300 hover:scale-105 shadow-primary-md hover:shadow-primary-lg inline-flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
       >
-        <span className="text-sm sm:text-base">Explore Our Services</span>
+        <span className="text-sm sm:text-base">{user ? "Enter My Dashboard" : "Explore Our Services"}</span>
         <svg
           className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform"
           fill="none"
@@ -181,6 +182,7 @@ const ImageCarousel = memo(function ImageCarousel() {
 });
 
 export default function HeroSection() {
+  const { user } = useAuth();
   const logoRef = useRef<HTMLDivElement>(null);
 
   // Optimized smooth mouse tracking
@@ -304,7 +306,7 @@ export default function HeroSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
             >
-              <HeroCTAs />
+              <HeroCTAs user={user} />
             </motion.div>
 
             {/* Stats */}
