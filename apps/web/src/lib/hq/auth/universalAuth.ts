@@ -168,7 +168,7 @@ export async function checkIdUniqueness(customId: string): Promise<{ isUnique: b
 import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
 
 export type AuthResult = 
-  | { success: true }
+  | { success: true; redirectUrl?: string }
   | { success: false; error: string };
 
 /**
@@ -240,9 +240,13 @@ export async function loginUniversal(customId: string, password: string): Promis
 
     // 5. Final Redirect
     const redirectPath = getDashboardPath(dept.id, finalData.role, finalData.patientId || finalData.studentId || finalData.seekerId || finalData.childId);
-    window.location.href = redirectPath;
+    
+    // Attempt local redirect, but return it for the caller to handle as well
+    if (typeof window !== 'undefined') {
+      window.location.href = redirectPath;
+    }
 
-    return { success: true };
+    return { success: true, redirectUrl: redirectPath };
   } catch (err: any) {
     console.error('[UniversalAuth] Login Error:', err);
     let msg = 'Authentication failed.';
@@ -256,14 +260,23 @@ export async function loginUniversal(customId: string, password: string): Promis
  * Constructs the correct dashboard path based on department and role.
  */
 function getDashboardPath(deptId: string, role: string, patientId?: string): string {
+  const normalizedRole = (role || '').toLowerCase();
+
   if (deptId === 'hq') {
-    if (role === 'superadmin') return '/hq/dashboard/superadmin';
-    if (role === 'manager') return '/hq/dashboard/manager';
-    if (role === 'cashier') return '/hq/dashboard/cashier';
+    if (normalizedRole === 'superadmin') return '/hq/dashboard/superadmin';
+    if (normalizedRole === 'manager') return '/hq/dashboard/manager';
+    if (normalizedRole === 'cashier') return '/hq/dashboard/cashier';
     return '/hq/dashboard';
   }
 
   const base = `/departments/${deptId}/dashboard`;
-  if (role === 'family' && patientId) return `${base}/family/${patientId}`;
-  return `${base}/${role}`;
+  // Handle common roles directly
+  if (normalizedRole === 'staff') return `${base}/staff`;
+  if (normalizedRole === 'admin') return `${base}/admin`;
+  if (normalizedRole === 'cashier') return `${base}/cashier`;
+  if (normalizedRole === 'superadmin') return `${base}/superadmin`;
+  if (normalizedRole === 'family' && patientId) return `${base}/family/${patientId}`;
+  
+  // Fallback to role-based dashboard if exists, or base dashboard
+  return `${base}/${normalizedRole}`;
 }
