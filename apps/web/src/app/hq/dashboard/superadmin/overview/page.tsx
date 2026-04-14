@@ -97,7 +97,7 @@ export default function OverviewPage() {
     return [
       {
         id: 'RHB-09X',
-        name: 'Rehab Sub-System',
+        name: 'Rehab Admissions',
         value: stats.rehabPatientsToday,
         status: (stats.pendingApprovals > 0 ? 'pending' : 'cleared') as UnitStatus,
         trend: { val: 12, up: true },
@@ -106,7 +106,7 @@ export default function OverviewPage() {
       },
       {
         id: 'SPM-44L',
-        name: 'SPIMS Academic Data',
+        name: 'Student Registry',
         value: stats.spimsStudentsToday,
         status: (stats.pendingApprovals > 5 ? 'pending' : 'cleared') as UnitStatus,
         trend: { val: 4, up: true },
@@ -115,7 +115,7 @@ export default function OverviewPage() {
       },
       {
         id: 'HQV-001',
-        name: 'Governance HQ',
+        name: 'Staff Management',
         value: stats.activeStaffCount,
         status: (stats.pendingReconciliations > 0 ? 'pending' : 'cleared') as UnitStatus,
         trend: { val: 2.1, up: true },
@@ -124,7 +124,7 @@ export default function OverviewPage() {
       },
       {
         id: 'JSV-77K',
-        name: 'Job Server Node',
+        name: 'Job Center Flow',
         value: formatPKR(stats.txAmountToday),
         status: 'cleared' as UnitStatus,
         trend: { val: 8, up: false },

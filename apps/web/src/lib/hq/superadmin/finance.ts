@@ -73,9 +73,10 @@ function classifyTxType(t: any): TxType {
 }
 
 /**
- * Robustly load approved transactions with error handling per department.
+ * Robustly load transactions with error handling per department.
+ * Defaults to 'approved' but can include pending for real-time collection metrics.
  */
-export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'hq', days = 35) {
+export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hq', days = 35, statuses: string[] = ['approved']) {
   try {
     let col = '';
     if (dept === 'rehab') col = 'rehab_transactions';
@@ -83,9 +84,14 @@ export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'h
     else if (dept === 'job-center') col = 'job_center_transactions';
     else col = 'cashierTransactions';
 
-    const snap = await getDocs(
-      query(collection(db, col), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(days * 100))
+    const q = query(
+      collection(db, col), 
+      where('status', 'in', statuses), 
+      orderBy('createdAt', 'desc'), 
+      limit(days * 100)
     );
+
+    const snap = await getDocs(q);
     
     return snap.docs.map((d: any) => {
       const data = d.data();
@@ -100,6 +106,13 @@ export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'h
     console.warn(`[Finance] Permission or load error for ${dept}:`, err);
     return [];
   }
+}
+
+/**
+ * Legacy wrapper for backward compatibility.
+ */
+export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'hq', days = 35) {
+  return loadRecentTx(dept, days, ['approved']);
 }
 
 /**
@@ -186,12 +199,13 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = dayKey(yesterday);
 
-  // Load last 40 days to calculate trends
+  // Load last 40 days to calculate trends, including pending for today's real-time accuracy
+  const statuses = ['approved', 'pending', 'pending_cashier'];
   const [rehab, spims, jobcenter, hq] = await Promise.all([
-    loadApprovedTx('rehab', 40),
-    loadApprovedTx('spims', 40),
-    loadApprovedTx('job-center', 40),
-    loadApprovedTx('hq', 40)
+    loadRecentTx('rehab', 40, statuses),
+    loadRecentTx('spims', 40, statuses),
+    loadRecentTx('job-center', 40, statuses),
+    loadRecentTx('hq', 40, statuses)
   ]);
 
   const allTx = [...rehab, ...spims, ...jobcenter, ...hq];
