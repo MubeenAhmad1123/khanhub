@@ -9,6 +9,7 @@ import { CsvExportButton } from '@/components/hq/superadmin/CsvExportButton';
 import { EmptyState, InlineLoading } from '@/components/hq/superadmin/DataState';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ActivityDetailModal } from '@/components/hq/superadmin/ActivityDetailModal';
 
 // --- Icons (Inline SVG) ---
 const SettingsIcon = ({ size = 16, className = "" }) => (
@@ -76,6 +77,9 @@ export default function SuperadminAuditPage() {
   const [actionType, setActionType] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<DateRange>('all');
   
+  // Modal State
+  const [selectedAudit, setSelectedAudit] = useState<any>(null);
+
   // Retention Modal State
   const [showRetention, setShowRetention] = useState(false);
   const [retentionDays, setRetentionDays] = useState<number | null>(null);
@@ -370,7 +374,8 @@ export default function SuperadminAuditPage() {
             {filtered.map((r) => (
               <div
                 key={r.id}
-                className={`group relative overflow-hidden rounded-[2rem] border border-gray-50 bg-white p-6 shadow-sm transition-all hover:translate-x-1 hover:border-black dark:hover:border-white dark:border-white/[0.02] dark:bg-white/[0.03] border-l-8 ${
+                onClick={() => setSelectedAudit(r)}
+                className={`group relative overflow-hidden rounded-[2rem] border border-gray-50 bg-white p-6 shadow-sm transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-md hover:border-black dark:hover:border-white dark:border-white/[0.02] dark:bg-white/[0.03] border-l-8 ${
                   r.action === 'created' ? 'border-l-black dark:border-l-white opacity-90' :
                   r.action === 'approved' ? 'border-l-black dark:border-l-white' :
                   r.action === 'rejected' ? 'border-l-gray-300 dark:border-l-gray-700' :
@@ -421,6 +426,14 @@ export default function SuperadminAuditPage() {
           </div>
         )}
       </div>
+
+      {/* Activity Detail Modal */}
+      {selectedAudit && (
+        <ActivityDetailModal 
+          audit={selectedAudit} 
+          onClose={() => setSelectedAudit(null)} 
+        />
+      )}
     </div>
   );
 }

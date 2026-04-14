@@ -22,6 +22,8 @@ import {
   ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { resolveProfilePath } from "@/lib/hq/superadmin/navigation";
 import { 
   fetchAnalyticsMetrics, 
   fetchFinanceInsights,
@@ -52,6 +54,7 @@ export default function SuperadminAnalyticsPage() {
   const [insights, setInsights] = useState<FinanceInsights | null>(null);
   const [activeTab, setActiveTab] = useState<'universal' | 'rehab' | 'spims' | 'job_center' | 'hq'>('universal');
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const router = useRouter();
 
   const loadData = async () => {
     setLoading(true);
@@ -313,7 +316,8 @@ export default function SuperadminAnalyticsPage() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + (i * 0.05) }}
-                    className="group hover:bg-muted/10 transition-colors"
+                    className="group hover:bg-muted/10 transition-colors cursor-pointer"
+                    onClick={() => router.push(resolveProfilePath(item.type, '', item.id))}
                   >
                     <td className="px-10 py-8 italic font-black text-sm tracking-tight text-black dark:text-white">
                       <div className="flex items-center gap-4">

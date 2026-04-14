@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { InlineLoading } from '@/components/hq/superadmin/DataState';
+import { ActivityDetailModal } from '@/components/hq/superadmin/ActivityDetailModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -49,28 +50,6 @@ const ACTION_BADGE_STYLES: Record<string, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatAction(action: string): string {
-  const map: Record<string, string> = {
-    created:    'User Created',
-    registered: 'User Registered',
-    approved:   'Approved',
-    rejected:   'Rejected',
-    login:      'Login',
-    reset:      'Password Reset',
-    updated:    'Updated',
-    other:      'Action Performed',
-  };
-  return map[action] || action.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function formatTimestamp(ms: number): string {
-  if (!ms) return '—';
-  return new Date(ms).toLocaleString('en-PK', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-  });
-}
-
 function getRelativeTime(ms: number): string {
   const diff = Date.now() - ms;
   const s = Math.floor(diff / 1000);
@@ -83,107 +62,6 @@ function getRelativeTime(ms: number): string {
   return 'Just now';
 }
 
-function getRelativeTimeFull(ms: number): string {
-  const diff = Date.now() - ms;
-  const s = Math.floor(diff / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  const d = Math.floor(h / 24);
-  if (d > 1) return `${d} days ago`;
-  if (d === 1) return '1 day ago';
-  if (h > 1) return `${h} hours ago`;
-  if (h === 1) return '1 hour ago';
-  if (m > 1) return `${m} minutes ago`;
-  if (m === 1) return '1 minute ago';
-  return 'Just now';
-}
-
-// ─── Sub-components ────────────────────────────────────────────────────────────
-
-function DetailRow({
-  label,
-  value,
-  capitalize,
-  mono,
-  badge,
-  actionColor,
-  last,
-}: {
-  label: string;
-  value?: string | null;
-  capitalize?: boolean;
-  mono?: boolean;
-  badge?: boolean;
-  actionColor?: string;
-  last?: boolean;
-}) {
-  const display = value && value.trim() ? value : '—';
-  const badgeStyle = badge && actionColor ? (ACTION_BADGE_STYLES[actionColor] || ACTION_BADGE_STYLES.other) : '';
-
-  return (
-    <div className={`flex items-start justify-between gap-4 px-4 py-3 ${!last ? 'border-b border-gray-100 dark:border-white/[0.04]' : ''}`}>
-      <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 shrink-0 pt-0.5 w-28 italic">{label}</span>
-      {badge ? (
-        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border ${badgeStyle}`}>
-          {display}
-        </span>
-      ) : (
-        <span className={`text-[13px] font-bold text-black dark:text-white text-right leading-snug ${capitalize ? 'capitalize' : ''} ${mono ? 'font-mono text-[11px] text-gray-500 dark:text-gray-400' : ''}`}>
-          {display}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// Fields to exclude from "More Details" — already shown in structured sections
-const KNOWN_FIELDS = new Set([
-  'name', 'displayName', 'role', 'type', 'customId', 'userId', 'staffId',
-  'patientId', 'clientId', 'action', 'event', 'actorName', 'actorId', 'byName',
-  'createdByName', 'message', 'title', 'details', 'summary', 'text',
-  'createdAt', 'timestamp', 'time', 'at', 'entityLabel', 'entityName',
-  'patientName', 'studentName', 'entityId', 'departmentCode', 'dept',
-  'by', 'createdBy', 'userName', 'performedBy'
-]);
-
-function MoreDetailsSection({ raw }: { raw: any }) {
-  if (!raw || typeof raw !== 'object') return null;
-
-  const extras = Object.entries(raw).filter(([key, val]) => {
-    if (KNOWN_FIELDS.has(key)) return false;
-    if (val === null || val === undefined || val === '') return false;
-    if (typeof val === 'object' && !Array.isArray(val) && 'seconds' in val) return false; // skip Firestore Timestamps
-    return true;
-  });
-
-  if (extras.length === 0) return null;
-
-  return (
-    <div className="rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/[0.03] overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-gray-100 dark:border-white/5 bg-gray-100 dark:bg-white/5">
-        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">More Details</p>
-      </div>
-      <div className="divide-y divide-white/[0.04]">
-        {extras.map(([key, val], i) => {
-          const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-          let display = '';
-          if (typeof val === 'boolean') display = val ? 'Yes' : 'No';
-          else if (typeof val === 'object') display = JSON.stringify(val);
-          else display = String(val);
-          return (
-            <DetailRow
-              key={key}
-              label={label}
-              value={display}
-              last={i === extras.length - 1}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function HqSuperadminPage() {
@@ -193,11 +71,6 @@ export default function HqSuperadminPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [activity, setActivity] = useState<any[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<any | null>(null);
-  
-  // Profile loading state for the detail modal
-  const [profileData, setProfileData] = useState<any | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const profileCache = useRef<Record<string, any>>({});
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -221,76 +94,6 @@ export default function HqSuperadminPage() {
       onData: (rows) => { setActivity(rows); },
     });
   }, [session]);
-
-  // Dynamic Full Profile Fetcher
-  useEffect(() => {
-    if (!selectedAudit) {
-      setProfileData(null);
-      return;
-    }
-
-    const fetchProfile = async () => {
-      const details = selectedAudit._raw?.details || {};
-      const customId = details.customId || details.userId || selectedAudit._raw?.customId || selectedAudit._raw?.userId || selectedAudit._raw?.staffId || selectedAudit.entityId;
-      
-      if (!customId) {
-        setProfileData('not_found');
-        return;
-      }
-
-      if (profileCache.current[customId]) {
-        setProfileData(profileCache.current[customId]);
-        return;
-      }
-
-      setProfileLoading(true);
-      try {
-        const src = (selectedAudit.source || '').replace('-', '_');
-        const collectionsToCheck = [
-          `${src}_users`,
-          `${src}_patients`,
-          `${src}_seekers`,
-          `${src}_students`,
-          `${src}_children`,
-          `${src}_clients`,
-          `${src}_staff`,
-          `${src}_admins`,
-          'users',
-          'staff',
-          'patients',
-          'students',
-          'accounts'
-        ];
-
-        for (const colName of collectionsToCheck) {
-          const colRef = collection(db, colName);
-          const fieldsToSearch = ['customId', 'uid', 'userId', 'id', 'clientId', 'studentId', 'patientId', 'seekerId', 'staffId'];
-          
-          for (const field of fieldsToSearch) {
-            const q = query(colRef, where(field, '==', customId), limit(1));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-              const data = snap.docs[0].data();
-              profileCache.current[customId] = data;
-              setProfileData(data);
-              setProfileLoading(false);
-              return;
-            }
-          }
-        }
-        
-        profileCache.current[customId] = 'not_found';
-        setProfileData('not_found');
-      } catch (err) {
-        console.error("Profile fetch error:", err);
-        setProfileData('not_found');
-      } finally {
-        setProfileLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [selectedAudit]);
 
   const cards = useMemo(
     () => [
@@ -351,123 +154,7 @@ export default function HqSuperadminPage() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
 
       {/* ── Activity Detail Modal ─────────────────────────────────────────── */}
-      {selectedAudit && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in"
-          onClick={(e) => { if (e.target === e.currentTarget) setSelectedAudit(null); }}
-        >
-          <div className="w-full max-w-[480px] overflow-hidden rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black shadow-2xl animate-in zoom-in-95">
-
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5 px-6 py-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-black dark:text-white">Activity Details</h3>
-              <button
-                onClick={() => setSelectedAudit(null)}
-                className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="max-h-[75vh] overflow-y-auto divide-y divide-gray-100 dark:divide-white/[0.04] custom-scrollbar">
-
-              {/* Section 1 — Summary */}
-              <div className="p-5">
-                <p className="text-[15px] font-black text-black dark:text-white leading-snug">
-                  {selectedAudit.readableMessage}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${SOURCE_BADGE_STYLES[selectedAudit.source] || 'bg-white/5 text-gray-400'}`}>
-                    {DEPT_LABELS[selectedAudit.source] || selectedAudit.source}
-                  </span>
-                  <span className="text-[11px] font-semibold text-gray-400">{selectedAudit.whenLabel}</span>
-                </div>
-              </div>
-
-              {/* Section 2 — User Details */}
-              <div>
-                <div className="px-5 pt-4 pb-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 italic">User Details</p>
-                </div>
-                <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                  <DetailRow label="Full Name"   value={selectedAudit._raw?.details?.displayName || selectedAudit._raw?.details?.name || selectedAudit._raw?.name || selectedAudit._raw?.displayName || selectedAudit.entityLabel} />
-                  <DetailRow label="Role"        value={selectedAudit._raw?.details?.role || selectedAudit._raw?.details?.type || selectedAudit._raw?.role || selectedAudit._raw?.type} capitalize />
-                  <DetailRow label="Custom ID"   value={selectedAudit._raw?.details?.customId || selectedAudit._raw?.details?.userId || selectedAudit._raw?.customId || selectedAudit._raw?.userId || selectedAudit._raw?.staffId || selectedAudit._raw?.patientId || selectedAudit._raw?.clientId} mono />
-                  <DetailRow label="Department"  value={DEPT_LABELS[selectedAudit.source] || selectedAudit.source} last />
-                </div>
-              </div>
-
-              {/* Section 3 — Action Info */}
-              <div>
-                <div className="px-5 pt-4 pb-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 italic">Action Info</p>
-                </div>
-                <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                  <DetailRow label="Action Type"   value={formatAction(selectedAudit.action)} badge actionColor={selectedAudit.action} />
-                  <DetailRow label="Performed By"  value={!selectedAudit.actorName || selectedAudit.actorName === 'System' || selectedAudit.actorName === 'server_action' ? 'System (Automated)' : selectedAudit.actorName} />
-                  <DetailRow label="Timestamp"     value={formatTimestamp(selectedAudit.whenMs)} />
-                  <DetailRow label="Time Ago"      value={getRelativeTimeFull(selectedAudit.whenMs)} last />
-                </div>
-              </div>
-
-              {/* Section 4 — More Details (auto-rendered extra fields) */}
-              <div className="p-5 space-y-3">
-                <MoreDetailsSection raw={selectedAudit._raw?.details || selectedAudit._raw} />
-              </div>
-
-              {/* Section 5 — Full Profile (Dynamic) */}
-              <div className="p-5">
-                <div className="rounded-2xl border border-indigo-500/10 dark:border-indigo-500/20 bg-indigo-500/5 overflow-hidden">
-                  <div className="px-4 py-2.5 border-b border-indigo-500/10 bg-indigo-500/5 flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-500">Full Profile Record</p>
-                    {profileLoading && <span className="w-3 h-3 border-2 border-indigo-500/30 border-t-indigo-400 rounded-full animate-spin"></span>}
-                  </div>
-                  <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                    {profileLoading && (
-                      <div className="px-4 py-6 text-center text-xs font-semibold text-gray-500 tracking-wider uppercase">Searching database...</div>
-                    )}
-                    {!profileLoading && profileData === 'not_found' && (
-                      <div className="px-4 py-6 text-center text-[11px] font-bold text-gray-500">No additional profile data found for this user.</div>
-                    )}
-                    {!profileLoading && profileData && profileData !== 'not_found' && Object.entries(profileData)
-                      .filter(([_, v]) => v !== undefined && v !== null && v !== '')
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([key, val], i, arr) => {
-                        const label = key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
-                        let display = '';
-                        if (typeof val === 'boolean') display = val ? 'Yes' : 'No';
-                        else if (val && typeof val === 'object' && !Array.isArray(val) && 'seconds' in val) display = formatTimestamp((val as any).seconds * 1000);
-                        else if (val && typeof val === 'object') display = JSON.stringify(val);
-                        else display = String(val);
-
-                        return (
-                          <DetailRow
-                            key={key}
-                            label={label}
-                            value={display}
-                            last={i === arr.length - 1}
-                          />
-                        );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-white/5 bg-white/5 p-4">
-              <button
-                onClick={() => setSelectedAudit(null)}
-                className="w-full rounded-xl bg-white/10 py-3 text-xs font-black uppercase tracking-widest text-gray-300 transition hover:bg-white/20 hover:text-white"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ActivityDetailModal audit={selectedAudit} onClose={() => setSelectedAudit(null)} />
 
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3">

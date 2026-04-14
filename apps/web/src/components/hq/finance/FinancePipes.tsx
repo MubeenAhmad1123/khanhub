@@ -7,164 +7,178 @@ interface PipeProps {
   id: string;
   source: { x: number; y: number };
   target: { x: number; y: number };
-  active?: boolean;
   color?: string;
   delay?: number;
 }
 
-export const FinancePipe: React.FC<PipeProps> = ({ 
+const FinancePipe: React.FC<PipeProps> = ({ 
   source, 
   target, 
-  active = true, 
-  color = '#3b82f6', 
+  color = '#22d3ee', // Default Cyan-400
   delay = 0 
 }) => {
-  // Vertical S-curve logic
-  const midY = (source.y + target.y) / 2;
-  const path = `M ${source.x} ${source.y} C ${source.x} ${midY}, ${target.x} ${midY}, ${target.x} ${target.y}`;
+  // Cubic Bezier path for smooth S-curve
+  // Source is top-down flow: 
+  // 控制点1: (startX, startY + dynamicHeight)
+  // 控制点2: (endX, endY - dynamicHeight)
+  const dy = Math.abs(target.y - source.y);
+  const cp1 = { x: source.x, y: source.y + dy * 0.5 };
+  const cp2 = { x: target.x, y: target.y - dy * 0.5 };
+  
+  const path = `M ${source.x} ${source.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${target.x} ${target.y}`;
 
   return (
     <g className="finance-pipe">
-      {/* Background Glow Path */}
+      {/* 1. Ultra-Wide Background Glow */}
       <path
         d={path}
         fill="none"
         stroke={color}
-        strokeWidth="8"
-        strokeOpacity="0.03"
+        strokeWidth="12"
+        strokeOpacity="0.05"
         strokeLinecap="round"
       />
       
-      {/* Subdued Base Line */}
+      {/* 2. Secondary Glow */}
       <path
         d={path}
         fill="none"
         stroke={color}
-        strokeWidth="1.5"
+        strokeWidth="6"
         strokeOpacity="0.1"
         strokeLinecap="round"
       />
 
-      {/* Primary Flow Path */}
-      {active && (
-        <motion.path
-          d={path}
-          fill="none"
-          stroke={color}
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ 
-            pathLength: [0, 1],
-            opacity: [0, 0.4, 0]
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: delay
-          }}
-          style={{ filter: `drop-shadow(0 0 4px ${color})` }}
-        />
-      )}
+      {/* 3. Base Line (Subdued) */}
+      <path
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth="1"
+        strokeOpacity="0.2"
+        strokeLinecap="round"
+      />
 
-      {/* Moving Particle Pulse */}
-      {active && (
-        <motion.circle
-          r="2.5"
-          fill={color}
-          initial={{ offset: 0 }}
-          animate={{ 
-            cx: [source.x, source.x, target.x, target.x],
-            cy: [source.y, midY, midY, target.y],
-            opacity: [0, 1, 1, 0]
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: "linear",
-            delay: delay + 0.5
-          }}
-          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+      {/* 4. Animated Flow Path */}
+      <motion.path
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ 
+          pathLength: [0, 1],
+          opacity: [0, 0.4, 0]
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: delay
+        }}
+      />
+
+      {/* 5. Moving Liquid Pulse */}
+      <motion.circle
+        r="2"
+        fill={color}
+        initial={{ offset: 0 }}
+        animate={{ 
+          offset: [0, 1] 
+        }}
+        transition={{
+          duration: 2.5,
+          repeat: Infinity,
+          ease: "linear",
+          delay: delay
+        }}
+      >
+        <animateMotion 
+          path={path} 
+          dur="2.5s" 
+          repeatCount="indefinite" 
+          begin={`${delay}s`}
         />
-      )}
+      </motion.circle>
     </g>
   );
 };
 
 interface FinancePipesOverlayProps {
+  totalCardRef: React.RefObject<HTMLDivElement>;
+  deptRefs: React.RefObject<HTMLDivElement>[];
   containerRef: React.RefObject<HTMLDivElement>;
-  sourceRef: React.RefObject<HTMLDivElement>;
-  targetRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
-  depts: string[];
+  deptIds: string[];
 }
 
 export const FinancePipesOverlay: React.FC<FinancePipesOverlayProps> = ({ 
+  totalCardRef, 
+  deptRefs, 
   containerRef,
-  sourceRef, 
-  targetRefs, 
-  depts 
+  deptIds
 }) => {
   const [pipes, setPipes] = useState<PipeProps[]>([]);
 
   const calculatePipes = useCallback(() => {
-    if (!containerRef.current || !sourceRef.current || !targetRefs.current) return;
+    if (!containerRef.current || !totalCardRef.current) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
-    const sourceRect = sourceRef.current.getBoundingClientRect();
+    const totalRect = totalCardRef.current.getBoundingClientRect();
 
-    // Source coordinates: Center-Bottom of the Total Card
-    const sourceX = (sourceRect.left + sourceRect.width / 2) - containerRect.left;
-    const sourceY = sourceRect.bottom - containerRect.top;
+    // Origin: Bottom center of the Grand Total Card
+    const startX = (totalRect.left + totalRect.width / 2) - containerRect.left;
+    const startY = totalRect.bottom - containerRect.top;
 
-    const newPipes = depts.map((id, index) => {
-      const targetEl = targetRefs.current[id];
-      if (!targetEl) return null;
+    const newPipes = deptIds.map((id, index) => {
+      const deptRef = deptRefs[index];
+      if (!deptRef?.current) return null;
 
-      const targetRect = targetEl.getBoundingClientRect();
+      const deptRect = deptRef.current.getBoundingClientRect();
       
-      // Target coordinates: Center-Top of the Department Card
-      const targetX = (targetRect.left + targetRect.width / 2) - containerRect.left;
-      const targetY = targetRect.top - containerRect.top;
+      // Target: Top center of the Department Card
+      const endX = (deptRect.left + deptRect.width / 2) - containerRect.left;
+      const endY = deptRect.top - containerRect.top;
 
       return {
         id,
-        source: { x: sourceX, y: sourceY },
-        target: { x: targetX, y: targetY },
-        color: index % 2 === 0 ? '#6366f1' : '#10b981', // Indigo and Emerald alternates
-        delay: index * 0.3
+        source: { x: startX, y: startY },
+        target: { x: endX, y: endY },
+        color: index % 2 === 0 ? '#22d3ee' : '#8b5cf6', // Cyan and Violet alternates
+        delay: index * 0.4
       };
     }).filter(Boolean) as PipeProps[];
 
     setPipes(newPipes);
-  }, [containerRef, sourceRef, targetRefs, depts]);
+  }, [containerRef, totalCardRef, deptRefs, deptIds]);
 
   useLayoutEffect(() => {
-    // Initial calculation
     calculatePipes();
 
-    // ResizeObserver for dynamic layout shifts
     if (!containerRef.current) return;
     
+    // ResizeObserver for dynamic layout shifts (responsive grid)
     const observer = new ResizeObserver(() => {
       calculatePipes();
     });
 
     observer.observe(containerRef.current);
-    
-    // Also listen to window resize for global shifts
     window.addEventListener('resize', calculatePipes);
+
+    // Initial delay to ensure refs are ready after first paint
+    const timer = setTimeout(calculatePipes, 100);
 
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', calculatePipes);
+      clearTimeout(timer);
     };
   }, [calculatePipes, containerRef]);
 
   return (
     <svg 
       className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible"
-      style={{ filter: 'drop-shadow(0 0 20px rgba(0,0,0,0.05))' }}
+      style={{ filter: 'drop-shadow(0 0 10px rgba(6,182,212,0.1))' }}
     >
       <AnimatePresence>
         {pipes.map((pipe) => (
