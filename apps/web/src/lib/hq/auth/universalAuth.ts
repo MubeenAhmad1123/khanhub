@@ -108,12 +108,12 @@ export async function discoverUser(customId: string) {
   const performSearch = async (dept: (typeof DEPARTMENTS_AUTH)[keyof typeof DEPARTMENTS_AUTH]) => {
     try {
       // 1. Try exact match
-      const q1 = query(collection(db, dept.collection), where('customId', '==', rawId));
+      const q1 = query(collection(db, dept.collection), where('customId', '==', rawId), limit(1));
       const snap1 = await getDocs(q1);
       if (!snap1.empty) return { dept, data: snap1.docs[0].data(), uid: snap1.docs[0].id };
       
       // 2. Try lowercase match
-      const q2 = query(collection(db, dept.collection), where('customId', '==', normalizedId));
+      const q2 = query(collection(db, dept.collection), where('customId', '==', normalizedId), limit(1));
       const snap2 = await getDocs(q2);
       if (!snap2.empty) return { dept, data: snap2.docs[0].data(), uid: snap2.docs[0].id };
       
