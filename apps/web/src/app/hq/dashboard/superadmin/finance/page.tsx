@@ -64,7 +64,7 @@ export default function SuperadminFinancePage() {
         </div>
         <div className="text-center">
           <div className="text-xs font-black uppercase tracking-[0.5em] text-primary mb-2 animate-pulse font-bold">Constructing Financial Data Hub</div>
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest opacity-50 italic">Establishing secure departmental tunnels...</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest opacity-50">Establishing secure departmental tunnels...</div>
         </div>
       </div>
     );
@@ -77,11 +77,11 @@ export default function SuperadminFinancePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
         
         <div className="relative">
-          <div className="flex items-center gap-3 text-[10px] text-primary font-black uppercase tracking-[0.4em] mb-1 italic">
+          <div className="flex items-center gap-3 text-[10px] text-primary font-bold uppercase tracking-widest mb-1">
             <TrendingUp className="w-4 h-4" /> Global Financial Nexus
           </div>
-          <h1 className="text-4xl font-black text-black dark:text-white tracking-tighter uppercase italic leading-none">
-            Master <span className="text-primary not-italic tracking-normal">Control</span>
+          <h1 className="text-4xl font-bold text-black dark:text-white tracking-tight uppercase leading-none">
+            Master <span className="text-primary tracking-normal font-black">Control</span>
           </h1>
         </div>
 
@@ -130,8 +130,8 @@ export default function SuperadminFinancePage() {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
             <Sparkles className="w-12 h-12 text-primary" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-4 block italic">Yield (TODAY)</span>
-          <div className="text-3xl font-black tracking-tighter italic text-black dark:text-white">Rs. {summary?.collectedToday.toLocaleString()}</div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-4 block">Yield (TODAY)</span>
+          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">Rs. {summary?.collectedToday.toLocaleString()}</div>
           <div className={cn(
             "mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest",
             (summary?.collectedDailyTrend || 0) >= 0 ? "text-emerald-500" : "text-rose-500"
@@ -142,27 +142,27 @@ export default function SuperadminFinancePage() {
         </div>
 
         <div className="p-8 rounded-[2.5rem] bg-black dark:bg-white border text-white dark:text-black shadow-2xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-4 block italic font-bold">Total Collection</span>
-          <div className="text-3xl font-black tracking-tighter italic">Rs. {summary?.collectedThisMonth.toLocaleString()}</div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider opacity-40 mb-4 block">Total Collection</span>
+          <div className="text-3xl font-bold tracking-tight">Rs. {summary?.collectedThisMonth.toLocaleString()}</div>
           <div className="mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-60">
             <Clock className="w-4 h-4" /> Current Month Cycle
           </div>
         </div>
 
         <div className="p-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/20 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-4 block italic font-bold">Dormant capital</span>
-          <div className="text-3xl font-black tracking-tighter italic text-black dark:text-white">Rs. {summary?.outstandingTotal.toLocaleString()}</div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-500 italic">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-4 block">Dormant capital</span>
+          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">Rs. {summary?.outstandingTotal.toLocaleString()}</div>
+          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-500">
             <AlertCircle className="w-4 h-4" /> Awaiting Liquidation
           </div>
         </div>
 
         <div className="p-8 rounded-[2.5rem] bg-muted/20 border border-border/50 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-4 block italic font-bold">Vulnerability index</span>
-          <div className="text-3xl font-black tracking-tighter italic text-black dark:text-white">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-4 block">Vulnerability index</span>
+          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">
             {summary?.pendingApprovals} <span className="text-sm">ITEMS</span>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary animate-pulse italic">
+          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
             <Layers className="w-4 h-4" /> Actions Required
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function SuperadminFinancePage() {
               {/* Pulse Velocity Matrix (Daily Tx Log - Operational) */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                  <div className="rounded-[3rem] border border-border/50 bg-white dark:bg-black p-10 shadow-sm overflow-hidden">
-                    <h2 className="text-2xl font-black uppercase tracking-tighter italic border-l-4 border-primary pl-6 mb-8 text-black dark:text-white">Pulse velocity matrix</h2>
+                    <h2 className="text-2xl font-bold uppercase tracking-tight border-l-4 border-primary pl-6 mb-8 text-black dark:text-white">Pulse velocity matrix</h2>
                     <div className="space-y-4">
                        {data.map((dept, i) => (
                          <div key={dept.deptId} className="flex items-center justify-between p-6 rounded-3xl bg-gray-50 dark:bg-white/[0.03] border border-transparent hover:border-primary/20 transition-all group">
@@ -201,13 +201,13 @@ export default function SuperadminFinancePage() {
                                    <Database className="w-5 h-5" />
                                 </div>
                                 <div>
-                                   <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Terminal: {dept.deptId}</p>
-                                   <p className="text-base font-black text-black dark:text-white uppercase tracking-tighter italic">{dept.deptName}</p>
+                                   <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Terminal: {dept.deptId}</p>
+                                   <p className="text-base font-bold text-black dark:text-white uppercase tracking-tight">{dept.deptName}</p>
                                 </div>
                              </div>
                              <div className="text-right">
-                                <p className="text-lg font-black text-black dark:text-white italic">RS {dept.totalIncome.toLocaleString()}</p>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">{(dept.percentOfTotal).toFixed(1)}% Share</p>
+                                <p className="text-lg font-bold text-black dark:text-white">RS {dept.totalIncome.toLocaleString()}</p>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-500">{(dept.percentOfTotal).toFixed(1)}% Share</p>
                              </div>
                          </div>
                        ))}
@@ -215,8 +215,8 @@ export default function SuperadminFinancePage() {
                  </div>
 
                  <div className="rounded-[3rem] border border-border/50 bg-white dark:bg-black p-10 shadow-sm overflow-hidden">
-                    <h2 className="text-2xl font-black uppercase tracking-tighter italic border-l-4 border-primary pl-6 mb-8 text-black dark:text-white">Recent System Closings</h2>
-                    <div className="space-y-4 flex flex-col justify-center h-[calc(100%-80px)] items-center opacity-30 italic group">
+                    <h2 className="text-2xl font-bold uppercase tracking-tight border-l-4 border-primary pl-6 mb-8 text-black dark:text-white">Recent System Closings</h2>
+                    <div className="space-y-4 flex flex-col justify-center h-[calc(100%-80px)] items-center opacity-30 group">
                         <CheckCircle2 className="w-16 h-16 mb-4 group-hover:text-primary transition-colors" />
                         <p className="font-black text-xs uppercase tracking-widest">Operational verification system active.</p>
                         <p className="text-[10px] font-bold text-center max-w-xs">All departmental reconciliations are synchronized with the central audit ledger.</p>
@@ -227,7 +227,7 @@ export default function SuperadminFinancePage() {
                {/* Integrated Drill Down Button */}
                <div className="flex flex-col items-center justify-center py-20 border-4 border-dashed border-border/20 rounded-[4rem] group hover:border-primary/20 transition-all bg-white dark:bg-black/20">
                  <Sparkles className="w-20 h-20 text-muted-foreground group-hover:text-primary transition-all duration-700 mb-6 scale-90 group-hover:scale-110" />
-                 <h3 className="text-xl font-black uppercase tracking-tighter italic mb-2">Deep Operational Drill-Down</h3>
+                 <h3 className="text-xl font-bold uppercase tracking-tight mb-2">Deep Operational Drill-Down</h3>
                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-10 opacity-60">Accessing low-level data fragments and departmental logs.</p>
                  <button 
                   onClick={() => setViewMode('visual')}

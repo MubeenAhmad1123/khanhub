@@ -95,12 +95,12 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
             
             <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-2 text-primary font-black uppercase tracking-[0.4em] text-[10px]">
+              <div className="flex items-center gap-3 mb-2 text-primary font-bold uppercase tracking-widest text-[10px]">
                 <Sparkles className="w-5 h-5 fill-primary/20" />
                 Financial Nexus Control
               </div>
-              <h2 className="text-4xl font-black text-black dark:text-white uppercase italic tracking-tighter">
-                {dept.deptName} <span className="text-primary tracking-normal not-italic">Audit</span>
+              <h2 className="text-4xl font-bold text-black dark:text-white uppercase tracking-tight">
+                {dept.deptName} <span className="text-primary tracking-normal">Audit</span>
               </h2>
               <p className="text-muted-foreground mt-2 text-xs font-bold uppercase tracking-widest opacity-60">Deep departmental flow analysis and authorization portal.</p>
             </div>
@@ -116,30 +116,30 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
           <div className="flex-1 overflow-y-auto p-10 custom-scrollbar bg-grid-white/[0.01]">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               <div className="p-8 rounded-[2rem] bg-black dark:bg-white text-white dark:text-black shadow-2xl flex flex-col justify-between group">
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 italic">Total Verified Inflow</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Total Verified Inflow</span>
                 <div className="mt-6">
-                   <div className="text-4xl font-black tracking-tighter">Rs. {dept.totalIncome.toLocaleString()}</div>
-                   <div className="flex items-center gap-2 text-[10px] mt-2 font-black uppercase tracking-widest opacity-70 group-hover:opacity-100 transition-opacity">
+                   <div className="text-4xl font-bold tracking-tight">Rs. {dept.totalIncome.toLocaleString()}</div>
+                   <div className="flex items-center gap-2 text-[10px] mt-2 font-bold uppercase tracking-wider opacity-70 group-hover:opacity-100 transition-opacity">
                      <TrendingUp className="w-4 h-4 text-emerald-400" /> System Synchronized
                    </div>
                 </div>
               </div>
 
               <div className="p-8 rounded-[2rem] border-2 border-border/50 bg-background flex flex-col justify-between hover:border-primary/30 transition-all">
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground italic">Awaiting Authorization</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Awaiting Authorization</span>
                 <div className="mt-6">
-                   <div className="text-4xl font-black tracking-tighter text-black dark:text-white">{dept.pendingCount} <span className="text-sm">ITEMS</span></div>
-                   <div className="flex items-center gap-2 text-[10px] text-amber-500 mt-2 font-black uppercase tracking-widest animate-pulse">
+                   <div className="text-4xl font-bold tracking-tight text-black dark:text-white">{dept.pendingCount} <span className="text-sm">ITEMS</span></div>
+                   <div className="flex items-center gap-2 text-[10px] text-amber-500 mt-2 font-bold uppercase tracking-wider animate-pulse">
                      <Clock className="w-4 h-4" /> Real-time Queue
                    </div>
                 </div>
               </div>
 
               <div className="p-8 rounded-[2rem] bg-primary/10 border-2 border-primary/20 flex flex-col justify-between group">
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary italic">Global Multiplier</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Global Multiplier</span>
                 <div className="mt-6">
-                   <div className="text-4xl font-black tracking-tighter text-black dark:text-white">{Math.round(dept.percentOfTotal)}% <span className="text-sm">SHARE</span></div>
-                   <div className="flex items-center gap-2 text-[10px] text-primary mt-2 font-black uppercase tracking-widest opacity-70 group-hover:opacity-100 transition-opacity">
+                   <div className="text-4xl font-bold tracking-tight text-black dark:text-white">{Math.round(dept.percentOfTotal)}% <span className="text-sm">SHARE</span></div>
+                   <div className="flex items-center gap-2 text-[10px] text-primary mt-2 font-bold uppercase tracking-wider opacity-70 group-hover:opacity-100 transition-opacity">
                      <ArrowUpRight className="w-4 h-4" /> Growth Dynamic
                    </div>
                 </div>
@@ -148,16 +148,16 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
 
             {/* Ways of Income */}
             <div className="mb-14">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground mb-6 border-l-4 border-primary pl-4">Revenue Stream Distribution</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-6 border-l-4 border-primary pl-4">Revenue Stream Distribution</h3>
               <div className="flex flex-wrap gap-4">
                 {Object.entries(dept.ways).map(([key, val]) => (
                   <div 
                     key={key} 
-                    className="px-6 py-4 rounded-2xl bg-muted/30 border border-border/50 flex items-center gap-4 text-xs font-black uppercase tracking-widest hover:border-primary/20 hover:bg-muted/50 transition-all"
+                    className="px-6 py-4 rounded-2xl bg-muted/30 border border-border/50 flex items-center gap-4 text-xs font-bold uppercase tracking-wider hover:border-primary/20 hover:bg-muted/50 transition-all"
                   >
                     <div className="w-2.5 h-2.5 rounded-full bg-primary animate-ping" />
                     <span className="opacity-60">{key}:</span>
-                    <span className="text-black dark:text-white">Rs. {val.toLocaleString()}</span>
+                    <span className="text-black dark:text-white font-bold">Rs. {val.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -166,8 +166,8 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
             {/* Pending Transactions List */}
             <div>
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground border-l-4 border-amber-500 pl-4 text-black dark:text-white">Pending Ledger Verifications</h3>
-                <div className="bg-muted px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest opacity-60 italic">{pending.length} Items Found</div>
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-l-4 border-amber-500 pl-4 text-black dark:text-white">Pending Ledger Verifications</h3>
+                <div className="bg-muted px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider opacity-60">{pending.length} Items Found</div>
               </div>
 
               {loading ? (
@@ -177,7 +177,7 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
               ) : pending.length === 0 ? (
                 <div className="text-center py-24 border-4 border-dashed border-border/30 rounded-[3rem] bg-muted/10 group">
                   <CheckCircle2 className="w-16 h-16 text-emerald-500/20 mx-auto mb-6 group-hover:scale-110 group-hover:text-emerald-500/40 transition-all duration-500" />
-                  <p className="font-black text-xs text-muted-foreground uppercase tracking-[0.3em] italic">All system operations are verified. Clean state.</p>
+                  <p className="font-bold text-xs text-muted-foreground uppercase tracking-wider">All system operations are verified. Clean state.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -198,15 +198,15 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
                          </div>
                          <div>
                             <div className="flex items-center gap-3">
-                              <span className="text-xl font-black italic tracking-tighter">Rs. {(tx.amount || 0).toLocaleString()}</span>
-                              <div className="bg-muted px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest opacity-70">
+                              <span className="text-xl font-bold tracking-tight">Rs. {(tx.amount || 0).toLocaleString()}</span>
+                              <div className="bg-muted px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider opacity-70">
                                 {tx.category || tx.categoryName || 'General Revenue'}
                               </div>
                             </div>
-                            <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-5 mt-2 uppercase tracking-widest">
+                            <div className="text-[10px] font-semibold text-muted-foreground flex items-center gap-5 mt-2 uppercase tracking-wider">
                                <span className="flex items-center gap-2"><User className="w-4 h-4 text-primary" /> {tx.collectedBy || tx.staffName || 'Automated System'}</span>
                                <span className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /> {tx.paymentMethod || 'Direct Ledger'}</span>
-                               <span className="flex items-center gap-2 font-mono opacity-50 italic">#{tx.id.slice(-8).toUpperCase()}</span>
+                               <span className="flex items-center gap-2 font-mono opacity-50">#{tx.id.slice(-8).toUpperCase()}</span>
                             </div>
                          </div>
                       </div>
@@ -215,7 +215,7 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
                         <button 
                           onClick={() => handleApprove(tx.id)}
                           disabled={approving === tx.id}
-                          className="rounded-2xl bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-[10px] h-14 px-10 shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-3"
+                          className="rounded-2xl bg-black dark:bg-white text-white dark:text-black font-bold uppercase tracking-wider text-[10px] h-14 px-10 shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-3"
                         >
                           {approving === tx.id ? (
                             <Clock className="w-5 h-5 animate-spin" />
