@@ -4,7 +4,8 @@ import {
   where, 
   getDocs, 
   doc, 
-  getDoc 
+  getDoc,
+  limit
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
