@@ -11,7 +11,24 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-export type TimeSeriesData = {
+export type AnalyticsMetrics = {
+  grossRevenue: number;
+  revenueGrowth: number;
+  retentionRate: number;
+  retentionGrowth: number;
+  activeNodes: number;
+  nodeGrowth: number;
+  conversionIndex: number;
+  conversionGrowth: number;
+};
+
+export type FinanceInsights = {
+  dailySeries: { date: string; amount: number }[];
+  typeBreakdown: { name: string; value: number }[];
+  topOutstanding: { id: string; name: string; amount: number; type: string }[];
+};
+
+export interface TimeSeriesData {
   date: string;
   rehab: number;
   spims: number;
@@ -38,6 +55,46 @@ const DEPT_COLORS = {
   spims: '#14b8a6', // Tailwind teal-500
   jobCenter: '#f59e0b', // Tailwind amber-500
 };
+
+export async function fetchAnalyticsMetrics(tab: string, range: string): Promise<AnalyticsMetrics> {
+  // Mocking detailed metrics until actual aggregation is implemented
+  return {
+    grossRevenue: 12450000,
+    revenueGrowth: 12.4,
+    retentionRate: 94,
+    retentionGrowth: 2.1,
+    activeNodes: 124,
+    nodeGrowth: 8,
+    conversionIndex: 68,
+    conversionGrowth: -1.2
+  };
+}
+
+export async function fetchFinanceInsights(): Promise<FinanceInsights> {
+  // This would typically aggregate from all departments
+  return {
+    dailySeries: [
+      { date: 'Apr 01', amount: 450000 },
+      { date: 'Apr 02', amount: 520000 },
+      { date: 'Apr 03', amount: 480000 },
+      { date: 'Apr 04', amount: 610000 },
+      { date: 'Apr 05', amount: 550000 },
+      { date: 'Apr 06', amount: 670000 },
+      { date: 'Apr 07', amount: 720000 },
+    ],
+    typeBreakdown: [
+      { name: 'Rehab', value: 45 },
+      { name: 'SPIMS', value: 25 },
+      { name: 'Job Center', value: 20 },
+      { name: 'HQ', value: 10 },
+    ],
+    topOutstanding: [
+      { id: '1', name: 'Zeeshan Ahmad', amount: 125000, type: 'Rehab' },
+      { id: '2', name: 'Mubeen Khan', amount: 85000, type: 'SPIMS' },
+      { id: '3', name: 'Sajid Ali', amount: 45000, type: 'Job Center' },
+    ]
+  };
+}
 
 export async function fetchAnalyticsData(): Promise<AnalyticsData> {
   const now = new Date();
