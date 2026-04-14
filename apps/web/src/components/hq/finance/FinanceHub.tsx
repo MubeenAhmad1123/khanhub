@@ -50,12 +50,12 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
           {/* Glow effect top */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
           
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-cyan-400/70 mb-1">Grand Total Daily Earnings</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-cyan-400/70 mb-1">Today's Grand Collection</p>
           <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">
-            Today's Earnings: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            Total Revenue: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
           
-          <div className="relative inline-block">
+          <div className="relative inline-block mb-4">
              <p className="text-5xl md:text-6xl font-black tracking-tighter text-white leading-none">
               Rs. {totalToday.toLocaleString()}
             </p>
@@ -68,7 +68,17 @@ export const FinanceHub: React.FC<FinanceHubProps> = ({ departments, onUpdate })
             </motion.div>
           </div>
 
-          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-cyan-400/50 mt-3">Today's Revenue Flow</p>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mb-4 opacity-70">
+            {departments.map(d => (
+              <div key={d.deptId} className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest">{d.deptName}:</span>
+                <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">Rs. {d.totalIncome.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-cyan-400/50">Revenue Flow Activated</p>
           
           {/* Bottom dot — pipe origin point */}
           <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.8)] z-20" />

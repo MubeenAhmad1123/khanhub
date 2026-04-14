@@ -78,10 +78,10 @@ export default function SuperadminFinancePage() {
         
         <div className="relative">
           <div className="flex items-center gap-3 text-[10px] text-primary font-bold uppercase tracking-widest mb-1">
-            <TrendingUp className="w-4 h-4" /> Global Financial Nexus
+            <TrendingUp className="w-4 h-4" /> HQ Financial Dashboard
           </div>
           <h1 className="text-4xl font-bold text-black dark:text-white tracking-tight uppercase leading-none">
-            Master <span className="text-primary tracking-normal font-black">Control</span>
+            Central <span className="text-primary tracking-normal font-black">Oversight</span>
           </h1>
         </div>
 
@@ -125,12 +125,13 @@ export default function SuperadminFinancePage() {
       </header>
 
       {/* Stats Ribbon */}
-      <div className="px-8 mt-10 grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="px-8 mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {/* 1. Today's Collection */}
         <div className="p-8 rounded-[2.5rem] bg-primary/5 border border-primary/20 backdrop-blur-xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
             <Sparkles className="w-12 h-12 text-primary" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">Collected Today</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">Today's Collection</span>
           <div className="text-3xl font-bold tracking-tight text-black dark:text-white">Rs. {summary?.collectedToday.toLocaleString()}</div>
           <div className={cn(
             "mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest",
@@ -141,29 +142,41 @@ export default function SuperadminFinancePage() {
           </div>
         </div>
 
+        {/* 2. Today's Pending */}
+        <div className="p-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/20 backdrop-blur-xl relative overflow-hidden group">
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">Today's Pending</span>
+          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">Rs. {summary?.pendingAmountToday.toLocaleString()}</div>
+          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-500">
+            <Clock className="w-4 h-4" /> {summary?.pendingCountToday} Items awaiting approval
+          </div>
+        </div>
+
+        {/* 3. Remaining Balance */}
+        <div className="p-8 rounded-[2.5rem] bg-rose-500/5 border border-rose-500/20 backdrop-blur-xl relative overflow-hidden group">
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">Remaining Balance</span>
+          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">Rs. {summary?.outstandingTotal.toLocaleString()}</div>
+          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-rose-500">
+            <AlertCircle className="w-4 h-4" /> Total Outstanding Debt
+          </div>
+        </div>
+
+        {/* 4. Need Approval (Total Queue) */}
+        <div className="p-8 rounded-[2.5rem] bg-muted/20 border border-border/50 backdrop-blur-xl relative overflow-hidden group shadow-sm transition-all hover:shadow-lg">
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">Need Approval</span>
+          <div className="text-3xl font-bold tracking-tight text-black dark:text-white uppercase tracking-tighter">
+            {summary?.pendingApprovals} <span className="text-sm font-black text-primary">Task Queue</span>
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
+            <Layers className="w-4 h-4" /> Action Required
+          </div>
+        </div>
+
+        {/* 5. Monthly Performance */}
         <div className="p-8 rounded-[2.5rem] bg-black dark:bg-white border text-white dark:text-black shadow-2xl relative overflow-hidden group">
           <span className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-4 block">Monthly Total</span>
           <div className="text-3xl font-bold tracking-tight">Rs. {summary?.collectedThisMonth.toLocaleString()}</div>
           <div className="mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-60">
-            <Clock className="w-4 h-4" /> Current Month Collection
-          </div>
-        </div>
-
-        <div className="p-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/20 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">Pending Payments</span>
-          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">Rs. {summary?.outstandingTotal.toLocaleString()}</div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-500">
-            <AlertCircle className="w-4 h-4" /> Remaining Balance
-          </div>
-        </div>
-
-        <div className="p-8 rounded-[2.5rem] bg-muted/20 border border-border/50 backdrop-blur-xl relative overflow-hidden group">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block">Needs Approval</span>
-          <div className="text-3xl font-bold tracking-tight text-black dark:text-white">
-            {summary?.pendingApprovals} <span className="text-sm">TASKS</span>
-          </div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
-            <Layers className="w-4 h-4" /> Action Required
+            <Sparkles className="w-4 h-4" /> Current Month Collection
           </div>
         </div>
       </div>

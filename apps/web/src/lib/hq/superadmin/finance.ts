@@ -33,6 +33,8 @@ export type FinanceSummary = {
   collectedThisMonth: number;
   outstandingTotal: number;
   pendingApprovals: number;
+  pendingAmountToday: number;
+  pendingCountToday: number;
   pendingReconciliations: number;
   totalTransactionsToday: number;
   // Trends (percentage change)
@@ -99,7 +101,8 @@ export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hq'
         id: d.id, 
         ...data, 
         _dept: dept,
-        _date: toDate(data.transactionDate || data.date || data.dateStr || data.createdAt)
+        _date: toDate(data.transactionDate || data.date || data.dateStr || data.createdAt),
+        _approvedDate: data.approvedAt ? toDate(data.approvedAt) : null
       };
     });
   } catch (err) {
@@ -210,14 +213,23 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
 
   const allTx = [...rehab, ...spims, ...jobcenter, ...hq];
 
-  const sumBy = (txs: any[], predicate: (d: Date) => boolean) =>
-    txs.reduce((acc, r) => predicate(r._date) ? acc + (Number(r.amount) || 0) : acc, 0);
+  const sumBy = (txs: any[], predicate: (r: any) => boolean) =>
+    txs.reduce((acc, r) => predicate(r) ? acc + (Number(r.amount) || 0) : acc, 0);
 
-  const collectedToday = sumBy(allTx, (d) => dayKey(d) === today);
-  const collectedYesterday = sumBy(allTx, (d) => dayKey(d) === yesterdayStr);
-  const collectedThisMonth = sumBy(allTx, (d) => monthKey(d) === thisMonth);
+  const isToday = (date: Date | null) => date ? dayKey(date) === today : false;
+  const isYesterday = (date: Date | null) => date ? dayKey(date) === yesterdayStr : false;
+
+  // Collected Today: Anything approved today OR anything approved that was recorded today
+  const collectedToday = sumBy(allTx, (r) => (r.status === 'approved' && isToday(r._approvedDate)) || (r.status === 'approved' && isToday(r._date)));
+  const collectedYesterday = sumBy(allTx, (r) => (r.status === 'approved' && isYesterday(r._approvedDate)) || (r.status === 'approved' && isYesterday(r._date)));
+  const collectedThisMonth = sumBy(allTx, (r) => r.status === 'approved' && r._date && monthKey(r._date) === thisMonth);
   
   const collectedDailyTrend = collectedYesterday === 0 ? 0 : ((collectedToday - collectedYesterday) / collectedYesterday) * 100;
+
+  // Stats for Pending Today
+  const pendingTodayTx = allTx.filter(r => r.status === 'pending' && isToday(r._date));
+  const pendingAmountToday = pendingTodayTx.reduce((acc, r) => acc + (Number(r.amount) || 0), 0);
+  const pendingCountToday = pendingTodayTx.length;
 
   const [rehabPending, spimsPending, jcPending, hqPending, recPending, rehabPat, spimsStu, jcSeek] = await Promise.all([
     getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
@@ -240,8 +252,10 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
     collectedThisMonth,
     outstandingTotal,
     pendingApprovals: rehabPending + spimsPending + jcPending + hqPending,
+    pendingAmountToday,
+    pendingCountToday,
     pendingReconciliations: recPending,
-    totalTransactionsToday: allTx.filter(t => dayKey(t._date) === today).length,
+    totalTransactionsToday: allTx.filter(t => isToday(t._date)).length,
     collectedDailyTrend,
     collectedMonthlyTrend: 0,
   };

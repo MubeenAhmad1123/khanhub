@@ -97,7 +97,7 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-2 text-primary font-bold uppercase tracking-widest text-[10px]">
                 <Sparkles className="w-5 h-5 fill-primary/20" />
-                Financial Nexus Control
+                HQ Finance Hub
               </div>
               <h2 className="text-4xl font-bold text-black dark:text-white uppercase tracking-tight">
                 {dept.deptName} <span className="text-primary tracking-normal">Audit</span>
