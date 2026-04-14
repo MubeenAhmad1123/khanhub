@@ -99,7 +99,11 @@ export default function DailyReportPage() {
         ...doc.data()
       })) as Transaction[];
       
-      data.sort((a,b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
+      data.sort((a, b) => {
+        const dateA = toDate((a as any).transactionDate || (a as any).date || a.dateStr || a.createdAt);
+        const dateB = toDate((b as any).transactionDate || (b as any).date || b.dateStr || b.createdAt);
+        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+      });
       
       setTransactions(data);
 

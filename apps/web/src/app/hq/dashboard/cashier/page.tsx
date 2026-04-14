@@ -382,7 +382,11 @@ export default function CashierStationPage() {
           if (snap.docs.length < 100) break;
         }
       }
-      all.sort((a, b) => (toDate(b.createdAt || b.date)?.getTime() || 0) - (toDate(a.createdAt || a.date)?.getTime() || 0));
+      all.sort((a, b) => {
+        const dateA = toDate(a.transactionDate || a.date || a.dateStr || a.createdAt);
+        const dateB = toDate(b.transactionDate || b.date || b.dateStr || b.createdAt);
+        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+      });
       setHistoryTxns(all);
     } finally {
       setHistoryLoading(false);
@@ -481,7 +485,7 @@ export default function CashierStationPage() {
 
   const todayStr = getLocalDateString(new Date());
   const historyFiltered = historyTxns.filter((tx) => {
-    const txDateStr = getLocalDateString(tx.transactionDate || tx.date || tx.createdAt);
+    const txDateStr = getLocalDateString(tx.transactionDate || tx.date || tx.dateStr || tx.createdAt);
     if (!txDateStr) return false;
     if (historyDateMode === 'today' && txDateStr !== todayStr) return false;
     if (historyDateMode === 'range') {

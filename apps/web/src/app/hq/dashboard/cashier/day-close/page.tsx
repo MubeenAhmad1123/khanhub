@@ -76,7 +76,7 @@ export default function DayClosePage() {
         ...hqTxs.docs.map(d => ({ ...d.data(), _source: 'hq' })),
         ...rehabTxs.docs.map(d => ({ ...d.data(), _source: 'rehab' })),
         ...spimsTxs.docs.map(d => ({ ...d.data(), _source: 'spims' }))
-      ].filter((t: any) => normalizeDate(t.createdAt || t.date || t.transactionDate) === todayStr);
+      ].filter((t: any) => normalizeDate(t.transactionDate || t.date || t.dateStr || t.createdAt) === todayStr);
 
       setTransactions(all);
 

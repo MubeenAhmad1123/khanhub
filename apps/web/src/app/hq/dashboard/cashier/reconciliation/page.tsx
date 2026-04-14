@@ -46,7 +46,7 @@ export default function CashierReconciliationPage() {
           ...hqSnap.docs.map(d => ({ ...d.data(), id: d.id, _source: 'hq' })),
           ...rehabSnap.docs.map(d => ({ ...d.data(), id: d.id, _source: 'rehab' })),
           ...spimsSnap.docs.map(d => ({ ...d.data(), id: d.id, _source: 'spims' }))
-        ].filter((t: any) => formatDateDMY(toDate(t.createdAt || t.date || t.dateStr)) === date);
+        ].filter((t: any) => formatDateDMY(toDate(t.transactionDate || t.date || t.dateStr || t.createdAt)) === date);
 
         setTransactions(all);
         setPastRecords(pastSnap.docs.map(d => ({ id: d.id, ...d.data() })));

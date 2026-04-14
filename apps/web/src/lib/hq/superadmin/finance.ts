@@ -93,7 +93,7 @@ export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'h
         id: d.id, 
         ...data, 
         _dept: dept,
-        _date: toDate(data.createdAt || data.date || data.transactionDate || data.dateStr)
+        _date: toDate(data.transactionDate || data.date || data.dateStr || data.createdAt)
       };
     });
   } catch (err) {
@@ -398,7 +398,7 @@ export async function fetchFinanceReport(tab: FinanceTab, startDate: Date, endDa
       id: d.id, 
       ...d.data(), 
       _dept: dept,
-      _date: toDate(d.data().createdAt || d.data().date)
+      _date: toDate(d.data().transactionDate || d.data().date || d.data().dateStr || d.data().createdAt)
     }));
   }));
 
