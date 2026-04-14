@@ -28,8 +28,17 @@ export async function recalculateGrowthPoints(
   const attendanceSnap = await getDocs(attendanceQuery);
   const attendanceDocs = attendanceSnap.docs.filter(d => d.data().date?.startsWith(month));
   
-  const attendancePoints = attendanceDocs.filter(d => d.data().status === 'present').length;
-  const punctualityPoints = attendanceDocs.filter(d => d.data().status === 'present' && d.data().isLate === false).length;
+  let attendancePoints = 0;
+  let punctualityPoints = 0;
+  
+  attendanceDocs.forEach(d => {
+    const data = d.data();
+    if (data.status === 'present') {
+      attendancePoints += 1;
+      if (data.arrivedOnTime === true) punctualityPoints += 1;
+      if (data.departedOnTime === true) punctualityPoints += 1;
+    }
+  });
   
   // 2. Fetch Duty Logs
   const dutyQuery = query(

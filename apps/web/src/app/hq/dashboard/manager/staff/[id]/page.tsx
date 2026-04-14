@@ -337,16 +337,19 @@ export default function StaffProfilePage() {
       const uid = staff.staffId;
       const ref = doc(db, `${slug}_attendance`, `${uid}_${date}`);
       
+      const prevRecord = attendanceMap[date] || {};
       const newRecord: HqDailyAttendanceRecord = {
         staffId: uid,
         date,
         status: next,
         markedBy: session?.uid,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        arrivedOnTime: prevRecord.arrivedOnTime ?? (next === 'present'),
+        departedOnTime: prevRecord.departedOnTime ?? (next === 'present'),
       };
 
       // Set default times if presenting for the first time
-      if (next === 'present') {
+      if (next === 'present' && !prevRecord.arrivalTime) {
         newRecord.arrivalTime = '09:00';
         newRecord.departureTime = '17:00';
       }
@@ -356,6 +359,38 @@ export default function StaffProfilePage() {
     } catch (err) {
       toast.error("Update failed");
       fetchData(); // Rollback
+    }
+  };
+
+  const togglePunctuality = async (date: string, field: 'arrivedOnTime' | 'departedOnTime', next: boolean) => {
+    try {
+      if (!staff) return;
+      const slug = staff.dept.replace('-', '_');
+      const uid = staff.staffId;
+      const ref = doc(db, `${slug}_attendance`, `${uid}_${date}`);
+      
+      const prevRecord = attendanceMap[date] || {};
+      const newRecord: HqDailyAttendanceRecord = {
+        ...prevRecord,
+        staffId: uid,
+        date,
+        [field]: next,
+        status: (next || prevRecord.status === 'present') ? 'present' : prevRecord.status || 'unmarked',
+        updatedAt: new Date().toISOString(),
+        markedBy: session?.uid
+      };
+
+      if (newRecord.status === 'present' && !newRecord.arrivalTime) {
+        newRecord.arrivalTime = '09:00';
+        newRecord.departureTime = '17:00';
+      }
+
+      setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
+      await setDoc(ref, newRecord, { merge: true });
+      toast.success(next ? "Marked as On Time" : "Marked as Late");
+    } catch (err) {
+      toast.error("Update failed");
+      fetchData();
     }
   };
 
@@ -974,6 +1009,22 @@ export default function StaffProfilePage() {
                        
                        {/* Duties Section */}
                        <div>
+                          <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4">Punctuality Score</h4>
+                          <div className="flex flex-wrap gap-2 mb-8">
+                             <button 
+                               onClick={() => togglePunctuality(todayStr, "arrivedOnTime", !attendanceMap[todayStr]?.arrivedOnTime)} 
+                               className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivedOnTime ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
+                             >
+                               <Clock size={12} /> {attendanceMap[todayStr]?.arrivedOnTime ? "Arr On Time" : "Arr Timing"}
+                             </button>
+                             <button 
+                               onClick={() => togglePunctuality(todayStr, "departedOnTime", !attendanceMap[todayStr]?.departedOnTime)} 
+                               className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.departedOnTime ? "bg-teal-600 text-white shadow-sm shadow-teal-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
+                             >
+                               <Clock size={12} /> {attendanceMap[todayStr]?.departedOnTime ? "Dep On Time" : "Dep Timing"}
+                             </button>
+                          </div>
+
                           <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Operational Duties</h4>
                           <div className="space-y-2">
                             {(staff?.dutyConfig?.length ? staff.dutyConfig : [
@@ -1158,7 +1209,22 @@ export default function StaffProfilePage() {
                             </td>
                           ))}
                         </tr>
-                        <tr className="transition-colors hover:bg-zinc-500/5">
+                        <tr className="border-t border-zinc-500/5 transition-colors hover:bg-zinc-500/5">
+                          <td className="sticky left-0 z-10 bg-inherit pr-8 py-2 text-left">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-teal-500/50">Arr On Time</span>
+                          </td>
+                          {daysInMonth().map(d => (
+                            <td key={d} className="px-1 py-2 text-center">
+                              <HqCheckCell 
+                                type="dresscode"
+                                size="sm"
+                                value={attendanceMap[d]?.arrivedOnTime ? 'yes' : attendanceMap[d]?.arrivedOnTime === false ? 'no' : 'na'} 
+                                onToggle={(next) => togglePunctuality(d, 'arrivedOnTime', next === 'yes')}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-t border-zinc-800/10 transition-colors hover:bg-zinc-500/5">
                           <td className="sticky left-0 z-10 bg-inherit pr-8 py-4 text-left">
                             <span className="text-[9px] font-black uppercase tracking-widest text-rose-500/50">Shift Out</span>
                           </td>
@@ -1171,6 +1237,21 @@ export default function StaffProfilePage() {
                               <span className={`text-[10px] font-black transition-all ${attendanceMap[d]?.departureTime ? (isDark ? 'text-white' : 'text-gray-900') : 'text-zinc-500/30'}`}>
                                 {attendanceMap[d]?.departureTime || '--'}
                               </span>
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-t border-zinc-500/5 transition-colors hover:bg-zinc-500/5">
+                          <td className="sticky left-0 z-10 bg-inherit pr-8 py-2 text-left">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-rose-500/50">Dep On Time</span>
+                          </td>
+                          {daysInMonth().map(d => (
+                            <td key={d} className="px-1 py-2 text-center">
+                              <HqCheckCell 
+                                type="dresscode"
+                                size="sm"
+                                value={attendanceMap[d]?.departedOnTime ? 'yes' : attendanceMap[d]?.departedOnTime === false ? 'no' : 'na'} 
+                                onToggle={(next) => togglePunctuality(d, 'departedOnTime', next === 'yes')}
+                              />
                             </td>
                           ))}
                         </tr>
@@ -1784,25 +1865,104 @@ export default function StaffProfilePage() {
             {/* Score History (Always show in Score tab) */}
             {activeTab === 'score' && (
               <div className="space-y-6">
-                <div className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Growth Point History</h3>
-                    <button onClick={handleRecalculate} className="p-2 rounded-xl bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all"><RefreshCw size={14}/></button>
+                {/* Score Breakdown Analysis */}
+                <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
+                   <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Performance Breakdown</h3>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                          Cycle: {growthPoints?.month ? new Date(growthPoints.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>
+                           Total: {growthPoints?.total || 0}
+                        </span>
+                        <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
+                           <RefreshCw size={14} className={saving ? 'animate-spin' : ''} />
+                        </button>
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {[
+                        { label: 'Attendance', score: growthPoints?.attendance || 0, max: (growthPoints?.workingDays || 0) * 1, icon: <Calendar size={18} />, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+                        { label: 'Punctuality', score: growthPoints?.punctuality || 0, max: (growthPoints?.workingDays || 0) * 2, icon: <Clock size={18} />, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                        { label: 'Uniform', score: growthPoints?.dressCode || 0, max: (growthPoints?.workingDays || 0) * (staff?.dressCodeConfig?.length || 4), icon: <Shield size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                        { label: 'Duties', score: growthPoints?.duties || 0, max: (growthPoints?.workingDays || 0) * (staff?.dutyConfig?.length || 4), icon: <ClipboardList size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                      ].map((stat, i) => (
+                        <div key={i} className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-200/50'} flex flex-col items-center text-center group hover:scale-[1.02] transition-all`}>
+                           <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}>
+                              {stat.icon}
+                           </div>
+                           <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{stat.label}</h4>
+                           <p className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{stat.score}</p>
+                           <div className="w-full h-1 bg-zinc-700/20 rounded-full mt-4 overflow-hidden">
+                              <div 
+                                className={`h-full ${stat.bg.replace('/10', '')} transition-all duration-1000`} 
+                                style={{ width: `${Math.min(100, (stat.score / (stat.max || 1)) * 100)}%` }} 
+                              />
+                           </div>
+                           <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-2">
+                             Efficiency: {Math.round((stat.score / (stat.max || 1)) * 100)}%
+                           </p>
+                        </div>
+                      ))}
+                   </div>
+
+                   <div className={`mt-8 p-6 rounded-3xl border border-dashed ${isDark ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50/50 border-indigo-100'}`}>
+                      <div className="flex items-center gap-3 mb-4">
+                         <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
+                            <Sparkles size={14} />
+                         </div>
+                         <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Merits & Contributions</h4>
+                      </div>
+                      <div className="flex items-center justify-between">
+                         <div className="space-y-1">
+                            <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Extra Points: {growthPoints?.extra || 0}</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Recorded for volunteer work, over-time, and exceptional behavior.</p>
+                         </div>
+                         <div className="text-right">
+                            <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Global Ranking</p>
+                            <p className={`text-sm font-bold ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>T-3 Management Candidate</p>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+
+                <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                  <div className="flex items-center justify-between mb-8">
+                     <div>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 italic">Chronological Growth Audit</h3>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Verified historical data blocks</p>
+                     </div>
                   </div>
                   <div className="space-y-4">
-                    {growthHistory.map((h: any) => (
-                      <div key={h.id} className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'}`}>
-                        <div>
-                          <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{formatDateDMY(new Date(h.month + '-01'))}</p>
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Points: {h.total || 0}</p>
+                    {growthHistory.length === 0 ? (
+                       <div className="py-12 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No historical cycles found</div>
+                    ) : (
+                      growthHistory.map((h: any) => (
+                        <div key={h.id} className={`p-5 rounded-[2rem] border flex items-center justify-between transition-all hover:border-indigo-500/30 ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'}`}>
+                          <div className="flex items-center gap-4">
+                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isDark ? 'bg-zinc-900 text-indigo-400' : 'bg-white text-indigo-600 shadow-sm'}`}>
+                                <Calendar size={20} />
+                             </div>
+                             <div>
+                               <p className={`text-md font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tighter`}>{new Date(h.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Aggregated Strength: {h.total || 0} pts</p>
+                             </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                             <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
+                               (h.total || 0) >= 100 ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white'
+                             }`}>
+                               {(h.total || 0) >= 100 ? 'Senior Expert' : 'Standard Staff'}
+                             </span>
+                             <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em]">Validated Cycle</p>
+                          </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                          (h.total || 0) >= 100 ? 'bg-teal-500/10 text-teal-500' : 'bg-orange-500/10 text-orange-500'
-                        }`}>
-                          {(h.total || 0) >= 100 ? 'Expert' : 'Developing'}
-                        </span>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

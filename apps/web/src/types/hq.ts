@@ -216,6 +216,8 @@ export interface HqDailyAttendanceRecord {
   arrivalTime?: string;   // 'HH:MM'
   departureTime?: string; // 'HH:MM'
   isLate?: boolean;
+  arrivedOnTime?: boolean;
+  departedOnTime?: boolean;
   markedBy?: string;
   markedByName?: string;
   updatedAt?: string;
