@@ -1765,7 +1765,114 @@ service cloud.firestore {
       allow delete: if isHqSuperAdmin();
     }
 
+    // ── Rehab Overlay ───────────────────────────────────
+    match /rehab_transactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+    }
+    match /rehab_fees/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /rehab_patients/{patientId} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+      allow delete: if isHqSuperOrManager();
+    }
+    match /rehab_staff/{staffId} {
+      allow read: if isHqSuperOrManager();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+      allow delete: if isHqSuperOrManager();
+    }
+    match /rehab_users/{uid} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+      allow delete: if isHqSuperOrManager();
+    }
+    match /rehab_attendance/{docId} {
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
+    }
+    match /rehab_salary_records/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
+    }
+
+    // ── Spims Overlay ───────────────────────────────────
+    match /spims_transactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'proofUrl',
+            'proofMissingReason',
+            'proofRequired',
+            'cashierForwardedAt',
+            'cashierForwardedBy',
+            'cashierForwardedByName'
+          ])
+        );
+    }
+    match /spims_fees/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /spims_students/{studentId} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+      allow delete: if isHqSuperOrManager();
+    }
+    match /spims_staff/{staffId} {
+      allow read: if isHqSuperOrManager();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+      allow delete: if isHqSuperOrManager();
+    }
+    match /spims_users/{uid} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+      allow delete: if isHqSuperOrManager();
+    }
+    match /spims_attendance/{docId} {
+      allow read: if isHqSuperOrManager();
+      allow create, update: if isHqSuperOrManager();
+    }
+    match /spims_salary_records/{docId} {
+      allow read: if isHqTier1();
+      allow create, update: if isHqSuperOrManager();
+      allow delete: if isHqSuperAdmin();
+    }
+
     // ═══════════════════════════════════════════════════════════
+
     //  DEPARTMENTAL STAFF OPERATIONAL RULES — NEW DEPARTMENTS
     // ═══════════════════════════════════════════════════════════
 
