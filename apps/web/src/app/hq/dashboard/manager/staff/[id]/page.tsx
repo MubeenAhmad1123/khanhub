@@ -221,14 +221,15 @@ export default function StaffProfilePage() {
       const start = days[0];
       const end = days[days.length - 1];
 
+      // Robust fetching: Individual catches prevent total page failure if one collection fails
       const [attSnap, dressSnap, dutySnap, pointsSnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
-        getDocs(query(collection(db, `${slug}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
-        getDocs(query(collection(db, `${slug}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
-        getDocs(query(collection(db, `${slug}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))),
-        getDocs(query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), limit(1))),
-        getDocs(query(collection(db, 'hq_salary_records'), where('staffId', '==', uid))),
-        getDocs(query(collection(db, `${slug}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))),
-        getDoc(doc(db, `${slug}_meta`, 'config'))
+        getDocs(query(collection(db, `${slug}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${slug}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${slug}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), limit(1))).catch(e => { console.error('points fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, 'hq_salary_records'), where('staffId', '==', uid))).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${slug}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
+        getDoc(doc(db, `${slug}_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
       ]);
 
       const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
@@ -248,26 +249,26 @@ export default function StaffProfilePage() {
       ]);
 
       const aMap: Record<string, HqDailyAttendanceRecord> = {};
-      attSnap.docs.forEach(d => { aMap[d.data().date] = d.data() as HqDailyAttendanceRecord; });
+      attSnap.docs.forEach((d: any) => { aMap[d.data().date] = d.data() as HqDailyAttendanceRecord; });
       setAttendanceMap(aMap);
 
       const drMap: Record<string, HqDailyDressCodeRecord> = {};
-      dressSnap.docs.forEach(d => { drMap[d.data().date] = d.data() as HqDailyDressCodeRecord; });
+      dressSnap.docs.forEach((d: any) => { drMap[d.data().date] = d.data() as HqDailyDressCodeRecord; });
       setDressMap(drMap);
 
       const duMap: Record<string, HqDailyDutyRecord> = {};
-      dutySnap.docs.forEach(d => { duMap[d.data().date] = d.data() as HqDailyDutyRecord; });
+      dutySnap.docs.forEach((d: any) => { duMap[d.data().date] = d.data() as HqDailyDutyRecord; });
       setDutyMap(duMap);
 
       if (!pointsSnap.empty) setGrowthPoints(pointsSnap.docs[0].data());
-      setSalaryRecords(salarySnap.docs.map(d => ({ id: d.id, ...d.data() } as SalarySlip)));
-      setSpecialTasks(tasksSnap.docs.map(d => ({ id: d.id, ...d.data() } as HqSpecialTask)));
+      setSalaryRecords(salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SalarySlip)));
+      setSpecialTasks(tasksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as HqSpecialTask)));
 
       // Fetch growth history (all months)
       const historySnap = await getDocs(
         query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), orderBy('month', 'desc'))
       );
-      setGrowthHistory(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setGrowthHistory(historySnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
 
     } catch (err) {
       console.error(err);
@@ -848,29 +849,30 @@ export default function StaffProfilePage() {
           {/* Main Content */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             
+
             {/* Tabs */}
-            <div className={`p-2 rounded-[2.5rem] shadow-sm border flex overflow-x-auto no-scrollbar transition-colors ${
+            <div className={`p-1 rounded-[1.2rem] md:rounded-[1.5rem] border flex flex-wrap items-center justify-center gap-1 transition-colors ${
               isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
             }`}>
                {[
-                 { id: 'overview', label: 'History', icon: <Clock size={14}/> },
-                 { id: 'attendance', label: 'Attendance', icon: <Calendar size={14}/> },
-                 { id: 'payroll', label: 'Payroll', icon: <DollarSign size={14}/> },
-                 { id: 'dress', label: 'Dress Code', icon: <Shield size={14}/> },
-                 { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={14}/> },
-                 { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={14}/> },
-                 { id: 'edit', label: 'Edit Profile', icon: <User size={14}/> },
+                 { id: 'overview', label: 'History', icon: <Clock size={12}/> },
+                 { id: 'attendance', label: 'Attendance', icon: <Calendar size={12}/> },
+                 { id: 'payroll', label: 'Payroll', icon: <DollarSign size={12}/> },
+                 { id: 'dress', label: 'Dress Code', icon: <Shield size={12}/> },
+                 { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12}/> },
+                 { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12}/> },
+                 { id: 'edit', label: 'Edit Profile', icon: <User size={12}/> },
                ].map(tab => (
                  <button
                    key={tab.id}
                    onClick={() => setActiveTab(tab.id as any)}
-                   className={`flex items-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                   className={`flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[7px] min-[400px]:text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                      activeTab === tab.id 
                        ? (isDark ? 'bg-white text-black shadow-xl shadow-white/5' : 'bg-gray-900 text-white shadow-lg shadow-gray-900/20') 
                        : 'text-gray-500 hover:text-indigo-500'
                    }`}
                  >
-                   {tab.icon} {tab.label}
+                   <span className="opacity-70">{tab.icon}</span> {tab.label}
                  </button>
                ))}
             </div>

@@ -499,7 +499,8 @@ service cloud.firestore {
     match /spims_users/{uid} {
       allow read: if (request.auth != null
         && (request.auth.uid == uid || isSpimsAdminOrAbove()))
-        || isDiscoveryQuery();
+        || isDiscoveryQuery()
+        || isHqSuperOrManager();
       allow create: if isSpimsSuperAdmin() || isHqSuperOrManager();
       allow delete: if isSpimsSuperAdmin() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -917,8 +918,9 @@ service cloud.firestore {
     }
 
     match /hospital_users/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid || isHospitalAdminOrAbove());
+      allow read: if (request.auth != null
+        && (request.auth.uid == uid || isHospitalAdminOrAbove()))
+        || isHqSuperOrManager();
       allow create: if isHospitalSuperAdmin() || isHqSuperOrManager();
       allow delete: if isHospitalSuperAdmin() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -1173,8 +1175,9 @@ service cloud.firestore {
     }
 
     match /welfare_users/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid || isWelfareAdminOrAbove());
+      allow read: if (request.auth != null
+        && (request.auth.uid == uid || isWelfareAdminOrAbove()))
+        || isHqSuperOrManager();
       allow create: if isWelfareSuperAdmin() || isHqSuperOrManager();
       allow delete: if isWelfareSuperAdmin() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -1341,8 +1344,9 @@ service cloud.firestore {
     }
 
     match /job_center_users/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid || isJobCenterAdminOrAbove());
+      allow read: if (request.auth != null
+        && (request.auth.uid == uid || isJobCenterAdminOrAbove()))
+        || isHqSuperOrManager();
       allow create: if isJobCenterSuperAdmin() || isHqSuperOrManager();
       allow delete: if isJobCenterSuperAdmin() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -1354,8 +1358,9 @@ service cloud.firestore {
     }
 
     match /jobcenter_users/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid || isJobCenterAdminOrAbove());
+      allow read: if (request.auth != null
+        && (request.auth.uid == uid || isJobCenterAdminOrAbove()))
+        || isHqSuperOrManager();
       allow create: if isJobCenterSuperAdmin() || isHqSuperOrManager();
       allow delete: if isJobCenterSuperAdmin() || isHqSuperOrManager();
       allow update: if (request.auth != null
