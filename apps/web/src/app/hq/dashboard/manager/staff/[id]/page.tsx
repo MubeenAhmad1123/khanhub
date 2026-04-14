@@ -653,27 +653,20 @@ export default function StaffProfilePage() {
     }
   };
 
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'khanhub_profiles'); 
+    if (!file || !staff) return;
 
     try {
-      if (!staff) return;
       toast.loading("Uploading photo...", { id: 'upload' });
-      const res = await fetch('https://api.cloudinary.com/v1_1/dr6m99scu/image/upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      
+      const { uploadToCloudinary } = await import('@/lib/cloudinaryUpload');
+      const url = await uploadToCloudinary(file, `khanhub/staff/${staff.dept}`);
+
       const slug = staff.dept.replace('-', '_');
       const collectionName = staff.dept === 'hq' ? 'hq_users' : `${slug}_users`;
       await updateDoc(doc(db, collectionName, staff.staffId), {
-        photoUrl: data.secure_url
+        photoUrl: url
       });
 
       toast.success("Photo updated", { id: 'upload' });
@@ -682,6 +675,7 @@ export default function StaffProfilePage() {
       toast.error("Upload failed", { id: 'upload' });
     }
   };
+
 
   const handleSaveProfile = async () => {
     try {
