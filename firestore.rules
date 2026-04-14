@@ -9,6 +9,9 @@ service cloud.firestore {
     function isAuth() {
       return request.auth != null;
     }
+    function isDiscoveryQuery() {
+      return request.query.limit <= 1;
+    }
     function isOwner(uid) {
       return isAuth() && request.auth.uid == uid;
     }
@@ -227,8 +230,9 @@ service cloud.firestore {
     // Admin/superadmin can read all.
     // Write is false from client — only server action (Firebase Admin) creates/updates.
     match /rehab_users/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid || isRehabAdminOrAbove());
+      allow read: if (request.auth != null
+        && (request.auth.uid == uid || isRehabAdminOrAbove()))
+        || isDiscoveryQuery();
       allow create: if isRehabSuperAdmin() || isHqSuperOrManager();
       allow delete: if isRehabSuperAdmin() || isHqSuperAdmin();
       allow update: if request.auth != null
@@ -470,8 +474,9 @@ service cloud.firestore {
     }
 
     match /spims_users/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid || isSpimsAdminOrAbove());
+      allow read: if (request.auth != null
+        && (request.auth.uid == uid || isSpimsAdminOrAbove()))
+        || isDiscoveryQuery();
       allow create: if isSpimsSuperAdmin() || isHqSuperOrManager();
       allow delete: if isSpimsSuperAdmin() || isHqSuperAdmin();
       allow update: if request.auth != null
@@ -636,7 +641,8 @@ service cloud.firestore {
     //  - superadmin/manager can update users (e.g. isActive)
     //  - owner can update limited profile fields only
     match /hq_users/{docId} {
-      allow read: if isHqAuth() && (request.auth.uid == docId || isHqTier1());
+      allow read: if (isHqAuth() && (request.auth.uid == docId || isHqTier1()))
+        || isDiscoveryQuery();
       allow create, delete: if false;
       allow update: if isHqSuperOrManager()
         || (
@@ -1034,7 +1040,7 @@ service cloud.firestore {
     //   {dept}_staff, {dept}_attendance, {dept}_duty_logs
     // is automatically manageable from HQ by manager/superadmin/cashier.
     match /{collectionId}/{docId} {
-      allow read: if isHqTier1()
+      allow read: if (isHqTier1()
         && (
           collectionId.matches('^[a-z0-9_-]+_staff$')
           || collectionId.matches('^[a-z0-9_-]+_attendance$')
@@ -1048,7 +1054,7 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_salary_records$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
           || collectionId.matches('^[a-z0-9_-]+_meta$')
-        );
+        )) || (isDiscoveryQuery() && collectionId.matches('^[a-z0-9_-]+_users$'));
       allow create, update: if (isHqSuperOrManager() || (isHqCashier() && collectionId.matches('^[a-z0-9_-]+_salary_records$')))
         && (
           collectionId.matches('^[a-z0-9_-]+_staff$')

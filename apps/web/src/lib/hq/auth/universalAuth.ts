@@ -95,32 +95,62 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
 
 /**
  * Searches across all department collections for a user with the given customId.
+ * Prioritizes departments based on ID prefixes (e.g., REHAB-, SPIMS-, HQ-).
  */
 export async function discoverUser(customId: string) {
-  const normalizedId = customId.trim().toLowerCase();
+  if (!customId) return null;
+  const rawId = customId.trim();
+  const normalizedId = rawId.toLowerCase();
   
-  // Create a list of all potential collections to search
-  const searches = Object.values(DEPARTMENTS_AUTH).map(async (dept) => {
+  const depts = Object.values(DEPARTMENTS_AUTH);
+
+  // Helper to search a specific department
+  const performSearch = async (dept: (typeof DEPARTMENTS_AUTH)[keyof typeof DEPARTMENTS_AUTH]) => {
     try {
-      const q = query(collection(db, dept.collection), where('customId', '==', normalizedId)); // Use original case or normalized depending on creation logic
-      // Actually, customId is often case-sensitive in the DB (e.g. M-Khan). 
-      // But we search for exact match first.
-      const snap = await getDocs(query(collection(db, dept.collection), where('customId', '==', customId.trim())));
-      if (!snap.empty) return { dept, data: snap.docs[0].data(), uid: snap.docs[0].id };
+      // 1. Try exact match
+      const q1 = query(collection(db, dept.collection), where('customId', '==', rawId));
+      const snap1 = await getDocs(q1);
+      if (!snap1.empty) return { dept, data: snap1.docs[0].data(), uid: snap1.docs[0].id };
       
-      // Secondary check with lowercase just in case
-      const snapLower = await getDocs(query(collection(db, dept.collection), where('customId', '==', normalizedId)));
-      if (!snapLower.empty) return { dept, data: snapLower.docs[0].data(), uid: snapLower.docs[0].id };
+      // 2. Try lowercase match
+      const q2 = query(collection(db, dept.collection), where('customId', '==', normalizedId));
+      const snap2 = await getDocs(q2);
+      if (!snap2.empty) return { dept, data: snap2.docs[0].data(), uid: snap2.docs[0].id };
       
       return null;
-    } catch (e) {
-      console.error(`Error searching ${dept.collection}:`, e);
+    } catch (e: any) {
+      // Silence "Missing or insufficient permissions" errors as they are expected 
+      // during unauthenticated discovery or cross-departmental searches.
+      const isPermissionError = 
+        e?.code === 'permission-denied' || 
+        e?.message?.toLowerCase().includes('permission');
+      
+      if (!isPermissionError) {
+        console.error(`[Discovery] Error searching ${dept.collection}:`, e);
+      }
       return null;
     }
+  };
+
+  // 1. Identify priority department based on prefix (e.g., "REHAB-001" -> Rehab)
+  const idUpper = rawId.toUpperCase();
+  const priorityDept = depts.find(d => {
+    const deptId = d.id.toUpperCase();
+    const deptName = d.name.toUpperCase();
+    return idUpper.startsWith(deptId + '-') || idUpper.startsWith(deptName + '-');
   });
 
-  const results = await Promise.all(searches);
-  return results.find(r => r !== null);
+  // 2. Search priority department first for efficiency
+  if (priorityDept) {
+    const result = await performSearch(priorityDept);
+    if (result) return result;
+  }
+
+  // 3. Search other departments in parallel
+  const otherDepts = depts.filter(d => d.id !== priorityDept?.id);
+  const results = await Promise.all(otherDepts.map(performSearch));
+  
+  return results.find(r => r !== null) || null;
 }
 
 /**
