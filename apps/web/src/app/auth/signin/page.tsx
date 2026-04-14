@@ -22,6 +22,7 @@ export default function SignInPage() {
     // Redirect if already signed in
     useEffect(() => {
         if (user) {
+            console.log('[SignInPage] Firebase user detected, redirecting to /');
             router.push('/');
         }
     }, [user, router]);
@@ -61,19 +62,20 @@ export default function SignInPage() {
 
         setIsLoading(true);
         try {
+            console.log('[SignInPage] Initiating universal login for:', customId);
             const result = await loginUniversal(customId, password);
+            console.log('[SignInPage] Login result:', result);
             if (result.success) {
                 toast.success('Successfully logged in!');
-                // loginUniversal handles its own redirects via window.location.href usually,
-                // but if it doesn't, we can handle it here.
                 if (result.redirectUrl) {
+                    console.log('[SignInPage] Proceeding to redirect:', result.redirectUrl);
                     window.location.href = result.redirectUrl;
                 }
             } else {
                 toast.error(result.error || 'Invalid credentials');
             }
         } catch (error) {
-            console.error('Universal login error:', error);
+            console.error('[SignInPage] Universal login error:', error);
             toast.error('An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);
@@ -220,4 +222,4 @@ export default function SignInPage() {
             </div>
         </div>
     );
-}
+}

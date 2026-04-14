@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
+import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
 
 export interface DepartmentAuthInfo {
   id: string;
@@ -165,8 +166,6 @@ export async function checkIdUniqueness(customId: string): Promise<{ isUnique: b
   return { isUnique: true };
 }
 
-import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
-
 export type AuthResult = 
   | { success: true; redirectUrl?: string }
   | { success: false; error: string };
@@ -178,7 +177,9 @@ export type AuthResult =
 export async function loginUniversal(customId: string, password: string): Promise<AuthResult> {
   try {
     // 1. Try to find the user
+    console.log('[UniversalAuth] Starting login for:', customId);
     const discovery = await discoverUser(customId);
+    console.log('[UniversalAuth] Discovery result:', discovery ? discovery.dept.id : 'NOT FOUND');
     
     let dept: DepartmentAuthInfo;
     let finalData: any;
@@ -192,12 +193,14 @@ export async function loginUniversal(customId: string, password: string): Promis
         const foundDept = Object.values(DEPARTMENTS_AUTH).find(d => d.domain === domain || domain.includes(d.id));
         if (foundDept) {
           try {
+            console.log('[UniversalAuth] Attempting login with full email:', customId);
             cred = await signInWithEmailAndPassword(auth, customId, password);
             const userDoc = await getDoc(doc(db, foundDept.collection, cred.user.uid));
             if (userDoc.exists()) {
               dept = foundDept;
               finalData = userDoc.data();
               uid = cred.user.uid;
+              console.log('[UniversalAuth] Profile found for email user');
             } else {
               return { success: false, error: 'User profile not found. Please check your credentials.' };
             }
@@ -215,7 +218,9 @@ export async function loginUniversal(customId: string, password: string): Promis
       finalData = discovery.data;
       uid = discovery.uid;
       const email = `${customId.trim().toLowerCase()}${dept.domain}`;
+      console.log('[UniversalAuth] Attempting Firebase Auth with discovered user:', email);
       cred = await signInWithEmailAndPassword(auth, email, password);
+      console.log('[UniversalAuth] Auth successful, UID:', cred.user.uid);
     }
 
     // 2. Security checks
@@ -230,18 +235,21 @@ export async function loginUniversal(customId: string, password: string): Promis
       loginTime: Date.now(),
       ...finalData
     };
+    console.log('[UniversalAuth] Setting localStorage for:', dept.sessionKey);
     localStorage.setItem(dept.sessionKey, JSON.stringify(session));
+    localStorage.setItem(`${dept.id}_login_time`, Date.now().toString());
 
     // 4. Set HQ Cookie if needed
     if (dept.id === 'hq' || finalData.role === 'superadmin') {
+       console.log('[UniversalAuth] Setting HQ session cookie...');
        const idToken = await cred.user.getIdToken();
        await setHqSessionCookieFromIdToken(idToken);
     }
 
     // 5. Final Redirect
     const redirectPath = getDashboardPath(dept.id, finalData.role, finalData.patientId || finalData.studentId || finalData.seekerId || finalData.childId);
+    console.log('[UniversalAuth] Redirecting to:', redirectPath);
     
-    // Attempt local redirect, but return it for the caller to handle as well
     if (typeof window !== 'undefined') {
       window.location.href = redirectPath;
     }
@@ -277,6 +285,5 @@ function getDashboardPath(deptId: string, role: string, patientId?: string): str
   if (normalizedRole === 'superadmin') return `${base}/superadmin`;
   if (normalizedRole === 'family' && patientId) return `${base}/family/${patientId}`;
   
-  // Fallback to role-based dashboard if exists, or base dashboard
   return `${base}/${normalizedRole}`;
 }

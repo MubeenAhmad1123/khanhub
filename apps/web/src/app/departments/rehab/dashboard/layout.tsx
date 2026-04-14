@@ -88,6 +88,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       try {
         const hqSession = JSON.parse(hqSessionStr);
         if (hqSession?.role === 'superadmin') {
+          console.log('[RehabLayout] Detected HQ Superadmin session, syncing to rehab...');
           const syncSession = {
             uid: hqSession.uid,
             customId: hqSession.customId || hqSession.email || 'HQ-USER',
@@ -102,30 +103,53 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
       } catch (e) {}
     }
 
-    if (!session) { router.push('/departments/rehab/login'); return; }
+    if (!session) { 
+      console.warn('[RehabLayout] No rehab_session found, redirecting to login');
+      router.push('/departments/rehab/login'); 
+      return; 
+    }
 
     const performAuthCheck = async () => {
+      console.log('[RehabLayout] Performing auth check. Session exists:', !!session);
       try {
         const parsed = JSON.parse(session!);
-        if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
+        console.log('[RehabLayout] Session parsed for:', parsed.customId, 'Role:', parsed.role);
+
+        if (!parsed.uid || !parsed.role) {
+          console.warn('[RehabLayout] Invalid session structure');
+          throw new Error('Invalid session');
+        }
 
         const loginTime = localStorage.getItem('rehab_login_time');
         if (loginTime && (Date.now() - parseInt(loginTime)) / (1000 * 60 * 60) > 12) {
+          console.warn('[RehabLayout] Session expired (>12h)');
           handleSignOut();
           return;
         }
 
         if (parsed.role !== 'superadmin') {
+          console.log('[RehabLayout] Verifying user in Firestore (rehab_users)...');
           const userDoc = await getDoc(doc(db, 'rehab_users', parsed.uid));
-          if (!userDoc.exists() || userDoc.data()?.isActive === false || userDoc.data()?.role !== parsed.role) {
+          if (!userDoc.exists()) {
+            console.error('[RehabLayout] User document not found in rehab_users');
             handleSignOut();
             return;
           }
+          const userData = userDoc.data();
+          if (userData?.isActive === false || userData?.role !== parsed.role) {
+            console.error('[RehabLayout] User inactive or role mismatch', userData);
+            handleSignOut();
+            return;
+          }
+        } else {
+          console.log('[RehabLayout] Bypassing Firestore check for Superadmin');
         }
 
+        console.log('[RehabLayout] Auth Check SUCCESS');
         setUser(parsed);
         setIsChecking(false);
       } catch (err) {
+        console.error('[RehabLayout] Auth Check FAILED:', err);
         handleSignOut();
       }
     };
@@ -134,6 +158,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
   }, [router]);
 
   const handleSignOut = () => {
+    console.log('[RehabLayout] Signing out and clearing session');
     localStorage.removeItem('rehab_session');
     const hqSessionStr = localStorage.getItem('hq_session');
     if (hqSessionStr) {
@@ -254,7 +279,7 @@ export default function RehabDashboardLayout({ children }: { children: React.Rea
               </button>
               <button
                 onClick={() => setViewMode('hq')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px) font-black transition-all ${
                   viewMode === 'hq' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-white text-rose-600 shadow-sm') : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
