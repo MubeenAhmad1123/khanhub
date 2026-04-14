@@ -245,3 +245,39 @@ export async function updateStaffProfile(
   }
 }
 
+export async function deleteStaffProfile(
+  compositeId: string
+): Promise<{ success: boolean; error?: string }> {
+  const idx = compositeId.indexOf('_');
+  if (idx <= 0) return { success: false, error: 'Invalid ID' };
+  const dept = compositeId.slice(0, idx) as StaffDept;
+  const uid = compositeId.slice(idx + 1);
+
+  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].includes(dept)) {
+    return { success: false, error: 'Invalid department' };
+  }
+
+  const slug = dept.replace('-', '_');
+  const deptCol = dept === 'hq' ? 'hq_users' : `${slug}_users`;
+  const { deleteDoc, doc: firestoreDoc } = await import('firebase/firestore');
+
+  try {
+    // 1. Delete from departmental users collection
+    const deptDocRef = firestoreDoc(db, deptCol, uid);
+    await deleteDoc(deptDocRef);
+
+    // 2. Delete from global hq_staff collection (if it exists)
+    // The hq_staff record often has the same ID as the UID or composite ID.
+    // Based on listStaffCards, the hq_staff might be a separate collection or just a mirror.
+    // Let's also check hq_staff just in case.
+    const hqStaffRef = firestoreDoc(db, 'hq_staff', uid);
+    await deleteDoc(hqStaffRef).catch(() => null); // Silently fail if doesn't exist
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Delete failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+

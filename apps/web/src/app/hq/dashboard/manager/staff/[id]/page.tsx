@@ -16,11 +16,12 @@ import {
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
   Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw,
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle,
-  ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock
+  ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle
 } from 'lucide-react';
 import { 
   fetchStaffProfile, 
   updateStaffProfile,
+  deleteStaffProfile,
   type StaffProfile 
 } from '@/lib/hq/superadmin/staff';
 import { Timestamp, increment } from 'firebase/firestore';
@@ -160,6 +161,10 @@ export default function StaffProfilePage() {
     arrivalTime: string;
     departureTime: string;
   }>({ isOpen: false, date: '', arrivalTime: '', departureTime: '' });
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const daysInMonth = useCallback(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -696,6 +701,31 @@ export default function StaffProfilePage() {
       toast.error("Failed to update profile");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!staff || deleteConfirmText !== staff.name) {
+      toast.error("Please type the staff name exactly to confirm");
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      const res = await deleteStaffProfile(staff.id); // Passing composite ID
+      
+      if (res.success) {
+        toast.success("Staff profile deleted successfully");
+        router.push('/hq/dashboard/manager/staff');
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Failed to delete staff profile");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -1509,6 +1539,104 @@ export default function StaffProfilePage() {
                           </button>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-12 flex items-center justify-between">
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-zinc-600' : 'text-gray-400'}`}>
+                    Last synchronized with global KhanHub registry
+                  </p>
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                    className="px-10 py-5 rounded-3xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-indigo-500/40 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 flex items-center gap-3"
+                  >
+                    {saving ? 'Synchronizing...' : (
+                      <>
+                        <Shield size={16} />
+                        Update Profile
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Danger Zone */}
+                <div className="mt-16 pt-12 border-t-2 border-dashed border-rose-500/20">
+                  <div className={`p-8 rounded-[2.5rem] border transition-all ${isDark ? 'bg-rose-500/5 border-rose-500/10' : 'bg-rose-50 border-rose-100'}`}>
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                      <div className="flex items-center gap-6">
+                        <div className={`w-16 h-16 rounded-3xl bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0`}>
+                          <AlertTriangle size={32} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black uppercase tracking-widest text-rose-500 mb-1">Danger Zone</h4>
+                          <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
+                            Permanently delete this staff profile and all associated data records.<br />
+                            This action cannot be undone and will revoke all access immediately.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="px-8 py-4 rounded-2xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all hover:scale-105 shadow-xl shadow-rose-500/20 flex items-center gap-3"
+                      >
+                        <Trash2 size={16} />
+                        Delete Staff Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Deletion Confirmation Modal */}
+            {showDeleteConfirm && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => !isDeleting && setShowDeleteConfirm(false)} />
+                <div className={`relative w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl border ${isDark ? 'bg-zinc-900 border-zinc-700' : 'bg-white border-gray-100'}`}>
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-20 h-20 rounded-[2rem] bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6">
+                      <Trash2 size={40} />
+                    </div>
+                    <h3 className={`text-2xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>Confirm Deletion</h3>
+                    <p className={`text-sm font-bold leading-relaxed mb-8 ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
+                      Are you absolutely sure? This will permanently delete 
+                      <span className="mx-1 text-rose-500 font-black underline decoration-2 underline-offset-4">{staff?.name}</span> 
+                      from the system.
+                    </p>
+
+                    <div className="w-full space-y-4 mb-8">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block text-left ml-2">Type the staff name to confirm</label>
+                      <input
+                        type="text"
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        placeholder={staff?.name}
+                        className={`w-full h-16 rounded-2xl px-6 text-sm font-bold outline-none border-2 transition-all ${
+                          isDark 
+                            ? 'bg-zinc-800 border-zinc-700 text-white focus:border-rose-500' 
+                            : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-rose-500'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="flex gap-4 w-full">
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={isDeleting}
+                        className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                          isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                        } disabled:opacity-50`}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={isDeleting || deleteConfirmText !== staff?.name}
+                        className="flex-1 h-14 rounded-2xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+                      </button>
                     </div>
                   </div>
                 </div>
