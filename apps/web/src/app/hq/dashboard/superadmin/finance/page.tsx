@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Terminal,
   Database,
@@ -253,6 +253,22 @@ export default function SuperadminFinancePage() {
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
 
   const todayStr = todayLocalDateString();
+
+  // ── Derive FinanceHub dept data — today's data normally, filtered date when active ──
+  const hubDepts = useMemo(() => {
+    if (!dailyResult) return data;
+    const grandIncome = dailyResult.grandIncome;
+    return dailyResult.departments.map((d) => ({
+      deptId: d.deptId,
+      deptName: d.deptName,
+      totalIncome: d.income,
+      totalExpense: d.expense,
+      pendingCount: 0,
+      pendingAmount: 0,
+      ways: d.categories,
+      percentOfTotal: grandIncome > 0 ? (d.income / grandIncome) * 100 : 0,
+    }));
+  }, [dailyResult, data]);
 
   // ── Load today's summary ───────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -648,7 +664,7 @@ export default function SuperadminFinancePage() {
               transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
               className="flex-1 min-h-[85vh] flex items-center justify-center p-10 lg:p-20 border-2 border-border/20 rounded-[4rem] bg-grid-white/[0.02] shadow-inner relative overflow-hidden"
             >
-              <FinanceHub departments={data} onUpdate={loadData} />
+              <FinanceHub departments={hubDepts} onUpdate={loadData} />
             </motion.div>
           ) : (
             <motion.div

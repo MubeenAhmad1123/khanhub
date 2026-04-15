@@ -8,12 +8,20 @@ import {
   orderBy,
   query,
   where,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { endOfDay, startOfDay } from './time';
 
 export type OverviewStats = {
+  /** Total registered rehab patients (all time) */
+  rehabPatientsTotal: number;
+  /** Total enrolled SPIMS students (all time) */
+  spimsStudentsTotal: number;
+  /** Total job center seekers (all time) */
+  jobSeekersTotal: number;
+  /** Legacy alias kept for backward compat — same as rehabPatientsTotal */
   rehabPatientsToday: number;
+  /** Legacy alias kept for backward compat — same as spimsStudentsTotal */
   spimsStudentsToday: number;
   pendingApprovals: number;
   txAmountToday: number;
@@ -21,77 +29,83 @@ export type OverviewStats = {
   pendingReconciliations: number;
 };
 
-function isoDayKey(d: Date) {
-  return d.toISOString().slice(0, 10);
+/** PKT day key: YYYY-MM-DD in Asia/Karachi timezone */
+function pktDayKey(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+/** Start of today in PKT as a UTC Date (for Firestore Timestamp comparison) */
+function pktStartOfToday(): Date {
+  const now = new Date();
+  // Format: YYYY-MM-DDT00:00:00 in PKT = YYYY-MM-DDT00:00:00+05:00
+  const pktStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  // midnight PKT in UTC
+  return new Date(`${pktStr}T00:00:00+05:00`);
+}
+
+/** End of today in PKT as a UTC Date */
+function pktEndOfToday(): Date {
+  const start = pktStartOfToday();
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
 }
 
 export async function fetchOverviewStats(): Promise<OverviewStats> {
-  const today = new Date();
-  const from = startOfDay(today);
-  const to = endOfDay(today);
-
-  // Patients/students “today” is interpreted as created today when timestamps exist.
-  // If your schema differs, we can adjust to admissionDate/enrollmentDate.
-  const rehabPatientsQ = query(
-    collection(db, 'rehab_patients'),
-    where('createdAt', '>=', from),
-    where('createdAt', '<=', to)
-  );
-  const spimsStudentsQ = query(
-    collection(db, 'spims_students'),
-    where('createdAt', '>=', from),
-    where('createdAt', '<=', to)
-  );
-  const jobCenterSeekersQ = query(
-    collection(db, 'job_center_seekers'),
-    where('createdAt', '>=', from),
-    where('createdAt', '<=', to)
-  );
-
   const PENDING_LIST = ['pending', 'pending_cashier'];
 
-  const pendingRehabTxQ = query(
-    collection(db, 'rehab_transactions'),
-    where('status', 'in', PENDING_LIST)
-  );
-  const pendingSpimsTxQ = query(
-    collection(db, 'spims_transactions'),
-    where('status', 'in', PENDING_LIST)
-  );
-  const pendingJobTxQ = query(
-    collection(db, 'job_center_transactions'),
-    where('status', 'in', PENDING_LIST)
-  );
-
-  const pendingRecsQ = query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'));
-
   const [
-    rehabPatientsCount,
-    spimsStudentsCount,
-    jobCenterSeekersCount,
+    rehabPatientsTotal,
+    spimsStudentsTotal,
+    jobSeekersTotal,
     pendingRehab,
     pendingSpims,
     pendingJob,
     pendingRecs,
   ] = await Promise.all([
-    getCountFromServer(rehabPatientsQ).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(spimsStudentsQ).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(jobCenterSeekersQ).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(pendingRehabTxQ).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(pendingSpimsTxQ).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(pendingJobTxQ).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(pendingRecsQ).then((r) => r.data().count).catch(() => 0),
+    // Total counts — no date filter so they always show real numbers
+    getCountFromServer(query(collection(db, 'rehab_patients')))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'spims_students')))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'job_center_seekers')))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    // Pending approvals
+    getCountFromServer(query(collection(db, 'rehab_transactions'), where('status', 'in', PENDING_LIST)))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'spims_transactions'), where('status', 'in', PENDING_LIST)))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'job_center_transactions'), where('status', 'in', PENDING_LIST)))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending')))
+      .then((r) => r.data().count)
+      .catch(() => 0),
   ]);
 
-  // “Total transactions today (combined amount)” uses approved + pending, for today only.
   const txToday = await fetchTodayTxAmount();
-
-  // Active staff count across HQ + rehab + spims staff collections.
   const activeStaffCount = await fetchActiveStaffCount();
 
   return {
-    rehabPatientsToday: rehabPatientsCount + jobCenterSeekersCount, // Combined count for dashboard card or separate if needed
-    spimsStudentsToday: spimsStudentsCount,
+    rehabPatientsTotal,
+    spimsStudentsTotal,
+    jobSeekersTotal,
+    // Legacy aliases for backward compat
+    rehabPatientsToday: rehabPatientsTotal,
+    spimsStudentsToday: spimsStudentsTotal,
     pendingApprovals: pendingRehab + pendingSpims + pendingJob,
     txAmountToday: txToday,
     activeStaffCount,
@@ -100,42 +114,69 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
 }
 
 export async function fetchTodayTxAmount(): Promise<number> {
-  const today = new Date();
-  const dayKey = isoDayKey(today);
+  const todayKey = pktDayKey(new Date());
 
-  // Many tx docs have `date`/`transactionDate`/`createdAt`. We try `createdAt` first for consistent indexing.
-  // For speed and to avoid extra indexes, we query a small window: latest N and filter client-side by dayKey.
-  const [rehabSnap, spimsSnap, jobSnap] = await Promise.all([
+  /** Extract a JS Date from a Firestore document's date field */
+  function resolveDate(data: Record<string, any>): Date | null {
+    const raw =
+      data.transactionDate ??
+      data.date ??
+      data.createdAt ??
+      null;
+    if (!raw) return null;
+    if (raw instanceof Timestamp) return raw.toDate();
+    if (raw?.toDate) return raw.toDate();
+    if (typeof raw === 'string') return new Date(raw);
+    if (raw instanceof Date) return raw;
+    return null;
+  }
+
+  const [rehabSnap, spimsSnap, jobSnap, hqSnap] = await Promise.all([
     getDocs(query(collection(db, 'rehab_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
-      () => ({ docs: [] } as any)
+      (): { docs: any[] } => ({ docs: [] })
     ),
     getDocs(query(collection(db, 'spims_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
-      () => ({ docs: [] } as any)
+      (): { docs: any[] } => ({ docs: [] })
     ),
     getDocs(query(collection(db, 'job_center_transactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
-      () => ({ docs: [] } as any)
+      (): { docs: any[] } => ({ docs: [] })
+    ),
+    getDocs(query(collection(db, 'cashierTransactions'), orderBy('createdAt', 'desc'), limit(300))).catch(
+      (): { docs: any[] } => ({ docs: [] })
     ),
   ]);
 
-  const sum = (docs: any[]) =>
-    docs.reduce((acc, d) => {
+  const sumSnap = (docs: any[]) =>
+    docs.reduce((acc: number, d: any) => {
       const data = d.data();
-      const createdAt = data.createdAt?.toDate?.() ? data.createdAt.toDate() : data.createdAt;
-      const key = createdAt ? isoDayKey(new Date(createdAt)) : '';
-      if (key !== dayKey) return acc;
+      if (data.status === 'rejected') return acc;
+      const date = resolveDate(data);
+      if (!date || pktDayKey(date) !== todayKey) return acc;
       return acc + (Number(data.amount) || 0);
     }, 0);
 
-  return sum(rehabSnap.docs) + sum(spimsSnap.docs) + sum(jobSnap.docs);
+  return (
+    sumSnap(rehabSnap.docs) +
+    sumSnap(spimsSnap.docs) +
+    sumSnap(jobSnap.docs) +
+    sumSnap(hqSnap.docs)
+  );
 }
 
 export async function fetchActiveStaffCount(): Promise<number> {
   const [hq, rehab, spims, job] = await Promise.all([
-    getCountFromServer(query(collection(db, 'hq_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'rehab_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'spims_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(query(collection(db, 'job_center_staff'), where('isActive', '==', true))).then((r) => r.data().count).catch(() => 0),
+    getCountFromServer(query(collection(db, 'hq_staff'), where('isActive', '==', true)))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'rehab_staff'), where('isActive', '==', true)))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'spims_staff'), where('isActive', '==', true)))
+      .then((r) => r.data().count)
+      .catch(() => 0),
+    getCountFromServer(query(collection(db, 'job_center_staff'), where('isActive', '==', true)))
+      .then((r) => r.data().count)
+      .catch(() => 0),
   ]);
   return hq + rehab + spims + job;
 }
-

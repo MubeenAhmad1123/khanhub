@@ -115,19 +115,27 @@ export default function HqSuperadminPage() {
         format: 'pkr' as const,
       },
       {
-        title: 'Rehab patients today',
-        value: stats?.rehabPatientsToday ?? 0,
-        subtitle: 'New today',
+        title: 'Rehab patients',
+        value: stats?.rehabPatientsTotal ?? 0,
+        subtitle: 'Total registered',
         href: '/hq/dashboard/superadmin/departments',
         icon: Building2,
         tone: 'neutral' as const,
       },
       {
-        title: 'SPIMS students today',
-        value: stats?.spimsStudentsToday ?? 0,
-        subtitle: 'New today',
+        title: 'SPIMS students',
+        value: stats?.spimsStudentsTotal ?? 0,
+        subtitle: 'Total enrolled',
         href: '/hq/dashboard/superadmin/spims/students',
         icon: ClipboardList,
+        tone: 'neutral' as const,
+      },
+      {
+        title: 'Job seekers',
+        value: stats?.jobSeekersTotal ?? 0,
+        subtitle: 'Total registered',
+        href: '/hq/dashboard/superadmin/departments',
+        icon: Users2,
         tone: 'neutral' as const,
       },
       {
@@ -173,7 +181,7 @@ export default function HqSuperadminPage() {
       </div>
 
       {/* ── Stat Cards ──────────────────────────────────────────────────────── */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {cards.map((c) => (
           <StatCard
             key={c.title}
