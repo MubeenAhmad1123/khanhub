@@ -34,10 +34,10 @@ export default function SuperAdminReportsPage() {
   const [generated, setGenerated] = useState(false);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('hospital_session');
+    if (!sessionData) { router.push('/departments/hospital/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'superadmin') { router.push('/departments/rehab/login'); return; }
+    if (parsed.role !== 'superadmin') { router.push('/departments/hospital/login'); return; }
   }, [router]);
 
   const handleGenerate = async () => {
@@ -51,7 +51,7 @@ export default function SuperAdminReportsPage() {
 
       // === FINANCIAL TRANSACTIONS ===
       const txnQ = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'hospital_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'approved'),
@@ -62,7 +62,7 @@ export default function SuperAdminReportsPage() {
 
       // Pending count
       const pendingQ = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'hospital_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'pending')
@@ -82,13 +82,13 @@ export default function SuperAdminReportsPage() {
       };
 
       // === STAFF SALARY ===
-      const staffSnap = await getDocs(query(collection(db, 'rehab_staff'), where('isActive', '==', true)));
+      const staffSnap = await getDocs(query(collection(db, 'hospital_staff'), where('isActive', '==', true)));
       const allStaff = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const finesSnap = await getDocs(query(collection(db, 'rehab_fines'), where('month', '==', monthStr)));
+      const finesSnap = await getDocs(query(collection(db, 'hospital_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
 
-      const attendanceSnap = await getDocs(query(collection(db, 'rehab_attendance'),
+      const attendanceSnap = await getDocs(query(collection(db, 'hospital_attendance'),
         where('date', '>=', `${monthStr}-01`),
         where('date', '<=', `${monthStr}-31`),
         where('status', '==', 'absent')
@@ -114,11 +114,11 @@ export default function SuperAdminReportsPage() {
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
       // === PATIENTS ===
-      const activePatientsSnap = await getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', true)));
+      const activePatientsSnap = await getDocs(query(collection(db, 'hospital_patients'), where('isActive', '==', true)));
       const totalActivePatients = activePatientsSnap.size;
 
       const newAdmissionsSnap = await getDocs(query(
-        collection(db, 'rehab_patients'),
+        collection(db, 'hospital_patients'),
         where('admissionDate', '>=', Timestamp.fromDate(firstDay)),
         where('admissionDate', '<=', Timestamp.fromDate(lastDay))
       ));
@@ -152,8 +152,8 @@ export default function SuperAdminReportsPage() {
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #hospital-report-print, #hospital-report-print * { visibility: visible; }
+          #hospital-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
         }
       `}</style>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -162,7 +162,7 @@ export default function SuperAdminReportsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <FileBarChart className="w-6 h-6 text-purple-600" /> Super Admin Reports
+              <FileBarChart className="w-6 h-6 text-emerald-600" /> Super Admin Reports
             </h1>
             <p className="text-sm text-gray-500 mt-1">Comprehensive monthly report including staff payroll</p>
           </div>
@@ -175,19 +175,19 @@ export default function SuperAdminReportsPage() {
 
         {/* Controls */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-purple-500" /> Select Period</h2>
+          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-500" /> Select Period</h2>
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
-              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500">
+              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
                 {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
             </div>
             <div className="flex-1">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
-              <input type="number" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} min={2020} max={2100} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500" />
+              <input type="number" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} min={2020} max={2100} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
             </div>
-            <button onClick={handleGenerate} disabled={generating} className="flex-1 sm:flex-none bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+            <button onClick={handleGenerate} disabled={generating} className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
               Generate Report
             </button>
@@ -196,12 +196,12 @@ export default function SuperAdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="rehab-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
+          <div id="hospital-report-print" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-10">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">KhanHub Rehab Center — Super Admin Report</h2>
-              <p className="text-lg font-bold text-purple-700 mt-1">Monthly Financial Summary — {reportData.monthLabel}</p>
+              <h2 className="text-2xl font-black text-gray-900">KhanHub Hospital — Super Admin Report</h2>
+              <p className="text-lg font-bold text-emerald-700 mt-1">Monthly Financial Summary — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
 
@@ -352,16 +352,16 @@ export default function SuperAdminReportsPage() {
             {/* Staff Salary Summary */}
             {reportData.staffSalaries.length > 0 && (
               <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-purple-500" /> Staff Payroll Summary</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-emerald-500" /> Staff Payroll Summary</h3>
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <table className="w-full text-sm border-collapse min-w-[600px]">
-                    <thead className="bg-purple-50">
+                    <thead className="bg-emerald-50">
                       <tr>
-                        <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-purple-800">Staff Member</th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Gross</th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-center font-bold text-purple-800">Absent</th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Fines</th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-purple-800">Net Payable</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-left font-bold text-emerald-800">Staff Member</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-emerald-800">Gross</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-center font-bold text-emerald-800">Absent</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-emerald-800">Fines</th>
+                        <th className="border-b border-gray-200 px-4 py-3 text-right font-bold text-emerald-800">Net Payable</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -374,9 +374,9 @@ export default function SuperAdminReportsPage() {
                           <td className="border-b border-gray-200 px-4 py-3 text-right font-black text-green-800">{formatPKR(s.netPayable)}</td>
                         </tr>
                       ))}
-                      <tr className="bg-purple-50/50 font-black">
-                        <td colSpan={4} className="px-4 py-3 text-purple-800">Total Payroll</td>
-                        <td className="px-4 py-3 text-right text-purple-800">{formatPKR(reportData.totalPayroll)}</td>
+                      <tr className="bg-emerald-50/50 font-black">
+                        <td colSpan={4} className="px-4 py-3 text-emerald-800">Total Payroll</td>
+                        <td className="px-4 py-3 text-right text-emerald-800">{formatPKR(reportData.totalPayroll)}</td>
                       </tr>
                     </tbody>
                   </table>

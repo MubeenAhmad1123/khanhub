@@ -2,35 +2,35 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
-import { createRehabUserServer, deactivateRehabUser, resetRehabPassword } from '../../../actions/createHospitalUser';
-import EyePasswordInput from '@/components/rehab/EyePasswordInput';
+import { useHospitalSession } from '@/hooks/hospital/useHospitalSession';
+import { createHospitalUserServer, deactivateHospitalUser, resetHospitalPassword } from '../../../actions/createHospitalUser';
+import EyePasswordInput from '@/components/hospital/EyePasswordInput';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { RehabUser } from '@/types/rehab';
+import type { HospitalUser } from '@/types/hospital';
 
 export default function SuperAdminUserManagement() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
-  const [admins, setAdmins] = useState<RehabUser[]>([]);
-  const [cashier, setCashier] = useState<RehabUser | null>(null);
+  const { session: user, loading: sessionLoading } = useHospitalSession();
+  const [admins, setAdmins] = useState<HospitalUser[]>([]);
+  const [cashier, setCashier] = useState<HospitalUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Form states
-  const [adminForm, setAdminForm] = useState({ name: '', id: 'REHAB-ADM-001', pass: '' });
-  const [cashierForm, setCashierForm] = useState({ id: 'REHAB-CSH-001', pass: '' });
+  const [adminForm, setAdminForm] = useState({ name: '', id: 'HOS-ADM-001', pass: '' });
+  const [cashierForm, setCashierForm] = useState({ id: 'HOS-CSH-001', pass: '' });
 
   const fetchData = async () => {
     try {
-      const qAdmins = query(collection(db, 'rehab_users'), where('role', '==', 'admin'));
-      const qCashier = query(collection(db, 'rehab_users'), where('role', '==', 'cashier'), where('isActive', '==', true));
+      const qAdmins = query(collection(db, 'hospital_users'), where('role', '==', 'admin'));
+      const qCashier = query(collection(db, 'hospital_users'), where('role', '==', 'cashier'), where('isActive', '==', true));
       
       const [snapAdmins, snapCashier] = await Promise.all([getDocs(qAdmins), getDocs(qCashier)]);
       
-      setAdmins(snapAdmins.docs.map(doc => ({ uid: doc.id, ...doc.data() } as RehabUser)));
-      setCashier(snapCashier.docs.length > 0 ? ({ uid: snapCashier.docs[0].id, ...snapCashier.docs[0].data() } as RehabUser) : null);
+      setAdmins(snapAdmins.docs.map(doc => ({ uid: doc.id, ...doc.data() } as HospitalUser)));
+      setCashier(snapCashier.docs.length > 0 ? ({ uid: snapCashier.docs[0].id, ...snapCashier.docs[0].data() } as HospitalUser) : null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -41,7 +41,7 @@ export default function SuperAdminUserManagement() {
   useEffect(() => {
     if (!sessionLoading) {
       if (!user || user.role !== 'superadmin') {
-        router.push('/departments/rehab/login');
+        router.push('/departments/hospital/login');
       } else {
         fetchData();
       }
@@ -51,10 +51,10 @@ export default function SuperAdminUserManagement() {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
-    const res = await createRehabUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
+    const res = await createHospitalUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
     if (res.success) {
       setMessage({ type: 'success', text: `Admin ${adminForm.id} created!` });
-      setAdminForm({ name: '', id: 'REHAB-ADM-001', pass: '' });
+      setAdminForm({ name: '', id: 'HOS-ADM-001', pass: '' });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create admin' });
@@ -66,10 +66,10 @@ export default function SuperAdminUserManagement() {
     e.preventDefault();
     if (cashier) return;
     setActionLoading(true);
-    const res = await createRehabUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
+    const res = await createHospitalUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
     if (res.success) {
       setMessage({ type: 'success', text: 'Cashier created successfully!' });
-      setCashierForm({ id: 'REHAB-CSH-001', pass: '' });
+      setCashierForm({ id: 'HOS-CSH-001', pass: '' });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create cashier' });
@@ -80,7 +80,7 @@ export default function SuperAdminUserManagement() {
   const handleDeactivate = async (uid: string) => {
     if (!confirm('Are you sure? This user will lose all access.')) return;
     setActionLoading(true);
-    const res = await deactivateRehabUser(uid);
+    const res = await deactivateHospitalUser(uid);
     if (res.success) {
       setMessage({ type: 'success', text: 'User deactivated successfully' });
       fetchData();
@@ -92,7 +92,7 @@ export default function SuperAdminUserManagement() {
     const newPass = prompt('Enter new password (min 6 chars):');
     if (!newPass || newPass.length < 6) return;
     setActionLoading(true);
-    const res = await resetRehabPassword(uid, newPass);
+    const res = await resetHospitalPassword(uid, newPass);
     if (res.success) setMessage({ type: 'success', text: 'Password reset successful' });
     setActionLoading(false);
   };
@@ -103,7 +103,7 @@ export default function SuperAdminUserManagement() {
     <div className="space-y-12 pb-20 max-w-6xl mx-auto">
       <div>
         <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-2">Authority Center</h1>
-        <p className="text-gray-400 font-bold uppercase text-xs tracking-[0.3em]">Master User & Role Distribution</p>
+        <p className="text-gray-400 font-bold uppercase text-xs tracking-[0.3em]">Hospital Master User & Role Distribution</p>
       </div>
 
       {message.text && (
@@ -119,7 +119,7 @@ export default function SuperAdminUserManagement() {
         {/* SECTION A: Admin Creation */}
         <section className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
           <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
-            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl shadow-sm">🛡️</div>
+            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-sm">🛡️</div>
             <div>
               <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Provision Admin</h2>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Global Managers</p>
@@ -129,30 +129,30 @@ export default function SuperAdminUserManagement() {
             <div className="grid grid-cols-2 gap-4">
                <div className="col-span-2 space-y-1">
                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Full Name</label>
-                 <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100 placeholder:text-gray-200" placeholder="e.g. Administrator Ahmad" value={adminForm.name} onChange={e => setAdminForm({...adminForm, name: e.target.value})} />
+                 <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-emerald-100 placeholder:text-gray-200" placeholder="e.g. Administrator Ahmad" value={adminForm.name} onChange={e => setAdminForm({...adminForm, name: e.target.value})} />
                </div>
                <div className="space-y-1">
                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Custom ID</label>
-                 <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100" value={adminForm.id} onChange={e => setAdminForm({...adminForm, id: e.target.value})} />
+                 <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-emerald-100" value={adminForm.id} onChange={e => setAdminForm({...adminForm, id: e.target.value})} />
                </div>
                <div className="space-y-1">
                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Access Secret</label>
                  <EyePasswordInput 
                    required 
-                   className="bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100 placeholder:text-gray-200" 
+                   className="bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-emerald-100 placeholder:text-gray-200" 
                    value={adminForm.pass} 
                    onChange={e => setAdminForm({...adminForm, pass: e.target.value})} 
                  />
                </div>
             </div>
-            <button disabled={actionLoading} className="w-full bg-blue-600 text-white py-5 rounded-[1.5rem] font-black shadow-xl shadow-blue-600/20 hover:scale-[1.02] transition-all disabled:opacity-50 uppercase tracking-widest text-sm">Create Admin Account</button>
+            <button disabled={actionLoading} className="w-full bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black shadow-xl shadow-emerald-600/20 hover:scale-[1.02] transition-all disabled:opacity-50 uppercase tracking-widest text-sm">Create Admin Account</button>
           </form>
         </section>
 
         {/* SECTION B: Cashier Management */}
         <section className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
           <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
-            <div className="w-12 h-12 bg-[#1D9E75]/10 text-[#1D9E75] rounded-2xl flex items-center justify-center text-xl shadow-sm">💰</div>
+            <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-xl shadow-sm">💰</div>
             <div>
               <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Cashier Control</h2>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Financial Operatives</p>
@@ -160,13 +160,13 @@ export default function SuperAdminUserManagement() {
           </div>
           
           {cashier ? (
-            <div className="bg-[#1D9E75]/5 p-8 rounded-3xl border border-[#1D9E75]/10 flex flex-col gap-6">
+            <div className="bg-orange-50/5 p-8 rounded-3xl border border-orange-200 flex flex-col gap-6">
                <div className="flex justify-between items-start">
                   <div>
                     <p className="text-2xl font-black text-gray-900">{cashier.displayName}</p>
-                    <p className="text-[10px] font-black text-[#1D9E75] uppercase tracking-widest mt-1">ID: {cashier.customId}</p>
+                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mt-1">ID: {cashier.customId}</p>
                   </div>
-                  <span className="bg-[#1D9E75] text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">Active</span>
+                  <span className="bg-orange-500 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">Active</span>
                </div>
                <div className="flex gap-4">
                   <button onClick={() => handleResetPass(cashier.uid)} className="flex-1 bg-white border border-gray-100 text-gray-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all">Password</button>
@@ -178,13 +178,13 @@ export default function SuperAdminUserManagement() {
                <div className="space-y-4">
                  <div className="space-y-1">
                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cashier ID</label>
-                   <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" value={cashierForm.id} onChange={e => setCashierForm({...cashierForm, id: e.target.value})} />
+                   <input required className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-orange-100" value={cashierForm.id} onChange={e => setCashierForm({...cashierForm, id: e.target.value})} />
                  </div>
                  <div className="space-y-1">
                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Initial Secret</label>
                    <EyePasswordInput 
                      required 
-                     className="bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-[#1D9E75]/10" 
+                     className="bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold text-gray-700 outline-none focus:ring-4 focus:ring-orange-100" 
                      value={cashierForm.pass} 
                      onChange={e => setCashierForm({...cashierForm, pass: e.target.value})} 
                    />
@@ -243,7 +243,7 @@ export default function SuperAdminUserManagement() {
               {admins.map((adm) => (
                 <tr key={adm.uid} className="hover:bg-gray-50/50 transition-all group">
                   <td className="px-10 py-8">
-                    <p className="font-black text-lg text-gray-900 group-hover:text-blue-600 transition-colors uppercase">{adm.displayName}</p>
+                    <p className="font-black text-lg text-gray-900 group-hover:text-emerald-600 transition-colors uppercase">{adm.displayName}</p>
                   </td>
                   <td className="px-10 py-8 font-black text-xs text-gray-400 tracking-widest">{adm.customId}</td>
                   <td className="px-10 py-8">

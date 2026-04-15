@@ -29,13 +29,15 @@ export default function HospitalLoginPage() {
     setError('');
 
     try {
-      const result = await loginUniversal(customId, password);
+      const result = await loginUniversal(customId, password, 'hospital');
+      
       if (!result.success) {
-        setError(result.error || 'Identity verification failed.');
+        setError(result.error || 'Authentication failed.');
         setLoading(false);
         return;
       }
-      // Redirection handled by loginUniversal
+
+      // If success, loginUniversal will handle redirection via window.location.href
     } catch (err: any) {
       console.error('[Hospital Login] Error:', err);
       setError('System authentication error. Try again.');

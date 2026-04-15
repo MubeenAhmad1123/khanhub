@@ -30,14 +30,14 @@ export default function FinanceLogPage() {
   const [stats, setStats] = useState({ income: 0, expense: 0, net: 0 });
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('hospital_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/hospital/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/hospital/login');
       return;
     }
     setSession(parsed);
@@ -56,7 +56,7 @@ export default function FinanceLogPage() {
 
       // We constrain our query to date range to keep it simple and composite index minimal
       const q = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'hospital_transactions'),
         where('date', '>=', Timestamp.fromDate(from)),
         where('date', '<=', Timestamp.fromDate(to)),
         orderBy('date', 'desc')
@@ -140,7 +140,7 @@ export default function FinanceLogPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -160,7 +160,7 @@ export default function FinanceLogPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-teal-600" />
+              <BarChart3 className="w-6 h-6 text-emerald-600" />
               Finance Log
             </h1>
             <p className="text-sm text-gray-500 mt-1">Read-only financial overview & history</p>
@@ -170,21 +170,21 @@ export default function FinanceLogPage() {
         {/* Filter Bar */}
         <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
           <div className="flex items-center gap-2 text-sm font-bold text-gray-800 mb-4 pb-2 border-b border-gray-50">
-            <Filter className="w-4 h-4 text-teal-600" /> Filters
+            <Filter className="w-4 h-4 text-emerald-600" /> Filters
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">From</label>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm" />
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm" />
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">To</label>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm" />
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm" />
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">Type</label>
-              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
+              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
                 <option value="all">All Types</option>
                 <option value="income">Income</option>
                 <option value="expense">Expense</option>
@@ -192,7 +192,7 @@ export default function FinanceLogPage() {
             </div>
             <div>
               <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">Status</label>
-              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
@@ -202,7 +202,7 @@ export default function FinanceLogPage() {
             </div>
             <div className="sm:col-span-2 lg:col-span-1">
               <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">Category</label>
-              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-teal-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
+              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm capitalize font-bold text-gray-700">
                 <option value="all">All Categories</option>
                 {allCategories.map(cat => (
                   <option key={cat} value={cat}>{formatCategory(cat)}</option>
@@ -216,7 +216,7 @@ export default function FinanceLogPage() {
             <button 
               onClick={fetchData}
               disabled={queryLoading}
-              className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-70"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-70"
             >
               {queryLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               Apply Filters
@@ -248,15 +248,15 @@ export default function FinanceLogPage() {
             <div className="text-3xl font-black text-gray-900 leading-none">₨{stats.expense.toLocaleString('en-PK')}</div>
           </div>
 
-          <div className="bg-white border border-teal-100 rounded-2xl shadow-sm p-5 relative overflow-hidden group hover:shadow-md transition-all sm:col-span-1 md:col-span-1">
+          <div className="bg-white border border-emerald-100 rounded-2xl shadow-sm p-5 relative overflow-hidden group hover:shadow-md transition-all sm:col-span-1 md:col-span-1">
              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <DollarSign className="w-16 h-16 text-teal-600" />
+              <DollarSign className="w-16 h-16 text-emerald-600" />
             </div>
-            <div className="flex items-center gap-2 text-teal-600 mb-3">
+            <div className="flex items-center gap-2 text-emerald-600 mb-3">
               <DollarSign className="w-5 h-5" />
               <span className="font-black text-[10px] uppercase tracking-widest">Net Balance</span>
             </div>
-            <div className={`text-3xl font-black leading-none ${stats.net >= 0 ? 'text-teal-600' : 'text-red-500'}`}>
+            <div className={`text-3xl font-black leading-none ${stats.net >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
               ₨{stats.net.toLocaleString('en-PK')}
             </div>
           </div>

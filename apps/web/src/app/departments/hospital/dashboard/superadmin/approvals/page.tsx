@@ -24,14 +24,14 @@ export default function ApprovalsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('hospital_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/hospital/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/hospital/login');
       return;
     }
     setSession(parsed);
@@ -44,7 +44,7 @@ export default function ApprovalsPage() {
 
     // No orderBy — avoids index requirement
     const q = query(
-      collection(db, 'rehab_transactions'),
+      collection(db, 'hospital_transactions'),
       where('status', '==', 'pending')
     )
 
@@ -87,7 +87,7 @@ export default function ApprovalsPage() {
       // No orderBy — avoids composite index requirement
       const snap = await getDocs(
         query(
-          collection(db, 'rehab_transactions'),
+          collection(db, 'hospital_transactions'),
           where('status', 'in', ['approved', 'rejected'])
         )
       )
@@ -151,7 +151,7 @@ export default function ApprovalsPage() {
       setActionLoading(txId);
       
       // 1. Update the transaction status first
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+      await updateDoc(doc(db, 'hospital_transactions', txId), {
         status: 'approved',
         approvedBy: session.uid,
         approvedAt: Timestamp.now()
@@ -165,10 +165,10 @@ export default function ApprovalsPage() {
           const txDate = tx.date?.toDate ? tx.date.toDate() : new Date();
           const month = txDate.toISOString().slice(0, 7); // "2026-03"
 
-          if (tx.category === 'patient_fee') {
+          if (tx.category === 'ipd_admission' || tx.category === 'fee' || tx.category === 'patient_fee') {
             // Find or CREATE the fee record for this patient+month
             const feesQ = query(
-              collection(db, 'rehab_fees'),
+              collection(db, 'hospital_fees'),
               where('patientId', '==', tx.patientId),
               where('month', '==', month)
             );
@@ -176,13 +176,13 @@ export default function ApprovalsPage() {
 
             if (feesSnap.empty) {
               // Auto-create fee record — fetch patient package amount first
-              const patientSnap = await getDoc(doc(db, 'rehab_patients', tx.patientId));
+              const patientSnap = await getDoc(doc(db, 'hospital_patients', tx.patientId));
               const packageAmount = patientSnap.exists()
-                ? (patientSnap.data().packageAmount || 60000)
-                : 60000;
+                ? (patientSnap.data().packageAmount || 0)
+                : 0;
               const amountPaid = tx.amount;
               const amountRemaining = Math.max(0, packageAmount - amountPaid);
-              await addDoc(collection(db, 'rehab_fees'), {
+              await addDoc(collection(db, 'hospital_fees'), {
                 patientId: tx.patientId,
                 patientName: tx.patientName || '',
                 month,
@@ -204,9 +204,9 @@ export default function ApprovalsPage() {
               const feeDoc = feesSnap.docs[0];
               const current = feeDoc.data();
               const newPaid = (current.amountPaid || 0) + tx.amount;
-              const newRemaining = Math.max(0, (current.packageAmount || 60000) - newPaid);
+              const newRemaining = Math.max(0, (current.packageAmount || 0) - newPaid);
               const existingPayments = current.payments || [];
-              await updateDoc(doc(db, 'rehab_fees', feeDoc.id), {
+              await updateDoc(doc(db, 'hospital_fees', feeDoc.id), {
                 amountPaid: newPaid,
                 amountRemaining: newRemaining,
                 lastPaymentDate: serverTimestamp(),
@@ -221,9 +221,9 @@ export default function ApprovalsPage() {
             }
           }
 
-          if (tx.category === 'canteen_deposit') {
+          if (tx.category === 'canteen' || tx.category === 'canteen_deposit') {
             const canteenQ = query(
-              collection(db, 'rehab_canteen'),
+              collection(db, 'hospital_canteen'),
               where('patientId', '==', tx.patientId),
               where('month', '==', month)
             );
@@ -231,58 +231,48 @@ export default function ApprovalsPage() {
 
             if (canteenSnap.empty) {
               // Auto-create canteen record
-              await addDoc(collection(db, 'rehab_canteen'), {
+              await addDoc(collection(db, 'hospital_canteen'), {
                 patientId: tx.patientId,
                 patientName: tx.patientName || '',
                 month,
-                totalDeposited: tx.amount,
-                totalSpent: 0,
-                balance: tx.amount,
+                totalDeposited: tx.type === 'income' ? tx.amount : 0,
+                totalSpent: tx.type === 'expense' ? tx.amount : 0,
+                balance: tx.type === 'income' ? tx.amount : -tx.amount,
                 lastDepositDate: serverTimestamp(),
                 createdAt: serverTimestamp(),
               });
             } else {
               const canteenDoc = canteenSnap.docs[0];
               const current = canteenDoc.data();
-              const newDeposited = (current.totalDeposited || 0) + tx.amount;
-              const newBalance = newDeposited - (current.totalSpent || 0);
-              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
-                totalDeposited: newDeposited,
-                balance: newBalance,
-                lastDepositDate: serverTimestamp(),
-              });
-            }
-          }
-
-          if (tx.category === 'canteen_expense') {
-            const canteenQ = query(
-              collection(db, 'rehab_canteen'),
-              where('patientId', '==', tx.patientId),
-              where('month', '==', month)
-            );
-            const canteenSnap = await getDocs(canteenQ);
-            if (!canteenSnap.empty) {
-              const canteenDoc = canteenSnap.docs[0];
-              const current = canteenDoc.data();
-              const newSpent = (current.totalSpent || 0) + tx.amount;
-              const newBalance = (current.totalDeposited || 0) - newSpent;
-              await updateDoc(doc(db, 'rehab_canteen', canteenDoc.id), {
-                totalSpent: newSpent,
-                balance: Math.max(0, newBalance),
-              });
+              if (tx.type === 'income') {
+                const newDeposited = (current.totalDeposited || 0) + tx.amount;
+                const newBalance = newDeposited - (current.totalSpent || 0);
+                await updateDoc(doc(db, 'hospital_canteen', canteenDoc.id), {
+                  totalDeposited: newDeposited,
+                  balance: newBalance,
+                  lastDepositDate: serverTimestamp(),
+                });
+              } else {
+                const newSpent = (current.totalSpent || 0) + tx.amount;
+                const newBalance = (current.totalDeposited || 0) - newSpent;
+                await updateDoc(doc(db, 'hospital_canteen', canteenDoc.id), {
+                  totalSpent: newSpent,
+                  balance: newBalance,
+                });
+              }
             }
           }
 
           if (tx.category === 'staff_salary' && tx.staffId) {
             // Mark salary as paid for this staff member this month
             const salaryQ = query(
-              collection(db, 'rehab_salary_records'),
+              collection(db, 'hospital_salary_records'),
               where('staffId', '==', tx.staffId),
               where('month', '==', month)
             );
             const salarySnap = await getDocs(salaryQ);
             if (salarySnap.empty) {
-              await addDoc(collection(db, 'rehab_salary_records'), {
+              await addDoc(collection(db, 'hospital_salary_records'), {
                 staffId: tx.staffId,
                 staffName: tx.staffName || '',
                 month,
@@ -292,7 +282,7 @@ export default function ApprovalsPage() {
                 approvedBy: session?.uid,
               });
             } else {
-              await updateDoc(doc(db, 'rehab_salary_records', salarySnap.docs[0].id), {
+              await updateDoc(doc(db, 'hospital_salary_records', salarySnap.docs[0].id), {
                 amount: (salarySnap.docs[0].data().amount || 0) + tx.amount,
                 lastPaidAt: serverTimestamp(),
               });
@@ -300,7 +290,6 @@ export default function ApprovalsPage() {
           }
         } catch (syncErr) {
           console.error('Sync error after approval:', syncErr);
-          // Don't fail the approval if sync fails — transaction is already approved
         }
       }
 
@@ -323,7 +312,7 @@ export default function ApprovalsPage() {
     
     try {
       setActionLoading(txId);
-      await updateDoc(doc(db, 'rehab_transactions', txId), {
+      await updateDoc(doc(db, 'hospital_transactions', txId), {
         status: 'rejected',
         rejectedBy: session.uid,
         rejectedAt: Timestamp.now(),
@@ -343,26 +332,24 @@ export default function ApprovalsPage() {
 
   const formatCategory = (cat: string) => {
     const map: Record<string, string> = {
-      patient_fee: 'Patient Monthly Fee',
-      canteen_deposit: 'Canteen Deposit',
-      donation: 'Donation',
-      government_grant: 'Government Grant',
+      // Hospital Categories
+      opd_consultation: 'OPD Consultation',
+      lab_test: 'Lab / Diagnostics',
+      pharmacy: 'Pharmacy Sales',
+      ipd_admission: 'IPD Admission Advance',
+      ambulance: 'Ambulance Service',
+      emergency_charges: 'Emergency Charges',
+      medical_report: 'Medical Reports',
+      fee: 'Patient Fee',
+      canteen: 'Canteen',
       other_income: 'Other Income',
+      medical_supplies: 'Medical Supplies',
+      consultant_payment: 'Consultant Payment',
+      equipment_maintenance: 'Equipment Repair',
+      pharmacy_restock: 'Pharmacy Restock',
       staff_salary: 'Staff Salary',
-      rent: 'Rent / Property',
-      electricity: 'Electricity Bill',
-      gas: 'Gas Bill',
-      water: 'Water Bill',
-      medicine: 'Medicine / Pharmacy',
-      food: 'Food & Groceries',
-      canteen_expense: 'Canteen Expense',
-      maintenance: 'Building Maintenance',
-      transport: 'Transport / Fuel',
-      equipment: 'Equipment Purchase',
-      security: 'Security Services',
-      cleaning: 'Cleaning Supplies',
-      patient_welfare: 'Patient Welfare',
-      office_supplies: 'Office Supplies',
+      utilities: 'Utilities / Bills',
+      maintenance: 'Maintenance',
       other_expense: 'Other Expense',
     };
     return map[cat] || cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -371,7 +358,7 @@ export default function ApprovalsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -407,7 +394,7 @@ export default function ApprovalsPage() {
             <div className="text-2xl font-black text-gray-900 mb-1 tracking-tight">
               {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>
               {tx.patientName && (
-                <span className="ml-3 text-sm font-black text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg uppercase tracking-widest">
+                <span className="ml-3 text-sm font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg uppercase tracking-widest">
                   Patient: {tx.patientName}
                 </span>
               )}
@@ -470,7 +457,7 @@ export default function ApprovalsPage() {
                 <button
                   onClick={() => handleApprove(tx.id)}
                   disabled={actionLoading === tx.id}
-                  className="flex-1 flex items-center justify-center gap-2 bg-teal-500 text-white px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-teal-600 transition-all shadow-lg shadow-teal-200 active:scale-95 disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 text-white px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 active:scale-95 disabled:opacity-50"
                 >
                   {actionLoading === tx.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle size={16} />} 
                   Approve
@@ -511,14 +498,14 @@ export default function ApprovalsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <CheckCircle className="w-6 h-6 text-teal-600" />
-              Transaction Approvals
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
+              Hospital Transaction Approvals
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Review and manage financial entries
+              Review and manage financial entries for Hospital
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full font-medium text-sm border border-yellow-200">
+          <div className="flex items-center gap-2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full font-medium text-sm border border-amber-200">
             <Clock className="w-4 h-4" />
             {pendingTransactions.length} Pending
           </div>

@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useRehabSession } from '@/hooks/rehab/useRehabSession';
+import { useHospitalSession } from '@/hooks/hospital/useHospitalSession';
 import {
   collection, query, where, getDocs, addDoc,
   updateDoc, doc, getDoc, Timestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
-import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/rehab';
+import type { AttendanceRecord, StaffContribution, StaffMember } from '@/types/hospital';
 import {
   Clock, CheckCircle, LogIn, LogOut, Calendar,
   Lightbulb, Send, Star, List, Loader2
@@ -26,7 +26,7 @@ const toDate = (ts: any): Date | null => {
 
 export default function StaffSelfPage() {
   const router = useRouter();
-  const { session: user, loading: sessionLoading } = useRehabSession();
+  const { session: user, loading: sessionLoading } = useHospitalSession();
 
   const [staffProfile, setStaffProfile] = useState<StaffMember | null>(null);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
@@ -46,7 +46,7 @@ export default function StaffSelfPage() {
     try {
       // Find staff profile linked to this login user
       const staffSnap = await getDocs(
-        query(collection(db, 'rehab_staff'), where('loginUserId', '==', user.uid))
+        query(collection(db, 'hospital_staff'), where('loginUserId', '==', user.uid))
       );
       if (staffSnap.empty) { setLoading(false); return; }
       const staffDoc = staffSnap.docs[0];
@@ -61,7 +61,7 @@ export default function StaffSelfPage() {
 
       const today = new Date().toISOString().split('T')[0];
       const attSnap = await getDocs(
-        query(collection(db, 'rehab_attendance'), where('staffId', '==', staffId), where('date', '==', today))
+        query(collection(db, 'hospital_attendance'), where('staffId', '==', staffId), where('date', '==', today))
       );
 
       // Today's attendance
@@ -80,7 +80,7 @@ export default function StaffSelfPage() {
 
       // Contributions (last 7 days)
       const contribSnap = await getDocs(
-        query(collection(db, 'rehab_contributions'), where('staffId', '==', staffId))
+        query(collection(db, 'hospital_contributions'), where('staffId', '==', staffId))
       );
       setContributions(
         contribSnap.docs
@@ -105,7 +105,7 @@ export default function StaffSelfPage() {
 
       const monthlySnap = await getDocs(
         query(
-          collection(db, 'rehab_attendance'),
+          collection(db, 'hospital_attendance'),
           where('staffId', '==', staffId),
           where('date', '>=', firstDayStr),
           where('date', '<=', todayStr)
@@ -125,7 +125,7 @@ export default function StaffSelfPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!user || user.role !== 'staff') { router.push('/departments/rehab/login'); return; }
+    if (!user || user.role !== 'staff') { router.push('/departments/hospital/login'); return; }
     fetchData();
   }, [sessionLoading, user, fetchData, router]);
 
@@ -135,7 +135,6 @@ export default function StaffSelfPage() {
   };
 
   const handleCheckIn = async () => {
-    console.log('Check-in clicked, staffProfile:', staffProfile?.id, 'today:', today);
     if (!staffProfile) {
       showMsg('error', 'Staff profile not found. Contact admin.');
       return;
@@ -154,7 +153,7 @@ export default function StaffSelfPage() {
         const lateByMinutes = Math.floor(lateByMs / 60000);
         const isLate = lateByMinutes > 0;
 
-        await addDoc(collection(db, 'rehab_attendance'), {
+        await addDoc(collection(db, 'hospital_attendance'), {
           staffId: staffProfile.id,
           date: today,
           status: 'present',
@@ -180,7 +179,7 @@ export default function StaffSelfPage() {
 
         if (isLate) {
           const currentMonth = today.substring(0, 7);
-          await addDoc(collection(db, 'rehab_fines'), {
+          await addDoc(collection(db, 'hospital_fines'), {
             staffId: staffProfile.id,
             amount: 200,
             reason: `Late arrival — ${lateByMinutes} minutes late (duty start: ${staffProfile.dutyStartTime})`,
@@ -192,7 +191,7 @@ export default function StaffSelfPage() {
         }
       } else if (!todayRecord.checkOutTime) {
         // Already checked in — check out
-        await updateDoc(doc(db, 'rehab_attendance', todayRecord.id), {
+        await updateDoc(doc(db, 'hospital_attendance', todayRecord.id), {
           checkOutTime: Timestamp.now(),
         });
         showMsg('success', 'Checked out. Great work today! ✓');
@@ -210,7 +209,7 @@ export default function StaffSelfPage() {
     if (!contributionText.trim() || !staffProfile) return;
     setContribLoading(true);
     try {
-      await addDoc(collection(db, 'rehab_contributions'), {
+      await addDoc(collection(db, 'hospital_contributions'), {
         staffId: staffProfile.id,
         date: today,
         content: contributionText.trim(),
@@ -264,10 +263,10 @@ export default function StaffSelfPage() {
         )}
 
         {/* Check In / Out Card */}
-        <div className={`rounded-2xl p-4 border-l-4 ${checkedIn || checkedOut ? 'border-teal-500 bg-white/5' : 'border-amber-500 bg-white/5'}`}>
+        <div className={`rounded-2xl p-4 border-l-4 ${checkedIn || checkedOut ? 'border-emerald-500 bg-white/5' : 'border-amber-500 bg-white/5'}`}>
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <Clock size={18} className="text-teal-400" />
+              <Clock size={18} className="text-emerald-400" />
               <h2 className="font-black text-white">Today's Attendance</h2>
             </div>
             {staffProfile && (
@@ -285,9 +284,9 @@ export default function StaffSelfPage() {
 
           {/* Time display */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className={`p-4 rounded-2xl text-center ${checkedIn ? 'bg-teal-500/10' : 'bg-white/5'}`}>
+            <div className={`p-4 rounded-2xl text-center ${checkedIn ? 'bg-emerald-500/10' : 'bg-white/5'}`}>
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Check In</p>
-              <p className={`font-mono text-2xl font-black ${checkedIn ? 'text-teal-400' : 'opacity-30'}`}>
+              <p className={`font-mono text-2xl font-black ${checkedIn ? 'text-emerald-400' : 'opacity-30'}`}>
                 {todayRecord?.checkInTime
                   ? toDate(todayRecord.checkInTime)?.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
                   : '--:--'
@@ -323,7 +322,7 @@ export default function StaffSelfPage() {
             <button
               onClick={handleCheckIn}
               disabled={checkLoading}
-              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-wide flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-teal-500 text-white animate-pulse"
+              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-wide flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-500 text-white animate-pulse"
             >
               {checkLoading
                 ? <Loader2 size={18} className="animate-spin" />
@@ -337,7 +336,7 @@ export default function StaffSelfPage() {
         {/* Monthly Summary Card */}
         <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
           <div className="flex items-center gap-2 mb-4">
-            <Calendar size={18} className="text-teal-400" />
+            <Calendar size={18} className="text-emerald-400" />
             <h2 className="font-black text-white">Monthly Summary</h2>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -358,7 +357,7 @@ export default function StaffSelfPage() {
           {((monthlySummary.present + monthlySummary.absent + monthlySummary.leave) > 0) && (
             <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
               <div 
-                className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                 style={{ width: `${(monthlySummary.present / (monthlySummary.present + monthlySummary.absent + monthlySummary.leave)) * 100}%` }}
               />
             </div>
@@ -369,14 +368,14 @@ export default function StaffSelfPage() {
         {(staffProfile?.duties?.length ?? 0) > 0 && (
           <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
             <div className="flex items-center gap-2 mb-4">
-              <List size={18} className="text-teal-400" />
+              <List size={18} className="text-emerald-400" />
               <h2 className="font-black text-white">Your Duties</h2>
             </div>
             <ol className="space-y-2">
               {staffProfile?.duties?.map((d: any, i: number) => (
                 <li key={d.id || i} className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
-                  <span className="w-5 h-5 rounded-lg bg-teal-500/10 text-teal-400 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                  <span className="text-slate-300 text-sm leading-snug">{d.description || String(d)}</span>
+                  <span className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                  <span className="text-slate-300 text-sm leading-snug">{d.description || d.name || String(d)}</span>
                 </li>
               ))}
             </ol>
@@ -389,18 +388,18 @@ export default function StaffSelfPage() {
             <Lightbulb size={18} className="text-amber-400" />
             <h2 className="font-black text-white">Your Contribution Today</h2>
           </div>
-          <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the rehab center.</p>
+          <p className="text-slate-400 text-xs mb-4">Share what you accomplished, any feedback, or ideas for improving the hospital.</p>
           <textarea
             rows={3}
-            placeholder="e.g. Completed morning rounds, cleaned all patient rooms, suggested new shift handover system..."
-            className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-teal-500/50 transition-all"
+            placeholder="e.g. Conducted patient rounds, assisted in lab tests, improved registration flow..."
+            className="w-full min-h-[100px] rounded-2xl resize-none p-4 bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-emerald-500/50 transition-all"
             value={contributionText}
             onChange={e => setContributionText(e.target.value)}
           />
           <button
             onClick={handleContribution}
             disabled={contribLoading || !contributionText.trim()}
-            className="w-full py-3 mt-3 rounded-2xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
+            className="w-full py-3 mt-3 rounded-2xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
           >
             {submitted ? '✓ Submitted' : contribLoading ? 'Submitting...' : 'Submit'}
           </button>

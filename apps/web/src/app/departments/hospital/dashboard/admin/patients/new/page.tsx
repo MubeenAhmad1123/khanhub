@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createRehabUserServer } from '@/app/departments/rehab/actions/createRehabUser';
+import { createHospitalUserServer } from '@/app/departments/hospital/actions/createHospitalUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { 
   ArrowLeft, Heart, Save, Loader2, User, Upload, 
@@ -62,20 +62,20 @@ export default function AdmitPatientPage() {
   const [notes, setNotes] = useState('');
 
   const admissionReasons = [
-    'Heroin', 'Ice (Crystal Meth)', 'Charas/Hashish', 'Opium', 
-    'Alcohol', 'Cigarette/Tobacco', 'Prescription Drugs', 
-    'Psychological', 'Other'
+    'General Surgery', 'Internal Medicine', 'Cardiology', 'Neurology', 
+    'Orthopedics', 'Pediatrics', 'Obstetrics', 
+    'Emergency', 'Other'
   ];
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('hospital_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/hospital/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login');
+      router.push('/departments/hospital/login');
       return;
     }
     setLoading(false);
@@ -114,12 +114,12 @@ export default function AdmitPatientPage() {
       let photoUrl = null;
       if (photoFile) {
         setSubmitStatus('Uploading photo...');
-        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/rehab/patients');
+        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/hospital/patients');
       }
 
       // 2. Create patient document in Firestore
       setSubmitStatus('Creating patient record...');
-      const patientRef = await addDoc(collection(db, 'rehab_patients'), {
+      const patientRef = await addDoc(collection(db, 'hospital_patients'), {
         name,
         fatherName,
         age: Number(age),
@@ -152,7 +152,7 @@ export default function AdmitPatientPage() {
 
       // 3. Create family login account linked to this patient
       setSubmitStatus('Creating family login...');
-      const result = await createRehabUserServer(
+      const result = await createHospitalUserServer(
         loginId.toUpperCase(),
         loginPassword,
         'family',
@@ -162,9 +162,8 @@ export default function AdmitPatientPage() {
 
       if (!result.success) {
         // Roll back the patient doc if the login account could not be created.
-        // This prevents "half-created" records from confusing future logins.
         try {
-          await deleteDoc(doc(db, 'rehab_patients', patientRef.id));
+          await deleteDoc(doc(db, 'hospital_patients', patientRef.id));
         } catch {}
 
         setError(`Patient admission failed: ${result.error}. Please choose a different Patient Login ID.`);
@@ -175,7 +174,7 @@ export default function AdmitPatientPage() {
 
       setSubmitStatus('Done!');
       toast.success('Patient admitted successfully ✓');
-      router.push(`/departments/rehab/dashboard/admin/patients/${patientRef.id}`);
+      router.push(`/departments/hospital/dashboard/admin/patients/${patientRef.id}`);
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Something went wrong');
@@ -187,21 +186,21 @@ export default function AdmitPatientPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     );
   }
 
   const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
     <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-      <Icon size={16} className="text-teal-500" />
+      <Icon size={16} className="text-emerald-500" />
       <h3 className="font-black text-gray-700 text-sm uppercase tracking-widest">
         {title}
       </h3>
     </div>
   );
 
-  const inputStyle = "w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm transition-all";
+  const inputStyle = "w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm transition-all";
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -209,13 +208,13 @@ export default function AdmitPatientPage() {
         
         {/* Header */}
         <div className="flex flex-col gap-4">
-          <Link href="/departments/rehab/dashboard/admin/patients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit">
+          <Link href="/departments/hospital/dashboard/admin/patients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-emerald-600 transition-colors w-fit">
             <ArrowLeft className="w-4 h-4" />
             Back to Patients
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Plus className="w-6 h-6 text-teal-600" />
+              <Plus className="w-6 h-6 text-emerald-600" />
               Admit New Patient
             </h1>
             <p className="text-sm text-gray-500 mt-1">Register a new patient and set up family access.</p>
@@ -232,7 +231,7 @@ export default function AdmitPatientPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Patient Login ID *</label>
-                  <input required placeholder="e.g. REHAB-PAT-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
+                  <input required placeholder="e.g. HOSP-PAT-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Login Password * (Min 6 chars)</label>
@@ -322,7 +321,7 @@ export default function AdmitPatientPage() {
               <div className="flex items-center gap-4 py-2">
                 <div 
                   onClick={() => fileRef.current?.click()}
-                  className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 transition-all overflow-hidden flex-shrink-0"
+                  className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-all overflow-hidden flex-shrink-0"
                 >
                   {photoPreview ? (
                     <img src={photoPreview} className="w-full h-full object-cover" alt="Preview" />
@@ -428,17 +427,17 @@ export default function AdmitPatientPage() {
                 <div className="flex flex-wrap gap-2">
                   {admissionReasons.map(r => (
                     <button
-                      key={r}
-                      type="button"
-                      onClick={() => toggleReason(r)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
-                        reasonsForAdmission.includes(r)
-                          ? 'bg-teal-600 text-white border-teal-600 shadow-md'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-200'
-                      }`}
-                    >
-                      {r}
-                    </button>
+                       key={r}
+                       type="button"
+                       onClick={() => toggleReason(r)}
+                       className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
+                         reasonsForAdmission.includes(r)
+                           ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                           : 'bg-white text-gray-500 border-gray-200 hover:border-emerald-200'
+                       }`}
+                     >
+                       {r}
+                     </button>
                   ))}
                 </div>
               </div>
@@ -466,7 +465,7 @@ export default function AdmitPatientPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
               >
                 {submitting ? (
                   <>
@@ -480,7 +479,7 @@ export default function AdmitPatientPage() {
                   </>
                 )}
               </button>
-              <Link href="/departments/rehab/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
+              <Link href="/departments/hospital/dashboard/admin/patients" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
                 Cancel Registration
               </Link>
             </div>

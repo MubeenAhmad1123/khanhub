@@ -6,9 +6,9 @@ import Link from 'next/link';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2, Search, Eye, EyeOff, Copy, Check, ArrowLeft, Shield } from 'lucide-react';
-import { resetRehabPassword } from '@/app/departments/rehab/actions/createRehabUser';
+import { resetHospitalPassword } from '@/app/departments/hospital/actions/createHospitalUser';
 
-type RehabPatientCredential = {
+type HospitalPatientCredential = {
   id: string;
   displayName?: string;
   customId?: string;
@@ -18,25 +18,25 @@ type RehabPatientCredential = {
   isActive?: boolean;
 };
 
-export default function RehabAdminPasswordsPage() {
+export default function HospitalAdminPasswordsPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<RehabPatientCredential[]>([]);
+  const [users, setUsers] = useState<HospitalPatientCredential[]>([]);
   const [search, setSearch] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [resettingId, setResettingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
+    const sessionData = localStorage.getItem('hospital_session');
     if (!sessionData) {
-      router.push('/departments/rehab/login');
+      router.push('/departments/hospital/login');
       return;
     }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin') {
-      router.push('/departments/rehab/login');
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
+      router.push('/departments/hospital/login');
       return;
     }
     setSession(parsed);
@@ -49,12 +49,12 @@ export default function RehabAdminPasswordsPage() {
       try {
         setLoading(true);
         const q = query(
-          collection(db, 'rehab_users'),
+          collection(db, 'hospital_users'),
           where('role', '==', 'family'),
           orderBy('displayName', 'asc'),
         );
         const snap = await getDocs(q);
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RehabPatientCredential));
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as HospitalPatientCredential));
 
         list.sort((a, b) => {
           const aName = (a.displayName || '').toLowerCase();
@@ -84,14 +84,14 @@ export default function RehabAdminPasswordsPage() {
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const copyCredentials = (u: RehabPatientCredential) => {
+  const copyCredentials = (u: HospitalPatientCredential) => {
     const text = `ID: ${u.customId || '-'} | Password: ${u.password || '-'}`;
     void navigator.clipboard.writeText(text);
     setCopiedId(u.id);
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleResetPassword = async (u: RehabPatientCredential) => {
+  const handleResetPassword = async (u: HospitalPatientCredential) => {
     const next = window.prompt(`Enter new password for ${u.customId || u.displayName || 'user'} (min 6 chars):`);
     if (!next) return;
     if (next.length < 6) {
@@ -101,7 +101,7 @@ export default function RehabAdminPasswordsPage() {
 
     try {
       setResettingId(u.id);
-      const res = await resetRehabPassword(u.id, next);
+      const res = await resetHospitalPassword(u.id, next);
       if (!res.success) {
         window.alert(res.error || 'Failed to reset password.');
         return;
@@ -119,27 +119,27 @@ export default function RehabAdminPasswordsPage() {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      <Link href="/departments/rehab/dashboard/admin" className="inline-flex items-center gap-2 text-xs font-black text-gray-500 hover:text-teal-700 uppercase tracking-widest">
+      <Link href="/departments/hospital/dashboard/admin" className="inline-flex items-center gap-2 text-xs font-black text-gray-500 hover:text-emerald-700 uppercase tracking-widest">
         <ArrowLeft size={14} />
         Back to admin
       </Link>
 
       <div className="bg-white rounded-2xl border border-gray-100 p-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <Shield size={18} />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black text-gray-900">Patient Login Credentials</h1>
             <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
-              Rehab patients only (family accounts)
+              Hospital patients only (family accounts)
             </p>
           </div>
         </div>
@@ -152,7 +152,7 @@ export default function RehabAdminPasswordsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, login ID, or patient ID"
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold outline-none focus:border-teal-400"
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold outline-none focus:border-emerald-400"
           />
         </div>
       </div>

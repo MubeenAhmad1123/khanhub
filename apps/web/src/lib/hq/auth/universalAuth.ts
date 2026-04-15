@@ -19,6 +19,7 @@ export interface DepartmentAuthInfo {
   dashboardPath: string;
   sessionKey: string;
   legacyDomain?: string;
+  prefixes?: string[];
 }
 
 export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
@@ -53,7 +54,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'hospital_users',
     domain: '@hospital.khanhub',
     dashboardPath: '/departments/hospital/dashboard',
-    sessionKey: 'hospital_session'
+    sessionKey: 'hospital_session',
+    prefixes: ['HOS', 'HOSP']
   },
   sukoon: {
     id: 'sukoon',
@@ -71,11 +73,11 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session'
   },
-  'job-center': {
-    id: 'job-center',
+  job_center: {
+    id: 'job_center',
     name: 'Job Center',
     collection: 'job_center_users',
-    domain: '@job-center.khanhub',
+    domain: '@jobcenter.khanhub',
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'job_center_session'
   },
@@ -98,21 +100,19 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
 };
 
 /**
- * Searches across all department collections for a user with the given customId.
- * Prioritizes departments based on ID prefixes (e.g., REHAB-, SPIMS-, HQ-).
+ * Discovers a user's department by their Custom ID.
+ * Optionally takes a deptHint to prioritize searching a specific department collection.
  */
-export async function discoverUser(customId: string) {
-  if (!customId) return null;
-  const rawId = customId.trim();
-  const normalizedId = rawId.toLowerCase();
-  
+export async function discoverUser(rawId: string, deptHint?: string): Promise<{ dept: DepartmentAuthInfo; data: any; uid: string } | null> {
+  if (!rawId) return null;
+  const normalizedId = rawId.trim().toLowerCase();
   const depts = Object.values(DEPARTMENTS_AUTH);
 
   // Helper to search a specific department
   const performSearch = async (dept: (typeof DEPARTMENTS_AUTH)[keyof typeof DEPARTMENTS_AUTH]) => {
     try {
       // 1. Try exact match
-      const q1 = query(collection(db, dept.collection), where('customId', '==', rawId), limit(1));
+      const q1 = query(collection(db, dept.collection), where('customId', '==', rawId.trim()), limit(1));
       const snap1 = await getDocs(q1);
       if (!snap1.empty) return { dept, data: snap1.docs[0].data(), uid: snap1.docs[0].id };
       
@@ -123,8 +123,6 @@ export async function discoverUser(customId: string) {
       
       return null;
     } catch (e: any) {
-      // Silence "Missing or insufficient permissions" errors as they are expected 
-      // during unauthenticated discovery or cross-departmental searches.
       const isPermissionError = 
         e?.code === 'permission-denied' || 
         e?.message?.toLowerCase().includes('permission');
@@ -136,24 +134,38 @@ export async function discoverUser(customId: string) {
     }
   };
 
+  // 0. Priority Hint Search (If landing on a specific department login page)
+  if (deptHint) {
+    const hintDept = DEPARTMENTS_AUTH[deptHint.toLowerCase()];
+    if (hintDept) {
+      console.log('[UniversalAuth] Discovery using deptHint:', deptHint);
+      const hintResult = await performSearch(hintDept);
+      if (hintResult) return hintResult;
+    }
+  }
+
   // 1. Identify priority department based on prefix (e.g., "REHAB-001" -> Rehab)
-  const idUpper = rawId.toUpperCase();
-  const priorityDept = depts.find(d => {
+  const idUpper = rawId.trim().toUpperCase();
+  const priorityDeptByPrefix = depts.find(d => {
     const deptId = d.id.toUpperCase();
     const deptName = d.name.toUpperCase();
-    return idUpper.startsWith(deptId + '-') || idUpper.startsWith(deptName + '-');
+    const customPrefixes = (d.prefixes || []).map(p => p.toUpperCase());
+    
+    return idUpper.startsWith(deptId + '-') || 
+           idUpper.startsWith(deptName + '-') || 
+           customPrefixes.some(p => idUpper.startsWith(p + '-'));
   });
 
-  // 2. Search priority department first for efficiency
-  if (priorityDept) {
-    const result = await performSearch(priorityDept);
+  if (priorityDeptByPrefix) {
+    console.log('[UniversalAuth] Priority prefix match:', priorityDeptByPrefix.id);
+    const result = await performSearch(priorityDeptByPrefix);
     if (result) return result;
   }
 
-  // 3. Search other departments in parallel
-  const otherDepts = depts.filter(d => d.id !== priorityDept?.id);
-  const results = await Promise.all(otherDepts.map(performSearch));
+  // 2. Fallback: Search all departments (parallel)
+  const remainingDepts = depts.filter(d => d.id !== priorityDeptByPrefix?.id && d.id !== deptHint?.toLowerCase());
   
+  const results = await Promise.all(remainingDepts.map(performSearch));
   return results.find(r => r !== null) || null;
 }
 
@@ -176,11 +188,11 @@ export type AuthResult =
  * Performs a universal login: discovers the user's department, authenticates, 
  * and identifies the correct redirect path and session configuration.
  */
-export async function loginUniversal(customId: string, password: string): Promise<AuthResult> {
+export async function loginUniversal(customId: string, password: string, deptHint?: string): Promise<AuthResult> {
   try {
     // 1. Try to find the user
-    console.log('[UniversalAuth] Starting login for:', customId);
-    const discovery = await discoverUser(customId);
+    console.log('[UniversalAuth] Starting login for:', customId, deptHint ? `(Hint: ${deptHint})` : '');
+    const discovery = await discoverUser(customId, deptHint);
     console.log('[UniversalAuth] Discovery result:', discovery ? discovery.dept.id : 'NOT FOUND');
     
     let dept: DepartmentAuthInfo;

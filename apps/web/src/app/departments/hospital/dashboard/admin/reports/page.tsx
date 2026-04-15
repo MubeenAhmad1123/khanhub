@@ -38,11 +38,11 @@ export default function AdminReportsPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const sessionData = localStorage.getItem('rehab_session');
-    if (!sessionData) { router.push('/departments/rehab/login'); return; }
+    const sessionData = localStorage.getItem('hospital_session');
+    if (!sessionData) { router.push('/departments/hospital/login'); return; }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/rehab/login'); return;
+      router.push('/departments/hospital/login'); return;
     }
     setSession(parsed);
   }, [router]);
@@ -56,7 +56,7 @@ export default function AdminReportsPage() {
       const lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
       const q = query(
-        collection(db, 'rehab_transactions'),
+        collection(db, 'hospital_transactions'),
         where('date', '>=', Timestamp.fromDate(firstDay)),
         where('date', '<=', Timestamp.fromDate(lastDay)),
         where('status', '==', 'approved'),
@@ -96,7 +96,7 @@ export default function AdminReportsPage() {
       setGenerated(true);
     } catch (error) {
       console.error('Report error:', error);
-      alert('Failed to generate report. Check Firestore index for date + status query.');
+      alert('Failed to generate report. Check Firestore index for date + status query on hospital_transactions.');
     } finally {
       setGenerating(false);
     }
@@ -109,8 +109,8 @@ export default function AdminReportsPage() {
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          #hospital-report-print, #hospital-report-print * { visibility: visible; }
+          #hospital-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
         }
       `}</style>
 
@@ -120,7 +120,7 @@ export default function AdminReportsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <FileBarChart className="w-6 h-6 text-teal-600" /> Financial Reports
+              <FileBarChart className="w-6 h-6 text-emerald-600" /> Financial Reports
             </h1>
             <p className="text-sm text-gray-500 mt-1">Generate monthly approved transaction reports</p>
           </div>
@@ -135,14 +135,14 @@ export default function AdminReportsPage() {
 
         {/* Controls */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-teal-500" /> Select Period</h2>
+          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-500" /> Select Period</h2>
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
               <select
                 value={selectedMonth}
                 onChange={e => setSelectedMonth(Number(e.target.value))}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
@@ -155,13 +155,13 @@ export default function AdminReportsPage() {
                 onChange={e => setSelectedYear(Number(e.target.value))}
                 min={2020}
                 max={2100}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="flex-1 sm:flex-none bg-teal-600 hover:bg-teal-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
               Generate Report
@@ -171,21 +171,21 @@ export default function AdminReportsPage() {
 
         {/* Report Preview */}
         {generated && reportData && (
-          <div id="rehab-report-print" ref={printRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-8">
+          <div id="hospital-report-print" ref={printRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-10 space-y-8">
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">KhanHub Rehab Center</h2>
-              <p className="text-lg font-bold text-teal-700 mt-1">Monthly Financial Report — {reportData.monthLabel}</p>
+              <h2 className="text-2xl font-black text-gray-900">KhanHub Hospital</h2>
+              <p className="text-lg font-bold text-emerald-700 mt-1">Monthly Financial Report — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>
 
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                <TrendingUp className="w-6 h-6 text-teal-600 mx-auto mb-2" />
-                <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Income</div>
-                <div className="text-2xl font-black text-teal-800">{formatPKR(reportData.totalIncome)}</div>
+              <div className="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl text-center">
+                <TrendingUp className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
+                <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Total Income</div>
+                <div className="text-2xl font-black text-emerald-800">{formatPKR(reportData.totalIncome)}</div>
               </div>
               <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
                 <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
@@ -208,12 +208,12 @@ export default function AdminReportsPage() {
                 {/* Income Breakdown */}
                 {Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-emerald-500" /> Income Breakdown</h3>
                     <table className="w-full text-sm border-collapse border border-gray-200 rounded-xl overflow-hidden">
-                      <thead className="bg-teal-50">
+                      <thead className="bg-emerald-50">
                         <tr>
-                          <th className="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">Category</th>
-                          <th className="border border-gray-200 px-4 py-3 text-right font-bold text-teal-800">Amount (PKR)</th>
+                          <th className="border border-gray-200 px-4 py-3 text-left font-bold text-emerald-800">Category</th>
+                          <th className="border border-gray-200 px-4 py-3 text-right font-bold text-emerald-800">Amount (PKR)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -223,9 +223,9 @@ export default function AdminReportsPage() {
                             <td className="border border-gray-200 px-4 py-3 text-right text-gray-900 font-medium">{formatPKR(amt)}</td>
                           </tr>
                         ))}
-                        <tr className="bg-teal-50 font-bold">
-                          <td className="border border-gray-200 px-4 py-3 text-teal-800">Total Income</td>
-                          <td className="border border-gray-200 px-4 py-3 text-right text-teal-800">{formatPKR(reportData.totalIncome)}</td>
+                        <tr className="bg-emerald-50 font-bold">
+                          <td className="border border-gray-200 px-4 py-3 text-emerald-800">Total Income</td>
+                          <td className="border border-gray-200 px-4 py-3 text-right text-emerald-800">{formatPKR(reportData.totalIncome)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -279,7 +279,7 @@ export default function AdminReportsPage() {
                           <tr key={t.id} className="hover:bg-gray-50">
                             <td className="border border-gray-200 px-3 py-2 text-gray-600">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
                             <td className="border border-gray-200 px-3 py-2">
-                              <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
+                              <span className={`font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${t.type === 'income' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                             </td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-700">{formatCat(t.category)}</td>
                             <td className="border border-gray-200 px-3 py-2 text-gray-600 max-w-[180px] truncate">{t.description || '—'}</td>
