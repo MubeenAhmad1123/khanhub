@@ -1,9 +1,10 @@
+// src/app/hq/dashboard/cashier/page.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where } from 'firebase/firestore';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint } from 'firebase/firestore';
+import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
@@ -107,6 +108,96 @@ export default function CashierStationPage() {
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
   const isStaffMode = departmentCode === 'rehab' && txnType === 'expense' && selectedCategoryId === 'staff_salary';
 
+  // Optimized fetchHistory that uses filters
+  const fetchHistory = useCallback(async () => {
+    if (!session) return;
+    try {
+      setHistoryLoading(true);
+      const all: any[] = [];
+      
+      const targetDepts = historyDepartment === 'all' 
+        ? DEPARTMENTS 
+        : DEPARTMENTS.filter(d => d.code === historyDepartment);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayTimestamp = Timestamp.fromDate(today);
+      const tomorrowTimestamp = Timestamp.fromDate(new Date(today.getTime() + 24 * 60 * 60 * 1000));
+
+      for (const dept of targetDepts) {
+        const constraints: QueryConstraint[] = [];
+        
+        // Priority filter: Date
+        if (historyDateMode === 'today') {
+          // If department is hospital, we can use the 'date' field effectively with new indexes
+          // For others, we'll try 'date' but might hit index errors if they didn't add them.
+          // Fallback to createdAt if needed, but the objective is standardizing.
+          constraints.push(where('date', '>=', todayTimestamp));
+          constraints.push(where('date', '<', tomorrowTimestamp));
+          constraints.push(orderBy('date', 'desc'));
+        } else if (historyDateMode === 'range' && historyFrom) {
+          const fromDate = new Date(`${historyFrom}T00:00:00`);
+          const toDateVal = historyTo ? new Date(`${historyTo}T23:59:59`) : new Date();
+          constraints.push(where('date', '>=', Timestamp.fromDate(fromDate)));
+          constraints.push(where('date', '<=', Timestamp.fromDate(toDateVal)));
+          constraints.push(orderBy('date', 'desc'));
+        } else {
+          constraints.push(orderBy('createdAt', 'desc'));
+        }
+
+        if (historyStatus !== 'all') {
+          if (historyStatus === 'pending') {
+            constraints.push(where('status', 'in', ['pending', 'pending_cashier']));
+          } else {
+            constraints.push(where('status', '==', historyStatus));
+          }
+        }
+
+        if (historyType !== 'all') {
+          constraints.push(where('type', '==', historyType));
+        }
+
+        // Limit for initial load - pagination could be added later if needed
+        constraints.push(limit(200));
+
+        try {
+          const q = query(collection(db, dept.txCollection), ...constraints);
+          const snap = await getDocs(q);
+          all.push(...snap.docs.map((d) => ({ 
+            id: d.id, 
+            departmentCode: dept.code, 
+            departmentName: dept.label, 
+            ...d.data() 
+          })));
+        } catch (err: any) {
+          console.warn(`[HQ Cashier] Failed to fetch optimized history for ${dept.code}. Falling back to basic fetch.`, err);
+          // Fallback to basic fetch if composite index missing
+          const qBasic = query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(100));
+          const snapBasic = await getDocs(qBasic);
+          all.push(...snapBasic.docs.map((d) => ({ 
+            id: d.id, 
+            departmentCode: dept.code, 
+            departmentName: dept.label, 
+            ...d.data() 
+          })));
+        }
+      }
+
+      // Final unified sort for display
+      all.sort((a, b) => {
+        const dateA = toDate(a.transactionDate || a.date || a.createdAt);
+        const dateB = toDate(b.transactionDate || b.date || b.createdAt);
+        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+      });
+      
+      setHistoryTxns(all);
+    } catch (err) {
+      console.error('[HQ Cashier] fetchHistory Error:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [session, historyDateMode, historyFrom, historyTo, historyStatus, historyType, historyDepartment]);
+
   useEffect(() => {
     if (sessionLoading) return;
     if (!session || (session.role !== 'cashier' && session.role !== 'superadmin')) {
@@ -119,7 +210,7 @@ export default function CashierStationPage() {
     return () => {
       if (typeof unsub === 'function') unsub();
     };
-  }, [sessionLoading, session, router]);
+  }, [sessionLoading, session, router, fetchHistory]);
 
   function subscribeIncoming() {
     if (!session?.customId) return;
@@ -309,6 +400,13 @@ export default function CashierStationPage() {
 
   useEffect(() => {
     if (!session) return;
+    
+    // CHANGE BEHAVIOR FOR HOSPITAL: Skip automatic fetching of all patients
+    if (departmentCode === 'hospital') {
+      setAllPatients([]);
+      return;
+    }
+
     const run = async () => {
       try {
         const entityCollection = isStaffMode ? 'rehab_staff' : activeDepartment.entityCollection;
@@ -365,34 +463,6 @@ export default function CashierStationPage() {
     }
   }
 
-  async function fetchHistory() {
-    try {
-      setHistoryLoading(true);
-      const all: any[] = [];
-      for (const dept of DEPARTMENTS) {
-        let cursor: any = null;
-        while (true) {
-          const q = cursor
-            ? query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(100), startAfter(cursor))
-            : query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(100));
-          const snap = await getDocs(q);
-          if (snap.empty) break;
-          all.push(...snap.docs.map((d) => ({ id: d.id, departmentCode: dept.code, departmentName: dept.label, ...d.data() })));
-          cursor = snap.docs[snap.docs.length - 1];
-          if (snap.docs.length < 100) break;
-        }
-      }
-      all.sort((a, b) => {
-        const dateA = toDate(a.transactionDate || a.date || a.dateStr || a.createdAt);
-        const dateB = toDate(b.transactionDate || b.date || b.dateStr || b.createdAt);
-        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
-      });
-      setHistoryTxns(all);
-    } finally {
-      setHistoryLoading(false);
-    }
-  }
-
   async function createCategory() {
     const name = categorySearch.trim();
     if (!name) return;
@@ -411,7 +481,7 @@ export default function CashierStationPage() {
     e.preventDefault();
     if (processing) return;
     setMessage(null);
-    if (!selectedEntity) return setMessage({ type: 'error', text: 'Select account first.' });
+    if (!selectedEntity && departmentCode !== 'hospital') return setMessage({ type: 'error', text: 'Select account first.' });
     if (!selectedCategory) return setMessage({ type: 'error', text: 'Select category field.' });
     if (!amount || Number(amount) <= 0) return setMessage({ type: 'error', text: 'Enter valid amount.' });
     if (!proofFile && !proofReason.trim()) {
@@ -434,12 +504,16 @@ export default function CashierStationPage() {
         departmentCode: activeDepartment.code,
         departmentName: activeDepartment.label,
         ...(isStaffMode
-          ? { staffId: selectedEntity.id, staffName: selectedEntity.name || selectedEntity.employeeId || 'Unknown' }
-          : { patientId: selectedEntity.id, patientName: selectedEntity.name || selectedEntity.fullName || 'Unknown' }),
+          ? { staffId: selectedEntity?.id, staffName: selectedEntity?.name || selectedEntity?.employeeId || 'Unknown' }
+          : { 
+              patientId: selectedEntity?.id || (departmentCode === 'hospital' ? 'hospital-general' : undefined), 
+              patientName: selectedEntity?.name || selectedEntity?.fullName || (departmentCode === 'hospital' ? 'General Hospital Account' : 'Unknown') 
+            }),
         description,
         paymentMethod,
         referenceNo,
         status: 'pending',
+        cashierId: session?.customId || 'HQ-CASHIER',
         proofRequired: true,
         date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
         transactionDate: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
@@ -459,9 +533,9 @@ export default function CashierStationPage() {
         recipientId: superadminRecipient.customId,
         recipientUid: superadminRecipient.id,
         recipientRole: 'superadmin',
-        type: 'tx_forwarded', // Use existing type for notifications
+        type: 'tx_forwarded',
         title: 'New Transaction Submitted',
-        body: `${session?.name || 'Cashier'} submitted a Rs ${Number(amount).toLocaleString()} transaction for ${selectedEntity.name}.`,
+        body: `${session?.name || 'Cashier'} submitted a Rs ${Number(amount).toLocaleString()} transaction for ${selectedEntity?.name || 'General Hospital'}.`,
         relatedId: txRef.id,
         actionUrl: '/hq/dashboard/superadmin/approvals',
       });
@@ -484,25 +558,19 @@ export default function CashierStationPage() {
   }
 
   const todayStr = getLocalDateString(new Date());
-  const historyFiltered = historyTxns.filter((tx) => {
-    const txDateStr = getLocalDateString(tx.transactionDate || tx.date || tx.dateStr || tx.createdAt);
-    if (!txDateStr) return false;
-    if (historyDateMode === 'today' && txDateStr !== todayStr) return false;
-    if (historyDateMode === 'range') {
-      if (historyFrom && txDateStr < historyFrom) return false;
-      if (historyTo && txDateStr > historyTo) return false;
-    }
-    if (historyStatus !== 'all') {
-      if (historyStatus === 'pending') {
-        if (!tx.status?.includes('pending')) return false;
-      } else if (tx.status !== historyStatus) {
-        return false;
-      }
-    }
-    if (historyType !== 'all' && tx.type !== historyType) return false;
-    if (historyDepartment !== 'all' && tx.departmentCode !== historyDepartment) return false;
-    return !searchQuery.trim() || `${tx.patientName || ''} ${tx.patientId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  
+  // Client-side filtering as fallback/refinement
+  const historyFiltered = useMemo(() => {
+    return historyTxns.filter((tx) => {
+      // If we already filtered by collection and basic status/type on server, 
+      // we only need to refine by searchQuery if present.
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      
+      const searchStr = `${tx.patientName || ''} ${tx.patientId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase();
+      return searchStr.includes(q);
+    });
+  }, [historyTxns, searchQuery]);
 
   const totals = useMemo(() => {
     const income = historyFiltered.filter((x) => x.type === 'income').reduce((s, x) => s + Number(x.amount || 0), 0);
@@ -532,18 +600,25 @@ export default function CashierStationPage() {
 
           <div className="flex items-center gap-2 shrink-0">
             <Link 
+              href="/hq/dashboard/cashier/history"
+              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+            >
+              <History size={14} className="text-teal-400" />
+              <span className="hidden md:inline">History</span>
+            </Link>
+            <Link 
               href="/hq/dashboard/cashier/daily-report"
               className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
             >
               <LayoutDashboard size={14} className="text-indigo-400" />
-              <span className="hidden md:inline">Daily Report</span>
+              <span className="hidden md:inline">Report</span>
             </Link>
             <Link 
-              href="/hq/dashboard/manager/salary"
+              href="/hq/dashboard/cashier/reconciliation"
               className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
             >
-              <DollarSign size={14} className="text-amber-400" />
-              <span className="hidden md:inline">Payroll</span>
+              <ShieldCheck size={14} className="text-emerald-400" />
+              <span className="hidden md:inline">Audit</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/day-close"
@@ -635,7 +710,7 @@ export default function CashierStationPage() {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery && setSearchOpen(true)}
-                    placeholder="Search by name or ID..."
+                    placeholder={departmentCode === 'hospital' ? "Optional search..." : "Search by name or ID..."}
                     className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/50 transition-all duration-200 placeholder-gray-600"
                   />
                   {searchQuery && (
@@ -697,25 +772,21 @@ export default function CashierStationPage() {
           <div className="bg-white/5 border border-white/8 rounded-3xl p-5 md:p-7">
             <form onSubmit={submitTx} className="space-y-4">
               <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{selectedEntity ? 'Account Selected' : 'Select Account'}</p>
-                <p className="text-base sm:text-lg font-black text-white truncate">{selectedEntity ? selectedEntity.name : 'Search and select account from left panel'}</p>
-              </div>
-
-              <div className="inline-flex bg-white/5 rounded-2xl p-1 border border-white/8">
-                <button type="button" onClick={() => setTxnType('income')} className={cn('min-h-[44px] text-xs uppercase tracking-widest px-5 py-2 rounded-xl transition-all duration-200 font-black', txnType === 'income' ? 'bg-amber-500 text-black' : 'text-gray-500 hover:text-gray-300')}>
-                  Payment In
-                </button>
-                <button type="button" onClick={() => setTxnType('expense')} className={cn('min-h-[44px] text-xs uppercase tracking-widest px-5 py-2 rounded-xl transition-all duration-200 font-black', txnType === 'expense' ? 'bg-amber-500 text-black' : 'text-gray-500 hover:text-gray-300')}>
-                  Payment Out
-                </button>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{selectedEntity ? 'Account Selected' : departmentCode === 'hospital' ? 'Account Auto-selected' : 'Select Account'}</p>
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-base sm:text-lg font-black text-white truncate">{selectedEntity ? selectedEntity.name : departmentCode === 'hospital' ? 'General Hospital Account (Auto-selected)' : 'Search and select account from left panel'}</p>
+                  {selectedEntity && (
+                    <button type="button" onClick={() => setSelectedEntity(null)} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-300">Clear</button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button type="button" onClick={() => setTxnType('income')} className={cn('min-h-[44px] p-4 rounded-xl border flex flex-col items-center gap-2', txnType === 'income' ? 'border-teal-500 bg-teal-500/10' : 'border-white/10 bg-[#1a1f2a]')}>
+                <button type="button" onClick={() => setTxnType('income')} className={cn('min-h-[44px] p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200', txnType === 'income' ? 'border-teal-500 bg-teal-500/10' : 'border-white/10 bg-[#1a1f2a] hover:bg-white/5')}>
                   <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', txnType === 'income' ? 'bg-teal-500 text-white' : 'bg-[#242b39] text-gray-300')}><TrendingUp size={20} /></div>
                   <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Payment In</span>
                 </button>
-                <button type="button" onClick={() => setTxnType('expense')} className={cn('min-h-[44px] p-4 rounded-xl border flex flex-col items-center gap-2', txnType === 'expense' ? 'border-red-500 bg-red-500/10' : 'border-white/10 bg-[#1a1f2a]')}>
+                <button type="button" onClick={() => setTxnType('expense')} className={cn('min-h-[44px] p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200', txnType === 'expense' ? 'border-red-500 bg-red-500/10' : 'border-white/10 bg-[#1a1f2a] hover:bg-white/5')}>
                   <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', txnType === 'expense' ? 'bg-red-500 text-white' : 'bg-[#242b39] text-gray-300')}><TrendingDown size={20} /></div>
                   <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Payment Out</span>
                 </button>
@@ -725,9 +796,9 @@ export default function CashierStationPage() {
                 <div className="min-w-0">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Field / Category</label>
                   <input value={categorySearch} onChange={(e) => setCategorySearch(e.target.value)} placeholder="Search or create custom field..." className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />
-                  <div className="mt-2 border border-white/10 rounded-xl overflow-hidden max-h-36 overflow-y-auto">
+                  <div className="mt-2 border border-white/10 rounded-xl overflow-hidden max-h-36 overflow-y-auto shadow-inner bg-black/20">
                     {visibleCategories.map((c) => (
-                      <button key={c.id} type="button" onClick={() => setSelectedCategoryId(c.id)} className={cn('min-h-[44px] w-full text-left px-3 py-2 text-sm font-semibold border-b border-white/10 last:border-0 truncate', selectedCategoryId === c.id ? 'text-teal-400 bg-teal-500/10' : 'text-gray-200 bg-[#1a1f2a]')}>
+                      <button key={c.id} type="button" onClick={() => setSelectedCategoryId(c.id)} className={cn('min-h-[44px] w-full text-left px-3 py-2 text-sm font-semibold border-b border-white/10 last:border-0 truncate transition-colors', selectedCategoryId === c.id ? 'text-teal-400 bg-teal-500/10' : 'text-gray-200 bg-[#1a1f2a] hover:bg-white/5')}>
                         {c.name}
                       </button>
                     ))}
@@ -755,7 +826,7 @@ export default function CashierStationPage() {
                 </div>
                 <div className="space-y-3 min-w-0">
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Transaction Date</label>
                     <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />
                   </div>
                   <div>
@@ -827,20 +898,86 @@ export default function CashierStationPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
-        <div className="flex items-center gap-2 mb-4"><History size={18} className="text-teal-400" /><h2 className="text-xl sm:text-2xl font-black text-white">Terminal History</h2></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-          <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"><option value="today">Today</option><option value="all">All History</option><option value="range">Date Range</option></select>
-          <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"><option value="all">All Status</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
-          <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"><option value="all">All Types</option><option value="income">Income</option><option value="expense">Expense</option></select>
-          <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10"><option value="all">All Departments</option>{DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}</select>
-          {historyDateMode === 'range' && (<><input type="date" value={historyFrom} onChange={(e) => setHistoryFrom(e.target.value)} className="bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10" /><input type="date" value={historyTo} onChange={(e) => setHistoryTo(e.target.value)} className="bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10" /></>)}
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <History size={18} className="text-teal-400" />
+            <h2 className="text-xl sm:text-2xl font-black text-white">Terminal History</h2>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => void fetchHistory()} 
+            disabled={historyLoading}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 transition-all active:rotate-180"
+          >
+            <RefreshCw size={16} className={cn(historyLoading && 'animate-spin')} />
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Date Period</span>
+            <select value={historyDateMode} onChange={(e) => setHistoryDateMode(e.target.value as DateMode)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10 outline-none focus:border-teal-500/50 transition-all">
+              <option value="today">Today</option>
+              <option value="range">Date Range</option>
+              <option value="all">All History</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Status Filter</span>
+            <select value={historyStatus} onChange={(e) => setHistoryStatus(e.target.value as StatusFilter)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10 outline-none focus:border-teal-500/50 transition-all">
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Payment Type</span>
+            <select value={historyType} onChange={(e) => setHistoryType(e.target.value as any)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10 outline-none focus:border-teal-500/50 transition-all">
+              <option value="all">In & Out</option>
+              <option value="income">Payment In</option>
+              <option value="expense">Payment Out</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Department</span>
+            <select value={historyDepartment} onChange={(e) => setHistoryDepartment(e.target.value)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10 outline-none focus:border-teal-500/50 transition-all">
+              <option value="all">All Departments</option>
+              {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
+            </select>
+          </div>
         </div>
 
+        {historyDateMode === 'range' && (
+          <div className="grid grid-cols-2 gap-3 mb-6 animate-in slide-in-from-top-2 duration-200">
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">From Date</span>
+              <input type="date" value={historyFrom} onChange={(e) => setHistoryFrom(e.target.value)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10" />
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">To Date</span>
+              <input type="date" value={historyTo} onChange={(e) => setHistoryTo(e.target.value)} className="w-full bg-[#11151d] rounded-xl px-4 py-3 text-sm font-bold text-white border border-white/10" />
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
-          <div className="border-l-4 border-l-emerald-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Income</p><p className="text-xl md:text-2xl font-black text-white">Rs {totals.income.toLocaleString()}</p></div>
-          <div className="border-l-4 border-l-rose-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Expense</p><p className="text-xl md:text-2xl font-black text-white">Rs {totals.expense.toLocaleString()}</p></div>
-          <div className="border-l-4 border-l-amber-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Pending</p><p className="text-xl md:text-2xl font-black text-white">{historyFiltered.filter((x) => x.status === 'pending' || x.status === 'pending_cashier').length}</p></div>
-          <div className="border-l-4 border-l-blue-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default"><p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Total</p><p className="text-xl md:text-2xl font-black text-white">Rs {totals.net.toLocaleString()}</p></div>
+          <div className="border-l-4 border-l-emerald-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Income</p>
+            <p className="text-xl md:text-2xl font-black text-white">Rs {totals.income.toLocaleString()}</p>
+          </div>
+          <div className="border-l-4 border-l-rose-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Expense</p>
+            <p className="text-xl md:text-2xl font-black text-white">Rs {totals.expense.toLocaleString()}</p>
+          </div>
+          <div className="border-l-4 border-l-amber-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Txns Found</p>
+            <p className="text-xl md:text-2xl font-black text-white">{historyFiltered.length}</p>
+          </div>
+          <div className="border-l-4 border-l-blue-500 rounded-2xl bg-white/5 border border-white/8 p-4 md:p-5 hover:bg-white/8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-1">Net Balance</p>
+            <p className="text-xl md:text-2xl font-black text-white">Rs {totals.net.toLocaleString()}</p>
+          </div>
         </div>
 
         <div className="md:hidden space-y-3">
@@ -849,7 +986,7 @@ export default function CashierStationPage() {
           ) : historyFiltered.length === 0 ? (
             <div className="bg-[#11151d] rounded-xl p-4 border border-white/10 text-sm font-bold text-gray-400">No transactions match your filters.</div>
           ) : historyFiltered.map((tx) => (
-            <div key={tx.id} className="bg-[#11151d] rounded-xl p-4 border border-white/10">
+            <div key={tx.id} className="bg-[#11151d] rounded-xl p-4 border border-white/10 animate-in fade-in duration-300">
                   <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-sm font-black text-white truncate">{tx.patientName || tx.staffName || '-'}</div>
@@ -866,15 +1003,63 @@ export default function CashierStationPage() {
           ))}
         </div>
 
-        <div className="hidden md:block bg-[#11151d] rounded-2xl border border-white/10 overflow-hidden">
-          <div className="overflow-x-auto -mx-4 md:mx-0">
+        <div className="hidden md:block bg-[#11151d] rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
             <div className="table-responsive">
-
-            <table className="w-full min-w-[860px] text-left">
-              <thead><tr className="bg-white/[0.02] border-b border-white/10"><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Department</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Entity</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Category</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Status</th><th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Amount</th></tr></thead>
-              <tbody>{historyLoading ? <tr><td colSpan={6} className="px-4 py-8 text-center"><Loader2 className="w-7 h-7 animate-spin text-teal-400 mx-auto" /></td></tr> : historyFiltered.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm font-bold text-gray-400">No transactions match your filters.</td></tr> : historyFiltered.map((tx) => (<tr key={tx.id} className="border-b border-white/5"><td className="px-4 py-3 text-sm font-black text-white">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td><td className="px-4 py-3 text-sm font-bold text-gray-300">{tx.departmentName || tx.departmentCode}</td><td className="px-4 py-3"><div className="text-sm font-black text-white">{tx.patientName || tx.staffName || '-'}</div><div className="text-[10px] font-bold text-gray-400">{tx.patientId || tx.staffId || '-'}</div></td><td className="px-4 py-3 text-sm font-bold text-gray-300">{tx.categoryName || tx.category}</td><td className="px-4 py-3"><span className={cn('px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider', tx.status === 'approved' ? 'bg-teal-500/10 text-teal-300' : tx.status === 'rejected' ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300')}>{tx.status || 'pending'}</span></td><td className="px-4 py-3 text-right"><div className={cn('text-sm font-black flex items-center justify-end gap-2', tx.type === 'income' ? 'text-teal-400' : 'text-red-400')}>{tx.type === 'income' ? <Plus size={12} /> : <Minus size={12} />}Rs {Number(tx.amount || 0).toLocaleString()}</div></td></tr>))}</tbody>
-            </table>
-              </div>
+              <table className="w-full min-w-[860px] text-left">
+                <thead>
+                  <tr className="bg-white/[0.02] border-b border-white/10">
+                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Date</th>
+                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Dept</th>
+                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Account / Entity</th>
+                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Category</th>
+                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Status</th>
+                    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {historyLoading ? (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-12 text-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-teal-400 mx-auto" />
+                        <p className="text-gray-500 text-xs font-black uppercase tracking-widest mt-4">Standardizing & Fetching Records...</p>
+                      </td>
+                    </tr>
+                  ) : historyFiltered.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-12 text-center text-sm font-bold text-gray-400">No cached transactions match your query.</td>
+                    </tr>
+                  ) : historyFiltered.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="px-5 py-4 text-sm font-black text-white">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</td>
+                      <td className="px-5 py-4">
+                        <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-wider text-gray-400">{tx.departmentCode}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="text-sm font-black text-white group-hover:text-amber-400 transition-colors">{tx.patientName || tx.staffName || '-'}</div>
+                        <div className="text-[10px] font-bold text-gray-500 tracking-wider">{tx.patientId || tx.staffId || tx.id?.slice(0, 8)}</div>
+                      </td>
+                      <td className="px-5 py-4 text-sm font-bold text-gray-300">{tx.categoryName || tx.category}</td>
+                      <td className="px-5 py-4">
+                        <span className={cn('px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border', 
+                          tx.status === 'approved' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' : 
+                          tx.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                          'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        )}>
+                          {tx.status || 'pending'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className={cn('text-sm font-black flex items-center justify-end gap-1', tx.type === 'income' ? 'text-teal-400' : 'text-red-400')}>
+                          {tx.type === 'income' ? <Plus size={12} /> : <Minus size={12} />}
+                          Rs {Number(tx.amount || 0).toLocaleString()}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -893,9 +1078,9 @@ export default function CashierStationPage() {
                 type="button"
                 disabled={forwardProofUploading}
                 onClick={() => setForwardModalTx(null)}
-                className="min-h-[44px] p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 disabled:opacity-60"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 transition-colors"
               >
-                X
+                <X size={20} />
               </button>
             </div>
 
@@ -964,9 +1149,9 @@ export default function CashierStationPage() {
                 type="button"
                 disabled={rejecting}
                 onClick={() => setRejectModalTx(null)}
-                className="min-h-[44px] p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 disabled:opacity-60"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 transition-colors"
               >
-                X
+                <X size={20} />
               </button>
             </div>
 
@@ -1009,4 +1194,3 @@ export default function CashierStationPage() {
     </div>
   );
 }
-

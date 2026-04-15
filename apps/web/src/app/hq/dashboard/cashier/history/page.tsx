@@ -1,33 +1,56 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, limit, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where, orderBy, Timestamp, QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, Printer, Filter, History, TrendingUp, TrendingDown, Clock, Wallet } from 'lucide-react';
+import { Loader2, Printer, Filter, History, TrendingUp, TrendingDown, Clock, Wallet, ArrowLeft, Search, RefreshCw, Calendar } from 'lucide-react';
 import { formatDateDMY, toDate, cn } from '@/lib/utils';
 
-type DeptFilter = 'all' | 'rehab' | 'spims';
+const DEPARTMENTS = [
+  { code: 'rehab', label: 'Rehab Center', txCollection: 'rehab_transactions' },
+  { code: 'spims', label: 'Spims', txCollection: 'spims_transactions' },
+  { code: 'hospital', label: 'Khan Hospital', txCollection: 'hospital_transactions' },
+  { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions' },
+  { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions' },
+  { code: 'job-center', label: 'Job Center', txCollection: 'job_center_transactions' },
+];
+
+type DeptFilter = 'all' | 'rehab' | 'spims' | 'hospital' | 'sukoon-center' | 'welfare' | 'job-center';
 type StatusFilter = 'all' | 'pending_cashier' | 'pending' | 'approved' | 'rejected';
 type DateMode = 'today' | 'all' | 'range';
 
-function getLocalDateString(val: any): string {
-  if (!val) return '';
-  const d = toDate(val);
-  if (isNaN(d.getTime())) return '';
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
+type Transaction = {
+  id: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  categoryName?: string;
+  description: string;
+  paymentMethod: string;
+  dept: string;
+  departmentName: string;
+  status: string;
+  createdAt: any;
+  date?: any;
+  transactionDate?: any;
+  note?: string;
+  patientName?: string;
+  staffName?: string;
+  patientId?: string;
+  staffId?: string;
+  createdBy?: string;
+  cashierId?: string;
+};
 
 export default function CashierHistoryPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
 
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [deptFilter, setDeptFilter] = useState<DeptFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -35,386 +58,362 @@ export default function CashierHistoryPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
+  const fetchData = useCallback(async () => {
+    if (!session) return;
+    setLoading(true);
+    try {
+      const activeDepts = deptFilter === 'all' 
+        ? DEPARTMENTS 
+        : DEPARTMENTS.filter(d => d.code === deptFilter);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const startTimestamp = Timestamp.fromDate(today);
+      const endTimestamp = Timestamp.fromDate(new Date(today.getTime() + 24 * 60 * 60 * 1000));
+
+      const fetchPromises = activeDepts.map(async (dept) => {
+        try {
+          const constraints: QueryConstraint[] = [];
+          
+          if (dateMode === 'today') {
+            constraints.push(where('date', '>=', startTimestamp));
+            constraints.push(where('date', '<', endTimestamp));
+            constraints.push(orderBy('date', 'desc'));
+          } else if (dateMode === 'range' && dateFrom) {
+            const from = Timestamp.fromDate(new Date(`${dateFrom}T00:00:00`));
+            const to = Timestamp.fromDate(dateTo ? new Date(`${dateTo}T23:59:59`) : new Date());
+            constraints.push(where('date', '>=', from));
+            constraints.push(where('date', '<=', to));
+            constraints.push(orderBy('date', 'desc'));
+          } else {
+            constraints.push(orderBy('createdAt', 'desc'));
+            constraints.push(limit(300));
+          }
+
+          if (statusFilter !== 'all') {
+            if (statusFilter === 'pending') {
+              constraints.push(where('status', 'in', ['pending', 'pending_cashier']));
+            } else {
+              constraints.push(where('status', '==', statusFilter));
+            }
+          }
+
+          const q = query(collection(db, dept.txCollection), ...constraints);
+          const snap = await getDocs(q);
+          return snap.docs.map(d => ({
+            id: d.id,
+            ...d.data(),
+            dept: dept.code,
+            departmentName: dept.label
+          })) as Transaction[];
+        } catch (err) {
+          console.warn(`[History] Optimized fetch failed for ${dept.code}, falling back...`, err);
+          const qBasic = query(collection(db, dept.txCollection), orderBy('createdAt', 'desc'), limit(200));
+          const snap = await getDocs(qBasic);
+          return snap.docs.map(d => ({ 
+            id: d.id, 
+            ...d.data(), 
+            dept: dept.code, 
+            departmentName: dept.label 
+          })) as Transaction[];
+        }
+      });
+
+      const results = await Promise.all(fetchPromises);
+      const flattened = results.flat();
+
+      flattened.sort((a, b: Transaction) => {
+        const dateA = toDate(a.transactionDate || a.date || a.createdAt)?.getTime() || 0;
+        const dateB = toDate(b.transactionDate || b.date || b.createdAt)?.getTime() || 0;
+        return dateB - dateA;
+      });
+
+      setTransactions(flattened);
+    } catch (err) {
+      console.error('History fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [session, deptFilter, statusFilter, dateMode, dateFrom, dateTo]);
+
   useEffect(() => {
     if (sessionLoading) return;
     if (!session || (session.role !== 'cashier' && session.role !== 'superadmin')) {
       router.push('/hq/login');
       return;
     }
-  }, [session, sessionLoading, router]);
-
-  const fetchData = async () => {
-    if (!session) return;
-    setLoading(true);
-    try {
-      let all: any[] = [];
-      const depts = ['rehab', 'spims'];
-
-      const snaps = await Promise.all(depts.map(async (dept) => {
-        // Fetch last 500 transactions per department to ensure we have enough for filtering
-        // We removed the strict cashierId filter to match Terminal History behavior
-        const q = query(
-          collection(db, `${dept}_transactions`),
-          orderBy('createdAt', 'desc'),
-          limit(500)
-        );
-        return getDocs(q).catch(() => ({ docs: [] } as any));
-      }));
-
-      snaps.forEach((snap, idx) => {
-        const dept = depts[idx];
-        const docs = snap.docs.map((d: any) => ({
-          id: d.id,
-          ...d.data(),
-          dept
-        }));
-        all = [...all, ...docs];
-      });
-
-      all.sort((a, b) => {
-        const dateA = toDate(a.transactionDate || a.date || a.createdAt)?.getTime() || 0;
-        const dateB = toDate(b.transactionDate || b.date || b.createdAt)?.getTime() || 0;
-        return dateB - dateA;
-      });
-
-      setTransactions(all);
-    } catch (err) {
-      console.error('History fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (session) {
-      fetchData();
-    }
-  }, [session, deptFilter]);
-
-  const todayStr = getLocalDateString(new Date());
+    fetchData();
+  }, [sessionLoading, session, fetchData]);
 
   const filtered = useMemo(() => {
-    return transactions.filter(t => {
-      // Dept Filter
-      if (deptFilter !== 'all' && t.dept !== deptFilter) return false;
-
-      // Status Filter
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'pending') {
-          if (!t.status?.includes('pending')) return false;
-        } else if (t.status !== statusFilter) {
-          return false;
-        }
-      }
-
-      // Date Filter
-      const txDateStr = getLocalDateString(t.transactionDate || t.date || t.createdAt);
-      if (dateMode === 'today') {
-        if (txDateStr !== todayStr) return false;
-      } else if (dateMode === 'range') {
-        if (dateFrom && txDateStr < dateFrom) return false;
-        if (dateTo && txDateStr > dateTo) return false;
-      }
-
-      return true;
-    });
-  }, [transactions, deptFilter, statusFilter, dateMode, dateFrom, dateTo, todayStr]);
+    if (!searchQuery.trim()) return transactions;
+    const q = searchQuery.toLowerCase();
+    return transactions.filter(t => 
+      (t.patientName || t.staffName || '').toLowerCase().includes(q) ||
+      (t.categoryName || t.category || '').toLowerCase().includes(q) ||
+      (t.description || t.note || '').toLowerCase().includes(q) ||
+      (t.id || '').toLowerCase().includes(q)
+    );
+  }, [transactions, searchQuery]);
 
   const stats = useMemo(() => {
     const income = filtered.filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const expense = filtered.filter(t => t.type === 'expense').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const pending = filtered.filter(t => t.status?.includes('pending')).length;
+    const pending = filtered.filter(t => String(t.status || '').includes('pending')).length;
     return { income, expense, net: income - expense, pending };
   }, [filtered]);
 
-  if (sessionLoading || loading) {
+  if (loading && transactions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
-          <p className="text-gray-500 font-bold animate-pulse text-xs uppercase tracking-[0.2em]">Syncing History...</p>
+          <p className="text-gray-500 font-bold animate-pulse text-xs uppercase tracking-[0.2em]">Accessing Archives...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-24 p-4 md:p-8 md:pl-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 min-h-screen" id="printable">
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-gray-950/80 border-b border-white/5 px-4 py-4 md:px-8 md:py-6 -mx-4 md:mx-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-black text-white flex items-center gap-3">
-            <div className="p-2 bg-amber-500 rounded-lg text-black"><History size={20} /></div>
-            Transaction History
-          </h1>
-          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1 ml-12">Universal Financial Record</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => fetchData()}
-            className="h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all active:scale-95"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="h-11 inline-flex items-center gap-2 bg-white text-black hover:bg-gray-200 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-200 active:scale-95 shadow-lg shadow-white/10"
-          >
-            <Printer size={14} /> Print Report
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Overview to match Terminal History */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-white/5 border border-white/8 rounded-2xl p-4 md:p-5 border-l-4 border-l-emerald-500 hover:bg-white/8 transition-all duration-300">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Income</p>
-          <p className="text-lg md:text-2xl font-black text-white mt-1">₨{stats.income.toLocaleString()}</p>
-        </div>
-        <div className="bg-white/5 border border-white/8 rounded-2xl p-4 md:p-5 border-l-4 border-l-rose-500 hover:bg-white/8 transition-all duration-300">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Expense</p>
-          <p className="text-lg md:text-2xl font-black text-white mt-1">₨{stats.expense.toLocaleString()}</p>
-        </div>
-        <div className="bg-white/5 border border-white/8 rounded-2xl p-4 md:p-5 border-l-4 border-l-amber-500 hover:bg-white/8 transition-all duration-300">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Pending</p>
-          <p className="text-lg md:text-2xl font-black text-white mt-1">{stats.pending}</p>
-        </div>
-        <div className="bg-white/5 border border-white/8 rounded-2xl p-4 md:p-5 border-l-4 border-l-blue-500 hover:bg-white/8 transition-all duration-300">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Net Flow</p>
-          <p className="text-lg md:text-2xl font-black text-white mt-1">₨{stats.net.toLocaleString()}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4 bg-white/5 border border-white/8 rounded-3xl p-4 md:p-6">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Date Mode Select */}
-          <div className="flex p-1 bg-black/40 rounded-xl border border-white/10 shrink-0">
-            {(['today', 'range', 'all'] as DateMode[]).map(m => (
-              <button
-                key={m}
-                onClick={() => setDateMode(m)}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200",
-                  dateMode === m ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-gray-500 hover:text-gray-300"
-                )}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-
-          <div className="h-8 w-[1px] bg-white/10 hidden sm:block" />
-
-          {/* Dept Filter */}
-          <div className="flex flex-wrap gap-2">
-            {(['all', 'rehab', 'spims'] as DeptFilter[]).map(f => (
-              <button
-                key={f}
-                onClick={() => setDeptFilter(f)}
-                className={cn(
-                  "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all duration-200",
-                  deptFilter === f ? "bg-white text-black border-white" : "bg-white/5 border-white/10 text-gray-500 hover:text-gray-300 hover:bg-white/8"
-                )}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Status Filter */}
-          <div className="flex flex-wrap gap-2">
-            {(['all', 'pending', 'approved', 'rejected'] as StatusFilter[]).map(f => (
-              <button
-                key={f}
-                onClick={() => setStatusFilter(f)}
-                className={cn(
-                  "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all duration-200",
-                  statusFilter === f ? "bg-amber-500/20 text-amber-500 border-amber-500/30" : "bg-white/5 border-white/10 text-gray-500 hover:text-gray-300 hover:bg-white/8"
-                )}
-              >
-                {f.replace('_', ' ')}
-              </button>
-            ))}
-          </div>
-
-          {dateMode === 'range' && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-              <input
-                type="date"
-                className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] font-bold text-gray-300 outline-none focus:border-amber-500/50 [color-scheme:dark]"
-                value={dateFrom}
-                onChange={e => setDateFrom(e.target.value)}
-              />
-              <span className="text-gray-600 font-bold">to</span>
-              <input
-                type="date"
-                className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] font-bold text-gray-300 outline-none focus:border-amber-500/50 [color-scheme:dark]"
-                value={dateTo}
-                onChange={e => setDateTo(e.target.value)}
-              />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-400 selection:text-black">
+      <header className="sticky top-0 z-40 bg-gray-950/80 backdrop-blur-xl border-b border-white/5 px-4 py-4 md:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-5">
+            <button 
+              onClick={() => router.back()}
+              className="p-2.5 hover:bg-white/5 rounded-2xl transition-all active:scale-95 text-slate-500 hover:text-white"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                 <History className="w-6 h-6 text-amber-500" />
+                 Master Ledger
+              </h1>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-0.5">Global Audit View</p>
             </div>
-          )}
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-32 gap-6 bg-white/5 border border-white/8 rounded-3xl">
-          <div className="w-20 h-20 rounded-full bg-white/5 border border-white/8 flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-amber-500/5 animate-pulse" />
-            <History className="text-gray-600 relative z-10" size={32} />
           </div>
-          <div className="text-center">
-            <h3 className="text-white font-black uppercase tracking-[0.2em] text-sm">Empty Archive</h3>
-            <p className="text-gray-500 text-xs font-bold mt-2">No transactions matching these parameters found.</p>
-          </div>
-          <button
-            onClick={() => { setDeptFilter('all'); setStatusFilter('all'); setDateMode('all'); }}
-            className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white"
-          >
-            Clear All Filters
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="hidden md:block bg-white/5 border border-white/8 rounded-3xl overflow-hidden backdrop-blur-sm">
-            <div className="overflow-x-auto">
-              <div className="table-responsive">
 
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-white/[0.02] border-b border-white/10">
-                    <th className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-6 py-5 whitespace-nowrap">Timestamp</th>
-                    <th className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-6 py-5 whitespace-nowrap">Department</th>
-                    <th className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-6 py-5 whitespace-nowrap">Category / Note</th>
-                    <th className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-6 py-5 whitespace-nowrap">Entity / Account</th>
-                    <th className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-6 py-5 whitespace-nowrap">Status</th>
-                    <th className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-6 py-5 whitespace-nowrap text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filtered.map((t, index) => (
-                    <tr key={t.id} className="group hover:bg-white/[0.04] transition-colors duration-150">
-                      <td className="px-6 py-5">
-                        <div className="text-sm font-black text-white">{formatDateDMY(t.transactionDate || t.date || t.createdAt)}</div>
-                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter mt-0.5">
-                          {t.createdAt?.seconds ? new Date(t.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <span className={cn(
-                          "px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border",
-                          t.dept === 'rehab' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        )}>
-                          {t.departmentName || t.dept}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="text-sm font-black text-gray-200">{t.categoryName || t.category}</div>
-                        <div className="text-[10px] font-bold text-gray-500 mt-1 max-w-[200px] truncate" title={t.note || t.description || ''}>
-                          {t.note || t.description || '—'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="text-sm font-black text-white">{t.patientName || t.staffName || 'General Account'}</div>
-                        <div className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">
-                          ID: {t.patientId || t.staffId || 'N/A'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em]",
-                          t.status === 'approved' ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" :
-                            t.status === 'rejected' ? "bg-rose-500/15 text-rose-400 border border-rose-500/20" :
-                              "bg-amber-500/15 text-amber-400 border border-amber-500/20"
-                        )}>
-                          <Clock size={10} className={t.status === 'pending' ? 'animate-pulse' : ''} />
-                          {t.status || 'pending'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <div className={cn(
-                          "text-base font-black flex items-center justify-end gap-1",
-                          t.type === 'income' ? "text-emerald-400" : "text-rose-400"
-                        )}>
-                          {t.type === 'income' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                          ₨{t.amount?.toLocaleString()}
-                        </div>
-                        <div className="text-[10px] font-bold text-gray-500 uppercase mt-1">
-                          {t.paymentMethod || 'CASH'}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="flex items-center gap-3">
+             <div className="relative group w-full md:w-64">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
+                <input 
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search archives..."
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-2.5 text-sm font-bold placeholder:text-slate-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all"
+                />
+             </div>
+             <button 
+               onClick={() => fetchData()}
+               className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all active:rotate-180"
+             >
+                <RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} />
+             </button>
+             <button 
+               onClick={() => window.print()}
+               className="px-6 py-2.5 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-white/5"
+             >
+                <Printer className="w-4 h-4" />
+                Print
+             </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-8 md:px-8 space-y-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+           {[
+             { label: 'Total Inflow', val: stats.income, color: 'text-emerald-400', border: 'border-emerald-500/20' },
+             { label: 'Total Outflow', val: stats.expense, color: 'text-rose-400', border: 'border-rose-500/20' },
+             { label: 'Pending Items', val: stats.pending, color: 'text-amber-400', border: 'border-amber-500/20', raw: true },
+             { label: 'Net Liquidity', val: stats.net, color: 'text-sky-400', border: 'border-sky-500/20' }
+           ].map((s, idx) => (
+             <div key={idx} className={cn("bg-white/5 border rounded-3xl p-6 transition-all hover:bg-white/8 hover:translate-y-[-2px]", s.border)}>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{s.label}</p>
+                <p className={cn("text-2xl font-black tracking-tight", s.color)}>
+                  {s.raw ? s.val : `Rs ${s.val.toLocaleString()}`}
+                </p>
+             </div>
+           ))}
+        </div>
+
+        <div className="bg-white/5 border border-white/5 rounded-[32px] p-6 space-y-6">
+           <div className="flex flex-wrap items-center gap-4">
+              <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/10 overflow-hidden shrink-0">
+                 {(['today', 'range', 'all'] as DateMode[]).map(m => (
+                   <button 
+                     key={m}
+                     onClick={() => setDateMode(m)}
+                     className={cn(
+                       "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                       dateMode === m ? "bg-amber-500 text-black shadow-lg" : "text-slate-500 hover:text-slate-300"
+                     )}
+                   >
+                     {m}
+                   </button>
+                 ))}
               </div>
-            </div>
-          </div>
 
-          {/* Mobile Cards */}
-          <div className="md:hidden space-y-3">
-            {filtered.map((t) => (
-              <div key={t.id} className="bg-white/5 border border-white/8 rounded-2xl p-5 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{formatDateDMY(t.transactionDate || t.date || t.createdAt)}</p>
-                    <h3 className="text-sm font-black text-white">{t.categoryName || t.category}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className={cn(
-                        "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
-                        t.dept === 'rehab' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      )}>{t.dept}</span>
-                      <span className="text-[10px] text-gray-400 font-bold">{t.patientName || 'General Account'}</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={cn("text-base font-black", t.type === 'income' ? 'text-emerald-400' : 'text-rose-400')}>
-                      {t.type === 'income' ? '+' : '-'}₨{t.amount?.toLocaleString()}
-                    </p>
-                    <div className={cn(
-                      "inline-flex mt-2 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                      t.status === 'approved' ? "bg-emerald-500/15 text-emerald-400" :
-                        t.status === 'rejected' ? "bg-rose-500/15 text-rose-400" :
-                          "bg-amber-500/15 text-amber-400"
-                    )}>{t.status || 'pending'}</div>
-                  </div>
+              <div className="h-8 w-[1px] bg-white/10 hidden lg:block" />
+
+              <div className="flex flex-wrap gap-2">
+                 {DEPARTMENTS.concat([{ code: 'all', label: 'All Depts' } as any]).map(d => (
+                   <button 
+                     key={d.code}
+                     onClick={() => setDeptFilter(d.code as any)}
+                     className={cn(
+                       "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                       deptFilter === d.code ? "bg-white text-black border-white" : "bg-white/5 border-white/10 text-slate-500 hover:text-white"
+                     )}
+                   >
+                     {d.code === 'all' ? 'All' : d.code}
+                   </button>
+                 ))}
+              </div>
+           </div>
+
+           <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-white/5">
+              <div className="flex flex-wrap gap-2">
+                 {(['all', 'pending', 'approved', 'rejected'] as StatusFilter[]).map(s => (
+                   <button 
+                     key={s}
+                     onClick={() => setStatusFilter(s)}
+                     className={cn(
+                       "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                       statusFilter === s ? "bg-amber-500/20 text-amber-500 border-amber-500/30" : "bg-white/5 border-white/10 text-slate-500 hover:text-white"
+                     )}
+                   >
+                     {s.replace('_', ' ')}
+                   </button>
+                 ))}
+              </div>
+
+              {dateMode === 'range' && (
+                <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300 ml-auto">
+                   <div className="relative group">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 group-within:text-amber-500 transition-colors" />
+                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-black/60 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-amber-500/40 [color-scheme:dark]" />
+                   </div>
+                   <span className="text-slate-700 font-black uppercase text-[10px]">to</span>
+                   <div className="relative group">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600 group-within:text-amber-500 transition-colors" />
+                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-black/60 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-slate-300 outline-none focus:border-amber-500/40 [color-scheme:dark]" />
+                   </div>
                 </div>
-
-                {t.note && (
-                  <div className="p-3 bg-black/20 rounded-xl">
-                    <p className="text-[10px] text-gray-400 leading-relaxed italic">"{t.note}"</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-white/5 border border-white/8 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-400"><Wallet size={24} /></div>
-              <div>
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest uppercase">Filtered Summary</p>
-                <p className="text-xl font-black text-white">₨{stats.net.toLocaleString()}</p>
-              </div>
-            </div>
-            <div className="flex gap-8">
-              <div className="text-center md:text-right">
-                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Total In</p>
-                <p className="text-sm font-black text-emerald-400">₨{stats.income.toLocaleString()}</p>
-              </div>
-              <div className="text-center md:text-right">
-                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Total Out</p>
-                <p className="text-sm font-black text-rose-400">₨{stats.expense.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] text-center py-4">
-            End of Record • {filtered.length} Entries Loaded
-          </p>
+              )}
+           </div>
         </div>
-      )}
+
+        <div className="bg-white/5 border border-white/5 rounded-[40px] overflow-hidden shadow-2xl relative">
+          <div className="overflow-x-auto min-h-[400px]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white/[0.02] border-b border-white/5">
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Transaction Date</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Source Dept</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Entity / Account</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Description</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Status</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.03]">
+                {filtered.map((tx) => (
+                  <tr key={tx.id} className="group hover:bg-white/[0.04] transition-colors duration-150">
+                    <td className="px-8 py-6">
+                       <div className="text-sm font-black text-white">{formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}</div>
+                       <div className="text-[10px] font-black text-slate-600 uppercase mt-1">
+                          {tx.createdAt?.seconds ? new Date(tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ref: Auto'}
+                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <span className={cn(
+                         "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                         tx.dept === 'rehab' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                         tx.dept === 'spims' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                         tx.dept === 'hospital' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
+                         "bg-white/5 text-slate-400 border-white/10"
+                       )}>
+                          {tx.departmentName || tx.dept}
+                       </span>
+                    </td>
+                    <td className="px-8 py-6">
+                       <div className="text-sm font-black text-white capitalize">{tx.patientName || tx.staffName || 'General Account'}</div>
+                       <div className="text-[10px] font-black text-slate-600 uppercase mt-1 tracking-tighter">
+                          ID: {tx.patientId || tx.staffId || 'MASTER'}
+                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <div className="text-xs font-bold text-slate-300 max-w-[240px] truncate leading-relaxed">
+                          {tx.categoryName || tx.category}: {tx.description || tx.note || 'Internal Flow'}
+                       </div>
+                       <div className="text-[9px] font-black text-slate-600 uppercase mt-1 italic">
+                          By: {tx.createdBy || tx.cashierId || 'System'}
+                       </div>
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                       <div className={cn(
+                         "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest",
+                         tx.status === 'approved' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" :
+                         tx.status?.includes('pending') ? "bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-lg shadow-amber-500/10" :
+                         "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                       )}>
+                          <Clock className={cn("w-2.5 h-2.5", tx.status?.includes('pending') && "animate-pulse")} />
+                          {tx.status || 'pending'}
+                       </div>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                       <div className={cn(
+                         "text-base font-black flex items-center justify-end gap-1.5",
+                         tx.type === 'income' ? "text-emerald-400" : "text-rose-400"
+                       )}>
+                          {tx.type === 'income' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                          Rs {Number(tx.amount || 0).toLocaleString()}
+                       </div>
+                       <div className="text-[10px] font-black text-slate-600 uppercase mt-1 tracking-widest">
+                          {tx.paymentMethod?.replace('_', ' ') || 'CASH'}
+                       </div>
+                    </td>
+                  </tr>
+                ))}
+                {!loading && filtered.length === 0 && (
+                  <tr>
+                     <td colSpan={6} className="px-8 py-32 text-center">
+                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 opacity-20">
+                           <History className="w-8 h-8" />
+                        </div>
+                        <p className="text-slate-500 font-bold italic">No records match your current filters.</p>
+                     </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="text-center py-10 opacity-30">
+           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">End of Financial Record • {filtered.length} Entries</p>
+        </div>
+      </main>
+
+      <style jsx global>{`
+        @media print {
+          body { background: white !important; color: black !important; }
+          .bg-slate-950, .bg-gray-950\/80 { background: white !important; }
+          header, .bg-white\/5, .bg-black\/40 { background: white !important; border-color: #eee !important; box-shadow: none !important; }
+          button, input, select { display: none !important; }
+          .text-white, .text-slate-100 { color: black !important; }
+          .text-slate-500, .text-slate-600 { color: #666 !important; }
+          .divide-white\/5 { divide-color: #eee !important; }
+          .border-white\/5, .border-white\/10 { border-color: #ddd !important; }
+          table { width: 100% !important; border-collapse: collapse !important; }
+          th { color: #333 !important; padding: 10px !important; border-bottom: 2px solid #333 !important; }
+          td { border-bottom: 1px solid #eee !important; padding: 10px !important; }
+          .shadow-2xl, .shadow-lg { box-shadow: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

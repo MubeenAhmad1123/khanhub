@@ -1,50 +1,157 @@
-// apps/web/src/app/hq/dashboard/cashier/day-close/page.tsx
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   collection, 
   query, 
   where, 
   getDocs, 
+  orderBy, 
+  limit,
   addDoc,
+  serverTimestamp,
   Timestamp,
-  orderBy,
-  limit
+  doc,
+  updateDoc
 } from 'firebase/firestore';
 import { 
-  ArrowLeft, 
-  CheckCircle2, 
   AlertCircle,
-  Loader2, 
-  Calculator, 
-  Coins, 
-  Save, 
+  ArrowLeft, 
+  Banknote,
+  Calculator,
+  Calendar, 
+  CheckCircle2,
+  ChevronRight,
+  Coins,
+  FileCheck,
   History,
-  TrendingDown,
+  LayoutDashboard, 
+  Loader2,
+  Lock,
+  Plus,
+  RefreshCcw,
+  Save,
+  ShieldCheck,
+  TrendingDown, 
   TrendingUp,
-  Receipt
+  Wallet,
+  X
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, toDate } from '@/lib/utils';
-import { formatPKR } from '@/lib/hq/superadmin/format';
+
+// Standard departments logic
+const DEPARTMENTS = [
+  { code: 'rehab', label: 'Rehab Center', txCollection: 'rehab_transactions' },
+  { code: 'spims', label: 'Spims', txCollection: 'spims_transactions' },
+  { code: 'hospital', label: 'Khan Hospital', txCollection: 'hospital_transactions' },
+  { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions' },
+  { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions' },
+  { code: 'job-center', label: 'Job Center', txCollection: 'job_center_transactions' },
+];
+
+type Transaction = {
+  id: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  description: string;
+  paymentMethod: string;
+  departmentCode: string;
+  departmentName: string;
+  status: string;
+  createdAt: any;
+  date?: any;
+};
 
 export default function DayClosePage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
   
-  const [dataLoading, setDataLoading] = useState(true);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  const [reportDate] = useState(new Date());
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [lastReconciliation, setLastReconciliation] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isDayClosed, setIsDayClosed] = useState(false);
   
-  // Form State
+  // Closing Form
   const [actualCash, setActualCash] = useState('');
   const [note, setNote] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!session) return;
+    setLoading(true);
+    try {
+      // 1. Get Opening Balance (Previous actual closing)
+      const reconQ = query(
+        collection(db, 'hq_reconciliation'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      const reconSnap = await getDocs(reconQ);
+      if (!reconSnap.empty) {
+        setLastReconciliation(reconSnap.docs[0].data());
+      }
+
+      // 2. Fetch all transactions for TODAY across ALL departments
+      const allTxs: Transaction[] = [];
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const startTimestamp = Timestamp.fromDate(startOfDay);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+
+      // Fetch from all collections
+      const fetchPromises = DEPARTMENTS.map(async (dept) => {
+        try {
+          const q = query(
+            collection(db, dept.txCollection),
+            where('date', '>=', startTimestamp),
+            where('date', '<=', endTimestamp)
+          );
+          const snap = await getDocs(q);
+          return snap.docs.map(doc => ({
+            id: doc.id,
+            departmentCode: dept.code,
+            departmentName: dept.label,
+            ...doc.data()
+          })) as Transaction[];
+        } catch (err) {
+            console.warn(`[DayClose] Failed fetch for ${dept.code}`, err);
+            return [];
+        }
+      });
+
+      const genericSnap = await getDocs(query(
+        collection(db, 'cashierTransactions'),
+        where('date', '>=', startTimestamp),
+        where('date', '<=', endTimestamp)
+      ));
+      const genericTxs = genericSnap.docs.map(doc => ({ id: doc.id, departmentCode: 'other', ...doc.data() })) as Transaction[];
+
+      const results = await Promise.all(fetchPromises);
+      setTransactions([...results.flat(), ...genericTxs]);
+
+      // 3. Check if already closed
+      const dateStr = formatDateDMY(new Date());
+      const closedCheck = await getDocs(query(
+        collection(db, 'hq_reconciliation'),
+        where('date', '==', dateStr),
+        limit(1)
+      ));
+      setIsDayClosed(!closedCheck.empty);
+
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [session]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -53,308 +160,242 @@ export default function DayClosePage() {
       return;
     }
     fetchData();
-  }, [sessionLoading, session]);
+  }, [sessionLoading, session, fetchData]);
 
-  async function fetchData() {
-    setDataLoading(true);
-    try {
-      const todayStr = formatDateDMY(new Date());
-      
-      // Fetch across all relevant collections for this cashier
-      const [hqTxs, rehabTxs, spimsTxs] = await Promise.all([
-        getDocs(query(collection(db, 'cashierTransactions'), where('cashierId', '==', session?.customId), where('status', '==', 'approved'))),
-        getDocs(query(collection(db, 'rehab_transactions'), where('cashierId', '==', session?.customId), where('status', '==', 'approved'))),
-        getDocs(query(collection(db, 'spims_transactions'), where('cashierId', '==', session?.customId), where('status', '==', 'approved')))
-      ]);
-
-      const normalizeDate = (v: any) => {
-        const d = toDate(v);
-        return d ? formatDateDMY(d) : '';
-      };
-
-      const all = [
-        ...hqTxs.docs.map(d => ({ ...d.data(), _source: 'hq' })),
-        ...rehabTxs.docs.map(d => ({ ...d.data(), _source: 'rehab' })),
-        ...spimsTxs.docs.map(d => ({ ...d.data(), _source: 'spims' }))
-      ].filter((t: any) => normalizeDate(t.transactionDate || t.date || t.dateStr || t.createdAt) === todayStr);
-
-      setTransactions(all);
-
-      // Fetch history
-      const prev = await getDocs(query(
-        collection(db, 'hq_reconciliation'),
-        where('cashierId', '==', session?.customId),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      ));
-      setHistory(prev.docs.map(d => ({ id: d.id, ...d.data() })));
-
-    } catch (err) {
-      console.error('Fetch error:', err);
-    } finally {
-      setDataLoading(false);
-    }
-  }
-
-  const totals = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    const byType: Record<string, number> = {};
-
+  const stats = useMemo(() => {
+    const s = {
+      income: 0,
+      expense: 0,
+      cashExpected: 0
+    };
     transactions.forEach(tx => {
       const amt = Number(tx.amount) || 0;
-      const t = tx.type || 'income';
-      if (t === 'income') income += amt; else expense += amt;
+      if (tx.type === 'income') s.income += amt;
+      else s.expense += amt;
 
-      const cat = tx.category || tx.categoryName || 'other';
-      byType[cat] = (byType[cat] || 0) + amt;
+      if (tx.paymentMethod === 'cash') {
+        s.cashExpected += (tx.type === 'income' ? amt : -amt);
+      }
     });
-
-    return { income, expense, net: income - expense, byType };
+    return s;
   }, [transactions]);
 
-  const differenceValue = Number(actualCash || 0) - totals.net;
+  const openingBalance = lastReconciliation?.actualClosing || 0;
+  const expectedClosing = openingBalance + stats.income - stats.expense;
+  const variance = Number(actualCash) - expectedClosing;
 
-  async function handleCloseDay() {
-    if (!actualCash) {
-      setError('Actual cash amount is required.');
-      return;
-    }
-
-    setSubmitting(true);
-    setError(null);
+  const handleCloseDay = async () => {
+    if (!actualCash) return alert('Enter physical cash amount');
+    setIsSubmitting(true);
     try {
-      const report = {
-        date: formatDateDMY(new Date()),
-        expectedBalance: totals.net,
-        actualClosing: Number(actualCash),
-        variance: differenceValue,
-        note: note.trim(),
-        cashierId: session?.customId,
-        cashierName: session?.name || 'Cashier',
-        status: 'pending',
-        createdAt: Timestamp.now(),
-        submittedAt: Timestamp.now(),
-        incomeTotal: totals.income,
-        expenseTotal: totals.expense,
-        typeBreakdown: totals.byType,
-        totalTransactions: transactions.length,
-        portal: session?.portal || 'hq', // Primary portal
-        reviewedAt: null,
-        reviewedBy: null
-      };
-
-      await addDoc(collection(db, 'hq_reconciliation'), report);
+      const dateStr = formatDateDMY(new Date());
       
-      // Audit log
-      await addDoc(collection(db, 'hq_audit'), {
-        action: 'day_close',
-        actorName: session?.name || 'Cashier',
-        actorId: session?.customId,
-        message: `Day closed for ${report.date}. Net: ${totals.net}, Actual: ${actualCash}, Var: ${differenceValue}`,
-        source: 'hq',
-        createdAt: Timestamp.now()
+      await addDoc(collection(db, 'hq_reconciliation'), {
+        date: dateStr,
+        openingBalance,
+        totalInflow: stats.income,
+        totalOutflow: stats.expense,
+        expectedClosing,
+        actualClosing: Number(actualCash),
+        variance,
+        varianceNote: note,
+        cashierId: session?.customId || session?.uid,
+        cashierName: session?.name || session?.displayName,
+        status: 'closed',
+        createdAt: serverTimestamp(),
       });
 
-      setSuccess(true);
-      setTimeout(() => router.push('/hq/dashboard/cashier'), 2000);
-    } catch (err: any) {
-      setError(err.message || 'Submission failed.');
+      setIsDayClosed(true);
+      alert('Day closed successfully!');
+      router.push('/hq/dashboard/cashier/daily-report');
+    } catch (err) {
+      console.error('Error closing day:', err);
+      alert('Failed to finalize day.');
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  if (sessionLoading || dataLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 text-amber-400 animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Auditing Daily Ledger...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+           <div className="w-12 h-12 border-4 border-slate-950 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+           <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Synchronizing Vault...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white font-sans selection:bg-amber-400 selection:text-black">
-      <header className="border-b border-white/5 bg-white/5 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.back()} className="p-2 hover:bg-white/5 rounded-full transition-all">
+    <div className="min-h-screen bg-[#F8FAFC] pb-20 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-4 py-4 md:px-8">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+           <div className="flex items-center gap-5">
+            <button 
+              onClick={() => router.back()}
+              className="p-2.5 hover:bg-slate-100 rounded-2xl transition-all active:scale-95 text-slate-400 hover:text-slate-900"
+            >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-xl font-black uppercase tracking-tight">Full Cash Audit</h1>
-              <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">{formatDateDMY(new Date())}</p>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Financial Liquidation</h1>
+              <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mt-0.5">End of Day Reconciliation</p>
             </div>
           </div>
-          <div className="flex flex-col items-end">
-             <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Node Status</span>
-             <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-400">
-               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-               SECURED
-             </span>
+          
+          <div className="flex items-center gap-3">
+             <div className="bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 flex items-center gap-2">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs font-black text-slate-700">{formatDateDMY(new Date())}</span>
+             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-10">
-        {success ? (
-          <div className="bg-emerald-400/5 rounded-3xl border border-emerald-400/20 p-16 text-center animate-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-emerald-400/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-400/20">
-              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-            </div>
-            <h2 className="text-2xl font-black uppercase mb-2">Audit Completed</h2>
-            <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">Reports archived. Node standby.</p>
+      <main className="max-w-5xl mx-auto px-4 py-10 md:px-8">
+        {isDayClosed ? (
+          <div className="bg-white p-12 rounded-[40px] border border-slate-200 shadow-2xl shadow-slate-200/50 text-center animate-in zoom-in-95 duration-500">
+             <div className="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
+                <Lock className="w-10 h-10 text-emerald-600" />
+             </div>
+             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Counter is Finalized</h2>
+             <p className="text-slate-500 font-bold max-w-sm mx-auto leading-relaxed mb-10">
+                The financial ledger for today has been audited and locked. New entries are now prohibited.
+             </p>
+             <button 
+               onClick={() => router.push('/hq/dashboard/cashier/daily-report')}
+               className="px-8 py-4 bg-slate-950 text-white rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all active:scale-95 shadow-xl shadow-slate-200"
+             >
+                View Final Report
+             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/5 rounded-2xl border border-white/5 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-3 h-3 text-emerald-500" /> Income
-                  </p>
-                  <p className="text-xl font-black text-white">{formatPKR(totals.income)}</p>
-                </div>
-                <div className="bg-white/5 rounded-2xl border border-white/5 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2 mb-2">
-                    <TrendingDown className="w-3 h-3 text-rose-500" /> Expense
-                  </p>
-                  <p className="text-xl font-black text-white">{formatPKR(totals.expense)}</p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-12 space-y-8">
+               <div className="bg-white p-8 md:p-12 rounded-[48px] border border-slate-200/60 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-5">
+                    <ShieldCheck className="w-40 h-40 text-slate-950" />
+                  </div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-10">
+                       <div className="w-1.5 h-8 bg-indigo-600 rounded-full" />
+                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">Counter Balance Verification</h2>
+                    </div>
 
-              {/* Main Audit Box */}
-              <div className="bg-white/5 rounded-3xl border border-white/10 p-8 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/5 rounded-full -mr-24 -mt-24 blur-3xl transition-all group-hover:bg-amber-400/10" />
-                
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-8 flex items-center gap-2">
-                  <Calculator size={16} className="text-amber-400" /> Reconciliation Schema
-                </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                       <div className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 flex flex-col justify-between group hover:bg-white hover:shadow-xl transition-all border-dashed">
+                          <div>
+                            <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-1">Opening Cash</p>
+                            <p className="text-xl font-black text-slate-900">PKR {openingBalance.toLocaleString()}</p>
+                          </div>
+                          <History className="w-5 h-5 text-slate-300 mt-4 group-hover:text-indigo-500 transition-colors" />
+                       </div>
+                       
+                       <div className="p-6 rounded-3xl bg-indigo-50/40 border border-indigo-100/50 flex flex-col justify-between hover:bg-indigo-50 transition-all">
+                          <div>
+                            <p className="text-[10px] font-black text-indigo-400 tracking-widest uppercase mb-1 italic">Total Cash Flow (Net)</p>
+                            <p className="text-xl font-black text-indigo-900">PKR {stats.cashExpected.toLocaleString()}</p>
+                          </div>
+                          <div className="flex items-center gap-2 mt-4">
+                             <TrendingUp className="w-4 h-4 text-emerald-500" />
+                             <span className="text-[9px] font-black text-emerald-600 uppercase">Computed</span>
+                          </div>
+                       </div>
 
-                <div className="space-y-8">
-                   <div>
-                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-4">Calculated Target Balance</span>
-                     <div className="bg-black/40 rounded-2xl p-8 border-2 border-dashed border-white/10 text-center group-hover:border-amber-400/20 transition-all">
-                       <p className="text-4xl font-black text-amber-400 tracking-tighter">{formatPKR(totals.net)}</p>
-                       <p className="text-[10px] font-black text-gray-600 uppercase mt-2">Based on {transactions.length} verified operations</p>
-                     </div>
-                   </div>
+                       <div className="p-8 rounded-[32px] bg-slate-950 text-white shadow-2xl shadow-indigo-200 flex flex-col items-center justify-center md:scale-105">
+                          <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-2">Expected Cash</p>
+                          <p className="text-3xl font-black text-white tracking-tighter">PKR {expectedClosing.toLocaleString()}</p>
+                       </div>
+                    </div>
 
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <div>
-                       <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3">Actual Cash Count</label>
-                       <div className="relative">
-                          <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                          <input 
-                            type="number"
-                            value={actualCash}
-                            onChange={(e) => setActualCash(e.target.value)}
-                            placeholder="0.00"
-                            className="w-full bg-white/5 border border-white/10 focus:border-amber-400/50 rounded-2xl pl-12 pr-4 py-4 font-black text-lg outline-none transition-all placeholder:text-white/10"
+                    <div className="space-y-10 max-w-2xl">
+                       <div className="space-y-4">
+                          <label className="text-xs font-black text-slate-500 tracking-widest uppercase px-1 flex items-center gap-2">
+                             <Coins className="w-3.5 h-3.5" />
+                             Actual Physical Balance
+                          </label>
+                          <div className="relative group">
+                             <div className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 group-focus-within:text-slate-950 transition-colors">PKR</div>
+                             <input 
+                               type="number"
+                               value={actualCash}
+                               onChange={(e) => setActualCash(e.target.value)}
+                               placeholder="00"
+                               className="w-full pl-20 pr-8 py-8 bg-slate-50 border-2 border-slate-100 rounded-[32px] font-black text-4xl text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all placeholder:text-slate-200"
+                             />
+                          </div>
+                       </div>
+
+                       {actualCash && (
+                        <div className={cn(
+                          "p-8 rounded-[32px] flex items-center justify-between animate-in slide-in-from-top-4",
+                          variance === 0 ? "bg-emerald-50 border border-emerald-100" : 
+                          variance > 0 ? "bg-blue-50 border border-blue-100" : "bg-rose-50 border border-rose-100"
+                        )}>
+                           <div className="flex items-center gap-5">
+                              <div className={cn(
+                                "p-4 rounded-2xl shadow-sm",
+                                variance === 0 ? "bg-white text-emerald-600" :
+                                variance > 0 ? "bg-white text-blue-600" : "bg-white text-rose-600"
+                              )}>
+                                 {variance === 0 ? <CheckCircle2 className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+                              </div>
+                              <div>
+                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Balance Variance</p>
+                                 <p className="text-xl font-black">PKR {Math.abs(variance).toLocaleString()}</p>
+                              </div>
+                           </div>
+                           <span className={cn(
+                             "text-[11px] font-black uppercase px-4 py-2 rounded-xl",
+                             variance === 0 ? "bg-emerald-600 text-white" : 
+                             variance > 0 ? "bg-blue-600 text-white" : "bg-rose-600 text-white"
+                           )}>
+                             {variance === 0 ? 'Perfect' : variance > 0 ? 'Surplus' : 'Deficit'}
+                           </span>
+                        </div>
+                       )}
+
+                       <div className="space-y-4">
+                          <label className="text-xs font-black text-slate-500 tracking-widest uppercase px-1">Internal Note / Narration</label>
+                          <textarea 
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            placeholder="Explain any shortages or transaction exceptions..."
+                            rows={3}
+                            className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] font-bold text-sm text-slate-700 outline-none focus:bg-white focus:border-indigo-600 transition-all placeholder:text-slate-300"
                           />
                        </div>
-                     </div>
 
-                     <div className={cn(
-                       "rounded-2xl flex flex-col justify-center p-5 border transition-all",
-                       differenceValue === 0 ? "bg-emerald-400/5 border-emerald-400/20" : "bg-rose-400/5 border-rose-400/20"
-                     )}>
-                        <p className="text-[10px] font-black text-gray-500 uppercase mb-1">Audit Variance</p>
-                        <p className={cn(
-                          "text-xl font-black tracking-tighter",
-                          differenceValue === 0 ? "text-emerald-400" : "text-rose-400"
-                        )}>
-                          {differenceValue > 0 ? '+' : ''}{formatPKR(differenceValue)}
-                        </p>
-                     </div>
-                   </div>
-
-                   <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3">Discrepancy Log / Note</label>
-                      <textarea 
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        placeholder="Detail any shortages or surplus detected during count..."
-                        className="w-full bg-white/5 border border-white/10 focus:border-amber-400/50 rounded-2xl p-4 text-sm font-bold min-h-[100px] outline-none transition-all"
-                      />
-                   </div>
-                </div>
-
-                {error && (
-                  <div className="mt-6 p-4 rounded-xl bg-rose-400/10 border border-rose-400/20 flex items-center gap-3 text-rose-400 text-xs font-black uppercase">
-                    <AlertCircle size={16} />
-                    {error}
+                       <button 
+                         onClick={handleCloseDay}
+                         disabled={!actualCash || isSubmitting}
+                         className="w-full py-8 bg-indigo-600 hover:bg-slate-950 text-white rounded-[32px] font-black text-xl flex items-center justify-center gap-4 transition-all shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-50 disabled:grayscale"
+                       >
+                         {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (
+                           <>
+                             <FileCheck className="w-6 h-6" />
+                             Finalize & Archive Ledger
+                           </>
+                         )}
+                       </button>
+                    </div>
                   </div>
-                )}
-
-                <button 
-                  onClick={handleCloseDay}
-                  disabled={submitting}
-                  className="w-full mt-10 py-5 bg-amber-400 hover:bg-amber-300 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-amber-400/10 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
-                >
-                  {submitting ? <Loader2 className="animate-spin" /> : <Save size={18} />}
-                  Execute Audit Submission
-                </button>
-              </div>
-
-              {/* Type breakdown display */}
-              <div className="bg-white/5 rounded-3xl border border-white/5 p-6">
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6">Sector Breakdown</h4>
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {Object.entries(totals.byType).map(([cat, amt]) => (
-                      <div key={cat} className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-[9px] font-black uppercase text-gray-500 mb-1">{cat}</p>
-                        <p className="text-xs font-black">{formatPKR(amt)}</p>
-                      </div>
-                    ))}
-                 </div>
-              </div>
-            </div>
-
-            {/* History Column */}
-            <div className="space-y-6">
-               <div className="bg-white/5 rounded-3xl border border-white/10 p-6">
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
-                   <History size={14} /> Audit History
-                 </h4>
-                 <div className="space-y-3">
-                    {history.map(item => (
-                      <div key={item.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 group hover:border-amber-400/20 transition-all">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-[10px] font-black text-white">{item.date}</span>
-                          <span className={cn(
-                             "text-[8px] font-black uppercase px-2 py-0.5 rounded border",
-                             Math.abs(item.variance || 0) < 1 ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20" : "bg-rose-400/10 text-rose-400 border-rose-400/20"
-                          )}>
-                            {Math.abs(item.variance || 0) < 1 ? 'BALANCED' : 'VARIANCE'}
-                          </span>
-                        </div>
-                        <p className="text-xs font-black text-gray-400">{formatPKR(item.actualClosing || item.actualCash)}</p>
-                      </div>
-                    ))}
-                    {!history.length && (
-                      <div className="text-center py-8">
-                         <Receipt className="w-8 h-8 mx-auto text-white/10 mb-2" />
-                         <p className="text-[10px] font-black uppercase text-gray-600">No archives found</p>
-                      </div>
-                    )}
-                 </div>
-               </div>
-
-               <div className="bg-white/5 rounded-3xl border border-white/10 p-6 h-fit bg-gradient-to-br from-white/5 to-amber-400/[0.02]">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-3 flex items-center gap-2">
-                    <AlertCircle size={14} /> Operational Directive
-                  </h4>
-                  <p className="text-[10px] font-bold text-gray-400 leading-relaxed uppercase">
-                    Submission locks the daily ledger. All values must be physically verified. Node variances are flagged for superadmin oversight automatically.
-                  </p>
                </div>
             </div>
           </div>
         )}
       </main>
+
+      <style jsx global>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+        .zoom-in-95 { animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .slide-in-from-top-4 { animation: slideIn 0.4s ease-out; }
+        @keyframes slideIn { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      `}</style>
     </div>
   );
 }

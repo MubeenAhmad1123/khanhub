@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   collection, 
@@ -11,7 +11,8 @@ import {
   limit,
   addDoc,
   serverTimestamp,
-  Timestamp 
+  Timestamp,
+  QueryConstraint
 } from 'firebase/firestore';
 import { 
   AlertCircle,
@@ -40,6 +41,16 @@ import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, toDate } from '@/lib/utils';
 
+// Shared with main cashier page
+const DEPARTMENTS = [
+  { code: 'rehab', label: 'Rehab Center', txCollection: 'rehab_transactions' },
+  { code: 'spims', label: 'Spims', txCollection: 'spims_transactions' },
+  { code: 'hospital', label: 'Khan Hospital', txCollection: 'hospital_transactions' },
+  { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions' },
+  { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions' },
+  { code: 'job-center', label: 'Job Center', txCollection: 'job_center_transactions' },
+];
+
 type Transaction = {
   id: string;
   amount: number;
@@ -48,12 +59,14 @@ type Transaction = {
   categoryName?: string;
   description: string;
   paymentMethod: string;
-  departmentId: string;
+  departmentCode: string;
   departmentName: string;
-  receivedBy: string;
+  receivedBy?: string;
+  cashierId?: string;
   status: string;
   createdAt: any;
-  dateStr: string;
+  date?: any;
+  transactionDate?: any;
 };
 
 export default function DailyReportPage() {
@@ -74,40 +87,79 @@ export default function DailyReportPage() {
   const [isDayClosed, setIsDayClosed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (sessionLoading) return;
-    if (!session || (session.role !== 'cashier' && session.role !== 'superadmin')) {
-      router.push('/hq/login');
-      return;
-    }
-    fetchData();
-    fetchOpeningBalance();
-  }, [sessionLoading, session, reportDate]);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
+    if (!session) return;
     setLoading(true);
     setError(null);
     try {
-      const q = query(
-        collection(db, 'cashierTransactions'),
-        where('dateStr', '==', formatDateDMY(new Date(reportDate)))
-      );
+      const allTxs: Transaction[] = [];
+      const reportDateObj = new Date(reportDate);
+      const startOfDay = new Date(reportDateObj.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(reportDateObj.setHours(23, 59, 59, 999));
       
-      const snap = await getDocs(q);
-      const data = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Transaction[];
+      const startTimestamp = Timestamp.fromDate(startOfDay);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+
+      // Aggregated fetch from all departmental collections
+      const fetchPromises = DEPARTMENTS.map(async (dept) => {
+        try {
+          // Optimized query using the new composite indexes (date ASC/DESC)
+          const q = query(
+            collection(db, dept.txCollection),
+            where('date', '>=', startTimestamp),
+            where('date', '<=', endTimestamp),
+            orderBy('date', 'desc')
+          );
+          const snap = await getDocs(q);
+          return snap.docs.map(doc => ({
+            id: doc.id,
+            departmentCode: dept.code,
+            departmentName: dept.label,
+            ...doc.data()
+          })) as Transaction[];
+        } catch (err) {
+          console.warn(`[DailyReport] Failed optimized fetch for ${dept.code}, falling back...`, err);
+          // Fallback if index not yet propagation
+          const qFallback = query(
+            collection(db, dept.txCollection),
+            orderBy('createdAt', 'desc'),
+            limit(200)
+          );
+          const snap = await getDocs(qFallback);
+          return snap.docs
+            .map(doc => ({ id: doc.id, departmentCode: dept.code, departmentName: dept.label, ...doc.data() }))
+            .filter((t: any) => {
+              const d = toDate(t.date || t.transactionDate || t.createdAt);
+              return d && d >= startOfDay && d <= endOfDay;
+            }) as Transaction[];
+        }
+      });
+
+      // Also fetch from legacy/generic cashierTransactions if it exists
+      const genericPromise = (async () => {
+        try {
+          const q = query(
+            collection(db, 'cashierTransactions'),
+            where('date', '>=', startTimestamp),
+            where('date', '<=', endTimestamp)
+          );
+          const snap = await getDocs(q);
+          return snap.docs.map(doc => ({ id: doc.id, departmentCode: 'other', departmentName: 'General', ...doc.data() })) as Transaction[];
+        } catch { return []; }
+      })();
+
+      const results = await Promise.all([...fetchPromises, genericPromise]);
+      const flattened = results.flat();
       
-      data.sort((a, b) => {
-        const dateA = toDate((a as any).transactionDate || (a as any).date || a.dateStr || a.createdAt);
-        const dateB = toDate((b as any).transactionDate || (b as any).date || b.dateStr || b.createdAt);
+      flattened.sort((a, b) => {
+        const dateA = toDate(a.transactionDate || a.date || a.createdAt);
+        const dateB = toDate(b.transactionDate || b.date || b.createdAt);
         return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
       });
       
-      setTransactions(data);
+      setTransactions(flattened);
 
-      // Check if already closed
+      // Check if already closed for this specific date
       const closedQ = query(
         collection(db, 'hq_reconciliation'),
         where('date', '==', formatDateDMY(new Date(reportDate))),
@@ -122,7 +174,17 @@ export default function DailyReportPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [session, reportDate]);
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!session || (session.role !== 'cashier' && session.role !== 'superadmin')) {
+      router.push('/hq/login');
+      return;
+    }
+    fetchData();
+    fetchOpeningBalance();
+  }, [sessionLoading, session, reportDate, fetchData]);
 
   async function fetchOpeningBalance() {
     try {
@@ -194,6 +256,7 @@ export default function DailyReportPage() {
       const amt = Number(tx.amount) || 0;
       const type = tx.type || 'income';
       const catKey = tx.categoryName || tx.category || 'Uncategorized';
+      const deptName = tx.departmentName || 'Unknown';
       
       if (type === 'income') {
         summary.totalIncome += amt;
@@ -203,8 +266,8 @@ export default function DailyReportPage() {
         summary.categoryBreakdown.income[catKey].total += amt;
         summary.categoryBreakdown.income[catKey].txs.push(tx);
         
-        if (!summary.deptTotals[tx.departmentName]) summary.deptTotals[tx.departmentName] = { income: 0, expense: 0 };
-        summary.deptTotals[tx.departmentName].income += amt;
+        if (!summary.deptTotals[deptName]) summary.deptTotals[deptName] = { income: 0, expense: 0 };
+        summary.deptTotals[deptName].income += amt;
       } else {
         summary.totalExpense += amt;
         if (!summary.categoryBreakdown.expense[catKey]) {
@@ -213,8 +276,8 @@ export default function DailyReportPage() {
         summary.categoryBreakdown.expense[catKey].total += amt;
         summary.categoryBreakdown.expense[catKey].txs.push(tx);
 
-        if (!summary.deptTotals[tx.departmentName]) summary.deptTotals[tx.departmentName] = { income: 0, expense: 0 };
-        summary.deptTotals[tx.departmentName].expense += amt;
+        if (!summary.deptTotals[deptName]) summary.deptTotals[deptName] = { income: 0, expense: 0 };
+        summary.deptTotals[deptName].expense += amt;
       }
 
       if (tx.paymentMethod === 'cash' && tx.status === 'approved') {
@@ -251,7 +314,6 @@ export default function DailyReportPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20 print:bg-white print:pb-0 font-sans">
-      {/* Premium Header */}
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 px-4 py-4 md:px-8 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-5">
@@ -307,7 +369,6 @@ export default function DailyReportPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-10 md:px-8">
-        {/* Day Status Banner */}
         {isDayClosed && (
             <div className="mb-10 bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-[2.5rem] text-white shadow-xl shadow-emerald-100 flex flex-col md:flex-row md:items-center justify-between gap-6 animate-in fade-in zoom-in-95 duration-500">
                 <div className="flex items-center gap-5">
@@ -332,7 +393,6 @@ export default function DailyReportPage() {
             </div>
         )}
 
-        {/* Toggle Controls - Premium Style */}
         <div className="flex justify-center mb-12 print:hidden">
           <div className="bg-slate-200/50 p-1.5 rounded-[22px] flex items-center border border-slate-200/50 gap-1">
             <button 
@@ -364,7 +424,6 @@ export default function DailyReportPage() {
 
         {viewMode === 'summary' ? (
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-            {/* Main KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-white p-7 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 transition-transform group-hover:rotate-12">
@@ -416,9 +475,7 @@ export default function DailyReportPage() {
               </div>
             </div>
 
-            {/* Expandable Breakdown Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              {/* Income Breakdown */}
               <div className="space-y-6">
                 <div className="flex items-center justify-between px-2">
                   <h2 className="text-lg font-black text-slate-900 flex items-center gap-3">
@@ -476,7 +533,6 @@ export default function DailyReportPage() {
                 </div>
               </div>
 
-              {/* Expense Breakdown */}
               <div className="space-y-6">
                 <div className="flex items-center justify-between px-2">
                   <h2 className="text-lg font-black text-slate-900 flex items-center gap-3">
@@ -515,7 +571,7 @@ export default function DailyReportPage() {
                                 <div className="space-y-0.5">
                                   <p className="text-xs font-bold text-slate-800">{tx.description || 'Operational Cost'}</p>
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                                    {tx.departmentName} • {tx.receivedBy}
+                                    {tx.departmentName} • {tx.receivedBy || tx.cashierId || 'Staff'}
                                   </p>
                                 </div>
                                 <span className="text-sm font-black text-rose-600">-{tx.amount.toLocaleString()}</span>
@@ -535,7 +591,6 @@ export default function DailyReportPage() {
               </div>
             </div>
 
-            {/* Department Comparison Horizontal Scroll */}
             <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
                 <h2 className="text-lg font-black text-slate-900 mb-8 px-2">Cash Flow by Department</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -571,7 +626,6 @@ export default function DailyReportPage() {
             </div>
           </div>
         ) : (
-          /* Detailed Table View */
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
             <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <h2 className="font-bold text-slate-800 flex items-center gap-2">
@@ -581,7 +635,6 @@ export default function DailyReportPage() {
             </div>
             
             <div className="space-y-4">
-              {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto print:block">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -603,7 +656,7 @@ export default function DailyReportPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-xs font-bold text-slate-900 px-2 py-0.5 bg-slate-100 rounded-md uppercase">
-                            {tx.departmentId}
+                            {tx.departmentCode}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -648,7 +701,6 @@ export default function DailyReportPage() {
                 </table>
               </div>
 
-              {/* Mobile Cards */}
               <div className="md:hidden space-y-3 px-4 pb-6 print:hidden">
                 {transactions.map((tx) => (
                   <div key={tx.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
@@ -659,7 +711,7 @@ export default function DailyReportPage() {
                             {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || (tx.createdAt.seconds * 1000)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                           </p>
                           <span className="text-[9px] font-black text-slate-600 px-1.5 py-0.5 bg-slate-100 rounded uppercase">
-                            {tx.departmentId}
+                            {tx.departmentCode}
                           </span>
                         </div>
                         <h3 className="text-sm font-black text-slate-900">{tx.categoryName || tx.category}</h3>
@@ -680,7 +732,7 @@ export default function DailyReportPage() {
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-1">
                       <span>{tx.paymentMethod?.replace('_', ' ')}</span>
-                      <span>By {tx.receivedBy || 'N/A'}</span>
+                      <span>By {tx.receivedBy || tx.cashierId || 'N/A'}</span>
                     </div>
                   </div>
                 ))}
@@ -695,7 +747,6 @@ export default function DailyReportPage() {
         )}
       </main>
 
-      {/* Settlement Modal */}
       {showCloseModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowCloseModal(false)} />
@@ -750,13 +801,13 @@ export default function DailyReportPage() {
                 </div>
 
                 <div>
-                   <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Settlement Narration</label>
-                   <textarea
+                   <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Closing Notes</label>
+                   <textarea 
                     value={closingNote}
                     onChange={(e) => setClosingNote(e.target.value)}
-                    placeholder="Describe any shortages or excess if applicable..."
+                    placeholder="Additional context for this settlement..."
                     rows={3}
-                    className="w-full p-6 bg-slate-50 border-2 border-slate-100 focus:bg-white focus:border-indigo-600 rounded-[28px] outline-none transition-all text-sm font-bold text-slate-700 placeholder:text-slate-300"
+                    className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[24px] outline-none focus:bg-white focus:border-indigo-600 transition-all text-sm font-bold text-slate-700 placeholder:text-slate-300"
                    />
                 </div>
               </div>
@@ -764,42 +815,19 @@ export default function DailyReportPage() {
               <button 
                 onClick={handleCloseDay}
                 disabled={submitting || !actualCash}
-                className="w-full py-6 bg-slate-950 hover:bg-black text-white rounded-full font-black text-lg transition-all shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-3 mb-4"
+                className="w-full py-6 bg-indigo-600 hover:bg-slate-900 text-white rounded-[28px] font-black text-lg transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale"
               >
-                {submitting ? <Loader2 className="w-6 h-6 animate-spin text-white" /> : (
+                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : (
                   <>
-                    <Save className="w-5 h-5" />
+                    <Save className="w-6 h-6" />
                     Archive & Finalize
                   </>
                 )}
               </button>
-              
-              <div className="flex gap-4 p-4 rounded-3xl bg-amber-50 border border-amber-100">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                <p className="text-[10px] font-black text-amber-800 leading-relaxed uppercase tracking-tight">
-                  Security Warning: Once finalized, today's data is LOCKED. Ensure physical verification is performed.
-                </p>
-              </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Global CSS for animations & premium feel */}
-      <style jsx global>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .animate-in { animation: fadeIn 0.3s ease-out forwards; }
-        .zoom-in-95 { animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        
-        @media print {
-          body { background: white !important; }
-          .print\:hidden { display: none !important; }
-          main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-          .rounded-\[40px\], .rounded-\[2\.5rem\] { border-radius: 12px !important; }
-          .bg-white { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
-        }
-      `}</style>
     </div>
   );
 }
