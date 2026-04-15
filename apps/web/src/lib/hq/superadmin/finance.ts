@@ -84,6 +84,9 @@ function classifyTxType(t: any): TxType {
  * Robustly load transactions with error handling per department.
  * Defaults to 'approved' but can include pending for real-time collection metrics.
  */
+export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq', days: number, statuses: string[]) {
+  try {
+    let col = '';
     if (dept === 'rehab') col = 'rehab_transactions';
     else if (dept === 'spims') col = 'spims_transactions';
     else if (dept === 'job-center') col = 'job_center_transactions';
