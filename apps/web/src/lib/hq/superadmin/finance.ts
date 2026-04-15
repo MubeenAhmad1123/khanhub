@@ -272,6 +272,163 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   };
 }
 
+// ─── Daily Breakdown for date-filter on Finance page ─────────────────────────
+
+export type DailyDeptBreakdown = {
+  deptId: string;
+  deptName: string;
+  income: number;
+  expense: number;
+  net: number;
+  txCount: number;
+  categories: Record<string, number>;
+  transactions: any[];
+};
+
+export type DailyBreakdownResult = {
+  date: string; // YYYY-MM-DD
+  departments: DailyDeptBreakdown[];
+  grandIncome: number;
+  grandExpense: number;
+  grandNet: number;
+};
+
+/**
+ * Fetches all transactions (approved + pending) across all departments
+ * for a specific calendar date (PKT) and returns per-department breakdowns.
+ */
+export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakdownResult> {
+  const targetDayKey = dayKey(targetDate);
+
+  // PKT is UTC+5. Build the UTC range that covers the full PKT calendar day.
+  const dayStartPKT = new Date(targetDate);
+  dayStartPKT.setHours(0, 0, 0, 0);
+  // Shift: PKT midnight = UTC 19:00 of previous day
+  const utcStart = new Date(dayStartPKT.getTime() - 5 * 60 * 60 * 1000);
+  const utcEnd = new Date(utcStart.getTime() + 24 * 60 * 60 * 1000);
+
+  const depts: { id: 'rehab' | 'spims' | 'job-center' | 'hq'; name: string; col: string }[] = [
+    { id: 'rehab',      name: 'Rehab',      col: 'rehab_transactions' },
+    { id: 'spims',      name: 'SPIMS',      col: 'spims_transactions' },
+    { id: 'job-center', name: 'Job Center', col: 'job_center_transactions' },
+    { id: 'hq',         name: 'HQ',         col: 'cashierTransactions' },
+  ];
+
+  const departments = await Promise.all(
+    depts.map(async (dept) => {
+      try {
+        const colRef = collection(db, dept.col);
+        const tsStart = Timestamp.fromDate(utcStart);
+        const tsEnd   = Timestamp.fromDate(utcEnd);
+
+        // Query 1: by createdAt (most common)
+        const q1 = query(
+          colRef,
+          where('createdAt', '>=', tsStart),
+          where('createdAt', '<', tsEnd),
+          limit(500)
+        );
+
+        // Query 2: by transactionDate (explicit date override used in some depts)
+        const q2 = query(
+          colRef,
+          where('transactionDate', '>=', tsStart),
+          where('transactionDate', '<', tsEnd),
+          limit(500)
+        );
+
+        const [snap1, snap2] = await Promise.all([
+          getDocs(q1).catch(() => ({ docs: [] as any[] })),
+          getDocs(q2).catch(() => ({ docs: [] as any[] })),
+        ]);
+
+        // Merge & deduplicate by doc ID
+        const seen = new Set<string>();
+        const rawDocs: any[] = [];
+        for (const d of [...snap1.docs, ...snap2.docs]) {
+          if (!seen.has(d.id)) {
+            seen.add(d.id);
+            rawDocs.push(d);
+          }
+        }
+
+        // Map & filter by resolved _date to catch any edge-cases from TZ differences
+        const dayTxs = rawDocs
+          .map((d: any) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              ...data,
+              _dept: dept.id,
+              _date: toDate(data.transactionDate || data.date || data.dateStr || data.createdAt),
+              _approvedDate: data.approvedAt ? toDate(data.approvedAt) : null,
+            };
+          })
+          .filter((tx) => tx._date && dayKey(tx._date) === targetDayKey);
+
+        let income = 0;
+        let expense = 0;
+        const categories: Record<string, number> = {};
+
+        for (const tx of dayTxs) {
+          const amt = Number(tx.amount) || 0;
+          const isExp =
+            tx.type === 'expense' ||
+            String(tx.categoryName || tx.category || '').toLowerCase().includes('expense');
+
+          if (isExp) {
+            expense += amt;
+          } else {
+            income += amt;
+            const cat = tx.categoryName || tx.category || 'General';
+            categories[cat] = (categories[cat] || 0) + amt;
+          }
+        }
+
+        return {
+          deptId: dept.id,
+          deptName: dept.name,
+          income,
+          expense,
+          net: income - expense,
+          txCount: dayTxs.length,
+          categories,
+          transactions: dayTxs.sort((a, b) => {
+            const ta = a._date?.getTime?.() ?? 0;
+            const tb = b._date?.getTime?.() ?? 0;
+            return tb - ta;
+          }),
+        } as DailyDeptBreakdown;
+      } catch (err) {
+        console.warn(`[DailyBreakdown] Error fetching ${dept.id}:`, err);
+        return {
+          deptId: dept.id,
+          deptName: dept.name,
+          income: 0,
+          expense: 0,
+          net: 0,
+          txCount: 0,
+          categories: {},
+          transactions: [],
+        } as DailyDeptBreakdown;
+      }
+    })
+  );
+
+  const grandIncome = departments.reduce((s, d) => s + d.income, 0);
+  const grandExpense = departments.reduce((s, d) => s + d.expense, 0);
+
+  return {
+    date: targetDayKey,
+    departments,
+    grandIncome,
+    grandExpense,
+    grandNet: grandIncome - grandExpense,
+  };
+}
+
+// ─── Original Finance Report ──────────────────────────────────────────────────
+
 export type FinanceReport = {
   income: number;
   expense: number;
