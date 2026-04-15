@@ -18,6 +18,7 @@ export interface DepartmentAuthInfo {
   domain: string;
   dashboardPath: string;
   sessionKey: string;
+  legacyDomain?: string;
 }
 
 export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
@@ -43,7 +44,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'spims_users',
     domain: '@spims.khanhub',
     dashboardPath: '/departments/spims/dashboard',
-    sessionKey: 'spims_session'
+    sessionKey: 'spims_session',
+    legacyDomain: '@spims.edu.pk'
   },
   hospital: {
     id: 'hospital',
@@ -190,7 +192,7 @@ export async function loginUniversal(customId: string, password: string): Promis
       // If not found by customId, maybe it's already a full email
       if (customId.includes('@')) {
         const domain = '@' + customId.split('@')[1];
-        const foundDept = Object.values(DEPARTMENTS_AUTH).find(d => d.domain === domain || domain.includes(d.id));
+        const foundDept = Object.values(DEPARTMENTS_AUTH).find(d => d.domain === domain || d.legacyDomain === domain || domain.includes(d.id));
         if (foundDept) {
           try {
             console.log('[UniversalAuth] Attempting login with full email:', customId);
@@ -219,8 +221,20 @@ export async function loginUniversal(customId: string, password: string): Promis
       uid = discovery.uid;
       const email = `${customId.trim().toLowerCase()}${dept.domain}`;
       console.log('[UniversalAuth] Attempting Firebase Auth with discovered user:', email);
-      cred = await signInWithEmailAndPassword(auth, email, password);
-      console.log('[UniversalAuth] Auth successful, UID:', cred.user.uid);
+      
+      try {
+        cred = await signInWithEmailAndPassword(auth, email, password);
+        console.log('[UniversalAuth] Auth successful, UID:', cred.user.uid);
+      } catch (e: any) {
+        if (dept.legacyDomain && (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-email')) {
+          const legacyEmail = `${customId.trim().toLowerCase()}${dept.legacyDomain}`;
+          console.log('[UniversalAuth] Attempting fallback with legacy domain:', legacyEmail);
+          cred = await signInWithEmailAndPassword(auth, legacyEmail, password);
+          console.log('[UniversalAuth] Legacy Auth successful, UID:', cred.user.uid);
+        } else {
+          throw e;
+        }
+      }
     }
 
     // 2. Security checks

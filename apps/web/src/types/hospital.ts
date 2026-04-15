@@ -481,3 +481,44 @@ export interface LeaveRecord {
   [key: string]: any;
 }
 
+// ─── HOSPITAL CASHIER META TYPES ─────────────────────
+
+export type HospitalIncomeCategory = 
+  | 'opd_consultation' 
+  | 'lab_test' 
+  | 'pharmacy' 
+  | 'ipd_admission' 
+  | 'ambulance' 
+  | 'emergency_charges'
+  | 'medical_report'
+  | 'fee'
+  | 'canteen'
+  | 'other_income';
+
+export type HospitalExpenseCategory = 
+  | 'medical_supplies' 
+  | 'consultant_payment' 
+  | 'equipment_maintenance' 
+  | 'pharmacy_restock'
+  | 'staff_salary'
+  | 'utilities'
+  | 'maintenance'
+  | 'other_expense';
+
+export const HOSPITAL_SPECIFIC_CATEGORIES = [
+  // Income
+  { id: 'opd_consultation', name: 'OPD Consultation', appliesTo: 'income' },
+  { id: 'lab_test', name: 'Lab / Diagnostics', appliesTo: 'income' },
+  { id: 'pharmacy', name: 'Pharmacy Sales', appliesTo: 'income' },
+  { id: 'ipd_admission', name: 'IPD Admission Advance', appliesTo: 'income' },
+  { id: 'ambulance', name: 'Ambulance Service', appliesTo: 'income' },
+  { id: 'emergency_charges', name: 'Emergency Charges', appliesTo: 'income' },
+  { id: 'medical_report', name: 'Medical Reports / Docs', appliesTo: 'income' },
+  
+  // Expense
+  { id: 'medical_supplies', name: 'Medical Supplies / Consumables', appliesTo: 'expense' },
+  { id: 'consultant_payment', name: 'External Consultant Payment', appliesTo: 'expense' },
+  { id: 'equipment_maintenance', name: 'Medical Equipment Repair', appliesTo: 'expense' },
+  { id: 'pharmacy_restock', name: 'Pharmacy Inventory Restock', appliesTo: 'expense' },
+] as const;
+
