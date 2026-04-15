@@ -11,6 +11,7 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
+import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
 
 type TxnType = 'income' | 'expense';
 type DateMode = 'today' | 'all' | 'range';
@@ -98,6 +99,24 @@ export default function CashierStationPage() {
   const [historyType, setHistoryType] = useState<'all' | TxnType>('all');
   const [historyDepartment, setHistoryDepartment] = useState<'all' | string>('all');
   const [spimsFeeSubtype, setSpimsFeeSubtype] = useState<'admission' | 'registration' | 'examination' | 'monthly'>('monthly');
+
+  // Hospital Meta States
+  const [hospCategory, setHospCategory] = useState<HospitalTxCategory>('opd_reception');
+  const [hospPatientName, setHospPatientName] = useState('');
+  const [hospGuardian, setHospGuardian] = useState('');
+  const [hospAge, setHospAge] = useState('');
+  const [hospContact, setHospContact] = useState('');
+  const [hospAddress, setHospAddress] = useState('');
+  const [hospReferredBy, setHospReferredBy] = useState('');
+  const [hospTestName, setHospTestName] = useState('');
+  const [hospTestReport, setHospTestReport] = useState('');
+  const [hospTestExpense, setHospTestExpense] = useState('');
+  const [hospOpType, setHospOpType] = useState('');
+  const [hospAdmitDate, setHospAdmitDate] = useState('');
+  const [hospDischargeDate, setHospDischargeDate] = useState('');
+  const [hospOpdShift, setHospOpdShift] = useState<'morning' | 'evening'>('morning');
+  const [hospVisitTime, setHospVisitTime] = useState('');
+  const [hospVisitPurpose, setHospVisitPurpose] = useState('');
 
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -526,6 +545,49 @@ export default function CashierStationPage() {
       const missingReason = proofReason.trim();
       if (!proofUrl && missingReason) createPayload.proofMissingReason = missingReason;
 
+      if (departmentCode === 'hospital') {
+        let hMeta: HospitalTxMeta | undefined;
+        if (hospCategory === 'opd_reception') {
+          hMeta = {
+            shift: hospOpdShift,
+            patientName: hospPatientName || 'Unknown',
+            guardianName: hospGuardian || undefined,
+            age: hospAge || undefined,
+            contactNo: hospContact || undefined,
+            address: hospAddress || undefined,
+            visitTime: hospVisitTime || undefined,
+            visitPurpose: hospVisitPurpose || undefined,
+          };
+        } else if (hospCategory === 'lab_test') {
+          hMeta = {
+            patientName: hospPatientName || 'Unknown',
+            testName: hospTestName || 'Unknown Test',
+            testReportResult: hospTestReport || undefined,
+            referredBy: hospReferredBy || undefined,
+            testCharges: Number(amount),
+            testExpense: hospTestExpense ? Number(hospTestExpense) : undefined,
+          };
+        } else if (hospCategory === 'operation') {
+          hMeta = {
+            patientName: hospPatientName || 'Unknown',
+            operationType: hospOpType || 'Unknown Operation',
+            contactNo: hospContact || undefined,
+            referredBy: hospReferredBy || undefined,
+            admitDate: hospAdmitDate || undefined,
+            dischargeDate: hospDischargeDate || undefined,
+          };
+        }
+        if (hMeta) {
+          createPayload.hospitalMeta = hMeta;
+          createPayload.category = hospCategory;
+          createPayload.categoryName = hospCategory.replace('_', ' ').toUpperCase();
+        } else {
+          // fallback custom category for hospital expenses like staff_salary etc
+          createPayload.category = selectedCategory.id;
+          createPayload.categoryName = selectedCategory.name;
+        }
+      }
+
       const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
 
       // Notify superadmin of new transaction pending approval
@@ -702,30 +764,31 @@ export default function CashierStationPage() {
               <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600">
                 {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
               </select>
-              <div className="relative w-full">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    onFocus={() => searchQuery && setSearchOpen(true)}
-                    placeholder={departmentCode === 'hospital' ? "Optional search..." : "Search by name or ID..."}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/50 transition-all duration-200 placeholder-gray-600"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
+              {departmentCode !== 'hospital' && (
+                <div className="relative w-full">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      onFocus={() => searchQuery && setSearchOpen(true)}
+                      placeholder="Search by name or ID..."
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/50 transition-all duration-200 placeholder-gray-600"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => { setSearchQuery(''); setSearchOpen(false); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
 
-                {searchOpen && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                  {searchOpen && searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
                     {searchResults.map((p) => (
                       <button
                         key={p.id}
@@ -756,6 +819,7 @@ export default function CashierStationPage() {
                   <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />
                 )}
               </div>
+              )}
             </div>
             <div className="mt-3 space-y-2 max-h-[300px] overflow-y-auto">
               {entityResults.map((e) => (
@@ -825,6 +889,67 @@ export default function CashierStationPage() {
                   )}
                 </div>
                 <div className="space-y-3 min-w-0">
+                  {departmentCode === 'hospital' ? (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 mt-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Hospital Service Details</label>
+                      <select value={hospCategory} onChange={(e) => setHospCategory(e.target.value as any)} className="mt-2 w-full bg-emerald-900/20 border border-emerald-500/30 rounded-2xl px-4 py-3 text-emerald-100 text-sm font-bold outline-none focus:border-emerald-400">
+                        <option value="opd_reception">OPD Reception</option>
+                        <option value="lab_test">Lab Test</option>
+                        <option value="operation">Operation/Surgery</option>
+                        <option value="staff_salary">Staff Salary</option>
+                        <option value="utilities">Utilities</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="other_income">Other Income</option>
+                        <option value="other_expense">Other Expense</option>
+                      </select>
+
+                      {['opd_reception', 'lab_test', 'operation'].includes(hospCategory) && (
+                        <div className="mt-3 space-y-3">
+                          <input type="text" value={hospPatientName} onChange={e => setHospPatientName(e.target.value)} placeholder="Patient Name" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                          <input type="text" value={hospGuardian} onChange={e => setHospGuardian(e.target.value)} placeholder="Guardian Name (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input type="text" value={hospAge} onChange={e => setHospAge(e.target.value)} placeholder="Age" className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                            <input type="text" value={hospContact} onChange={e => setHospContact(e.target.value)} placeholder="Contact No" className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                          </div>
+                          
+                          {hospCategory === 'opd_reception' && (
+                            <>
+                              <select value={hospOpdShift} onChange={(e) => setHospOpdShift(e.target.value as any)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white">
+                                <option value="morning">Morning Shift</option>
+                                <option value="evening">Evening Shift</option>
+                              </select>
+                              <input type="text" value={hospVisitPurpose} onChange={e => setHospVisitPurpose(e.target.value)} placeholder="Visit Purpose (e.g. Checkup)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                            </>
+                          )}
+
+                          {hospCategory === 'lab_test' && (
+                            <>
+                              <input type="text" value={hospTestName} onChange={e => setHospTestName(e.target.value)} placeholder="Test Name" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                              {txnType === 'expense' && <input type="number" value={hospTestExpense} onChange={e => setHospTestExpense(e.target.value)} placeholder="Lab Cost/Expense (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />}
+                            </>
+                          )}
+
+                          {hospCategory === 'operation' && (
+                            <>
+                              <input type="text" value={hospOpType} onChange={e => setHospOpType(e.target.value)} placeholder="Operation Type" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                              <input type="text" value={hospReferredBy} onChange={e => setHospReferredBy(e.target.value)} placeholder="Referred By (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] text-gray-500 px-1">Admit</label>
+                                  <input type="date" value={hospAdmitDate} onChange={e => setHospAdmitDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] text-gray-500 px-1">Discharge</label>
+                                  <input type="date" value={hospDischargeDate} onChange={e => setHospDischargeDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Transaction Date</label>
                     <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600" />

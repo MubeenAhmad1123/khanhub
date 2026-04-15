@@ -23,6 +23,7 @@ export interface Transaction {
   patientName?: string;
   staffId?: string;
   staffName?: string;
+  hospitalMeta?: HospitalTxMeta;  // only set when departmentCode === 'hospital'
   amount: number;
   type: 'income' | 'expense';
   category: string;
@@ -521,4 +522,39 @@ export const HOSPITAL_SPECIFIC_CATEGORIES = [
   { id: 'equipment_maintenance', name: 'Medical Equipment Repair', appliesTo: 'expense' },
   { id: 'pharmacy_restock', name: 'Pharmacy Inventory Restock', appliesTo: 'expense' },
 ] as const;
+
+// ─── HOSPITAL CASHIER META TYPES ─────────────────────────────────────────────
+
+export type HospitalTxCategory = 'lab_test' | 'operation' | 'opd_reception' | 'staff_salary' | 'utilities' | 'maintenance' | 'other_income' | 'other_expense';
+
+export interface LabTestMeta {
+  patientName: string;
+  testName: string;
+  testReportResult?: string;      // "Positive" / "Negative" / free text
+  referredBy?: string;
+  testCharges: number;
+  testExpense?: number;           // lab's cost/expense
+}
+
+export interface OperationMeta {
+  patientName: string;
+  operationType: string;
+  contactNo?: string;
+  referredBy?: string;
+  admitDate?: string;             // "YYYY-MM-DD"
+  dischargeDate?: string;         // "YYYY-MM-DD"
+}
+
+export interface OpdReceptionMeta {
+  shift: 'morning' | 'evening';
+  patientName: string;
+  guardianName?: string;
+  age?: string;
+  contactNo?: string;
+  address?: string;
+  visitTime?: string;             // "HH:MM" e.g. "11:30"
+  visitPurpose?: string;          // e.g. "Checkup", "Follow-up"
+}
+
+export type HospitalTxMeta = LabTestMeta | OperationMeta | OpdReceptionMeta;
 
