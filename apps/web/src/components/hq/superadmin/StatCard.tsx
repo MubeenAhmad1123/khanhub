@@ -16,6 +16,7 @@ export function StatCard({
   tone = 'neutral',
   format,
   loading,
+  onClick,
 }: {
   title: string;
   value: string | number;
@@ -27,6 +28,7 @@ export function StatCard({
   tone?: 'neutral' | 'rehab' | 'spims' | 'hq' | 'primary' | 'warning' | 'danger';
   format?: 'pkr';
   loading?: boolean;
+  onClick?: () => void;
 }) {
   const toneStyles =
     tone === 'rehab'
@@ -89,7 +91,15 @@ export function StatCard({
     </div>
   );
 
-  const className = `block rounded-[2rem] border bg-gradient-to-br ${toneStyles} bg-white dark:bg-black p-6 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-300`;
+  const className = `block rounded-[2rem] border bg-gradient-to-br ${toneStyles} bg-white dark:bg-black p-6 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-300 w-full text-left`;
+
+  if (onClick && !href) {
+    return (
+      <button onClick={onClick} className={className}>
+        {Card}
+      </button>
+    );
+  }
 
   return href ? (
     <Link href={href} className={className}>

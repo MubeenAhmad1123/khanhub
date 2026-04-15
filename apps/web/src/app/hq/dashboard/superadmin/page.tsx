@@ -3,15 +3,15 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Activity, BadgeCheck, Building2, ClipboardList, CreditCard, Users2 } from 'lucide-react';
+import { Activity, BadgeCheck, Building2, ClipboardList, CreditCard, Users2, UserPlus } from 'lucide-react';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { fetchOverviewStats } from '@/lib/hq/superadmin/stats';
+import { fetchTodayClientCounts, formatPKTDate, type TodayClientsResult } from '@/lib/hq/superadmin/clients';
 import { subscribeUnifiedAuditFeed } from '@/lib/hq/superadmin/audit';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { InlineLoading } from '@/components/hq/superadmin/DataState';
 import { ActivityDetailModal } from '@/components/hq/superadmin/ActivityDetailModal';
+import { ClientsFlowModal } from '@/components/hq/superadmin/ClientsFlowModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -35,17 +35,6 @@ const SOURCE_BADGE_STYLES: Record<string, string> = {
   welfare:     'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
   job_center:  'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
   'job-center':'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 font-bold',
-};
-
-const ACTION_BADGE_STYLES: Record<string, string> = {
-  created:   'bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-tighter',
-  registered:'bg-black dark:bg-white text-white dark:text-black font-black uppercase tracking-tighter',
-  approved:  'bg-black/5 dark:bg-white/5 text-black dark:text-white font-black border border-black dark:border-white',
-  login:     'bg-gray-50 dark:bg-gray-900 text-gray-400 font-bold',
-  rejected:  'bg-gray-200 dark:bg-gray-800 text-gray-500 line-through font-bold decoration-black dark:decoration-white',
-  reset:     'bg-gray-100 dark:bg-white/10 text-gray-400 font-bold',
-  updated:   'bg-gray-50 dark:bg-white/5 text-gray-500 font-bold underline decoration-2 underline-offset-4',
-  other:     'bg-gray-100/5 text-gray-300',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -72,6 +61,12 @@ export default function HqSuperadminPage() {
   const [activity, setActivity] = useState<any[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<any | null>(null);
 
+  // ── Clients flow state ────────────────────────────────────────────────────
+  const [clientsData, setClientsData] = useState<TodayClientsResult | null>(null);
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [flowOpen, setFlowOpen] = useState(false);
+  const todayLabel = useMemo(() => formatPKTDate(new Date()), []);
+
   useEffect(() => {
     if (sessionLoading) return;
     if (!session || session.role !== 'superadmin') router.push('/hq/login');
@@ -84,6 +79,18 @@ export default function HqSuperadminPage() {
     fetchOverviewStats()
       .then((s) => alive && setStats(s))
       .finally(() => alive && setStatsLoading(false));
+    return () => { alive = false; };
+  }, [session]);
+
+  // Fetch today's client counts (separate query, lightweight)
+  useEffect(() => {
+    if (!session || session.role !== 'superadmin') return;
+    let alive = true;
+    setClientsLoading(true);
+    fetchTodayClientCounts()
+      .then((d) => alive && setClientsData(d))
+      .catch(() => alive && setClientsData({ total: 0, byDept: [] }))
+      .finally(() => alive && setClientsLoading(false));
     return () => { alive = false; };
   }, [session]);
 
@@ -115,10 +122,18 @@ export default function HqSuperadminPage() {
         format: 'pkr' as const,
       },
       {
+        title: 'Clients today',
+        value: clientsLoading ? '—' : (clientsData?.total ?? 0),
+        subtitle: 'New registrations',
+        icon: UserPlus,
+        tone: 'neutral' as const,
+        onClick: () => setFlowOpen(true),
+      },
+      {
         title: 'Rehab patients',
         value: stats?.rehabPatientsTotal ?? 0,
         subtitle: 'Total registered',
-        href: '/hq/dashboard/superadmin/departments',
+        href: '/hq/dashboard/superadmin/rehab/patients',
         icon: Building2,
         tone: 'neutral' as const,
       },
@@ -155,7 +170,7 @@ export default function HqSuperadminPage() {
         tone: 'warning' as const,
       },
     ],
-    [stats]
+    [stats, clientsData, clientsLoading]
   );
 
   return (
@@ -163,6 +178,17 @@ export default function HqSuperadminPage() {
 
       {/* ── Activity Detail Modal ─────────────────────────────────────────── */}
       <ActivityDetailModal audit={selectedAudit} onClose={() => setSelectedAudit(null)} />
+
+      {/* ── Clients Flow Modal ────────────────────────────────────────────── */}
+      {flowOpen && clientsData && (
+        <ClientsFlowModal
+          open={flowOpen}
+          onClose={() => setFlowOpen(false)}
+          byDept={clientsData.byDept}
+          total={clientsData.total}
+          todayLabel={todayLabel}
+        />
+      )}
 
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3">
@@ -188,11 +214,12 @@ export default function HqSuperadminPage() {
             title={c.title}
             value={c.value}
             subtitle={c.subtitle}
-            href={c.href}
+            href={(c as any).href}
             icon={c.icon}
             tone={c.tone}
             format={(c as any).format}
-            loading={statsLoading}
+            loading={statsLoading && !('onClick' in c)}
+            onClick={(c as any).onClick}
           />
         ))}
       </div>
