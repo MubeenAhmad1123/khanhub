@@ -24,6 +24,7 @@ export interface DeptBreakdown {
   totalIncome: number;
   totalExpense: number;
   pendingCount: number;
+  pendingAmount: number;
   ways: Record<string, number>;
   percentOfTotal: number;
 }
@@ -55,7 +56,12 @@ export type TopOutstandingRow = { id: string; name: string; outstanding: number;
 export type WeekComparison = { week: string; income: number; expense: number; growth: number };
 
 function dayKey(d: Date) {
-  return d.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
 }
 
 function monthKey(d: Date) {
@@ -151,10 +157,14 @@ export async function fetchFinanceHubData() {
     const ways: Record<string, number> = {};
     todayTxs.forEach(t => {
       if (t.type !== 'expense') {
-        const type = classifyTxType(t);
+        const type = 'categoryName' in t ? (t.categoryName as string) : 'General';
         ways[type] = (ways[type] || 0) + (Number(t.amount) || 0);
       }
     });
+
+    const pendingAmount = 'docs' in pendingSnap 
+      ? (pendingSnap.docs as any[]).reduce((acc, doc) => acc + (Number(doc.data().amount) || 0), 0)
+      : 0;
 
     return {
       deptId: d.id,
@@ -162,6 +172,7 @@ export async function fetchFinanceHubData() {
       totalIncome: income,
       totalExpense: expense,
       pendingCount: 'size' in pendingSnap ? pendingSnap.size : 0,
+      pendingAmount,
       ways,
       percentOfTotal: 0 // Calculated after all depts are loaded
     };

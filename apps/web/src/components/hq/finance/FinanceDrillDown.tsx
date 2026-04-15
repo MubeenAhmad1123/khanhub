@@ -114,36 +114,67 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, onClose, onUp
           </div>
 
           <div className="flex-1 overflow-y-auto p-10 custom-scrollbar bg-grid-white/[0.01]">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              <div className="p-8 rounded-[2rem] bg-black dark:bg-white text-white dark:text-black shadow-2xl flex flex-col justify-between group">
-                <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Total Verified Inflow</span>
-                <div className="mt-6">
-                   <div className="text-4xl font-bold tracking-tight">Rs. {dept.totalIncome.toLocaleString()}</div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="p-8 rounded-[2.5rem] bg-black dark:bg-white text-white dark:text-black shadow-2xl flex flex-col justify-between group overflow-hidden relative"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-none" />
+                <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 relative z-10">Verified Inflow</span>
+                <div className="mt-6 relative z-10">
+                   <div className="text-4xl font-black tracking-tight">Rs. {dept.totalIncome.toLocaleString()}</div>
                    <div className="flex items-center gap-2 text-[10px] mt-2 font-bold uppercase tracking-wider opacity-70 group-hover:opacity-100 transition-opacity">
-                     <TrendingUp className="w-4 h-4 text-emerald-400" /> System Synchronized
+                     <TrendingUp className="w-4 h-4 text-emerald-400" /> System Confirmed
                    </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="p-8 rounded-[2rem] border-2 border-border/50 bg-background flex flex-col justify-between hover:border-primary/30 transition-all">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Awaiting Authorization</span>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="p-8 rounded-[2.5rem] border-2 border-amber-500/30 bg-amber-500/5 flex flex-col justify-between hover:border-amber-500/50 transition-all group"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">Pipeline Value</span>
                 <div className="mt-6">
-                   <div className="text-4xl font-bold tracking-tight text-black dark:text-white">{dept.pendingCount} <span className="text-sm">ITEMS</span></div>
+                   <div className="text-4xl font-black tracking-tight text-black dark:text-white">Rs. {dept.pendingAmount.toLocaleString()}</div>
                    <div className="flex items-center gap-2 text-[10px] text-amber-500 mt-2 font-bold uppercase tracking-wider animate-pulse">
-                     <Clock className="w-4 h-4" /> Real-time Queue
+                     <Clock className="w-4 h-4" /> Awaiting Auth
                    </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="p-8 rounded-[2rem] bg-primary/10 border-2 border-primary/20 flex flex-col justify-between group">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Global Multiplier</span>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="p-8 rounded-[2.5rem] border-2 border-border/50 bg-background flex flex-col justify-between hover:border-primary/30 transition-all"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Queue Depth</span>
                 <div className="mt-6">
-                   <div className="text-4xl font-bold tracking-tight text-black dark:text-white">{Math.round(dept.percentOfTotal)}% <span className="text-sm">SHARE</span></div>
-                   <div className="flex items-center gap-2 text-[10px] text-primary mt-2 font-bold uppercase tracking-wider opacity-70 group-hover:opacity-100 transition-opacity">
-                     <ArrowUpRight className="w-4 h-4" /> Growth Dynamic
+                   <div className="text-4xl font-black tracking-tight text-black dark:text-white">{dept.pendingCount} <span className="text-sm font-bold opacity-30">ITEMS</span></div>
+                   <div className="flex items-center gap-2 text-[10px] text-primary mt-2 font-bold uppercase tracking-wider">
+                     <Hash className="w-4 h-4" /> Registry Count
                    </div>
                 </div>
-              </div>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="p-8 rounded-[2.5rem] bg-primary/10 border-2 border-primary/20 flex flex-col justify-between group"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Volume Share</span>
+                <div className="mt-6">
+                   <div className="text-4xl font-black tracking-tight text-black dark:text-white">{Math.round(dept.percentOfTotal)}% <span className="text-sm font-bold opacity-30">GLOBAL</span></div>
+                   <div className="flex items-center gap-2 text-[10px] text-primary mt-2 font-bold uppercase tracking-wider opacity-70 group-hover:opacity-100 transition-opacity">
+                     <ArrowUpRight className="w-4 h-4" /> Dynamic Growth
+                   </div>
+                </div>
+              </motion.div>
             </div>
 
             {/* Ways of Income */}

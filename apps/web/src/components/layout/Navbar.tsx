@@ -12,8 +12,9 @@
 
 import UserMenu from './UserMenu';
 import Image from 'next/image';
-import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { canAccessHqPortal } from '@/lib/hqPortalAccess';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { DEPARTMENTS, DEPARTMENT_CATEGORIES } from '@/data/departments';
@@ -110,6 +111,8 @@ export default function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
+  const isHqUser = useMemo(() => canAccessHqPortal(user?.email), [user?.email]);
+  const dashboardHref = isHqUser ? '/hq/dashboard/superadmin/finance' : '/dashboard';
 
   // Optimized scroll listener with RAF throttling
   useEffect(() => {
@@ -298,7 +301,7 @@ export default function Navbar() {
             <div className="hidden md:flex items-center gap-1.5 lg:gap-2.5 flex-shrink-0">
               {user && (
                 <Link
-                  href="/dashboard"
+                  href={dashboardHref}
                   className="flex items-center gap-1.5 px-3 sm:px-3.5 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs sm:text-sm lg:text-sm font-bold text-primary-600 bg-primary-50/70 border-2 border-primary-200/60 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 transition-all duration-300 whitespace-nowrap group shadow-sm shadow-primary-200/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 >
                    <span className="animate-pulse" aria-hidden="true">🎯</span>
@@ -496,7 +499,7 @@ export default function Navbar() {
             <div className="pt-4 mt-4 border-t border-neutral-200/60 space-y-2.5">
               {user && (
                 <Link
-                  href="/dashboard"
+                  href={dashboardHref}
                   onClick={closeMobileMenu}
                   className="flex items-center justify-center gap-2.5 px-4 py-4 rounded-xl bg-primary-50/70 border-2 border-primary-200/60 text-primary-600 hover:bg-primary-100/70 hover:border-primary-300/60 hover:scale-105 text-sm font-bold transition-all duration-300 group shadow-sm shadow-primary-200/30 touch-manipulation min-h-[48px]"
                 >

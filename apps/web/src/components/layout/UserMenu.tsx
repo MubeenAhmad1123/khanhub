@@ -12,6 +12,7 @@ export default function UserMenu() {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const showHqButton = canAccessHqPortal(user?.email);
+    const dashboardHref = showHqButton ? '/hq/dashboard/superadmin/finance' : '/dashboard';
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -115,7 +116,7 @@ export default function UserMenu() {
                             </svg>
                             <span className="text-sm font-medium text-neutral-700 group-hover:text-neutral-900">My Profile</span>
                         </Link>
-                        <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors group" onClick={() => setIsOpen(false)}>
+                        <Link href={dashboardHref} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors group" onClick={() => setIsOpen(false)}>
                             <svg className="w-5 h-5 text-neutral-400 group-hover:text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                             </svg>
