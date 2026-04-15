@@ -12,7 +12,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Family View', href: '/departments/hospital/dashboard/family', roles: ['family'] },
+  { label: 'Patient View', href: '/departments/hospital/dashboard/patient', roles: ['family'] },
   { label: 'Staff Dashboard', href: '/departments/hospital/dashboard/staff', roles: ['staff'] },
   { label: 'Cashier Dashboard', href: '/departments/hospital/dashboard/cashier', roles: ['cashier', 'superadmin'] },
   { label: 'Admin Overview', href: '/departments/hospital/dashboard/admin', roles: ['admin', 'superadmin'] },
@@ -37,7 +37,7 @@ export default function HospitalSidebar({ role, patientId }: { role: HospitalRol
       <nav className="flex-1 p-4 space-y-1">
         {filteredNav.map((item) => {
           let href = item.href;
-          if (item.label === 'Family View' && patientId) {
+          if (item.label === 'Patient View' && patientId) {
             href = `${item.href}/${patientId}`;
           }
           const isActive = pathname === href;

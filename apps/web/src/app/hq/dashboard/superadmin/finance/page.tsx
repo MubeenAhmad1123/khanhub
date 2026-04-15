@@ -75,6 +75,12 @@ const DEPT_ACCENT: Record<string, { bg: string; border: string; text: string; do
     text: "text-emerald-600 dark:text-emerald-400",
     dot: "bg-emerald-500",
   },
+  hospital: {
+    bg: "bg-rose-500/5",
+    border: "border-rose-500/20",
+    text: "text-rose-600 dark:text-rose-400",
+    dot: "bg-rose-500",
+  },
   hq: {
     bg: "bg-amber-500/5",
     border: "border-amber-500/20",

@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: 'Manage Staff', href: '/departments/hospital/dashboard/admin/staff', icon: UserCircle, roles: ['admin'] },
   { title: 'My Duty', href: '/departments/hospital/dashboard/staff', icon: Activity, roles: ['staff'] },
   { title: 'Daily Report', href: '/departments/hospital/dashboard/staff/report', icon: ClipboardList, roles: ['staff'] },
-  { title: 'My Hospital Profile', href: '/departments/hospital/dashboard/family', icon: UserCircle, roles: ['family'] },
+  { title: 'My Hospital Profile', href: '/departments/hospital/dashboard/patient', icon: UserCircle, roles: ['family'] },
 ];
 
 const ROLE_COLORS: Record<HospitalRole, string> = {

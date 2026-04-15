@@ -15,7 +15,7 @@ import {
 import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
 
-export type FinanceTab = 'combined' | 'rehab' | 'spims' | 'job-center' | 'hq';
+export type FinanceTab = 'combined' | 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq';
 export type TxType = 'fees' | 'medicine' | 'salary' | 'maintenance' | 'other' | 'session';
 
 export interface DeptBreakdown {
@@ -84,12 +84,10 @@ function classifyTxType(t: any): TxType {
  * Robustly load transactions with error handling per department.
  * Defaults to 'approved' but can include pending for real-time collection metrics.
  */
-export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hq', days = 35, statuses: string[] = ['approved']) {
-  try {
-    let col = '';
     if (dept === 'rehab') col = 'rehab_transactions';
     else if (dept === 'spims') col = 'spims_transactions';
     else if (dept === 'job-center') col = 'job_center_transactions';
+    else if (dept === 'hospital' as any) col = 'hospital_transactions';
     else col = 'cashierTransactions';
 
     const q = query(
@@ -120,7 +118,7 @@ export async function loadRecentTx(dept: 'rehab' | 'spims' | 'job-center' | 'hq'
 /**
  * Legacy wrapper for backward compatibility.
  */
-export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'hq', days = 35) {
+export async function loadApprovedTx(dept: 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq', days = 35) {
   return loadRecentTx(dept, days, ['approved']);
 }
 
@@ -135,6 +133,7 @@ export async function fetchFinanceHubData() {
     { id: 'rehab', name: 'Rehab' },
     { id: 'spims', name: 'SPIMS' },
     { id: 'hq', name: 'HQ' },
+    { id: 'hospital', name: 'Hospital' },
     { id: 'job-center', name: 'Job Center' }
   ];
 
@@ -147,6 +146,7 @@ export async function fetchFinanceHubData() {
     if (d.id === 'rehab') col = 'rehab_transactions';
     else if (d.id === 'spims') col = 'spims_transactions';
     else if (d.id === 'job-center') col = 'job_center_transactions';
+    else if (d.id === 'hospital') col = 'hospital_transactions';
     else col = 'cashierTransactions';
 
     const pendingSnap = await getDocs(query(collection(db, col), where('status', '==', 'pending'))).catch(() => ({ size: 0 }));
@@ -194,6 +194,7 @@ export async function approveTransaction(deptId: string, txId: string) {
   if (deptId === 'rehab') col = 'rehab_transactions';
   else if (deptId === 'spims') col = 'spims_transactions';
   else if (deptId === 'job-center') col = 'job_center_transactions';
+  else if (deptId === 'hospital') col = 'hospital_transactions';
   else col = 'cashierTransactions';
 
   const txRef = doc(db, col, txId);
@@ -215,14 +216,15 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
 
   // Load last 40 days to calculate trends, including pending for today's real-time accuracy
   const statuses = ['approved', 'pending', 'pending_cashier'];
-  const [rehab, spims, jobcenter, hq] = await Promise.all([
+  const [rehab, spims, jobcenter, hospital, hq] = await Promise.all([
     loadRecentTx('rehab', 40, statuses),
     loadRecentTx('spims', 40, statuses),
     loadRecentTx('job-center', 40, statuses),
+    loadRecentTx('hospital' as any, 40, statuses),
     loadRecentTx('hq', 40, statuses)
   ]);
 
-  const allTx = [...rehab, ...spims, ...jobcenter, ...hq];
+  const allTx = [...rehab, ...spims, ...jobcenter, ...hospital, ...hq];
 
   const sumBy = (txs: any[], predicate: (r: any) => boolean) =>
     txs.reduce((acc, r) => predicate(r) ? acc + (Number(r.amount) || 0) : acc, 0);
@@ -242,18 +244,20 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
   const pendingAmountToday = pendingTodayTx.reduce((acc, r) => acc + (Number(r.amount) || 0), 0);
   const pendingCountToday = pendingTodayTx.length;
 
-  const [rehabPending, spimsPending, jcPending, hqPending, recPending, rehabPat, spimsStu, jcSeek] = await Promise.all([
+  const [rehabPending, spimsPending, jcPending, hosPending, hqPending, recPending, rehabPat, spimsStu, jcSeek, hospitalPat] = await Promise.all([
     getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'job_center_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
+    getDocs(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))).then(s => s.size).catch(() => 0),
     getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
     getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
     getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] })),
   ]);
 
-  const outstandingTotal = [...rehabPat.docs, ...spimsStu.docs, ...jcSeek.docs].reduce((acc, d: any) => {
+  const outstandingTotal = [...rehabPat.docs, ...spimsStu.docs, ...jcSeek.docs, ...hospitalPat.docs].reduce((acc, d: any) => {
     const data = d.data();
     return acc + Math.max(0, Number(data.remaining ?? data.amountRemaining ?? 0));
   }, 0);
@@ -262,7 +266,7 @@ export async function fetchFinanceSummary(): Promise<FinanceSummary> {
     collectedToday,
     collectedThisMonth,
     outstandingTotal,
-    pendingApprovals: rehabPending + spimsPending + jcPending + hqPending,
+    pendingApprovals: rehabPending + spimsPending + jcPending + hosPending + hqPending,
     pendingAmountToday,
     pendingCountToday,
     pendingReconciliations: recPending,
@@ -307,10 +311,11 @@ export async function fetchDailyBreakdown(targetDate: Date): Promise<DailyBreakd
   const utcStart = new Date(dayStartPKT.getTime() - 5 * 60 * 60 * 1000);
   const utcEnd = new Date(utcStart.getTime() + 24 * 60 * 60 * 1000);
 
-  const depts: { id: 'rehab' | 'spims' | 'job-center' | 'hq'; name: string; col: string }[] = [
+  const depts: { id: 'rehab' | 'spims' | 'job-center' | 'hospital' | 'hq'; name: string; col: string }[] = [
     { id: 'rehab',      name: 'Rehab',      col: 'rehab_transactions' },
     { id: 'spims',      name: 'SPIMS',      col: 'spims_transactions' },
     { id: 'job-center', name: 'Job Center', col: 'job_center_transactions' },
+    { id: 'hospital',   name: 'Hospital',   col: 'hospital_transactions' },
     { id: 'hq',         name: 'HQ',         col: 'cashierTransactions' },
   ];
 
@@ -446,7 +451,7 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
   start.setDate(start.getDate() - (days - 1));
   start.setHours(0, 0, 0, 0);
 
-  const deptList = tab === 'combined' ? (['rehab', 'spims', 'job-center', 'hq'] as const) : ([tab] as const);
+  const deptList = tab === 'combined' ? (['rehab', 'spims', 'job-center', 'hospital', 'hq'] as const) : ([tab] as const);
   const approvedRows = (await Promise.all(deptList.map((d) => loadApprovedTx(d, 45)))).flat();
 
   // 1. Daily Series (Income vs Expense)
@@ -529,13 +534,14 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
   }
 
   // 4. Top Outstanding
-  const [rehabEntities, spimsEntities, jcEntities] = await Promise.all([
+  const [rehabEntities, spimsEntities, jcEntities, hospitalEntities] = await Promise.all([
     tab !== 'rehab' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'rehab_patients'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'rehab' }))),
     tab !== 'spims' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'spims_students'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'spims' }))),
     tab !== 'job-center' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'job_center_seekers'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'job-center' }))),
+    tab !== 'hospital' && tab !== 'combined' ? Promise.resolve([]) : getDocs(query(collection(db, 'hospital_patients'), orderBy('createdAt', 'desc'), limit(800))).then(s => s.docs.map(d => ({ id: d.id, ...d.data(), _dept: 'hospital' }))),
   ]);
 
-  const top: TopOutstandingRow[] = [...rehabEntities, ...spimsEntities, ...jcEntities]
+  const top: TopOutstandingRow[] = [...rehabEntities, ...spimsEntities, ...jcEntities, ...hospitalEntities]
     .map((e: any) => {
       const outstanding = Number(e.remaining ?? e.amountRemaining ?? 0) || 0;
       const lastPay = e.lastPaymentDate || e.updatedAt || e.createdAt;
@@ -564,7 +570,7 @@ export async function fetchFinanceInsights(tab: FinanceTab) {
 }
 
 export async function fetchFinanceReport(tab: FinanceTab, startDate: Date, endDate: Date) {
-  const deptList = tab === 'combined' ? (['rehab', 'spims', 'job-center', 'hq'] as const) : ([tab] as const);
+  const deptList = tab === 'combined' ? (['rehab', 'spims', 'job-center', 'hospital', 'hq'] as const) : ([tab] as const);
   
   const start = new Date(startDate);
   start.setHours(0, 0, 0, 0);
@@ -576,6 +582,7 @@ export async function fetchFinanceReport(tab: FinanceTab, startDate: Date, endDa
     if (dept === 'rehab') col = 'rehab_transactions';
     else if (dept === 'spims') col = 'spims_transactions';
     else if (dept === 'job-center') col = 'job_center_transactions';
+    else if (dept === 'hospital') col = 'hospital_transactions';
     else col = 'cashierTransactions';
 
     const q = query(

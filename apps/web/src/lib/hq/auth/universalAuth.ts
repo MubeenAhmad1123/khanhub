@@ -309,7 +309,10 @@ function getDashboardPath(deptId: string, role: string, patientId?: string): str
   if (normalizedRole === 'admin') return `${base}/admin`;
   if (normalizedRole === 'cashier') return `${base}/cashier`;
   if (normalizedRole === 'superadmin') return `${base}/superadmin`;
-  if (normalizedRole === 'family' && patientId) return `${base}/family/${patientId}`;
+  if (normalizedRole === 'family' && patientId) {
+    const familyPath = deptId === 'hospital' ? 'patient' : 'family';
+    return `${base}/${familyPath}/${patientId}`;
+  }
   
   return `${base}/${normalizedRole}`;
 }
