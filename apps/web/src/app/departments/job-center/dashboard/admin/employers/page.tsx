@@ -103,7 +103,35 @@ export default function EmployersListPage() {
   });
 
   return (
-              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Open Positions</p><p className="text-xl font-black text-gray-900">0</p></div>
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Employers</h1>
+            <p className="text-gray-500 text-sm mt-1">Manage partner companies and job providers.</p>
+          </div>
+          <Link
+            href="/departments/job-center/dashboard/admin/employers/new"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-sm transition-all active:scale-[0.98] shadow-lg shadow-indigo-200"
+          >
+            <Plus size={18} />
+            <span>Add Employer</span>
+          </Link>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0"><Building className="w-5 h-5" /></div>
+              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Employers</p><p className="text-xl font-black text-gray-900">{allEmployers.length}</p></div>
+            </div>
+          </div>
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0"><CheckCircle className="w-5 h-5" /></div>
+              <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Employers</p><p className="text-xl font-black text-gray-900">{allEmployers.filter(e => e.isActive).length}</p></div>
             </div>
           </div>
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">

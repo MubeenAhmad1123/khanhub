@@ -469,6 +469,3 @@ export default function RegisterSeekerPage() {
     </div>
   );
 }
-    </div>
-  );
-}
