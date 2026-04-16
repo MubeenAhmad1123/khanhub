@@ -67,19 +67,20 @@ import {
 import { createRehabUserServer, createStaffMemberServer } from '@/app/departments/rehab/actions/createRehabUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import toast from 'react-hot-toast';
+import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
 type TabType = 'admin' | 'staff' | 'client';
 
 const DEPARTMENTS = [
-  { id: 'rehab', name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', collection: 'rehab_users', staffCollection: 'rehab_staff', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
-  { id: 'spims', name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', collection: 'spims_users', staffCollection: 'spims_staff', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
-  { id: 'hospital', name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.khanhub', collection: 'hospital_users', staffCollection: 'hospital_staff', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
-  { id: 'sukoon-center', name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', collection: 'sukoon_users', staffCollection: 'sukoon_staff', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
-  { id: 'welfare', name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.khanhub', collection: 'welfare_users', staffCollection: 'welfare_staff', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
-  { id: 'job-center', name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.khanhub', collection: 'job_center_users', staffCollection: 'job_center_staff', prefix: 'JOB', clientCollection: 'job_center_seekers', clientLabel: 'Seeker' },
-  { id: 'social-media', name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.khanhub', collection: 'media_users', staffCollection: 'media_staff', prefix: 'MED' },
-  { id: 'it', name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.khanhub', collection: 'it_users', staffCollection: 'it_staff', prefix: 'IT' },
-  { id: 'hq', name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@khanhub.io', collection: 'hq_users', staffCollection: 'hq_staff', prefix: 'HQ' },
+  { id: 'hq' as StaffDept, name: 'HQ / Khan Hub', fullName: 'HQ / Khan Hub', icon: Users, color: 'gray', emailDomain: '@khanhub.io', prefix: 'HQ' },
+  { id: 'rehab' as StaffDept, name: 'Rehab Center', fullName: 'Khan Hub Rehabilitation Center', icon: Building2, color: 'blue', emailDomain: '@rehab.khanhub', prefix: 'REHAB', clientCollection: 'rehab_patients', clientLabel: 'Patient' },
+  { id: 'spims' as StaffDept, name: 'SPIMS Academy', fullName: 'SPIMS Academy', icon: TrendingUp, color: 'purple', emailDomain: '@spims.khanhub', prefix: 'SPIMS', clientCollection: 'spims_students', clientLabel: 'Student' },
+  { id: 'hospital' as StaffDept, name: 'Khan Hospital', fullName: 'Khan Hospital', icon: Activity, color: 'emerald', emailDomain: '@hospital.khanhub', prefix: 'HOSP', clientCollection: 'hospital_patients', clientLabel: 'Patient' },
+  { id: 'sukoon' as StaffDept, name: 'Sukoon Center', fullName: 'Sukoon Center', icon: Home, color: 'orange', emailDomain: '@sukoon.khanhub', prefix: 'SUK', clientCollection: 'sukoon_patients', clientLabel: 'Patient' },
+  { id: 'welfare' as StaffDept, name: 'Welfare', fullName: 'Khan Welfare Foundation', icon: Heart, color: 'rose', emailDomain: '@welfare.khanhub', prefix: 'WEL', clientCollection: 'welfare_children', clientLabel: 'Child' },
+  { id: 'job-center' as StaffDept, name: 'Job Center', fullName: 'Khan Job Center', icon: Briefcase, color: 'amber', emailDomain: '@job-center.khanhub', prefix: 'JOB', clientCollection: 'job_center_seekers', clientLabel: 'Seeker' },
+  { id: 'social-media' as StaffDept, name: 'Social Media', fullName: 'Social Media', icon: Smartphone, color: 'pink', emailDomain: '@media.khanhub', prefix: 'MED' },
+  { id: 'it' as StaffDept, name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.khanhub', prefix: 'IT' },
 ];
 
 const COMMON_DUTIES = [
@@ -176,7 +177,7 @@ export default function ManagerUsersPage() {
     email: '',
     emergencyContact: { name: '', phone: '' },
     photoUrl: '',
-    department: 'rehab',
+    department: 'hq',
     designation: '',
     staffRole: 'Worker',
     joiningDate: new Date().toISOString().split('T')[0],
@@ -220,7 +221,7 @@ export default function ManagerUsersPage() {
   const fetchUsers = async () => {
     try {
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
-      const collectionName = activeTab === 'staff' ? deptDetails.staffCollection : deptDetails.collection;
+      const collectionName = getDeptCollection(deptDetails.id);
 
       const snap = await getDocs(query(collection(db, collectionName), orderBy('createdAt', 'desc'), limit(50)));
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
@@ -236,7 +237,7 @@ export default function ManagerUsersPage() {
     try {
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
       if (!deptDetails) return;
-      const snap = await getDocs(collection(db, deptDetails.staffCollection));
+      const snap = await getDocs(collection(db, getDeptCollection(deptDetails.id)));
       setEmployeeCount(snap.size);
     } catch (err) {
       console.error(err);
@@ -255,7 +256,7 @@ export default function ManagerUsersPage() {
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
       if (!deptDetails) return;
       
-      const slug = deptDetails.id.replace('-', '_');
+      const slug = getDeptPrefix(deptDetails.id);
       try {
         const metaDoc = await getDoc(doc(db, `${slug}_meta`, 'config'));
         const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
@@ -293,7 +294,7 @@ export default function ManagerUsersPage() {
        try {
          const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
          if (deptDetails) {
-           const slug = deptDetails.id.replace('-', '_');
+           const slug = getDeptPrefix(deptDetails.id);
            const metaRef = doc(db, `${slug}_meta`, 'config');
            const metaDoc = await getDoc(metaRef);
            const field = type === 'duty' ? 'customDuties' : 'customDress';
@@ -428,7 +429,7 @@ export default function ManagerUsersPage() {
         formData.displayName,
         undefined, // no patientId
         deptDetails.emailDomain,
-        deptDetails.collection
+        getDeptCollection(deptDetails.id)
       );
 
       if (res.success) {
@@ -496,8 +497,8 @@ export default function ManagerUsersPage() {
         loginUserId = res.uid;
       }
 
-      // Save to staff collection
-      const collectionName = deptDetails.staffCollection;
+      // Save to staff collection (unified with main user collection)
+      const collectionName = getDeptCollection(deptDetails.id);
       const staffRef = collection(db, collectionName);
 
       await addDoc(staffRef, {
@@ -598,7 +599,7 @@ export default function ManagerUsersPage() {
         formData.displayName,
         formData.patientId,
         deptDetails.emailDomain,
-        deptDetails.collection
+        getDeptCollection(deptDetails.id)
       );
 
       if (res.success) {

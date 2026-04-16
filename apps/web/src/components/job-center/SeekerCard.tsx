@@ -18,15 +18,14 @@ export default function SeekerCard({ seeker }: { seeker: Seeker }) {
       </div>
       <div className="flex-1">
         <h3 className="text-xl font-bold text-gray-900">{seeker.name}</h3>
-        <p className="text-gray-500 text-sm mb-2">{(seeker as any).diagnosis || 'Diagnosis not specified'}</p>
         <div className="flex gap-4 text-xs font-medium uppercase tracking-wider">
           <div className="flex flex-col">
-            <span className="text-gray-400">Admitted</span>
-            <span className="text-gray-700">{formatDateDMY(seeker.admissionDate)}</span>
+            <span className="text-gray-400">Joined</span>
+            <span className="text-gray-700">{formatDateDMY(seeker.createdAt)}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-gray-400">Package</span>
-            <span className="text-[#1D9E75]">{seeker.packageAmount.toLocaleString()} PKR</span>
+            <span className="text-gray-400">Phone</span>
+            <span className="text-blue-600">{seeker.contactNumber || 'N/A'}</span>
           </div>
         </div>
       </div>

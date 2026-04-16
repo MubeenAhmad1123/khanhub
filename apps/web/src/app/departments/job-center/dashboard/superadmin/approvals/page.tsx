@@ -1,3 +1,4 @@
+// d:\khanhub\apps\web\src\app\departments\job-center\dashboard\superadmin\approvals\page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -343,7 +344,7 @@ export default function ApprovalsPage() {
 
   const formatCategory = (cat: string) => {
     const map: Record<string, string> = {
-      seeker_fee: 'Seeker Monthly Fee',
+      seeker_fee: 'Job Seeker Fee',
       canteen_deposit: 'Canteen Deposit',
       donation: 'Donation',
       government_grant: 'Government Grant',
@@ -361,7 +362,7 @@ export default function ApprovalsPage() {
       equipment: 'Equipment Purchase',
       security: 'Security Services',
       cleaning: 'Cleaning Supplies',
-      seeker_welfare: 'Seeker Welfare',
+      seeker_welfare: 'Job Seeker Welfare',
       office_supplies: 'Office Supplies',
       other_expense: 'Other Expense',
     };
@@ -408,7 +409,7 @@ export default function ApprovalsPage() {
               {tx.amount.toLocaleString('en-PK')} <span className="text-sm font-bold text-gray-400">PKR</span>
               {tx.seekerName && (
                 <span className="ml-3 text-sm font-black text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg uppercase tracking-widest">
-                  Seeker: {tx.seekerName}
+                  Job Seeker: {tx.seekerName}
                 </span>
               )}
             </div>

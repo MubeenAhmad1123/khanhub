@@ -1,3 +1,4 @@
+// d:\khanhub\apps\web\src\app\departments\job-center\dashboard\admin\finance\page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -112,7 +113,7 @@ export default function FinanceLogPage() {
 
   const formatCategory = (cat: string) => {
     const map: Record<string, string> = {
-      seeker_fee: 'seeker Monthly Fee',
+      seeker_fee: 'Job Seeker Fee',
       canteen_deposit: 'Canteen Deposit',
       donation: 'Donation',
       government_grant: 'Government Grant',
@@ -130,7 +131,7 @@ export default function FinanceLogPage() {
       equipment: 'Equipment Purchase',
       security: 'Security Services',
       cleaning: 'Cleaning Supplies',
-      seeker_welfare: 'seeker Welfare',
+      seeker_welfare: 'Job Seeker Welfare',
       office_supplies: 'Office Supplies',
       other_expense: 'Other Expense',
     };

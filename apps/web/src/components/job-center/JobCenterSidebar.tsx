@@ -14,7 +14,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Seeker View', href: '/departments/job-center/dashboard/seeker', roles: ['seeker'] },
   { label: 'Staff Dashboard', href: '/departments/job-center/dashboard/staff', roles: ['staff'] },
-  { label: 'Cashier Dashboard', href: '/departments/job-center/dashboard/cashier', roles: ['cashier', 'superadmin'] },
   { label: 'Admin Overview', href: '/departments/job-center/dashboard/admin', roles: ['admin', 'superadmin'] },
   { label: 'Seekers', href: '/departments/job-center/dashboard/admin/seekers', roles: ['admin', 'superadmin'] },
   { label: 'Staff Management', href: '/departments/job-center/dashboard/admin/staff', roles: ['admin', 'superadmin'] },

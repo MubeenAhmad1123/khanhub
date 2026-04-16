@@ -8,6 +8,8 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
 import { Loader2, CheckCircle, XCircle, AlertTriangle, Filter } from 'lucide-react';
 
+import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
+
 type FilterType = 'all' | 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'urgent';
 
 function timeAgo(dateStr: string): string {
@@ -46,10 +48,10 @@ export default function ManagerApprovalsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'] as StaffDept[];
         
         const snaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${d.replace('-', '_')}_contributions`), where('isApproved', '==', false))))
+          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false))))
         );
 
         let allContribs: any[] = [];
@@ -69,7 +71,7 @@ export default function ManagerApprovalsPage() {
         const staffMap: Record<string, string> = {};
         
         await Promise.all(depts.map(async (d) => {
-          const col = d === 'hq' ? 'hq_staff' : `${d.replace('-', '_')}_staff`;
+          const col = getDeptCollection(d);
           const staffSnap = await getDocs(collection(db, col));
           staffSnap.docs.forEach(docSnap => {
             staffMap[docSnap.id] = docSnap.data().name || 'Unknown Staff';
@@ -101,7 +103,7 @@ export default function ManagerApprovalsPage() {
   const handleApprove = async (id: string, dept: string) => {
     setActionLoading(id);
     try {
-      const col = `${dept.replace('-', '_')}_contributions`;
+      const col = `${getDeptPrefix(dept)}_contributions`;
       await updateDoc(doc(db, col, id), {
         isApproved: true,
         points: 1,
@@ -121,7 +123,7 @@ export default function ManagerApprovalsPage() {
     if (!rejectReason.trim()) return;
     setActionLoading(id);
     try {
-      const col = `${dept.replace('-', '_')}_contributions`;
+      const col = `${getDeptPrefix(dept)}_contributions`;
       await updateDoc(doc(db, col, id), {
         isApproved: false,
         status: 'rejected',

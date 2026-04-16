@@ -221,6 +221,7 @@ export interface HqDailyAttendanceRecord {
   markedBy?: string;
   markedByName?: string;
   updatedAt?: string;
+  note?: string;
 }
 
 export interface HqDailyDressCodeRecord {

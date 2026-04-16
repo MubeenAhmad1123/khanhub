@@ -1,4 +1,4 @@
-// src/app/departments/job-center/dashboard/layout.tsx
+// d:\khanhub\apps\web\src\app\departments\job-center\dashboard\layout.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -7,13 +7,12 @@ import {
   LayoutDashboard, Users, CheckCircle, Heart, UserCog,
   Banknote, FileBarChart, CreditCard, CalendarDays,
   User, LogOut, ArrowLeft, Menu, X, Shield, Sun, Moon,
-  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2
+  ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, Briefcase
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
-type JobCenterRole = 'admin' | 'staff' | 'seeker' | 'superadmin';
+import { JobCenterRole } from '@/types/job-center';
 
 interface NavItem {
   label: string;
@@ -24,23 +23,28 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview',      href: '/departments/job-center/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
-  { label: 'Seekers',      href: '/departments/job-center/dashboard/admin/seekers', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
+  { label: 'Seekers',       href: '/departments/job-center/dashboard/admin/seekers',  icon: <User size={16}/>,            roles: ['admin', 'superadmin'] },
+  { label: 'Employers',     href: '/departments/job-center/dashboard/admin/employers',icon: <Building2 size={16}/>,       roles: ['admin', 'superadmin'] },
+  { label: 'Staff Management', href: '/departments/job-center/dashboard/admin/staff',  icon: <Users size={16}/>,           roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/job-center/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
-  { label: 'My Portal',    href: '/departments/job-center/dashboard/seeker',         icon: <User size={16}/>,            roles: ['seeker'] },
-  { label: 'My Profile',    href: '/departments/job-center/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'seeker', 'superadmin'] },
+  { label: 'Seeker Portal', href: '/departments/job-center/dashboard/seeker',         icon: <Briefcase size={16}/>,       roles: ['seeker'] },
+  { label: 'Employer Portal', href: '/departments/job-center/dashboard/employer',     icon: <Building2 size={16}/>,       roles: ['employer'] },
+  { label: 'My Profile',    href: '/departments/job-center/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'seeker', 'employer', 'superadmin'] },
 ];
 
 const ROLE_COLORS: Record<JobCenterRole, string> = {
   admin:      'bg-blue-100 text-blue-700',
   staff:      'bg-orange-100 text-orange-700',
   seeker:     'bg-green-100 text-green-700',
+  employer:   'bg-indigo-100 text-indigo-700',
   superadmin: 'bg-purple-100 text-purple-700',
 };
 
 const ROLE_LABELS: Record<JobCenterRole, string> = {
   admin:      'Admin',
   staff:      'Staff',
-  seeker:     'Seeker',
+  seeker:     'Job Seeker',
+  employer:   'Employer',
   superadmin: 'HQ Admin',
 };
 

@@ -1,0 +1,16 @@
+[debug] [2026-04-16T07:15:23.332Z] ----------------------------------------------------------------------
+[debug] [2026-04-16T07:15:23.337Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Mirza Computers\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only firestore
+[debug] [2026-04-16T07:15:23.339Z] CLI Version:   15.13.0
+[debug] [2026-04-16T07:15:23.339Z] Platform:      win32
+[debug] [2026-04-16T07:15:23.340Z] Node Version:  v22.20.0
+[debug] [2026-04-16T07:15:23.341Z] Time:          Thu Apr 16 2026 12:15:23 GMT+0500 (Pakistan Standard Time)
+[debug] [2026-04-16T07:15:23.341Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-16T07:15:27.395Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-16T07:15:27.396Z] > authorizing via signed-in user (khanhubnetwork@gmail.com)
+[debug] [2026-04-16T07:15:27.396Z] [iam] checking project khanhub-5e552 for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-04-16T07:15:27.398Z] Checked if tokens are valid: true, expires at: 1776326267704
+[debug] [2026-04-16T07:15:27.398Z] Checked if tokens are valid: true, expires at: 1776326267704
+[debug] [2026-04-16T07:15:27.399Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/khanhub-5e552:testIamPermissions [none]
+[debug] [2026-04-16T07:15:27.400Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/khanhub-5e552:testIamPermissions  x-goog-user-project=khanhub-5e552
+[debug] [2026-04-16T07:15:27.400Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/khanhub-5e552:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}

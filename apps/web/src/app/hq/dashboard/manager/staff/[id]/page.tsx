@@ -3,35 +3,38 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { 
+import {
   doc, getDoc, collection, getDocs, query, where, orderBy,
-  updateDoc, addDoc, serverTimestamp, setDoc, limit 
+  updateDoc, addDoc, serverTimestamp, setDoc, limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
 import Link from 'next/link';
-import { 
+import {
   Target, Camera,
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
   Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw,
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle,
   ChevronLeft, ChevronRight, Star, Plus, Trash2, CreditCard, LayoutDashboard, Lock, AlertTriangle
 } from 'lucide-react';
-import { 
-  fetchStaffProfile, 
+import {
+  fetchStaffProfile,
   updateStaffProfile,
   deleteStaffProfile,
-  type StaffProfile 
+  getDeptPrefix,
+  getDeptCollection,
+  type StaffDept,
+  type StaffProfile
 } from '@/lib/hq/superadmin/staff';
 import { Timestamp, increment } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import ScoreCard from '@/components/rehab/ScoreCard';
 import { SCORE_CATEGORIES, MONTHLY_REWARDS, WEEKLY_RULE } from '@/data/scoreRules';
 import { HqCheckCell } from '@/components/hq/HqCheckCell';
-import { 
-  HqDailyAttendanceRecord, 
-  HqDailyDressCodeRecord, 
+import {
+  HqDailyAttendanceRecord,
+  HqDailyDressCodeRecord,
   HqDailyDutyRecord,
   HqDressCodeItem,
   HqDutyItem,
@@ -83,13 +86,13 @@ export default function StaffProfilePage() {
   const params = useParams();
   const staffId = params.id as string; // Expected: dept_UID
   const { session, loading: sessionLoading } = useHqSession();
-  
+
   const [staff, setStaff] = useState<StaffProfile | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll'>('overview');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isDark, setIsDark] = useState(false);
-  
+
   const [editForm, setEditForm] = useState({
     name: '',
     designation: '',
@@ -98,7 +101,7 @@ export default function StaffProfilePage() {
     dutyEndTime: '',
     isActive: true,
     phone: '',
-    employeeId: '',
+    customId: '',
     userId: '',
     dressCodeConfig: [] as { key: string; label: string }[],
     dutyConfig: [] as { key: string; label: string }[]
@@ -108,7 +111,7 @@ export default function StaffProfilePage() {
     const saved = localStorage.getItem('hq_dark_mode') === 'true';
     setIsDark(saved);
   }, []);
-  
+
   // Data States
   const [attendance, setAttendance] = useState<AttendanceLog[]>([]);
   const [dutyLogs, setDutyLogs] = useState<any[]>([]);
@@ -130,28 +133,34 @@ export default function StaffProfilePage() {
   const [creatingTask, setCreatingTask] = useState(false);
 
   // Custom Config Add States
-  const [availableDuties, setAvailableDuties] = useState<{key: string, label: string}[]>([]);
-  const [availableDress, setAvailableDress] = useState<{key: string, label: string}[]>([]);
-  const [addingConfig, setAddingConfig] = useState<{type: 'duty' | 'dress', mode: 'select' | 'custom'} | null>(null);
+  const [availableDuties, setAvailableDuties] = useState<{ key: string, label: string }[]>([]);
+  const [availableDress, setAvailableDress] = useState<{ key: string, label: string }[]>([]);
+  const [addingConfig, setAddingConfig] = useState<{ type: 'duty' | 'dress', mode: 'select' | 'custom' } | null>(null);
   const [addingConfigSelection, setAddingConfigSelection] = useState('');
   const [addingConfigCustom, setAddingConfigCustom] = useState('');
 
   // Payroll Form State
   const [showPayrollModal, setShowPayrollModal] = useState(false);
+  const [notePopup, setNotePopup] = useState<{
+    isOpen: boolean;
+    date: string;
+    note: string;
+  }>({ isOpen: false, date: '', note: '' });
+
   const [payrollForm, setPayrollForm] = useState({
-     month: new Date().toISOString().slice(0, 7),
-     basicSalary: 0,
-     presentDays: 30,
-     bonuses: 0,
-     bonusReason: '',
-     deductions: 0,
-     deductionReason: '',
+    month: new Date().toISOString().slice(0, 7),
+    basicSalary: 0,
+    presentDays: 30,
+    bonuses: 0,
+    bonusReason: '',
+    deductions: 0,
+    deductionReason: '',
   });
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
   // ─── Monthly Grid Logic ───────────────────────────────────────────────────
-  
+
   const [attendanceMap, setAttendanceMap] = useState<Record<string, HqDailyAttendanceRecord>>({});
   const [dressMap, setDressMap] = useState<Record<string, HqDailyDressCodeRecord>>({});
   const [dutyMap, setDutyMap] = useState<Record<string, HqDailyDutyRecord>>({});
@@ -182,23 +191,23 @@ export default function StaffProfilePage() {
     try {
       setLoading(true);
       const profile = await fetchStaffProfile(staffId);
-      
+
       if (!profile) {
         toast.error("Staff member not found");
         router.push('/hq/dashboard/manager/staff');
         return;
       }
-      
+
       setStaff(profile);
       setEditForm({
         name: profile.name || '',
-        designation: profile.role || '',
+        designation: profile.designation || '',
         monthlySalary: Number(profile.monthlySalary || 0),
-        dutyStartTime: '09:00',
-        dutyEndTime: '17:00',
+        dutyStartTime: profile.dutyStartTime || '09:00',
+        dutyEndTime: profile.dutyEndTime || '17:00',
         isActive: profile.isActive !== false,
         phone: profile.phone || '',
-        employeeId: profile.customId || '',
+        customId: profile.customId || '',
         userId: profile.staffId || '',
         dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : [
           { key: 'pant', label: 'Dress Pant' },
@@ -215,7 +224,7 @@ export default function StaffProfilePage() {
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
-      const slug = profile.dept.replace('-', '_');
+      const prefix = getDeptPrefix(profile.dept);
       const uid = profile.staffId;
       const days = daysInMonth();
       const start = days[0];
@@ -223,13 +232,13 @@ export default function StaffProfilePage() {
 
       // Robust fetching: Individual catches prevent total page failure if one collection fails
       const [attSnap, dressSnap, dutySnap, pointsSnap, salarySnap, tasksSnap, metaDoc] = await Promise.all([
-        getDocs(query(collection(db, `${slug}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${slug}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${slug}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), limit(1))).catch(e => { console.error('points fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, 'hq_salary_records'), where('staffId', '==', uid))).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
-        getDocs(query(collection(db, `${slug}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
-        getDoc(doc(db, `${slug}_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
+        getDocs(query(collection(db, `${prefix}_attendance`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('attendance fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_dress_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('dress fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_duty_logs`), where('staffId', '==', uid), where('date', '>=', start), where('date', '<=', end))).catch(e => { console.error('duty fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid), limit(1))).catch(e => { console.error('points fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
+        getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
+        getDoc(doc(db, `${prefix}_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
       ]);
 
       const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
@@ -266,7 +275,7 @@ export default function StaffProfilePage() {
 
       // Fetch growth history (all months)
       const historySnap = await getDocs(
-        query(collection(db, `${slug}_growth_points`), where('staffId', '==', uid), orderBy('month', 'desc'))
+        query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid), orderBy('month', 'desc'))
       );
       setGrowthHistory(historySnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
 
@@ -281,47 +290,47 @@ export default function StaffProfilePage() {
   const handleAddConfig = async () => {
     if (!staff || !addingConfig) return;
     const { type, mode } = addingConfig;
-    
-    let newItem: {key: string, label: string} | null = null;
+
+    let newItem: { key: string, label: string } | null = null;
 
     if (mode === 'select' && addingConfigSelection) {
-       const opts = type === 'duty' ? availableDuties : availableDress;
-       newItem = opts.find(o => o.key === addingConfigSelection) || null;
+      const opts = type === 'duty' ? availableDuties : availableDress;
+      newItem = opts.find(o => o.key === addingConfigSelection) || null;
     } else if (mode === 'custom' && addingConfigCustom.trim()) {
-       const label = addingConfigCustom.trim();
-       const key = label.toLowerCase().replace(/\s+/g, '_');
-       newItem = { key, label };
+      const label = addingConfigCustom.trim();
+      const key = label.toLowerCase().replace(/\s+/g, '_');
+      newItem = { key, label };
 
-       // Save backend to `_meta/config`
-       try {
-         const slug = staff.dept.replace('-', '_');
-         const metaRef = doc(db, `${slug}_meta`, 'config');
-         const metaDoc = await getDoc(metaRef);
-         const field = type === 'duty' ? 'customDuties' : 'customDress';
-         const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
-         if (!existing.find((e: any) => e.key === key)) {
-            await setDoc(metaRef, { [field]: [...existing, newItem] }, { merge: true });
-            toast.success(`${type === 'duty' ? 'Duty' : 'Dress Item'} stored globally to options list!`);
-         }
-         
-         // Update Local States
-         if (type === 'duty') setAvailableDuties(p => [...p, newItem!]);
-         else setAvailableDress(p => [...p, newItem!]);
-       } catch(e) {
-         console.error(e);
-         toast.error("Failed to commit custom config to backend metadata.");
-       }
+      // Save backend to `_meta/config`
+      try {
+        const slug = getDeptPrefix(staff.dept);
+        const metaRef = doc(db, `${slug}_meta`, 'config');
+        const metaDoc = await getDoc(metaRef);
+        const field = type === 'duty' ? 'customDuties' : 'customDress';
+        const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
+        if (!existing.find((e: any) => e.key === key)) {
+          await setDoc(metaRef, { [field]: [...existing, newItem] }, { merge: true });
+          toast.success(`${type === 'duty' ? 'Duty' : 'Dress Item'} stored globally to options list!`);
+        }
+
+        // Update Local States
+        if (type === 'duty') setAvailableDuties(p => [...p, newItem!]);
+        else setAvailableDress(p => [...p, newItem!]);
+      } catch (e) {
+        console.error(e);
+        toast.error("Failed to commit custom config to backend metadata.");
+      }
     }
 
     if (newItem) {
-       setEditForm(prev => {
-         const targetList = type === 'duty' ? prev.dutyConfig : prev.dressCodeConfig;
-         if (targetList.find(i => i.key === newItem!.key)) return prev;
-         return {
-           ...prev,
-           [type === 'duty' ? 'dutyConfig' : 'dressCodeConfig']: [...targetList, newItem!]
-         };
-       });
+      setEditForm(prev => {
+        const targetList = type === 'duty' ? prev.dutyConfig : prev.dressCodeConfig;
+        if (targetList.find(i => i.key === newItem!.key)) return prev;
+        return {
+          ...prev,
+          [type === 'duty' ? 'dutyConfig' : 'dressCodeConfig']: [...targetList, newItem!]
+        };
+      });
     }
 
     setAddingConfig(null);
@@ -333,10 +342,10 @@ export default function StaffProfilePage() {
   const toggleAttendance = async (date: string, next: any) => {
     try {
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
+      const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
       const ref = doc(db, `${slug}_attendance`, `${uid}_${date}`);
-      
+
       const prevRecord = attendanceMap[date] || {};
       const newRecord: HqDailyAttendanceRecord = {
         staffId: uid,
@@ -365,10 +374,10 @@ export default function StaffProfilePage() {
   const togglePunctuality = async (date: string, field: 'arrivedOnTime' | 'departedOnTime', next: boolean) => {
     try {
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
+      const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
       const ref = doc(db, `${slug}_attendance`, `${uid}_${date}`);
-      
+
       const prevRecord = attendanceMap[date] || {};
       const newRecord: HqDailyAttendanceRecord = {
         ...prevRecord,
@@ -387,10 +396,61 @@ export default function StaffProfilePage() {
 
       setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
       await setDoc(ref, newRecord, { merge: true });
+
+      if (!next && field === 'arrivedOnTime') {
+        setNotePopup({
+          isOpen: true,
+          date,
+          note: prevRecord.note || ''
+        });
+      }
+
       toast.success(next ? "Marked as On Time" : "Marked as Late");
     } catch (err) {
       toast.error("Update failed");
       fetchData();
+    }
+  };
+
+  const handleSaveNote = async () => {
+    if (!notePopup.date) return;
+    try {
+      if (!staff) return;
+      const slug = getDeptPrefix(staff.dept);
+      const uid = staff.staffId;
+      const ref = doc(db, `${slug}_attendance`, `${uid}_${notePopup.date}`);
+
+      await setDoc(ref, { note: notePopup.note }, { merge: true });
+      setAttendanceMap(prev => ({
+        ...prev,
+        [notePopup.date]: { ...prev[notePopup.date], note: notePopup.note }
+      }));
+      setNotePopup({ ...notePopup, isOpen: false });
+      toast.success("Note saved");
+    } catch (err) {
+      toast.error("Failed to save note");
+    }
+  };
+
+  const handleUpdateTime = async (date: string, field: 'arrivalTime' | 'departureTime', value: string) => {
+    try {
+      if (!staff) return;
+      const slug = getDeptPrefix(staff.dept);
+      const uid = staff.staffId;
+      const ref = doc(db, `${slug}_attendance`, `${uid}_${date}`);
+
+      const prevRecord = attendanceMap[date] || {};
+      const newRecord = {
+        ...prevRecord,
+        [field]: value,
+        status: prevRecord.status === 'unmarked' ? 'present' : prevRecord.status,
+        updatedAt: new Date().toISOString()
+      };
+
+      setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
+      await setDoc(ref, { [field]: value, status: newRecord.status }, { merge: true });
+    } catch (err) {
+      toast.error("Failed to update time");
     }
   };
 
@@ -406,14 +466,14 @@ export default function StaffProfilePage() {
 
   const handleTimePopupSave = async () => {
     if (!timePopup.date) return;
-    
+
     try {
       setSaving(true);
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
+      const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
       const ref = doc(db, `${slug}_attendance`, `${uid}_${timePopup.date}`);
-      
+
       // Payloads are PURELY strings, NO date objects used to prevent double-day entries
       const payload = {
         arrivalTime: timePopup.arrivalTime,
@@ -438,7 +498,7 @@ export default function StaffProfilePage() {
 
       // Single setDoc call as requested
       await setDoc(ref, payload, { merge: true });
-      
+
       toast.success("Timing updated");
       setTimePopup({ ...timePopup, isOpen: false });
     } catch (err) {
@@ -451,12 +511,12 @@ export default function StaffProfilePage() {
   const toggleDress = async (date: string, itemKey: string, next: any) => {
     try {
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
+      const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
       const ref = doc(db, `${slug}_dress_logs`, `${uid}_${date}`);
       const current = dressMap[date]?.items || [];
       const exists = current.find(i => i.key === itemKey);
-      
+
       let nextItems: HqDressCodeItem[] = [];
       if (exists) {
         nextItems = current.map(i => i.key === itemKey ? { ...i, status: next } : i);
@@ -484,7 +544,7 @@ export default function StaffProfilePage() {
   const toggleDuty = async (date: string, dutyKey: string, next: any) => {
     try {
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
+      const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
       const ref = doc(db, `${slug}_duty_logs`, `${uid}_${date}`);
       const current = dutyMap[date]?.duties || [];
@@ -518,7 +578,7 @@ export default function StaffProfilePage() {
     if (!newTaskText.trim() || !staff) return;
     try {
       setCreatingTask(true);
-      const slug = staff.dept.replace('-', '_');
+      const slug = getDeptPrefix(staff.dept);
       const newTask: Partial<HqSpecialTask> = {
         staffId: staff.staffId,
         description: newTaskText,
@@ -541,16 +601,16 @@ export default function StaffProfilePage() {
   const handleTaskActionManager = async (taskId: string, newStatus: 'assigned' | 'acknowledged' | 'completed') => {
     try {
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
-      await updateDoc(doc(db, `${slug}_special_tasks`, taskId), {
+      const prefix = getDeptPrefix(staff.dept);
+      await updateDoc(doc(db, `${prefix}_special_tasks`, taskId), {
         status: newStatus,
         ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : {})
       });
       if (newStatus === 'completed') {
-         await updateDoc(doc(db, `${slug}_growth_points`, `${staff.staffId}_${new Date().toISOString().slice(0,7)}`), {
-           extra: increment(1),
-           total: increment(1)
-         }).catch(e => console.log('Growth doc might not exist yet', e));
+        await updateDoc(doc(db, `${prefix}_growth_points`, `${staff.staffId}_${new Date().toISOString().slice(0, 7)}`), {
+          extra: increment(1),
+          total: increment(1)
+        }).catch(e => console.log('Growth doc might not exist yet', e));
       }
       toast.success(`Task marked as ${newStatus}`);
       fetchData();
@@ -560,41 +620,42 @@ export default function StaffProfilePage() {
   };
 
   const handleGenerateSlip = async () => {
-     try {
-       if (!staff) return;
-       const [y, m] = payrollForm.month.split('-');
-       const workingDays = new Date(Number(y), Number(m), 0).getDate();
-       const netSalary = Math.round((payrollForm.basicSalary / workingDays) * payrollForm.presentDays) + payrollForm.bonuses - payrollForm.deductions;
-       
-       const slip: Partial<SalarySlip> = {
-          staffId: staff.staffId,
-          employeeId: staff.customId || '',
-          staffName: staff.name || '',
-          department: staff.dept,
-          month: payrollForm.month,
-          basicSalary: payrollForm.basicSalary,
-          dailyWage: Math.round(payrollForm.basicSalary / workingDays),
-          workingDays,
-          presentDays: payrollForm.presentDays,
-          absentDays: workingDays - payrollForm.presentDays,
-          leaveDays: 0,
-          absentDeduction: 0,
-          bonus: payrollForm.bonuses,
-          bonusReason: payrollForm.bonusReason,
-          otherDeductions: payrollForm.deductions,
-          deductionReason: payrollForm.deductionReason,
-          netSalary,
-          status: 'draft',
-          createdAt: new Date().toISOString(),
-          createdBy: session?.uid || ''
-       };
-       await addDoc(collection(db, 'hq_salary_records'), slip);
-       toast.success("Salary Slip Generated");
-       setShowPayrollModal(false);
-       fetchData();
-     } catch (e) {
-       toast.error("Failed to generate slip");
-     }
+    try {
+      if (!staff) return;
+      const [y, m] = payrollForm.month.split('-');
+      const workingDays = new Date(Number(y), Number(m), 0).getDate();
+      const netSalary = Math.round((payrollForm.basicSalary / workingDays) * payrollForm.presentDays) + payrollForm.bonuses - payrollForm.deductions;
+
+      const slip: Partial<SalarySlip> = {
+        staffId: staff.staffId,
+        employeeId: staff.customId || '',
+        staffName: staff.name || '',
+        department: staff.dept,
+        month: payrollForm.month,
+        basicSalary: payrollForm.basicSalary,
+        dailyWage: Math.round(payrollForm.basicSalary / workingDays),
+        workingDays,
+        presentDays: payrollForm.presentDays,
+        absentDays: workingDays - payrollForm.presentDays,
+        leaveDays: 0,
+        absentDeduction: 0,
+        bonus: payrollForm.bonuses,
+        bonusReason: payrollForm.bonusReason,
+        otherDeductions: payrollForm.deductions,
+        deductionReason: payrollForm.deductionReason,
+        netSalary,
+        status: 'draft',
+        createdAt: new Date().toISOString(),
+        createdBy: session?.uid || ''
+      };
+      const salaryPrefix = getDeptPrefix(staff.dept);
+      await addDoc(collection(db, `${salaryPrefix}_salary_records`), slip);
+      toast.success("Salary Slip Generated");
+      setShowPayrollModal(false);
+      fetchData();
+    } catch (e) {
+      toast.error("Failed to generate slip");
+    }
   };
 
   useEffect(() => {
@@ -610,7 +671,7 @@ export default function StaffProfilePage() {
     try {
       setMarkingDuty(true);
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
+      const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
       await addDoc(collection(db, `${slug}_duty_logs`), {
         staffId: uid,
@@ -636,7 +697,7 @@ export default function StaffProfilePage() {
   const handleMarkAttendance = async (dateStr: string, status: 'present' | 'absent' | 'leave') => {
     try {
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
+      const slug = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
       const attId = `${uid}_${dateStr}`;
       await setDoc(doc(db, `${slug}_attendance`, attId), {
@@ -658,10 +719,10 @@ export default function StaffProfilePage() {
   const handleMarkDress = async (dateStr: string, isCompliant: boolean) => {
     try {
       if (!staff) return;
-      const slug = staff.dept.replace('-', '_');
+      const prefix = getDeptPrefix(staff.dept);
       const uid = staff.staffId;
       const logId = `${uid}_${dateStr}`;
-      await setDoc(doc(db, `${slug}_dress_logs`, logId), {
+      await setDoc(doc(db, `${prefix}_dress_logs`, logId), {
         staffId: uid,
         date: dateStr,
         isCompliant,
@@ -699,8 +760,7 @@ export default function StaffProfilePage() {
       const { uploadToCloudinary } = await import('@/lib/cloudinaryUpload');
       const url = await uploadToCloudinary(file, `khanhub/staff/${staff.dept}`);
 
-      const slug = staff.dept.replace('-', '_');
-      const collectionName = staff.dept === 'hq' ? 'hq_users' : `${slug}_users`;
+      const collectionName = getDeptCollection(staff.dept as StaffDept);
       await updateDoc(doc(db, collectionName, staff.staffId), {
         photoUrl: url
       });
@@ -717,14 +777,14 @@ export default function StaffProfilePage() {
     try {
       setSaving(true);
       if (!staff) return;
-      
+
       const res = await updateStaffProfile(staff.id, {
         ...editForm,
         updatedAt: serverTimestamp()
       });
-      
+
       if (!res.success) throw new Error(res.error);
-      
+
       toast.success("Profile updated successfully");
       fetchData();
     } catch (error) {
@@ -743,7 +803,7 @@ export default function StaffProfilePage() {
     try {
       setIsDeleting(true);
       const res = await deleteStaffProfile(staff.id); // Passing composite ID
-      
+
       if (res.success) {
         toast.success("Staff profile deleted successfully");
         router.push('/hq/dashboard/manager/staff');
@@ -776,100 +836,95 @@ export default function StaffProfilePage() {
           </Link>
 
           <div className="flex items-center gap-4">
-             <button 
-               onClick={handleRecalculate}
-               className={`p-2.5 rounded-xl transition-all shadow-sm ${isDark ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'bg-orange-50 text-orange-600 shadow-orange-100'}`}
-               title="Recalculate Growth Points"
-             >
-               <Target size={18} />
-             </button>
-             <div className={`h-6 w-px ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`} />
-             <div className="text-right hidden sm:block">
-               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Growth Points</p>
-               <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{growthPoints?.total || 0}</p>
-             </div>
+            <button
+              onClick={handleRecalculate}
+              className={`p-2.5 rounded-xl transition-all shadow-sm ${isDark ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'bg-orange-50 text-orange-600 shadow-orange-100'}`}
+              title="Recalculate Growth Points"
+            >
+              <Target size={18} />
+            </button>
+            <div className={`h-6 w-px ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`} />
+            <div className="text-right hidden sm:block">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Growth Points</p>
+              <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{growthPoints?.total || 0}</p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Sidebar */}
           <div className="lg:col-span-4 space-y-6">
-            <div className={`rounded-[2.5rem] p-8 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-colors ${
-              isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-            }`}>
-               <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-600 to-blue-700 opacity-20" />
-               
-               <div className="relative mt-4 mb-6 group">
-                 {staff?.photoUrl ? (
-                   <img src={staff.photoUrl} className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-transparent shadow-2xl" />
-                 ) : (
-                   <div className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center text-4xl font-black ring-8 shadow-inner ${
-                     isDark ? 'bg-zinc-800 text-zinc-600 ring-zinc-900/50' : 'bg-gray-100 text-gray-400 ring-white'
-                   }`}>
-                     {staff?.name?.[0]}
-                   </div>
-                 )}
-                 <label className={`absolute bottom-0 right-0 p-3 rounded-2xl shadow-xl cursor-pointer hover:scale-110 transition-transform ${
-                   isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'
-                 }`}>
-                    <Camera size={18} />
-                    <input type="file" className="hidden" onChange={handlePhotoUpload} accept="image/*" />
-                 </label>
-               </div>
+            <div className={`rounded-[2.5rem] p-8 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+              }`}>
+              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-600 to-blue-700 opacity-20" />
 
-               <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{staff?.name || 'Unknown Staff'}</h2>
-               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1 mb-4">{staff?.designation || 'Position N/A'}</p>
-               
-               <div className="flex flex-wrap justify-center gap-2 mb-6">
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                    isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-400' : 'bg-gray-50 border-gray-100 text-gray-500'
+              <div className="relative mt-4 mb-6 group">
+                {staff?.photoUrl ? (
+                  <img src={staff.photoUrl} className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-transparent shadow-2xl" />
+                ) : (
+                  <div className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center text-4xl font-black ring-8 shadow-inner ${isDark ? 'bg-zinc-800 text-zinc-600 ring-zinc-900/50' : 'bg-gray-100 text-gray-400 ring-white'
+                    }`}>
+                    {staff?.name?.[0]}
+                  </div>
+                )}
+                <label className={`absolute bottom-0 right-0 p-3 rounded-2xl shadow-xl cursor-pointer hover:scale-110 transition-transform ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'
                   }`}>
-                    ID: {staff?.customId || 'N/A'}
-                  </span>
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                     staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : (isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-gray-50 text-gray-600')
+                  <Camera size={18} />
+                  <input type="file" className="hidden" onChange={handlePhotoUpload} accept="image/*" />
+                </label>
+              </div>
+
+              <h2 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{staff?.name || 'Unknown Staff'}</h2>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1 mb-4">{staff?.designation || 'Position N/A'}</p>
+
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-400' : 'bg-gray-50 border-gray-100 text-gray-500'
                   }`}>
-                    {staff?.dept || 'General'}
-                  </span>
-               </div>
+                  ID: {staff?.customId || 'N/A'}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : (isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-gray-50 text-gray-600')
+                  }`}>
+                  {staff?.dept || 'General'}
+                </span>
+              </div>
 
-               <div className="w-full grid grid-cols-2 gap-4 mt-4">
-                  <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
-                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status</p>
-                     <p className={`font-black text-xs uppercase ${staff?.isActive !== false ? 'text-teal-500' : 'text-rose-500'}`}>
-                       {staff?.isActive !== false ? 'Active' : 'Inactive'}
-                     </p>
-                  </div>
-                  <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
-                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Salary</p>
-                     <p className={`font-black text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number(staff?.monthlySalary || 0).toLocaleString()}</p>
-                  </div>
-               </div>
+              <div className="w-full grid grid-cols-2 gap-4 mt-4">
+                <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status</p>
+                  <p className={`font-black text-xs uppercase ${staff?.isActive !== false ? 'text-teal-500' : 'text-rose-500'}`}>
+                    {staff?.isActive !== false ? 'Active' : 'Inactive'}
+                  </p>
+                </div>
+                <div className={`rounded-2xl p-4 text-left ${isDark ? 'bg-zinc-800/30' : 'bg-gray-50'}`}>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Salary</p>
+                  <p className={`font-black text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>₨{Number(staff?.monthlySalary || 0).toLocaleString()}</p>
+                </div>
+              </div>
 
-               <div className={`w-full mt-4 rounded-2xl p-4 text-left border ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-amber-50/50 border-amber-100'}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                     <Lock className={`w-3 h-3 ${isDark ? 'text-zinc-500' : 'text-amber-500'}`} />
-                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Portal Credentials</p>
+              <div className={`w-full mt-4 rounded-2xl p-4 text-left border ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-amber-50/50 border-amber-100'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Lock className={`w-3 h-3 ${isDark ? 'text-zinc-500' : 'text-amber-500'}`} />
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Portal Credentials</p>
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Login Email / ID</p>
+                    <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.email || staff?.customId || 'No Email Registered'}</p>
                   </div>
-                  <div className="space-y-2">
-                     <div>
-                       <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Login Email / ID</p>
-                       <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.email || staff?.customId || 'No Email Registered'}</p>
-                     </div>
-                     <div>
-                       <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Password</p>
-                       <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.defaultPassword || 'Custom (Reset Required)'}</p>
-                     </div>
+                  <div>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Password</p>
+                    <p className={`font-mono text-xs font-bold ${isDark ? 'text-teal-400' : 'text-indigo-600'}`}>{staff?.defaultPassword || 'Custom (Reset Required)'}</p>
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
 
             {/* Score Card */}
-            <ScoreCard 
-              staffName={staff?.name || 'Staff'} 
+            <ScoreCard
+              staffName={staff?.name || 'Staff'}
               month={growthPoints?.month || new Date().toISOString().slice(0, 7)}
               scores={growthPoints ? {
                 attendance: (growthPoints.attendance || 0) + (growthPoints.punctuality || 0),
@@ -883,271 +938,256 @@ export default function StaffProfilePage() {
 
           {/* Main Content */}
           <div className="lg:col-span-8 flex flex-col gap-6">
-            
+
 
             {/* Tabs */}
-            <div className={`p-1 rounded-[1.2rem] md:rounded-[1.5rem] border flex flex-wrap items-center justify-center gap-1 transition-colors ${
-              isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-            }`}>
-               {[
-                 { id: 'overview', label: 'History', icon: <Clock size={12}/> },
-                 { id: 'attendance', label: 'Attendance', icon: <Calendar size={12}/> },
-                 { id: 'payroll', label: 'Payroll', icon: <DollarSign size={12}/> },
-                 { id: 'dress', label: 'Dress Code', icon: <Shield size={12}/> },
-                 { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12}/> },
-                 { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12}/> },
-                 { id: 'edit', label: 'Edit Profile', icon: <User size={12}/> },
-               ].map(tab => (
-                 <button
-                   key={tab.id}
-                   onClick={() => setActiveTab(tab.id as any)}
-                   className={`flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[7px] min-[400px]:text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                     activeTab === tab.id 
-                       ? (isDark ? 'bg-white text-black shadow-xl shadow-white/5' : 'bg-gray-900 text-white shadow-lg shadow-gray-900/20') 
-                       : 'text-gray-500 hover:text-indigo-500'
-                   }`}
-                 >
-                   <span className="opacity-70">{tab.icon}</span> {tab.label}
-                 </button>
-               ))}
+            <div className={`p-1 rounded-[1.2rem] md:rounded-[1.5rem] border flex flex-wrap items-center justify-center gap-1 transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+              }`}>
+              {[
+                { id: 'overview', label: 'History', icon: <Clock size={12} /> },
+                { id: 'attendance', label: 'Attendance', icon: <Calendar size={12} /> },
+                { id: 'payroll', label: 'Payroll', icon: <DollarSign size={12} /> },
+                { id: 'dress', label: 'Dress Code', icon: <Shield size={12} /> },
+                { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12} /> },
+                { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12} /> },
+                { id: 'edit', label: 'Edit Profile', icon: <User size={12} /> },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[7px] min-[400px]:text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id
+                      ? (isDark ? 'bg-white text-black shadow-xl shadow-white/5' : 'bg-gray-900 text-white shadow-lg shadow-gray-900/20')
+                      : 'text-gray-500 hover:text-indigo-500'
+                    }`}
+                >
+                  <span className="opacity-70">{tab.icon}</span> {tab.label}
+                </button>
+              ))}
             </div>
 
             {/* Panels */}
             {activeTab === 'overview' && (
-               <div className="space-y-6">
+              <div className="space-y-6">
 
-                  {/* Special Tasks Module */}
-                  <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
-                    isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                {/* Special Tasks Module */}
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
                   }`}>
-                    <div className="flex items-center justify-between mb-6">
-                       <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                         <Sparkles className="text-purple-500" /> Special Tasks & Missions
-                       </h3>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2 mb-6">
-                       <input 
-                         type="text" 
-                         className={`flex-1 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${
-                                  isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
-                         }`}
-                         placeholder="Describe the temporary task..."
-                         value={newTaskText}
-                         onChange={e => setNewTaskText(e.target.value)}
-                       />
-                       <button
-                         onClick={handleCreateSpecialTask}
-                         disabled={creatingTask || !newTaskText.trim()}
-                         className="px-6 py-3 rounded-2xl bg-purple-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all disabled:opacity-50"
-                       >
-                         Assign Task
-                       </button>
-                    </div>
-
-                    <div className="space-y-3">
-                      {specialTasks.length === 0 ? (
-                         <div className="py-6 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No active tasks</div>
-                      ) : (
-                         specialTasks.map(task => (
-                           <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${
-                             task.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100') : 
-                             isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-100'
-                           }`}>
-                             <div>
-                                <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Assigned by {task.assignedByName}</p>
-                             </div>
-                             <div className="flex items-center gap-2">
-                                <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                  task.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600' :
-                                  task.status === 'acknowledged' ? 'bg-blue-500/20 text-blue-600' : 'bg-amber-500/20 text-amber-600'
-                                }`}>
-                                  {task.status}
-                                </span>
-                             </div>
-                           </div>
-                         ))
-                      )}
-                    </div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <Sparkles className="text-purple-500" /> Special Tasks & Missions
+                    </h3>
                   </div>
-
-                  {/* Today's Quick Operations Assessment */}
-                  <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
-                    isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-                  }`}>
-                     <div className="flex flex-col sm:flex-row justify-between mb-8">
-                       <div>
-                         <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                           <Award className="text-indigo-500" /> Today&apos;s Daily Checklist
-                         </h3>
-                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{formatDateDMY(new Date(todayStr))}</p>
-                       </div>
-                     </div>
-                     
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                       {/* Dress Code Section */}
-                       <div>
-                          <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Uniform Items</h4>
-                          <div className="space-y-2">
-                            {(staff?.dressCodeConfig?.length ? staff.dressCodeConfig : [
-                              { key: 'pant', label: 'Dress Pant' },
-                              { key: 'shirt', label: 'Uniform Shirt' },
-                              { key: 'shoes', label: 'Black Shoes' },
-                              { key: 'id_card', label: 'ID Card' }
-                            ]).map((dress: any) => {
-                               const dayRecord = dressMap[todayStr];
-                               const status = dayRecord?.items?.find((i: any) => i.key === dress.key)?.status || 'na';
-                               return (
-                                 <div key={dress.key} className="flex items-center justify-between">
-                                    <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{dress.label}</span>
-                                    <HqCheckCell type="dresscode" size="md" value={status} onToggle={(next) => toggleDress(todayStr, dress.key, next)} />
-                                 </div>
-                               );
-                            })}
-                          </div>
-                       </div>
-                       
-                       {/* Duties Section */}
-                       <div>
-                          <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4">Punctuality Score</h4>
-                          <div className="flex flex-wrap gap-2 mb-8">
-                             <button 
-                               onClick={() => togglePunctuality(todayStr, "arrivedOnTime", !attendanceMap[todayStr]?.arrivedOnTime)} 
-                               className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivedOnTime ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
-                             >
-                               <Clock size={12} /> {attendanceMap[todayStr]?.arrivedOnTime ? "Arr On Time" : "Arr Timing"}
-                             </button>
-                             <button 
-                               onClick={() => togglePunctuality(todayStr, "departedOnTime", !attendanceMap[todayStr]?.departedOnTime)} 
-                               className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.departedOnTime ? "bg-teal-600 text-white shadow-sm shadow-teal-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
-                             >
-                               <Clock size={12} /> {attendanceMap[todayStr]?.departedOnTime ? "Dep On Time" : "Dep Timing"}
-                             </button>
-                          </div>
-
-                          <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Operational Duties</h4>
-                          <div className="space-y-2">
-                            {(staff?.dutyConfig?.length ? staff.dutyConfig : [
-                              { key: 'attendance_portal', label: 'Attendance Entry' },
-                              { key: 'patient_vitals', label: 'Patient Vitals' },
-                              { key: 'ward_round', label: 'Ward Round' },
-                              { key: 'cleanliness', label: 'Area Cleanliness' }
-                            ]).map((duty: any) => {
-                               const dayRecord = dutyMap[todayStr];
-                               const status = dayRecord?.duties?.find((i: any) => i.key === duty.key)?.status || 'na';
-                               return (
-                                 <div key={duty.key} className="flex items-center justify-between">
-                                    <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{duty.label}</span>
-                                    <HqCheckCell type="duty" size="md" value={status} onToggle={(next) => toggleDuty(todayStr, duty.key, next)} />
-                                 </div>
-                               );
-                            })}
-                          </div>
-                       </div>
-                     </div>
-                     
-                     <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Attendance</span>
-                        <div className="flex flex-wrap gap-2">
-                           <button onClick={() => toggleAttendance(todayStr, 'present')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'present' ? 'bg-teal-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Present</button>
-                           <button onClick={() => toggleAttendance(todayStr, 'absent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Absent</button>
-                           <button onClick={() => toggleAttendance(todayStr, 'paid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'paid_leave' ? 'bg-blue-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Paid Leave</button>
-                           <button onClick={() => toggleAttendance(todayStr, 'unpaid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-purple-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Unpd Leave</button>
-                        </div>
-                     </div>
-                  </div>
-
-                  {/* Mark Duty Module */}
-                  <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${
-                    isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
-                  }`}>
-                     <h3 className={`text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                       <Award className="text-indigo-500" /> Assess Daily Duty
-                     </h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                           <div>
-                              <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Duty Type</label>
-                              <select 
-                                className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${
-                                  isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
-                                }`}
-                                value={dutyForm.type}
-                                onChange={e => setDutyForm({...dutyForm, type: e.target.value})}
-                              >
-                                <option value="morning_shift">Morning Shift</option>
-                                <option value="evening_shift">Evening Shift</option>
-                                <option value="night_shift">Night Shift</option>
-                                <option value="special_duty">Special Duty</option>
-                              </select>
-                           </div>
-                           <div className="flex gap-2">
-                              <button 
-                                onClick={() => setDutyForm({...dutyForm, status: 'completed'})}
-                                className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                                  dutyForm.status === 'completed' 
-                                    ? 'bg-teal-500 border-teal-500 text-white shadow-lg' 
-                                    : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
-                                }`}
-                              >Completed</button>
-                              <button 
-                                onClick={() => setDutyForm({...dutyForm, status: 'not_completed'})}
-                                className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                                  dutyForm.status === 'not_completed' 
-                                    ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
-                                    : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
-                                }`}
-                              >Penalty</button>
-                           </div>
-                        </div>
-                        <div className="space-y-4">
-                           <textarea 
-                              placeholder="Operational performance notes..."
-                              className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[120px] md:min-h-[100px] ${
-                                isDark ? 'bg-zinc-800 text-white placeholder:text-zinc-600' : 'bg-gray-50 text-gray-900'
-                              }`}
-                              value={dutyForm.comment}
-                              onChange={e => setDutyForm({...dutyForm, comment: e.target.value})}
-                           />
-                        </div>
-                     </div>
-                     <button 
-                        onClick={handleMarkDuty}
-                        disabled={markingDuty}
-                        className={`w-full py-4 mt-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl disabled:opacity-50 transition-all ${
-                          isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-gray-900 text-white hover:bg-black'
+                  <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                    <input
+                      type="text"
+                      className={`flex-1 border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
                         }`}
-                     >
-                        {markingDuty ? 'Recording...' : 'Finalize Assessment'}
-                     </button>
+                      placeholder="Describe the temporary task..."
+                      value={newTaskText}
+                      onChange={e => setNewTaskText(e.target.value)}
+                    />
+                    <button
+                      onClick={handleCreateSpecialTask}
+                      disabled={creatingTask || !newTaskText.trim()}
+                      className="px-6 py-3 rounded-2xl bg-purple-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all disabled:opacity-50"
+                    >
+                      Assign Task
+                    </button>
                   </div>
 
-                  {dutyLogs.length === 0 ? <div className="p-20 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
-                    dutyLogs.map(log => (
-                      <div key={log.id} className={`p-6 rounded-[2.5rem] shadow-sm border flex items-start gap-4 transition-all hover:scale-[1.01] ${
-                        isDark ? 'bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200'
-                      }`}>
-                        <div className={`p-3 rounded-2xl ${log.status === 'completed' ? 'bg-teal-500/10 text-teal-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                           <Award size={20} />
-                        </div>
-                        <div className="flex-1">
-                           <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className={`font-black capitalize text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{log.dutyType?.replace(/_/g, ' ')}</h4>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{formatStaffDate(log.date || log.createdAt)}</p>
-                              </div>
-                              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                log.status === 'completed' ? 'bg-teal-500/20 text-teal-500' : 'bg-rose-500/20 text-rose-500'
+                  <div className="space-y-3">
+                    {specialTasks.length === 0 ? (
+                      <div className="py-6 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No active tasks</div>
+                    ) : (
+                      specialTasks.map(task => (
+                        <div key={task.id} className={`p-4 rounded-2xl border flex items-center justify-between ${task.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100') :
+                            isDark ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-100'
+                          }`}>
+                          <div>
+                            <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Assigned by {task.assignedByName}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${task.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600' :
+                                task.status === 'acknowledged' ? 'bg-blue-500/20 text-blue-600' : 'bg-amber-500/20 text-amber-600'
                               }`}>
-                                {log.status}
-                              </span>
-                           </div>
-                           <p className={`text-sm mt-3 italic leading-relaxed ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>{log.comment || 'No assessment recorded'}</p>
+                              {task.status}
+                            </span>
+                          </div>
                         </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Today's Quick Operations Assessment */}
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                  }`}>
+                  <div className="flex flex-col sm:flex-row justify-between mb-8">
+                    <div>
+                      <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        <Award className="text-indigo-500" /> Today&apos;s Daily Checklist
+                      </h3>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{formatDateDMY(new Date(todayStr))}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Dress Code Section */}
+                    <div>
+                      <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Uniform Items</h4>
+                      <div className="space-y-2">
+                        {(staff?.dressCodeConfig?.length ? staff.dressCodeConfig : [
+                          { key: 'pant', label: 'Dress Pant' },
+                          { key: 'shirt', label: 'Uniform Shirt' },
+                          { key: 'shoes', label: 'Black Shoes' },
+                          { key: 'id_card', label: 'ID Card' }
+                        ]).map((dress: any) => {
+                          const dayRecord = dressMap[todayStr];
+                          const status = dayRecord?.items?.find((i: any) => i.key === dress.key)?.status || 'na';
+                          return (
+                            <div key={dress.key} className="flex items-center justify-between">
+                              <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{dress.label}</span>
+                              <HqCheckCell type="dresscode" size="md" value={status} onToggle={(next) => toggleDress(todayStr, dress.key, next)} />
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))
-                  )}
-               </div>
+                    </div>
+
+                    {/* Duties Section */}
+                    <div>
+                      <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4">Punctuality Score</h4>
+                      <div className="flex flex-wrap gap-2 mb-8">
+                        <button
+                          onClick={() => togglePunctuality(todayStr, "arrivedOnTime", !attendanceMap[todayStr]?.arrivedOnTime)}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivedOnTime ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
+                        >
+                          <Clock size={12} /> {attendanceMap[todayStr]?.arrivedOnTime ? "Arr On Time" : "Arr Timing"}
+                        </button>
+                        <button
+                          onClick={() => togglePunctuality(todayStr, "departedOnTime", !attendanceMap[todayStr]?.departedOnTime)}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.departedOnTime ? "bg-teal-600 text-white shadow-sm shadow-teal-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
+                        >
+                          <Clock size={12} /> {attendanceMap[todayStr]?.departedOnTime ? "Dep On Time" : "Dep Timing"}
+                        </button>
+                      </div>
+
+                      <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Operational Duties</h4>
+                      <div className="space-y-2">
+                        {(staff?.dutyConfig?.length ? staff.dutyConfig : [
+                          { key: 'attendance_portal', label: 'Attendance Entry' },
+                          { key: 'patient_vitals', label: 'Patient Vitals' },
+                          { key: 'ward_round', label: 'Ward Round' },
+                          { key: 'cleanliness', label: 'Area Cleanliness' }
+                        ]).map((duty: any) => {
+                          const dayRecord = dutyMap[todayStr];
+                          const status = dayRecord?.duties?.find((i: any) => i.key === duty.key)?.status || 'na';
+                          return (
+                            <div key={duty.key} className="flex items-center justify-between">
+                              <span className={`text-xs font-bold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{duty.label}</span>
+                              <HqCheckCell type="duty" size="md" value={status} onToggle={(next) => toggleDuty(todayStr, duty.key, next)} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Attendance</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => toggleAttendance(todayStr, 'present')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'present' ? 'bg-teal-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Present</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'absent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'absent' ? 'bg-rose-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Absent</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'paid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'paid_leave' ? 'bg-blue-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Paid Leave</button>
+                      <button onClick={() => toggleAttendance(todayStr, 'unpaid_leave')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceMap[todayStr]?.status === 'unpaid_leave' ? 'bg-purple-500 text-white' : (isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500')}`}>Unpd Leave</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mark Duty Module */}
+                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
+                  }`}>
+                  <h3 className={`text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <Award className="text-indigo-500" /> Assess Daily Duty
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Duty Type</label>
+                        <select
+                          className={`w-full border-none rounded-2xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-50 text-gray-900'
+                            }`}
+                          value={dutyForm.type}
+                          onChange={e => setDutyForm({ ...dutyForm, type: e.target.value })}
+                        >
+                          <option value="morning_shift">Morning Shift</option>
+                          <option value="evening_shift">Evening Shift</option>
+                          <option value="night_shift">Night Shift</option>
+                          <option value="special_duty">Special Duty</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDutyForm({ ...dutyForm, status: 'completed' })}
+                          className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${dutyForm.status === 'completed'
+                              ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
+                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                            }`}
+                        >Completed</button>
+                        <button
+                          onClick={() => setDutyForm({ ...dutyForm, status: 'not_completed' })}
+                          className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${dutyForm.status === 'not_completed'
+                              ? 'bg-rose-500 border-rose-500 text-white shadow-lg'
+                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
+                            }`}
+                        >Penalty</button>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <textarea
+                        placeholder="Operational performance notes..."
+                        className={`w-full border-none rounded-2xl px-4 py-4 text-sm font-medium outline-none h-full min-h-[120px] md:min-h-[100px] ${isDark ? 'bg-zinc-800 text-white placeholder:text-zinc-600' : 'bg-gray-50 text-gray-900'
+                          }`}
+                        value={dutyForm.comment}
+                        onChange={e => setDutyForm({ ...dutyForm, comment: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleMarkDuty}
+                    disabled={markingDuty}
+                    className={`w-full py-4 mt-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl disabled:opacity-50 transition-all ${isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-gray-900 text-white hover:bg-black'
+                      }`}
+                  >
+                    {markingDuty ? 'Recording...' : 'Finalize Assessment'}
+                  </button>
+                </div>
+
+                {dutyLogs.length === 0 ? <div className="p-20 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No history found</div> : (
+                  dutyLogs.map(log => (
+                    <div key={log.id} className={`p-6 rounded-[2.5rem] shadow-sm border flex items-start gap-4 transition-all hover:scale-[1.01] ${isDark ? 'bg-zinc-900/50 border-zinc-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200'
+                      }`}>
+                      <div className={`p-3 rounded-2xl ${log.status === 'completed' ? 'bg-teal-500/10 text-teal-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                        <Award size={20} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className={`font-black capitalize text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{log.dutyType?.replace(/_/g, ' ')}</h4>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{formatStaffDate(log.date || log.createdAt)}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${log.status === 'completed' ? 'bg-teal-500/20 text-teal-500' : 'bg-rose-500/20 text-rose-500'
+                            }`}>
+                            {log.status}
+                          </span>
+                        </div>
+                        <p className={`text-sm mt-3 italic leading-relaxed ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>{log.comment || 'No assessment recorded'}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
 
             {activeTab === 'attendance' && (
@@ -1155,8 +1195,8 @@ export default function StaffProfilePage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                   <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Monthly Attendance Grid</h3>
                   <div className="flex gap-2 w-full sm:w-auto">
-                    <input 
-                      type="month" 
+                    <input
+                      type="month"
                       value={selectedMonth}
                       onChange={e => setSelectedMonth(e.target.value)}
                       className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-black border-none outline-none ${isDark ? 'bg-zinc-800 text-white' : 'bg-gray-100 text-gray-900'}`}
@@ -1165,7 +1205,7 @@ export default function StaffProfilePage() {
                 </div>
 
                 <div className="overflow-x-auto no-scrollbar -mx-4 sm:-mx-8 px-4 sm:px-8">
-                   <div className="inline-block min-w-[800px] w-full align-middle">
+                  <div className="inline-block min-w-[800px] w-full align-middle">
                     <table className="min-w-full">
                       <thead>
                         <tr>
@@ -1184,10 +1224,10 @@ export default function StaffProfilePage() {
                           </td>
                           {daysInMonth().map(d => (
                             <td key={d} className="px-1 py-6 text-center">
-                              <HqCheckCell 
+                              <HqCheckCell
                                 type="attendance"
                                 size="md"
-                                value={attendanceMap[d]?.status || 'unmarked'} 
+                                value={attendanceMap[d]?.status || 'unmarked'}
                                 onToggle={(next) => toggleAttendance(d, next)}
                               />
                             </td>
@@ -1198,14 +1238,19 @@ export default function StaffProfilePage() {
                             <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500/50">Shift In</span>
                           </td>
                           {daysInMonth().map(d => (
-                            <td 
-                              key={d} 
-                              className="px-1 py-4 text-center cursor-pointer hover:bg-indigo-500/10 rounded-lg group transition-all"
-                              onClick={() => handleAttendanceCell(d)}
+                            <td
+                              key={d}
+                              className="px-1 py-4 text-center"
                             >
-                              <span className={`text-[10px] font-black transition-all ${attendanceMap[d]?.arrivalTime ? (isDark ? 'text-white' : 'text-gray-900') : 'text-zinc-500/30'}`}>
-                                {attendanceMap[d]?.arrivalTime || '--'}
-                              </span>
+                              <input
+                                type="time"
+                                value={attendanceMap[d]?.arrivalTime || ''}
+                                onChange={e => handleUpdateTime(d, 'arrivalTime', e.target.value)}
+                                className={`w-14 h-8 text-[10px] font-black text-center rounded-md border-none outline-none transition-all ${attendanceMap[d]?.arrivalTime
+                                    ? (isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600')
+                                    : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
+                                  }`}
+                              />
                             </td>
                           ))}
                         </tr>
@@ -1214,13 +1259,31 @@ export default function StaffProfilePage() {
                             <span className="text-[8px] font-black uppercase tracking-widest text-teal-500/50">Arr On Time</span>
                           </td>
                           {daysInMonth().map(d => (
-                            <td key={d} className="px-1 py-2 text-center">
-                              <HqCheckCell 
-                                type="dresscode"
-                                size="sm"
-                                value={attendanceMap[d]?.arrivedOnTime ? 'yes' : attendanceMap[d]?.arrivedOnTime === false ? 'no' : 'na'} 
-                                onToggle={(next) => togglePunctuality(d, 'arrivedOnTime', next === 'yes')}
-                              />
+                            <td key={d} className="px-1 py-2 text-center group relative">
+                              <div className="flex flex-col items-center gap-1">
+                                <HqCheckCell
+                                  type="dresscode"
+                                  size="sm"
+                                  value={attendanceMap[d]?.arrivedOnTime ? 'yes' : attendanceMap[d]?.arrivedOnTime === false ? 'no' : 'na'}
+                                  onToggle={(next) => togglePunctuality(d, 'arrivedOnTime', next === 'yes')}
+                                />
+                                {attendanceMap[d]?.note && (
+                                  <button
+                                    onClick={() => setNotePopup({ isOpen: true, date: d, note: attendanceMap[d].note || '' })}
+                                    className="text-[8px] text-amber-500 hover:text-amber-600 font-black uppercase transition-all"
+                                  >
+                                    Note
+                                  </button>
+                                )}
+                                {attendanceMap[d]?.arrivedOnTime === false && !attendanceMap[d]?.note && (
+                                  <button
+                                    onClick={() => setNotePopup({ isOpen: true, date: d, note: '' })}
+                                    className="opacity-0 group-hover:opacity-100 text-[8px] text-zinc-500 hover:text-indigo-500 font-black uppercase transition-all"
+                                  >
+                                    +Note
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           ))}
                         </tr>
@@ -1229,14 +1292,19 @@ export default function StaffProfilePage() {
                             <span className="text-[9px] font-black uppercase tracking-widest text-rose-500/50">Shift Out</span>
                           </td>
                           {daysInMonth().map(d => (
-                            <td 
-                              key={d} 
-                              className="px-1 py-4 text-center cursor-pointer hover:bg-rose-500/10 rounded-lg group transition-all"
-                              onClick={() => handleAttendanceCell(d)}
+                            <td
+                              key={d}
+                              className="px-1 py-4 text-center"
                             >
-                              <span className={`text-[10px] font-black transition-all ${attendanceMap[d]?.departureTime ? (isDark ? 'text-white' : 'text-gray-900') : 'text-zinc-500/30'}`}>
-                                {attendanceMap[d]?.departureTime || '--'}
-                              </span>
+                              <input
+                                type="time"
+                                value={attendanceMap[d]?.departureTime || ''}
+                                onChange={e => handleUpdateTime(d, 'departureTime', e.target.value)}
+                                className={`w-14 h-8 text-[10px] font-black text-center rounded-md border-none outline-none transition-all ${attendanceMap[d]?.departureTime
+                                    ? (isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-rose-50 text-rose-600')
+                                    : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
+                                  }`}
+                              />
                             </td>
                           ))}
                         </tr>
@@ -1245,11 +1313,11 @@ export default function StaffProfilePage() {
                             <span className="text-[8px] font-black uppercase tracking-widest text-rose-500/50">Dep On Time</span>
                           </td>
                           {daysInMonth().map(d => (
-                            <td key={d} className="px-1 py-2 text-center">
-                              <HqCheckCell 
+                            <td key={d} className="px-1 py-2 text-center text-center">
+                              <HqCheckCell
                                 type="dresscode"
                                 size="sm"
-                                value={attendanceMap[d]?.departedOnTime ? 'yes' : attendanceMap[d]?.departedOnTime === false ? 'no' : 'na'} 
+                                value={attendanceMap[d]?.departedOnTime ? 'yes' : attendanceMap[d]?.departedOnTime === false ? 'no' : 'na'}
                                 onToggle={(next) => togglePunctuality(d, 'departedOnTime', next === 'yes')}
                               />
                             </td>
@@ -1298,10 +1366,10 @@ export default function StaffProfilePage() {
                               const dressStatus = dayRecord?.items?.find(i => i.key === dress.key)?.status || 'na';
                               return (
                                 <td key={d} className="px-1 py-6 text-center">
-                                  <HqCheckCell 
+                                  <HqCheckCell
                                     type="dresscode"
                                     size="md"
-                                    value={dressStatus as any} 
+                                    value={dressStatus as any}
                                     onToggle={(next) => toggleDress(d, dress.key, next)}
                                   />
                                 </td>
@@ -1352,10 +1420,10 @@ export default function StaffProfilePage() {
                               const dutyStatus = dayRecord?.duties?.find(i => i.key === duty.key)?.status || 'na';
                               return (
                                 <td key={d} className="px-1 py-6 text-center">
-                                  <HqCheckCell 
+                                  <HqCheckCell
                                     type="duty"
                                     size="md"
-                                    value={dutyStatus as any} 
+                                    value={dutyStatus as any}
                                     onToggle={(next) => toggleDuty(d, duty.key, next)}
                                   />
                                 </td>
@@ -1371,9 +1439,8 @@ export default function StaffProfilePage() {
             )}
 
             {activeTab === 'edit' && (
-              <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${
-                isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'
-              }`}>
+              <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'
+                }`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
                   <div>
                     <h3 className="text-xl font-black uppercase tracking-tight italic">Profile Optimization</h3>
@@ -1384,7 +1451,7 @@ export default function StaffProfilePage() {
                     disabled={saving}
                     className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {saving ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14}/>}
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                     {saving ? 'Synchronizing...' : 'Save Changes'}
                   </button>
                 </div>
@@ -1397,9 +1464,8 @@ export default function StaffProfilePage() {
                         type="text"
                         value={editForm.name}
                         onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
-                          isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                        }`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                          }`}
                       />
                     </div>
                     <div>
@@ -1408,9 +1474,8 @@ export default function StaffProfilePage() {
                         type="text"
                         value={editForm.designation}
                         onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
-                          isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                        }`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                          }`}
                       />
                     </div>
                     <div>
@@ -1419,9 +1484,18 @@ export default function StaffProfilePage() {
                         type="number"
                         value={editForm.monthlySalary}
                         onChange={e => setEditForm({ ...editForm, monthlySalary: Number(e.target.value) })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
-                          isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                        }`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                          }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Custom ID</label>
+                      <input
+                        type="text"
+                        value={editForm.customId}
+                        onChange={e => setEditForm({ ...editForm, customId: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                          }`}
                       />
                     </div>
                   </div>
@@ -1434,9 +1508,8 @@ export default function StaffProfilePage() {
                           type="time"
                           value={editForm.dutyStartTime}
                           onChange={e => setEditForm({ ...editForm, dutyStartTime: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
-                            isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                          }`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                            }`}
                         />
                       </div>
                       <div>
@@ -1445,9 +1518,8 @@ export default function StaffProfilePage() {
                           type="time"
                           value={editForm.dutyEndTime}
                           onChange={e => setEditForm({ ...editForm, dutyEndTime: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
-                            isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                          }`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                            }`}
                         />
                       </div>
                     </div>
@@ -1456,33 +1528,31 @@ export default function StaffProfilePage() {
                       <div className="flex gap-4">
                         <button
                           onClick={() => setEditForm({ ...editForm, isActive: true })}
-                          className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                            editForm.isActive 
-                              ? 'bg-teal-500 border-teal-500 text-white shadow-lg' 
+                          className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${editForm.isActive
+                              ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
                               : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
-                          }`}
+                            }`}
                         >Active</button>
                         <button
                           onClick={() => setEditForm({ ...editForm, isActive: false })}
-                          className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                            !editForm.isActive 
-                              ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
+                          className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${!editForm.isActive
+                              ? 'bg-rose-500 border-rose-500 text-white shadow-lg'
                               : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
-                          }`}
+                            }`}
                         >Inactive</button>
                       </div>
                     </div>
                     <div className={`p-6 rounded-[2rem] border transition-colors ${isDark ? 'bg-indigo-500/5 border-indigo-500/10' : 'bg-indigo-50 border-indigo-100'}`}>
-                       <div className="flex items-center gap-3 mb-2 text-indigo-500">
-                         <Shield size={16} />
-                         <p className="text-[10px] font-black uppercase tracking-widest">Security Credentials</p>
-                       </div>
-                       <p className={`text-[10px] font-bold leading-relaxed ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
-                         User Login: <span className={isDark ? 'text-white' : 'text-gray-900'}>{editForm.userId}</span><br />
-                         Internal ID: <span className={isDark ? 'text-white' : 'text-gray-900'}>{editForm.employeeId}</span>
-                         <br /><br />
-                         Unique identifiers are permanently locked to ensure data integrity across historical logs.
-                       </p>
+                      <div className="flex items-center gap-3 mb-2 text-indigo-500">
+                        <Shield size={16} />
+                        <p className="text-[10px] font-black uppercase tracking-widest">Security Credentials</p>
+                      </div>
+                      <p className={`text-[10px] font-bold leading-relaxed ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
+                        User Login: <span className={isDark ? 'text-white' : 'text-gray-900'}>{editForm.userId}</span><br />
+                        Internal ID: <span className={isDark ? 'text-white' : 'text-gray-900'}>{editForm.customId}</span>
+                        <br /><br />
+                        Unique identifiers are permanently locked to ensure data integrity across historical logs.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1493,52 +1563,52 @@ export default function StaffProfilePage() {
                   <div className={`p-8 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-50/50 border-gray-100'}`}>
                     <div className="flex items-center justify-between mb-6">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Dress Code Items</h4>
-                      <button 
+                      <button
                         onClick={() => setAddingConfig({ type: 'dress', mode: 'select' })}
                         className="p-2.5 rounded-xl bg-indigo-500 text-white hover:scale-105 transition-all shadow-lg shadow-indigo-500/20"
                       >
-                         <Plus size={14} />
+                        <Plus size={14} />
                       </button>
                     </div>
 
                     {addingConfig?.type === 'dress' && (
-                       <div className={`p-4 rounded-2xl border mb-6 transition-all ${isDark ? 'bg-zinc-900/80 border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'bg-white border-indigo-200 shadow-xl shadow-indigo-500/10'}`}>
-                          <div className="flex flex-col gap-3">
-                             {addingConfig.mode === 'select' ? (
-                               <select 
-                                 className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
-                                 value={addingConfigSelection}
-                                 onChange={e => {
-                                   if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
-                                   else setAddingConfigSelection(e.target.value);
-                                 }}
-                               >
-                                 <option value="" disabled>Select a preset dress item...</option>
-                                 {availableDress.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-                                 <option value="__custom__">+ Create Custom Label...</option>
-                               </select>
-                             ) : (
-                               <input 
-                                 type="text" 
-                                 placeholder="Type a new global dress code item (e.g. Scarf)" 
-                                 autoFocus
-                                 className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-indigo-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
-                                 value={addingConfigCustom}
-                                 onChange={e => setAddingConfigCustom(e.target.value)}
-                               />
-                             )}
-                             <div className="flex gap-2 mt-1">
-                               <button onClick={handleAddConfig} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
-                               <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
-                             </div>
+                      <div className={`p-4 rounded-2xl border mb-6 transition-all ${isDark ? 'bg-zinc-900/80 border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'bg-white border-indigo-200 shadow-xl shadow-indigo-500/10'}`}>
+                        <div className="flex flex-col gap-3">
+                          {addingConfig.mode === 'select' ? (
+                            <select
+                              className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                              value={addingConfigSelection}
+                              onChange={e => {
+                                if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
+                                else setAddingConfigSelection(e.target.value);
+                              }}
+                            >
+                              <option value="" disabled>Select a preset dress item...</option>
+                              {availableDress.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                              <option value="__custom__">+ Create Custom Label...</option>
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="Type a new global dress code item (e.g. Scarf)"
+                              autoFocus
+                              className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-indigo-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
+                              value={addingConfigCustom}
+                              onChange={e => setAddingConfigCustom(e.target.value)}
+                            />
+                          )}
+                          <div className="flex gap-2 mt-1">
+                            <button onClick={handleAddConfig} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
                           </div>
-                       </div>
+                        </div>
+                      </div>
                     )}
                     <div className="space-y-3">
                       {editForm.dressCodeConfig.map((item, idx) => (
                         <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                           <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
-                          <button 
+                          <button
                             onClick={() => {
                               setEditForm(prev => ({
                                 ...prev,
@@ -1558,52 +1628,52 @@ export default function StaffProfilePage() {
                   <div className={`p-8 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-50/50 border-gray-100'}`}>
                     <div className="flex items-center justify-between mb-6">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-500">Scheduled Duties</h4>
-                      <button 
+                      <button
                         onClick={() => setAddingConfig({ type: 'duty', mode: 'select' })}
                         className="p-2.5 rounded-xl bg-teal-500 text-white hover:scale-105 transition-all shadow-lg shadow-teal-500/20"
                       >
-                         <Plus size={14} />
+                        <Plus size={14} />
                       </button>
                     </div>
 
                     {addingConfig?.type === 'duty' && (
-                       <div className={`p-4 rounded-2xl border mb-6 transition-all ${isDark ? 'bg-zinc-900/80 border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.1)]' : 'bg-white border-teal-200 shadow-xl shadow-teal-500/10'}`}>
-                          <div className="flex flex-col gap-3">
-                             {addingConfig.mode === 'select' ? (
-                               <select 
-                                 className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-teal-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-teal-500'}`}
-                                 value={addingConfigSelection}
-                                 onChange={e => {
-                                   if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
-                                   else setAddingConfigSelection(e.target.value);
-                                 }}
-                               >
-                                 <option value="" disabled>Select a preset duty...</option>
-                                 {availableDuties.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-                                 <option value="__custom__">+ Create Custom Duty...</option>
-                               </select>
-                             ) : (
-                               <input 
-                                 type="text" 
-                                 placeholder="Type a new global duty (e.g. Night Shift Guard)" 
-                                 autoFocus
-                                 className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-teal-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
-                                 value={addingConfigCustom}
-                                 onChange={e => setAddingConfigCustom(e.target.value)}
-                               />
-                             )}
-                             <div className="flex gap-2 mt-1">
-                               <button onClick={handleAddConfig} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest bg-teal-500 hover:bg-teal-600 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
-                               <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
-                             </div>
+                      <div className={`p-4 rounded-2xl border mb-6 transition-all ${isDark ? 'bg-zinc-900/80 border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.1)]' : 'bg-white border-teal-200 shadow-xl shadow-teal-500/10'}`}>
+                        <div className="flex flex-col gap-3">
+                          {addingConfig.mode === 'select' ? (
+                            <select
+                              className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-teal-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-teal-500'}`}
+                              value={addingConfigSelection}
+                              onChange={e => {
+                                if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
+                                else setAddingConfigSelection(e.target.value);
+                              }}
+                            >
+                              <option value="" disabled>Select a preset duty...</option>
+                              {availableDuties.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                              <option value="__custom__">+ Create Custom Duty...</option>
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="Type a new global duty (e.g. Night Shift Guard)"
+                              autoFocus
+                              className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-teal-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
+                              value={addingConfigCustom}
+                              onChange={e => setAddingConfigCustom(e.target.value)}
+                            />
+                          )}
+                          <div className="flex gap-2 mt-1">
+                            <button onClick={handleAddConfig} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest bg-teal-500 hover:bg-teal-600 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
                           </div>
-                       </div>
+                        </div>
+                      </div>
                     )}
                     <div className="space-y-3">
                       {editForm.dutyConfig.map((item, idx) => (
                         <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                           <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
-                          <button 
+                          <button
                             onClick={() => {
                               setEditForm(prev => ({
                                 ...prev,
@@ -1677,8 +1747,8 @@ export default function StaffProfilePage() {
                     </div>
                     <h3 className={`text-2xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tight`}>Confirm Deletion</h3>
                     <p className={`text-sm font-bold leading-relaxed mb-8 ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
-                      Are you absolutely sure? This will permanently delete 
-                      <span className="mx-1 text-rose-500 font-black underline decoration-2 underline-offset-4">{staff?.name}</span> 
+                      Are you absolutely sure? This will permanently delete
+                      <span className="mx-1 text-rose-500 font-black underline decoration-2 underline-offset-4">{staff?.name}</span>
                       from the system.
                     </p>
 
@@ -1689,11 +1759,10 @@ export default function StaffProfilePage() {
                         value={deleteConfirmText}
                         onChange={(e) => setDeleteConfirmText(e.target.value)}
                         placeholder={staff?.name}
-                        className={`w-full h-16 rounded-2xl px-6 text-sm font-bold outline-none border-2 transition-all ${
-                          isDark 
-                            ? 'bg-zinc-800 border-zinc-700 text-white focus:border-rose-500' 
+                        className={`w-full h-16 rounded-2xl px-6 text-sm font-bold outline-none border-2 transition-all ${isDark
+                            ? 'bg-zinc-800 border-zinc-700 text-white focus:border-rose-500'
                             : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-rose-500'
-                        }`}
+                          }`}
                       />
                     </div>
 
@@ -1701,9 +1770,8 @@ export default function StaffProfilePage() {
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
                         disabled={isDeleting}
-                        className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                          isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-400 hover:bg-gray-50'
-                        } disabled:opacity-50`}
+                        className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                          } disabled:opacity-50`}
                       >
                         Cancel
                       </button>
@@ -1726,55 +1794,55 @@ export default function StaffProfilePage() {
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h3 className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
-                         <DollarSign size={16}/> Payroll History
+                        <DollarSign size={16} /> Payroll History
                       </h3>
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Financial Performance Audit</p>
                     </div>
-                    <button 
-                       onClick={() => {
-                          setPayrollForm(p => ({ ...p, basicSalary: staff?.monthlySalary || 0 }));
-                          setShowPayrollModal(!showPayrollModal);
-                       }}
-                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : (isDark ? 'bg-zinc-800 text-amber-500' : 'bg-amber-50 text-amber-600')}`}
+                    <button
+                      onClick={() => {
+                        setPayrollForm(p => ({ ...p, basicSalary: staff?.monthlySalary || 0 }));
+                        setShowPayrollModal(!showPayrollModal);
+                      }}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showPayrollModal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : (isDark ? 'bg-zinc-800 text-amber-500' : 'bg-amber-50 text-amber-600')}`}
                     >
-                       {showPayrollModal ? 'Cancel' : 'Generate Slip'}
+                      {showPayrollModal ? 'Cancel' : 'Generate Slip'}
                     </button>
                   </div>
 
                   {showPayrollModal && (
                     <div className={`p-6 rounded-3xl border mb-8 ${isDark ? 'bg-amber-500/5 border-amber-500/10' : 'bg-amber-50/50 border-amber-100'}`}>
-                       <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-4">Draft New Salary Record</h4>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                         <div>
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Month (YYYY-MM)</label>
-                            <input type="month" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.month} onChange={e => setPayrollForm({...payrollForm, month: e.target.value})} />
-                         </div>
-                         <div>
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Basic Salary (PKR)</label>
-                            <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.basicSalary} onChange={e => setPayrollForm({...payrollForm, basicSalary: Number(e.target.value)})} />
-                         </div>
-                         <div>
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Present Days</label>
-                            <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.presentDays} onChange={e => setPayrollForm({...payrollForm, presentDays: Number(e.target.value)})} />
-                         </div>
-                         <div>
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Bonuses (PKR)</label>
-                            <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonuses} onChange={e => setPayrollForm({...payrollForm, bonuses: Number(e.target.value)})} />
-                         </div>
-                         <div>
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Bonus Reason</label>
-                            <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonusReason} onChange={e => setPayrollForm({...payrollForm, bonusReason: e.target.value})} placeholder="e.g. Performance" />
-                         </div>
-                         <div>
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Deductions (PKR)</label>
-                            <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductions} onChange={e => setPayrollForm({...payrollForm, deductions: Number(e.target.value)})} />
-                         </div>
-                         <div className="sm:col-span-2">
-                            <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Deduction Reason</label>
-                            <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductionReason} onChange={e => setPayrollForm({...payrollForm, deductionReason: e.target.value})} placeholder="e.g. Absences" />
-                         </div>
-                       </div>
-                       <button onClick={handleGenerateSlip} className="w-full py-3 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20">Finalize Slip</button>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-4">Draft New Salary Record</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Month (YYYY-MM)</label>
+                          <input type="month" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.month} onChange={e => setPayrollForm({ ...payrollForm, month: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Basic Salary (PKR)</label>
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.basicSalary} onChange={e => setPayrollForm({ ...payrollForm, basicSalary: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Present Days</label>
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.presentDays} onChange={e => setPayrollForm({ ...payrollForm, presentDays: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Bonuses (PKR)</label>
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonuses} onChange={e => setPayrollForm({ ...payrollForm, bonuses: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Bonus Reason</label>
+                          <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.bonusReason} onChange={e => setPayrollForm({ ...payrollForm, bonusReason: e.target.value })} placeholder="e.g. Performance" />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Deductions (PKR)</label>
+                          <input type="number" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductions} onChange={e => setPayrollForm({ ...payrollForm, deductions: Number(e.target.value) })} />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-[9px] font-bold uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Deduction Reason</label>
+                          <input type="text" className={`w-full rounded-2xl px-4 py-3 text-sm font-bold border-none ${isDark ? 'bg-zinc-900 text-white' : 'bg-white text-gray-900'}`} value={payrollForm.deductionReason} onChange={e => setPayrollForm({ ...payrollForm, deductionReason: e.target.value })} placeholder="e.g. Absences" />
+                        </div>
+                      </div>
+                      <button onClick={handleGenerateSlip} className="w-full py-3 rounded-2xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20">Finalize Slip</button>
                     </div>
                   )}
 
@@ -1788,16 +1856,14 @@ export default function StaffProfilePage() {
                   ) : (
                     <div className="grid gap-4">
                       {salaryRecords.sort((a, b) => (b.month || '').localeCompare(a.month || '')).map(record => (
-                        <div key={record.id} className={`p-6 rounded-[2.5rem] border transition-all hover:scale-[1.01] ${
-                          isDark ? 'bg-zinc-800/30 border-zinc-700/50 hover:border-amber-500/30' : 'bg-gray-50 border-gray-100 hover:border-amber-200'
-                        }`}>
+                        <div key={record.id} className={`p-6 rounded-[2.5rem] border transition-all hover:scale-[1.01] ${isDark ? 'bg-zinc-800/30 border-zinc-700/50 hover:border-amber-500/30' : 'bg-gray-50 border-gray-100 hover:border-amber-200'
+                          }`}>
                           <div className="flex flex-col md:flex-row justify-between gap-6">
                             <div className="flex gap-4">
-                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                                record.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' :
-                                record.status === 'approved' ? 'bg-blue-500/10 text-blue-500' :
-                                'bg-amber-500/10 text-amber-500'
-                              }`}>
+                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${record.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' :
+                                  record.status === 'approved' ? 'bg-blue-500/10 text-blue-500' :
+                                    'bg-amber-500/10 text-amber-500'
+                                }`}>
                                 <DollarSign size={24} />
                               </div>
                               <div>
@@ -1805,11 +1871,10 @@ export default function StaffProfilePage() {
                                   {record.month ? new Date(record.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Unknown Month'}
                                 </h4>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                    record.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                    record.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                  }`}>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${record.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                      record.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                        'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    }`}>
                                     {record.status}
                                   </span>
                                   <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
@@ -1833,7 +1898,7 @@ export default function StaffProfilePage() {
                               </p>
                               <p className="text-[9px] text-gray-600 mt-1 uppercase font-black">Pro-rated attendance</p>
                             </div>
-                            
+
                             {((record as any).bonus > 0) && (
                               <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                                 <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Performance Bonus (+)</p>
@@ -1867,98 +1932,97 @@ export default function StaffProfilePage() {
               <div className="space-y-6">
                 {/* Score Breakdown Analysis */}
                 <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
-                   <div className="flex items-center justify-between mb-8">
-                      <div>
-                        <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Performance Breakdown</h3>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                          Cycle: {growthPoints?.month ? new Date(growthPoints.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Performance Breakdown</h3>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                        Cycle: {growthPoints?.month ? new Date(growthPoints.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>
+                        Total: {growthPoints?.total || 0}
+                      </span>
+                      <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
+                        <RefreshCw size={14} className={saving ? 'animate-spin' : ''} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                      { label: 'Attendance', score: growthPoints?.attendance || 0, max: (growthPoints?.workingDays || 0) * 1, icon: <Calendar size={18} />, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+                      { label: 'Punctuality', score: growthPoints?.punctuality || 0, max: (growthPoints?.workingDays || 0) * 2, icon: <Clock size={18} />, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                      { label: 'Uniform', score: growthPoints?.dressCode || 0, max: (growthPoints?.workingDays || 0) * (staff?.dressCodeConfig?.length || 4), icon: <Shield size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                      { label: 'Duties', score: growthPoints?.duties || 0, max: (growthPoints?.workingDays || 0) * (staff?.dutyConfig?.length || 4), icon: <ClipboardList size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                    ].map((stat, i) => (
+                      <div key={i} className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-200/50'} flex flex-col items-center text-center group hover:scale-[1.02] transition-all`}>
+                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}>
+                          {stat.icon}
+                        </div>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{stat.label}</h4>
+                        <p className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{stat.score}</p>
+                        <div className="w-full h-1 bg-zinc-700/20 rounded-full mt-4 overflow-hidden">
+                          <div
+                            className={`h-full ${stat.bg.replace('/10', '')} transition-all duration-1000`}
+                            style={{ width: `${Math.min(100, (stat.score / (stat.max || 1)) * 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-2">
+                          Efficiency: {Math.round((stat.score / (stat.max || 1)) * 100)}%
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>
-                           Total: {growthPoints?.total || 0}
-                        </span>
-                        <button onClick={handleRecalculate} className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
-                           <RefreshCw size={14} className={saving ? 'animate-spin' : ''} />
-                        </button>
-                      </div>
-                   </div>
+                    ))}
+                  </div>
 
-                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      {[
-                        { label: 'Attendance', score: growthPoints?.attendance || 0, max: (growthPoints?.workingDays || 0) * 1, icon: <Calendar size={18} />, color: 'text-teal-500', bg: 'bg-teal-500/10' },
-                        { label: 'Punctuality', score: growthPoints?.punctuality || 0, max: (growthPoints?.workingDays || 0) * 2, icon: <Clock size={18} />, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                        { label: 'Uniform', score: growthPoints?.dressCode || 0, max: (growthPoints?.workingDays || 0) * (staff?.dressCodeConfig?.length || 4), icon: <Shield size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                        { label: 'Duties', score: growthPoints?.duties || 0, max: (growthPoints?.workingDays || 0) * (staff?.dutyConfig?.length || 4), icon: <ClipboardList size={18} />, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                      ].map((stat, i) => (
-                        <div key={i} className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-200/50'} flex flex-col items-center text-center group hover:scale-[1.02] transition-all`}>
-                           <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}>
-                              {stat.icon}
-                           </div>
-                           <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{stat.label}</h4>
-                           <p className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{stat.score}</p>
-                           <div className="w-full h-1 bg-zinc-700/20 rounded-full mt-4 overflow-hidden">
-                              <div 
-                                className={`h-full ${stat.bg.replace('/10', '')} transition-all duration-1000`} 
-                                style={{ width: `${Math.min(100, (stat.score / (stat.max || 1)) * 100)}%` }} 
-                              />
-                           </div>
-                           <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-2">
-                             Efficiency: {Math.round((stat.score / (stat.max || 1)) * 100)}%
-                           </p>
-                        </div>
-                      ))}
-                   </div>
-
-                   <div className={`mt-8 p-6 rounded-3xl border border-dashed ${isDark ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50/50 border-indigo-100'}`}>
-                      <div className="flex items-center gap-3 mb-4">
-                         <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
-                            <Sparkles size={14} />
-                         </div>
-                         <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Merits & Contributions</h4>
+                  <div className={`mt-8 p-6 rounded-3xl border border-dashed ${isDark ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50/50 border-indigo-100'}`}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
+                        <Sparkles size={14} />
                       </div>
-                      <div className="flex items-center justify-between">
-                         <div className="space-y-1">
-                            <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Extra Points: {growthPoints?.extra || 0}</p>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Recorded for volunteer work, over-time, and exceptional behavior.</p>
-                         </div>
-                         <div className="text-right">
-                            <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Global Ranking</p>
-                            <p className={`text-sm font-bold ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>T-3 Management Candidate</p>
-                         </div>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Merits & Contributions</h4>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>Extra Points: {growthPoints?.extra || 0}</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">Recorded for volunteer work, over-time, and exceptional behavior.</p>
                       </div>
-                   </div>
+                      <div className="text-right">
+                        <p className="text-xs font-black text-indigo-500 uppercase tracking-widest">Global Ranking</p>
+                        <p className={`text-sm font-bold ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>T-3 Management Candidate</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
                   <div className="flex items-center justify-between mb-8">
-                     <div>
-                        <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 italic">Chronological Growth Audit</h3>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Verified historical data blocks</p>
-                     </div>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 italic">Chronological Growth Audit</h3>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Verified historical data blocks</p>
+                    </div>
                   </div>
                   <div className="space-y-4">
                     {growthHistory.length === 0 ? (
-                       <div className="py-12 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No historical cycles found</div>
+                      <div className="py-12 text-center text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No historical cycles found</div>
                     ) : (
                       growthHistory.map((h: any) => (
                         <div key={h.id} className={`p-5 rounded-[2rem] border flex items-center justify-between transition-all hover:border-indigo-500/30 ${isDark ? 'bg-zinc-800/30 border-zinc-700/50' : 'bg-gray-50 border-gray-100'}`}>
                           <div className="flex items-center gap-4">
-                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isDark ? 'bg-zinc-900 text-indigo-400' : 'bg-white text-indigo-600 shadow-sm'}`}>
-                                <Calendar size={20} />
-                             </div>
-                             <div>
-                               <p className={`text-md font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tighter`}>{new Date(h.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-                               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Aggregated Strength: {h.total || 0} pts</p>
-                             </div>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isDark ? 'bg-zinc-900 text-indigo-400' : 'bg-white text-indigo-600 shadow-sm'}`}>
+                              <Calendar size={20} />
+                            </div>
+                            <div>
+                              <p className={`text-md font-black ${isDark ? 'text-white' : 'text-gray-900'} uppercase tracking-tighter`}>{new Date(h.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Aggregated Strength: {h.total || 0} pts</p>
+                            </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">
-                             <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
-                               (h.total || 0) >= 100 ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white'
-                             }`}>
-                               {(h.total || 0) >= 100 ? 'Senior Expert' : 'Standard Staff'}
-                             </span>
-                             <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em]">Validated Cycle</p>
+                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${(h.total || 0) >= 100 ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white'
+                              }`}>
+                              {(h.total || 0) >= 100 ? 'Senior Expert' : 'Standard Staff'}
+                            </span>
+                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em]">Validated Cycle</p>
                           </div>
                         </div>
                       ))
@@ -1975,65 +2039,114 @@ export default function StaffProfilePage() {
       {/* Time Entry Popup */}
       {timePopup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setTimePopup({...timePopup, isOpen: false})} />
-          <div className={`relative w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border animate-in zoom-in-95 duration-200 ${
-            isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-gray-100 text-gray-900'
-          }`}>
-             <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h3 className="text-xl font-black italic tracking-tight">Shift Timing</h3>
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
-                    Entry for {formatDateDMY(new Date(timePopup.date))}
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setTimePopup({...timePopup, isOpen: false})}
-                  className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-zinc-800 text-zinc-500' : 'hover:bg-gray-100 text-gray-400'}`}
-                >
-                  <RefreshCw size={18} className="rotate-45" />
-                </button>
-             </div>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setTimePopup({ ...timePopup, isOpen: false })} />
+          <div className={`relative w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-gray-100 text-gray-900'
+            }`}>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-black italic tracking-tight">Shift Timing</h3>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
+                  Entry for {formatDateDMY(new Date(timePopup.date))}
+                </p>
+              </div>
+              <button
+                onClick={() => setTimePopup({ ...timePopup, isOpen: false })}
+                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-zinc-800 text-zinc-500' : 'hover:bg-gray-100 text-gray-400'}`}
+              >
+                <RefreshCw size={18} className="rotate-45" />
+              </button>
+            </div>
 
-             <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Arrival Time</label>
-                  <input
-                    type="time"
-                    value={timePopup.arrivalTime}
-                    onChange={e => setTimePopup({ ...timePopup, arrivalTime: e.target.value })}
-                    className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
-                      isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Arrival Time</label>
+                <input
+                  type="time"
+                  value={timePopup.arrivalTime}
+                  onChange={e => setTimePopup({ ...timePopup, arrivalTime: e.target.value })}
+                  className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
                     }`}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Departure Time</label>
-                  <input
-                    type="time"
-                    value={timePopup.departureTime}
-                    onChange={e => setTimePopup({ ...timePopup, departureTime: e.target.value })}
-                    className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${
-                      isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Departure Time</label>
+                <input
+                  type="time"
+                  value={timePopup.departureTime}
+                  onChange={e => setTimePopup({ ...timePopup, departureTime: e.target.value })}
+                  className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
                     }`}
-                  />
-                </div>
-                
-                <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isDark ? 'bg-indigo-500/5 border-indigo-500/10' : 'bg-indigo-50 border-indigo-100'}`}>
-                  <AlertCircle size={16} className="text-indigo-500 mt-0.5 shrink-0" />
-                  <p className="text-[9px] font-bold leading-relaxed text-indigo-500/70 uppercase tracking-wider">
-                    Setting these times will mark the staff as present for this specific date only.
-                  </p>
-                </div>
+                />
+              </div>
 
-                <button
-                  onClick={handleTimePopupSave}
-                  disabled={saving}
-                  className="w-full h-14 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {saving ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16}/>}
-                  {saving ? 'Synchronizing...' : 'Update Record'}
-                </button>
-             </div>
+              <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isDark ? 'bg-indigo-500/5 border-indigo-500/10' : 'bg-indigo-50 border-indigo-100'}`}>
+                <AlertCircle size={16} className="text-indigo-500 mt-0.5 shrink-0" />
+                <p className="text-[9px] font-bold leading-relaxed text-indigo-500/70 uppercase tracking-wider">
+                  Setting these times will mark the staff as present for this specific date only.
+                </p>
+              </div>
+
+              <button
+                onClick={handleTimePopupSave}
+                disabled={saving}
+                className="w-full h-14 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {saving ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                {saving ? 'Synchronizing...' : 'Update Record'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Note Popup */}
+      {notePopup.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setNotePopup({ ...notePopup, isOpen: false })} />
+          <div className={`relative w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-gray-100 text-gray-900'
+            }`}>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-black italic tracking-tight text-amber-500">Attendance Note</h3>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">
+                  Context for {formatDateDMY(new Date(notePopup.date))}
+                </p>
+              </div>
+              <button
+                onClick={() => setNotePopup({ ...notePopup, isOpen: false })}
+                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-zinc-800 text-zinc-500' : 'hover:bg-gray-100 text-gray-400'}`}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Late/Adjustment Reason</label>
+                <textarea
+                  value={notePopup.note}
+                  onChange={e => setNotePopup({ ...notePopup, note: e.target.value })}
+                  placeholder="e.g. Flight delayed, Medical emergency..."
+                  className={`w-full min-h-[120px] p-6 rounded-2xl text-sm font-bold outline-none border-2 transition-all resize-none ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-amber-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-amber-500'
+                    }`}
+                />
+              </div>
+
+              <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isDark ? 'bg-amber-500/5 border-amber-500/10' : 'bg-amber-50 border-amber-100'}`}>
+                <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-[9px] font-bold leading-relaxed text-amber-500/70 uppercase tracking-wider">
+                  This note will be visible in the attendance audit history.
+                </p>
+              </div>
+
+              <button
+                onClick={handleSaveNote}
+                className="w-full h-14 rounded-2xl bg-amber-500 text-white text-[11px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2"
+              >
+                <Save size={16} />
+                Save Note
+              </button>
+            </div>
           </div>
         </div>
       )}

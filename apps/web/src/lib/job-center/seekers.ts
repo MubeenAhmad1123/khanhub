@@ -31,19 +31,14 @@ export interface SeekerFinanceSummary {
   serialNumber: number;
   name: string;
   seekerNumber: string;
-  inpatientNumber?: string;
   admissionDate: Date;
-  packageAmount: number;
-  durationMonths: number;
-  totalFees: number;       // packageAmount × durationMonths
-  otherExpenses: number;
-  totalDues: number;       // totalFees + otherExpenses
+  registrationFee: number;
   totalReceived: number;
-  remaining: number;       // totalDues - totalReceived
+  remaining: number;
   canteenDeposit: number;
   canteenSpent: number;
   canteenBalance: number;
-  guardianNumber: string;
+  contactNumber: string;
   isActive: boolean;
 }
 
@@ -56,9 +51,7 @@ export async function getSeeker(id: string): Promise<Seeker | null> {
   return { 
     id: snap.id, 
     ...data,
-    admissionDate: toDate(data.admissionDate),
     createdAt: toDate(data.createdAt),
-    dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
   } as Seeker;
 }
 
@@ -70,9 +63,7 @@ export async function getSeekers(): Promise<Seeker[]> {
     return { 
       id: doc.id, 
       ...data,
-      admissionDate: toDate(data.admissionDate),
       createdAt: toDate(data.createdAt),
-      dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
     } as Seeker;
   });
 }
@@ -80,7 +71,6 @@ export async function getSeekers(): Promise<Seeker[]> {
 export async function createSeeker(data: Omit<Seeker, 'id' | 'createdAt'>): Promise<string> {
   const res = await addDoc(collection(db, 'jobcenter_seekers'), {
     ...data,
-    admissionDate: Timestamp.fromDate(toDate(data.admissionDate)),
     createdAt: Timestamp.now(),
     isActive: true
   });
@@ -88,14 +78,7 @@ export async function createSeeker(data: Omit<Seeker, 'id' | 'createdAt'>): Prom
 }
 
 export async function updateSeeker(id: string, data: Partial<Seeker>): Promise<void> {
-  const updateData = { ...data };
-  if (data.admissionDate) {
-    updateData.admissionDate = Timestamp.fromDate(toDate(data.admissionDate)) as any;
-  }
-  if (data.dischargeDate) {
-    updateData.dischargeDate = Timestamp.fromDate(toDate(data.dischargeDate)) as any;
-  }
-  await updateDoc(doc(db, 'jobcenter_seekers', id), updateData);
+  await updateDoc(doc(db, 'jobcenter_seekers', id), data as any);
 }
 
 // ─── DAILY ACTIVITIES ────────────────────────────────────────────────────────
@@ -114,15 +97,12 @@ export async function getDailyActivities(seekerId: string, yearMonth: string): P
   );
   
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: toDate(data.createdAt),
-      updatedAt: data.updatedAt ? toDate(data.updatedAt) : undefined
-    } as DailyActivityRecord;
-  }).sort((a, b) => a.date.localeCompare(b.date)); // client-side sort to avoid index
+  return snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: toDate(doc.data().createdAt),
+    updatedAt: doc.data().updatedAt ? toDate(doc.data().updatedAt) : undefined
+  } as any)).sort((a: any, b: any) => a.date.localeCompare(b.date));
 }
 
 // Save/update a single day's activity record
@@ -131,7 +111,7 @@ export async function saveDailyActivity(
   date: string,
   activities: DailyActivityRecord['activities'],
   markedBy: string,
-  extra?: { counsellingNotes?: string; vitalNotes?: string }
+  extra?: { careerCounsellingNotes?: string; placementStatusNotes?: string }
 ): Promise<void> {
   // Check if doc exists for this seekerId+date
   const q = query(
@@ -149,8 +129,8 @@ export async function saveDailyActivity(
       activities,
       markedBy,
       updatedAt: Timestamp.now(),
-      ...(extra?.counsellingNotes !== undefined && { counsellingSessionNotes: extra.counsellingNotes }),
-      ...(extra?.vitalNotes !== undefined && { vitalSignNotes: extra.vitalNotes })
+      ...(extra?.careerCounsellingNotes !== undefined && { careerCounsellingNotes: extra.careerCounsellingNotes }),
+      ...(extra?.placementStatusNotes !== undefined && { placementStatusNotes: extra.placementStatusNotes })
     });
   } else {
     await addDoc(collection(db, 'jobcenter_daily_activities'), {
@@ -159,8 +139,8 @@ export async function saveDailyActivity(
       activities,
       markedBy,
       createdAt: Timestamp.now(),
-      counsellingSessionNotes: extra?.counsellingNotes || '',
-      vitalSignNotes: extra?.vitalNotes || ''
+      careerCounsellingNotes: extra?.careerCounsellingNotes || '',
+      placementStatusNotes: extra?.placementStatusNotes || ''
     });
   }
 }
@@ -173,14 +153,11 @@ export async function getTherapySessions(seekerId: string): Promise<TherapySessi
     where('seekerId', '==', seekerId)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: toDate(data.createdAt)
-    } as TherapySession;
-  }).sort((a, b) => a.sessionNumber - b.sessionNumber);
+  return snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: toDate(doc.data().createdAt)
+  } as any)).sort((a: any, b: any) => (a.sessionNumber || 0) - (b.sessionNumber || 0));
 }
 
 export async function addTherapySession(data: Omit<TherapySession, 'id' | 'createdAt'>): Promise<string> {
@@ -199,14 +176,11 @@ export async function getMedicationRecords(seekerId: string): Promise<Medication
     where('seekerId', '==', seekerId)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: toDate(data.createdAt)
-    } as MedicationRecord;
-  }).sort((a, b) => b.date.localeCompare(a.date));
+  return snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: toDate(doc.data().createdAt)
+  } as any)).sort((a: any, b: any) => b.date.localeCompare(a.date));
 }
 
 export async function addMedicationRecord(data: Omit<MedicationRecord, 'id' | 'createdAt'>): Promise<string> {
@@ -225,14 +199,11 @@ export async function getWeeklyProgress(seekerId: string): Promise<WeeklyProgres
     where('seekerId', '==', seekerId)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: toDate(data.createdAt)
-    } as WeeklyProgress;
-  }).sort((a, b) => a.weekNumber - b.weekNumber);
+  return snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: toDate(doc.data().createdAt)
+  } as any)).sort((a: any, b: any) => (a.weekNumber || 0) - (b.weekNumber || 0));
 }
 
 export async function addWeeklyProgress(data: Omit<WeeklyProgress, 'id' | 'createdAt'>): Promise<string> {
@@ -275,9 +246,7 @@ export async function getAllSeekersWithFinanceSummary(): Promise<SeekerFinanceSu
     const sFees = feesBySeeker[s.id] || [];
     const sCanteen = canteenBySeeker[s.id] || [];
     
-    const totalFees = (s.packageAmount || 0) * (s.durationMonths || 1);
-    const otherExpenses = s.otherExpenses || 0;
-    const totalDues = totalFees + otherExpenses;
+    const registrationFee = 0; // Job Center registration fee (if any)
     
     const totalReceived = sFees.reduce((acc, f) => {
       const approvedPayments = (f.payments || []).filter(pay => pay.status === 'approved');
@@ -293,19 +262,14 @@ export async function getAllSeekersWithFinanceSummary(): Promise<SeekerFinanceSu
       serialNumber: s.serialNumber,
       name: s.name,
       seekerNumber: s.seekerNumber,
-      inpatientNumber: s.inpatientNumber,
-      admissionDate: toDate(s.admissionDate),
-      packageAmount: s.packageAmount,
-      durationMonths: s.durationMonths,
-      totalFees,
-      otherExpenses,
-      totalDues,
+      admissionDate: toDate(s.createdAt),
+      registrationFee,
       totalReceived,
-      remaining: totalDues - totalReceived,
+      remaining: registrationFee - totalReceived,
       canteenDeposit: totalCanteenDeposited,
       canteenSpent: totalCanteenSpent,
       canteenBalance,
-      guardianNumber: s.contactNumber,
+      contactNumber: s.contactNumber,
       isActive: s.isActive
     };
   }).sort((a, b) => b.serialNumber - a.serialNumber);

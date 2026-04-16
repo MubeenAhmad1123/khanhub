@@ -73,13 +73,13 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     dashboardPath: '/departments/welfare/dashboard',
     sessionKey: 'welfare_session'
   },
-  job_center: {
-    id: 'job_center',
+  'job-center': {
+    id: 'job-center',
     name: 'Job Center',
-    collection: 'job_center_users',
+    collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub',
     dashboardPath: '/departments/job-center/dashboard',
-    sessionKey: 'job_center_session'
+    sessionKey: 'job-center_session'
   },
   'social-media': {
     id: 'social-media',

@@ -175,7 +175,7 @@ export default function AdminReportsPage() {
 
             {/* Report Header */}
             <div className="text-center border-b border-gray-200 pb-6">
-              <h2 className="text-2xl font-black text-gray-900">KhanHub Rehab Center</h2>
+              <h2 className="text-2xl font-black text-gray-900">Job Center</h2>
               <p className="text-lg font-bold text-teal-700 mt-1">Monthly Financial Report — {reportData.monthLabel}</p>
               <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
             </div>

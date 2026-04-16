@@ -4,8 +4,22 @@ import { collection, getDocs, limit, orderBy, query, where } from 'firebase/fire
 import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
 
-export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center';
+export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
 export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'other';
+
+export function getDeptCollection(dept: StaffDept): string {
+  if (dept === 'hq') return 'hq_users';
+  if (dept === 'job-center') return 'jobcenter_users';
+  if (dept === 'social-media') return 'media_users';
+  const slug = dept.replace('-', '_');
+  return `${slug}_users`;
+}
+
+export function getDeptPrefix(dept: StaffDept): string {
+  if (dept === 'job-center') return 'jobcenter';
+  if (dept === 'social-media') return 'media';
+  return dept.replace('-', '_');
+}
 
 export type StaffCardRow = {
   id: string;
@@ -34,8 +48,8 @@ function normalizeRole(raw: any): StaffRole {
 
 async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: string) {
   if (dept === 'hq') return { present: 0, absent: 0, late: 0 };
-  const slug = dept.replace('-', '_');
-  const col = `${slug}_attendance`;
+  const prefix = getDeptPrefix(dept);
+  const col = `${prefix}_attendance`;
   const snap = await getDocs(
     query(collection(db, col), where('staffId', '==', staffId), where('month', '==', monthKey))
   ).catch(() => ({ docs: [] } as any));
@@ -52,8 +66,8 @@ async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: s
 
 async function loadGrowthPoints(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return 0;
-  const slug = dept.replace('-', '_');
-  const col = `${slug}_growth_points`;
+  const prefix = getDeptPrefix(dept);
+  const col = `${prefix}_growth_points`;
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(200))).catch(
     () => ({ docs: [] } as any)
   );
@@ -62,16 +76,16 @@ async function loadGrowthPoints(dept: StaffDept, staffId: string) {
 
 async function loadFinesTotal(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return 0;
-  const slug = dept.replace('-', '_');
-  const col = `${slug}_fines`;
+  const prefix = getDeptPrefix(dept);
+  const col = `${prefix}_fines`;
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId))).catch(() => ({ docs: [] } as any));
   return snap.docs.reduce((acc: number, d: any) => acc + (Number(d.data()?.amount) || 0), 0);
 }
 
 async function loadLastDuty(dept: StaffDept, staffId: string) {
   if (dept === 'hq') return undefined;
-  const slug = dept.replace('-', '_');
-  const col = `${slug}_duty_logs`;
+  const prefix = getDeptPrefix(dept);
+  const col = `${prefix}_duty_logs`;
   const snap = await getDocs(query(collection(db, col), where('staffId', '==', staffId), orderBy('createdAt', 'desc'), limit(1))).catch(
     () => ({ docs: [] } as any)
   );
@@ -98,8 +112,7 @@ export async function listStaffCards({
 
   const base = await Promise.all(
     targetDepts.map(async (d) => {
-      const slug = d.replace('-', '_');
-      const col = d === 'hq' ? 'hq_users' : `${slug}_users`;
+      const col = getDeptCollection(d);
       const snap = await getDocs(query(collection(db, col), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any));
       return snap.docs.map((docSnap: any) => ({ _dept: d, id: docSnap.id, ...docSnap.data() }));
     })
@@ -165,6 +178,8 @@ export type StaffProfile = StaffCardRow & {
   defaultPassword?: string;
   dutyConfig?: { key: string; label: string }[];
   dressCodeConfig?: { key: string; label: string }[];
+  dutyStartTime?: string;
+  dutyEndTime?: string;
 };
 
 export async function fetchStaffProfile(compositeId: string): Promise<StaffProfile | null> {
@@ -173,10 +188,9 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
   const dept = compositeId.slice(0, idx) as StaffDept;
   const uid = compositeId.slice(idx + 1);
 
-  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].includes(dept)) return null;
+  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(dept)) return null;
 
-  const slug = dept.replace('-', '_');
-  const col = dept === 'hq' ? 'hq_users' : `${slug}_users`;
+  const col = getDeptCollection(dept);
   const { getDoc, doc } = await import('firebase/firestore');
   const snap = await getDoc(doc(db, col, uid)).catch(() => null);
   if (!snap || !snap.exists()) return null;
@@ -217,6 +231,9 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     defaultPassword: data.defaultPassword || data.password || undefined,
     dutyConfig: data.dutyConfig || [],
     dressCodeConfig: data.dressCodeConfig || [],
+    designation: data.designation || data.role || 'Staff Member',
+    dutyStartTime: data.dutyStartTime || '09:00',
+    dutyEndTime: data.dutyEndTime || '17:00',
   };
 }
 
@@ -229,10 +246,9 @@ export async function updateStaffProfile(
   const dept = compositeId.slice(0, idx) as StaffDept;
   const uid = compositeId.slice(idx + 1);
 
-  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].includes(dept)) return { success: false, error: 'Invalid department' };
+  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(dept)) return { success: false, error: 'Invalid department' };
 
-  const slug = dept.replace('-', '_');
-  const col = dept === 'hq' ? 'hq_users' : `${slug}_users`;
+  const col = getDeptCollection(dept);
   const { updateDoc, doc: firestoreDoc } = await import('firebase/firestore');
 
   try {
@@ -253,12 +269,11 @@ export async function deleteStaffProfile(
   const dept = compositeId.slice(0, idx) as StaffDept;
   const uid = compositeId.slice(idx + 1);
 
-  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'].includes(dept)) {
+  if (!['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].includes(dept)) {
     return { success: false, error: 'Invalid department' };
   }
 
-  const slug = dept.replace('-', '_');
-  const deptCol = dept === 'hq' ? 'hq_users' : `${slug}_users`;
+  const deptCol = getDeptCollection(dept);
   const { deleteDoc, doc: firestoreDoc } = await import('firebase/firestore');
 
   try {

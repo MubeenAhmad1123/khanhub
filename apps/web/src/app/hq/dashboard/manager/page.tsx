@@ -10,6 +10,7 @@ import {
   Users, CheckCircle, XCircle, Clock, FileText,
   ArrowRight, Loader2, AlertTriangle
 } from 'lucide-react';
+import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
 function timeAgo(dateInput: any): string {
   if (!dateInput) return 'N/A';
@@ -82,28 +83,19 @@ export default function ManagerOverviewPage() {
         const now = Date.now();
 
         // 1. Fetch Staff (All 7 Departments) - Handle diverse collection schemas
-        const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
         
         const staffQueries: any[] = [];
         
-        // HQ
-        staffQueries.push({ dept: 'hq', q: query(collection(db, 'hq_users'), where('isActive', '==', true)) });
-        
-        // Rehab
-        staffQueries.push({ dept: 'rehab', q: query(collection(db, 'rehab_users'), where('role', '==', 'staff'), where('isActive', '==', true)) });
-        
-        // SPIMS (Check both staff collection and users with staff role)
-        staffQueries.push({ dept: 'spims', q: query(collection(db, 'spims_staff'), where('isActive', '==', true)) });
-        staffQueries.push({ dept: 'spims', q: query(collection(db, 'spims_users'), where('role', '==', 'staff'), where('isActive', '==', true)) });
-        
-        // Welfare
-        staffQueries.push({ dept: 'welfare', q: query(collection(db, 'welfare_users'), where('isActive', '==', true)) });
-        
-        // Others (hospital, sukoon, job-center)
-        ['hospital', 'sukoon', 'job-center'].forEach(d => {
-          const collName = d.replace('-', '_');
-          staffQueries.push({ dept: d, q: query(collection(db, `${collName}_staff`), where('isActive', '==', true)) });
-          staffQueries.push({ dept: d, q: query(collection(db, `${collName}_users`), where('role', '==', 'staff'), where('isActive', '==', true)) });
+        depts.forEach(d => {
+          // Main staff collection
+          staffQueries.push({ dept: d, q: query(collection(db, getDeptCollection(d)), where('isActive', '==', true)) });
+          
+          // Legacy check for _staff collections where they exist (mostly for hospital/sukoon data compatibility)
+          const prefix = getDeptPrefix(d);
+          if (prefix !== 'hq') {
+             staffQueries.push({ dept: d, q: query(collection(db, `${prefix}_staff`), where('isActive', '==', true)) });
+          }
         });
 
         const staffSnaps = await Promise.all(staffQueries.map(sq => getDocs(sq.q)));
@@ -130,7 +122,7 @@ export default function ManagerOverviewPage() {
 
         // 2. Fetch Attendance (All 7 Departments)
         const attSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, d === 'hq' ? 'hq_attendance' : `${d.replace('-', '_')}_attendance`), where('date', '==', today))))
+          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))))
         );
 
         const attendanceMap = new Map<string, string>();
@@ -155,7 +147,7 @@ export default function ManagerOverviewPage() {
 
         // 3. Fetch Contributions (Pending)
         const contribSnaps = await Promise.all(
-          depts.map(d => getDocs(query(collection(db, `${d.replace('-', '_')}_contributions`), where('isApproved', '==', false))))
+          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('isApproved', '==', false))))
         );
 
         let allContribs: any[] = [];

@@ -2,7 +2,7 @@
 
 import { Timestamp } from 'firebase/firestore';
 
-export type JobCenterRole = 'admin' | 'staff' | 'family' | 'cashier' | 'superadmin' | 'seeker';
+export type JobCenterRole = 'admin' | 'staff' | 'seeker' | 'employer' | 'superadmin';
 
 // ─── JOBCENTER USER (Auth) ───────────────────────────────────────────────────────
 
@@ -14,13 +14,16 @@ export interface JobCenterUser {
   role: JobCenterRole;
   isActive: boolean;
   seekerId?: string;
+  employerId?: string;
   createdAt?: Timestamp | Date;
 }
 
 export interface Transaction {
   id: string;
-  seekerId?: string;
+  seekerId?: string;   // Either seekerId or employerId
+  employerId?: string;
   seekerName?: string;
+  employerName?: string;
   staffId?: string;
   staffName?: string;
   amount: number;
@@ -45,6 +48,99 @@ export interface Transaction {
   createdAt?: Timestamp | Date;
 }
 
+// ─── JOB SEEKER ─────────────────────────────────────────────────────────────
+
+export interface JobSeeker {
+  id: string;
+  seekerNumber: string;            // e.g. "JC-S-058"
+  serialNumber: number;
+  
+  // Basic Identity
+  name: string;
+  fatherName: string;
+  dateOfBirth?: string;            // "YYYY-MM-DD"
+  age?: number;
+  gender: 'male' | 'female' | 'other';
+  photoUrl?: string;
+
+  // Education & Skills
+  education: string;               // e.g. "Matric", "Masters in CS"
+  skills: string[];                // e.g. ["Driving", "Tailoring", "React"]
+  experience?: string;             // summary of work history
+  
+  // Job Preferences
+  jobInterests: string[];          // what are they looking for?
+  expectedSalary?: string;
+  availability: 'immediate' | '1_week' | '2_plus_weeks';
+
+  // Contact & Location
+  address: string;
+  contactNumber: string;
+  whatsappNumber?: string;
+  emergencyContact?: {
+    name: string;
+    relationship: string;
+    number: string;
+  };
+
+  // Status
+  isActive: boolean;
+  isEmployed: boolean;             // whether they found a job through us
+  employedAt?: string;             // Employer ID if employed
+  createdAt: Timestamp | Date;
+  createdBy?: string;               // admin uid
+}
+
+// Legacy alias for Seeker
+export type Seeker = JobSeeker;
+
+// ─── EMPLOYER / COMPANY ───────────────────────────────────────────────────
+
+export interface Employer {
+  id: string;
+  loginId: string;                 // unique login identifier
+  
+  // Company Info
+  companyName: string;
+  industry: string;                // e.g. "IT", "Healthcare"
+  address: string;
+  email?: string;
+  website?: string;
+  logoUrl?: string;
+  companySize?: string;            // e.g. "1-10", "11-50"
+  description?: string;
+
+  // Contact Person
+  contactPerson: {
+    name: string;
+    position?: string;
+    phone: string;
+  };
+
+  // Status
+  isActive: boolean;
+  createdAt: Timestamp | Date;
+  createdBy?: string;
+}
+
+// ─── JOB POSTING ─────────────────────────────────────────────────────────
+
+export interface JobOpening {
+  id: string;
+  employerId: string;
+  companyName: string;
+  title: string;
+  description: string;
+  requirements: string[];          // e.g. ["Driving License", "3 Years Experience"]
+  salaryRange?: string;
+  vacancyCount: number;
+  location?: string;               // if different from company address
+  status: 'open' | 'closed';
+  createdAt: Timestamp | Date;
+}
+
+// ─── STAFF & GROWTH (Keep mostly same but rename concepts if needed) ───────────
+
 export interface StaffDuty {
   id: string;
   dutyDescription: string;
@@ -52,135 +148,59 @@ export interface StaffDuty {
   endTime?: string;
 }
 
-// Update StaffContribution to add approval:
 export interface StaffContribution {
   id: string;
   staffId: string;
-  date: string;                 // "YYYY-MM-DD"
-  content?: string;             // support both 'content' and 'description'
+  date: string;
+  content?: string;
   description?: string;
   contributionDescription?: string;
-  isApproved?: boolean;         // undefined = pending, true = approved, false = rejected
-  approvedBy?: string;          // manager uid
-  approvedAt?: any;             // support Timestamp or string
-  createdAt: any;               // support Timestamp or string
+  isApproved?: boolean;
+  approvedBy?: string;
+  approvedAt?: any;
+  createdAt: any;
   points?: number;
   type?: 'service' | 'creative' | 'other';
 }
 
-// ─── SEEKER (Full Admission Form Data) ─────────────────────────────────────
-
-export interface Seeker {
+export interface StaffMember {
   id: string;
-
-  // Basic Identity
-  seekerNumber: string;            // e.g. "JOBCENTER-058"
-  inpatientNumber?: string;        // Legacy field (Seeker Number preferred)
-  serialNumber: number;            // 58, 60, 61 etc from records
   name: string;
   fatherName: string;
-  dateOfBirth?: string;            // "YYYY-MM-DD"
-  age?: number;
-  gender: 'male' | 'female' | 'other';
-  ethnicity?: string;
+  employeeId: string;
+  designation: string;
+  department: 'job-center';
+  gender: 'male' | 'female';
+  phone?: string;
   photoUrl?: string;
-
-  // Education & Work
-  education?: string;
-  institution?: string;
-  maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed';
-  profession?: string;
-  employerInfo?: string;
-  income?: string;
-
-  // Addiction Info
-  substanceOfAddiction: string;    // main substance
-  presentingComplaints?: string;
-  averageDailyIntake?: string;
-  durationOfUse?: string;
-
-  // Previous Treatment
-  previousTreatmentDuration?: string;
-  previousCenter?: string;
-
-  // Location
-  townPoliceStation?: string;
-  address?: string;
-
-  // Guardian / Family Contact
-  guardianName: string;
-  guardianRelationship: string;
-  contactNumber: string;
-  whatsappNumber?: string;
-  nameOfVisitors?: string;
-
-  // Admission Details
-  admissionDate: Timestamp | Date;
-  timeOfAdmission?: string;        // "14:30"
-  typeOfFacility?: string;
-  durationOfCurrentTreatment?: string;  // "3 months"
-  durationMonths: number;          // 1, 2, 3, 4 — for fee calculation
-
-  // Financial
-  packageAmount: number;           // monthly PKR fee (Total PKG)
-  otherExpenses?: number;          // extra charges like transport
-
-  // Health Status
-  healthStatus?: {
-    hasAsthma?: boolean;
-    hasFits?: boolean;
-    otherCondition?: string;
-    majorIllnessLast12Months?: boolean;
-    majorIllnessDetails?: string;
-    hivStatus?: 'positive' | 'negative' | 'not_known';
-    hbsagStatus?: 'positive' | 'negative' | 'not_known';
-    hcvStatus?: 'positive' | 'negative' | 'not_known';
-    tbStatus?: 'positive' | 'negative' | 'not_known';
-    stiStatus?: 'positive' | 'negative' | 'not_known';
-    hasDisability?: boolean;
-    disabilityCondition?: string;
-    everHospitalized?: boolean;
-    hospitalizationReason?: string;
-    hasBloodDonation?: boolean;
-  };
-
-  // Psychiatric Evaluation
-  psychiatricEvaluation?: {
-    generalAptitude?: string;
-    thoughtDisorder?: boolean;
-    moodEmotions?: string[];       // ['high', 'fear', 'appropriate', ...]
-    obsessiveThoughts?: boolean;
-    hallucinations?: boolean;
-    delusions?: boolean;
-    insights?: boolean;
-    insightsDetails?: string;
-    attentionConcentration?: string;
-    memory?: string;
-    intelligence?: string;
-    feelings?: string;
-    sensing?: string;
-    intuition?: string;
-  };
-
-  // Psychological Assessment
-  psychologicalAssessment?: {
-    physicalCondition?: string;
-    bodyAches?: string;
-    relapseAfterWeeks?: number;
-    abilityToSleep?: string;
-    mentalConditionOthers?: string;
-    problemsWithSpouse?: string;
-    problemsWithParents?: string;
-    problemsWithSiblings?: string;
-  };
-
-  // Status
+  dutyStartTime: string;
+  dutyEndTime: string;
+  dressCode: { id: string; name: string; required: boolean; isCustom: boolean }[];
+  duties: { id: string; name: string; description?: string; assignedAt: string; assignedBy: string; isActive: boolean }[];
+  salary: number;
   isActive: boolean;
-  dischargeDate?: Timestamp | Date;
-  dischargeReason?: string;
-  assignedStaffId?: string;
-  createdAt: Timestamp | Date;
-  createdBy?: string;               // admin uid who created
+  joiningDate: string;
+  loginUserId?: string;
+  role: JobCenterRole;
+  customId?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  staffId: string;
+  date: string;
+  status: 'present' | 'absent' | 'leave';
+  arrivalTime?: string;
+  departureTime?: string;
+  isLate?: boolean;
+  leftEarly?: boolean;
+  checkInTime?: any;
+  checkOutTime?: any;
+  lateByMinutes?: number;
+  overriddenBy?: string;
+  [key: string]: any;
 }
 
 // ─── DAILY ACTIVITY RECORD ───────────────────────────────────────────────────
@@ -188,27 +208,27 @@ export interface Seeker {
 // Collection: jobcenter_daily_activities
 
 export const DAILY_ACTIVITIES = [
-  { id: 1,  name: 'Fajar Prayer' },
-  { id: 2,  name: 'Tilawat-e-Quran' },
-  { id: 3,  name: 'Morning Fitness Exercise' },
-  { id: 4,  name: 'Shower' },
-  { id: 5,  name: 'Break Fast' },
-  { id: 6,  name: 'Morning Medication' },
-  { id: 7,  name: 'Islamic Lecture' },
-  { id: 8,  name: 'Counselling Session' },
-  { id: 9,  name: 'Zohar Prayer' },
+  { id: 1,  name: 'Morning Prep & Grooming' },
+  { id: 2,  name: 'Job Search / Portals Check' },
+  { id: 3,  name: 'Skill Development (Course/Lab)' },
+  { id: 4,  name: 'Interview Prep / Mock Session' },
+  { id: 5,  name: 'CV / Portfolio Refinement' },
+  { id: 6,  name: 'New Applications Submitted' },
+  { id: 7,  name: 'Soft Skills Training' },
+  { id: 8,  name: 'Career Counselling' },
+  { id: 9,  name: 'Zohar Prayer / Break' },
   { id: 10, name: 'Lunch' },
-  { id: 11, name: 'Vital Sign Check' },
-  { id: 12, name: 'Day Medication' },
-  { id: 13, name: 'Game' },
-  { id: 14, name: 'Exercise' },
-  { id: 15, name: 'Dars-e-Quran' },
+  { id: 11, name: 'Placement Status Check' },
+  { id: 12, name: 'Employer Communication' },
+  { id: 13, name: 'Networking / Industry Research' },
+  { id: 14, name: 'Mock Interview / Assessment' },
+  { id: 15, name: 'Digital Literacy Lab' },
   { id: 16, name: 'Asar Prayer' },
   { id: 17, name: 'Maghrib Prayer' },
   { id: 18, name: 'Dinner' },
-  { id: 19, name: 'Night Medication' },
+  { id: 19, name: 'Self-Reflection / Daily Review' },
   { id: 20, name: 'Isha Prayer' },
-  { id: 21, name: 'Sleep' },
+  { id: 21, name: 'Rest / Personal Time' },
 ] as const;
 
 export type ActivityStatus = 'done' | 'not_done' | 'na';
@@ -222,263 +242,121 @@ export interface DailyActivityRecord {
     status: ActivityStatus;        // 'done' | 'not_done' | 'na'
     note?: string;                 // optional note per activity
   }[];
-  counsellingSessionNotes?: string; // text area for counselling session (#8)
-  vitalSignNotes?: string;          // notes for vital sign check (#11)
+  careerCounsellingNotes?: string;  // text area for counselling session (#8)
+  placementStatusNotes?: string;    // notes for status check (#11)
   markedBy: string;                 // admin uid
-  createdAt: Timestamp | Date;
-  updatedAt?: Timestamp | Date;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
-// ─── INDIVIDUAL THERAPY SESSION ───────────────────────────────────────────────
-// Collection: jobcenter_therapy_sessions
-
-export interface TherapySession {
-  id: string;
-  seekerId: string;
-  sessionNumber: number;           // 1, 2, 3, 4, 5, 6, 7...
-  date: string;                    // "YYYY-MM-DD"
-  therapistName?: string;
-  clinicalPsychologist?: string;
-  sessionNotes: string;            // main text area — what happened in session
-  seekerMood?: string;
-  progressRating?: 1 | 2 | 3 | 4; // 1=Static, 2=Slow, 3=Good, 4=Max
-  createdBy: string;               // admin uid
-  createdAt: Timestamp | Date;
-}
-
-// ─── MEDICATION ASSISTED THERAPY ─────────────────────────────────────────────
-// Collection: jobcenter_medication_records
-
-export interface MedicationRecord {
-  id: string;
-  seekerId: string;
-  date: string;                    // "YYYY-MM-DD"
-  timing: string;                  // "Morning", "Afternoon", "Night"
-  medications: string;             // list of meds as text
-  notes?: string;
-  medicalOfficerSig?: string;      // name of medical officer
-  dispenserSig?: string;           // name of dispenser
-  createdBy: string;
-  createdAt: Timestamp | Date;
-}
-
-// ─── WEEKLY PROGRESS RECORD ───────────────────────────────────────────────────
-// Collection: jobcenter_weekly_progress
-
-export interface WeeklyProgress {
-  id: string;
-  seekerId: string;
-  weekNumber: number;              // 1, 2, 3, 4...
-  weekStartDate: string;           // "YYYY-MM-DD"
-  weekEndDate: string;             // "YYYY-MM-DD"
-  score: 1 | 2 | 3 | 4;           // 1=Static, 2=Slow Progress, 3=Good Progress, 4=Max Progress
-  notes?: string;
-  createdBy: string;
-  createdAt: Timestamp | Date;
-}
-
-// ─── FEE RECORD (already exists, keep compatible) ────────────────────────────
-// Collection: jobcenter_fees
+// ─── LEGACY / COMPATIBILITY TYPES (Adapted for Job Center) ───────────────────
 
 export interface FeeRecord {
   id: string;
   seekerId: string;
-  month: string;                   // "2025-01"
-  packageAmount: number;           // monthly fee
+  month: string;              // "YYYY-MM"
+  packageAmount: number;
   amountPaid: number;
   amountRemaining: number;
-  payments: Payment[];
+  status: 'pending' | 'active' | 'completed';
+  payments: {
+    id: string;
+    amount: number;
+    date: any;
+    note?: string;
+    receivedBy: string;
+    status: 'pending' | 'approved' | 'rejected';
+  }[];
+  createdAt: any;
 }
-
-export interface Payment {
-  id: string;
-  amount: number;
-  date: Timestamp | Date;
-  cashierId: string;
-  approvedBy?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  note?: string;
-}
-
-// ─── CANTEEN RECORD (already exists, keep compatible) ────────────────────────
-// Collection: jobcenter_canteen
 
 export interface CanteenRecord {
   id: string;
   seekerId: string;
-  month: string;                   // "2025-01"
+  month: string;
+  balance: number;
   totalDeposited: number;
   totalSpent: number;
-  balance: number;
-  transactions: CanteenTransaction[];
-}
-
-export interface CanteenTransaction {
-  id: string;
-  type: 'deposit' | 'expense';
-  amount: number;
-  description: string;
-  date: Timestamp | Date;
-  cashierId: string;
-}
-
-// ─── STAFF MEMBER (Full Profile) ─────────────────────────────────────────────
-
-export type StaffGender = 'male' | 'female';
-
-export interface DressCodeItem {
-  id: string;           // unique within this staff's dress code
-  name: string;         // e.g. "Dress Pant", "Tie", "Employee Card", "Abaya"
-  required: boolean;    // always true — all assigned items are required
-  isCustom: boolean;    // false = from preset list, true = manually added
-}
-
-export interface StaffDutyAssigned {
-  id: string;
-  name: string;             // e.g. "Clean all rooms before 8am"
-  description?: string;
-  assignedAt: string;       // ISO date string
-  assignedBy: string;       // manager uid
-  isActive: boolean;        // can be deactivated without deletion
-}
-
-export interface StaffMember {
-  id: string;
-
-  // Basic Info
-  name: string;
-  fatherName: string;
-  employeeId: string;           // e.g. "JOBCENTER-STF-001"
-  designation: string;          // e.g. "Counselor", "Security Guard", "Nurse"
-  department: 'job-center';          // for now always job-center
-  gender: StaffGender;
-  phone?: string;
-  photoUrl?: string;
-
-  // Duty Timing
-  dutyStartTime: string;        // "08:00" 24hr
-  dutyEndTime: string;          // "20:00" 24hr
-
-  // Dress Code (assigned per staff, differs by gender + custom)
-  dressCode: DressCodeItem[];
-
-  // Duties (assigned list — manager adds/removes)
-  duties: StaffDutyAssigned[];
-
-  // Financial
-  salary: number;               // monthly PKR
-
-  // Status
-  isActive: boolean;
-  joiningDate: string;          // "YYYY-MM-DD"
-  loginUserId?: string;         // uid in jobcenter_users for portal login
-  role: JobCenterRole;              // used for UI role indicators
-  customId?: string;            // unique staff identifier
-  createdAt: string;            // ISO
-  createdBy?: string;           // manager uid
-}
-
-// ─── DAILY DUTY LOG ────────────────────────────────────────────────────────────
-// One doc per staff per date
-// Collection: jobcenter_duty_logs
-
-export interface DailyDutyLog {
-  id: string;
-  staffId: string;
-  date: string;                 // "YYYY-MM-DD"
-  duties: {
-    dutyId: string;
-    dutyName: string;
-    status: 'done' | 'not_done' | 'na';
-    note?: string;              // optional performance note per duty
+  transactions: {
+    id: string;
+    amount: number;
+    type: 'income' | 'expense';
+    description: string;
+    date: any;
+    status: 'approved' | 'pending';
   }[];
-  // UI helper fields for summaries:
-  totalItems?: number;
-  completedItems?: number;
-  items?: { description: string; completed: boolean }[]; // alias for component compatibility
-  overallPerformanceNote?: string;  // manager's general note for the day
-  markedBy: string;             // manager uid
-  createdAt: string;
-  updatedAt?: string;
 }
 
-// ─── DAILY DRESS CODE LOG ─────────────────────────────────────────────────────
-// One doc per staff per date
-// Collection: jobcenter_dress_logs
-
-export interface DailyDressLog {
+export interface TherapySession {
   id: string;
-  staffId: string;
-  date: string;                 // "YYYY-MM-DD"
-  items: {
-    itemId: string;
-    itemName: string;
-    wearing: boolean;           // true = wearing, false = not wearing
-  }[];
-  isPerfect?: boolean;
-  remarks?: string;
-  markedBy: string;
-  createdAt: any;
+  seekerId: string;
+  date: string;
+  therapistId?: string;
+  notes?: string;
+  sessionNumber: number;        // Added
+  sessionNotes?: string;        // Added for JobTrainingTab
+  therapistName?: string;       // Added for JobTrainingTab
+  progressRating?: number;      // Added for JobTrainingTab
+  duration?: string;
+  createdBy?: string;
+  createdAt?: any;               // Added
 }
 
-// ─── MONTHLY GROWTH POINTS ────────────────────────────────────────────────────
-// Auto-calculated and stored monthly
-// Collection: jobcenter_growth_points
-// One doc per staff per month
+export interface MedicationRecord {
+  id: string;
+  seekerId: string;
+  date: string;
+  morning?: string;
+  afternoon?: string;
+  evening?: string;
+  night?: string;
+  notes?: string;           // Added for SupportRecordTab
+  medicalOfficerSig?: string; // Added for SupportRecordTab
+  timing?: string;            // Added for SupportRecordTab
+  medications?: string;       // Added for SupportRecordTab
+  dispenserSig?: string;      // Added for SupportRecordTab
+  createdBy?: string;
+  createdAt?: any;
+}
+
+export interface WeeklyProgress {
+  id: string;
+  seekerId: string;
+  weekStarting?: string;
+  weekNumber: number;          // Added
+  metrics?: {
+    [key: string]: number;
+  };
+  comments?: string;
+  notes?: string;
+  weekStartDate?: string;
+  weekEndDate?: string;
+  score?: number;
+  createdBy?: string;
+  createdAt?: any;              // Added
+}
 
 export interface MonthlyGrowthPoints {
   id: string;
-  staffId: string;
-  month: string;                // "2025-01"
-
-  // Point breakdown (each = 0 or 1 per day, summed for month)
-  attendance: number;           // +1 per day present
-  punctuality: number;          // +1 per day on time (not late)
-  duties: number;               // +1 per day all duties done
-  dressCode: number;            // +1 per day full dress code followed
-  contributions: number;        // points from approved contributions
-  extra: number;                // bonus points from admin
-
-  total: number;                // sum of all above
-  totalPossible: number;        // max possible for the month
-  percentage: number;           // total / totalPossible * 100
-
-  lastCalculatedAt: string;     // ISO — recalculate on every mark action
-}
-
-export interface AttendanceRecord {
-  id: string;
-  staffId: string;
-  date: string;
-  status: 'present' | 'absent' | 'leave';
-  arrivalTime?: string;        // "09:15" — 24hr
-  departureTime?: string;      // "20:05"
-  isLate?: boolean;            // auto: arrivalTime > dutyStartTime
-  leftEarly?: boolean;         // auto: departureTime < dutyEndTime
-  checkInTime?: any;
-  checkOutTime?: any;
-  lateByMinutes?: number;
-  overriddenBy?: string;
-  [key: string]: any;
-}
-
-export interface StaffFine {
-  id: string;
+  seekerId: string;
+  month: string;
+  totalPoints: number;
+  breakdown: {
+    [category: string]: number;
+  };
   staffId?: string;
-  amount?: number;
-  reason?: string;
-  date?: any;
-  createdAt?: any;
-  [key: string]: any;
+  attendance?: number; // Added for growthPoints.ts
+  punctuality?: number; // Added for growthPoints.ts
+  duties?: number;
+  dressCode?: number;
+  contributions?: number;
+  extra?: number;
+  total?: number;
 }
 
-export interface LeaveRecord {
+export interface DressCodeItem {
   id: string;
-  staffId?: string;
-  startDate?: any;
-  endDate?: any;
-  type?: string;
-  status?: string;
-  [key: string]: any;
+  name: string;
+  required: boolean;
+  isCustom: boolean;
 }
-

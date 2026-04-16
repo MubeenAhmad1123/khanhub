@@ -13,6 +13,7 @@ import {
   Clock, Filter, ChevronLeft, ChevronRight, UserPlus, FileSpreadsheet
 } from 'lucide-react';
 import { toDate, cn } from '@/lib/utils';
+import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
 export default function ManagerAttendancePage() {
   const router = useRouter();
@@ -43,20 +44,40 @@ export default function ManagerAttendancePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch all active HQ staff
-      const staffSnap = await getDocs(query(collection(db, 'hq_staff'), where('isActive', '==', true)));
-      const staffList = staffSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+      const targetDepts = deptFilter === 'all' ? depts : [deptFilter as StaffDept];
+      
+      // 1. Fetch staff from target departments
+      const staffPromises = targetDepts.map(async (d) => {
+        const col = getDeptCollection(d);
+        const snap = await getDocs(query(collection(db, col), where('isActive', '==', true))).catch(() => ({ docs: [] } as any));
+        return snap.docs.map((docSnap: any) => ({ 
+          id: docSnap.id, 
+          department: d,
+          ...docSnap.data() 
+        }));
+      });
+      
+      const results = await Promise.all(staffPromises);
+      const staffList = results.flat();
       setStaff(staffList);
 
-      // 2. Fetch attendance for selected date
-      const attendanceSnap = await getDocs(query(
-        collection(db, 'hq_attendance'), 
-        where('date', '==', selectedDate)
-      ));
+      // 2. Fetch attendance for selected date across target departments
+      const attendancePromises = targetDepts.map(async (d) => {
+        const col = `${getDeptPrefix(d)}_attendance`;
+        const snap = await getDocs(query(collection(db, col), where('date', '==', selectedDate))).catch(() => ({ docs: [] } as any));
+        return snap.docs.map((docSnap: any) => ({ 
+          id: docSnap.id, 
+          ...docSnap.data() 
+        }));
+      });
+      
+      const attendanceResults = await Promise.all(attendancePromises);
+      const attendanceList = attendanceResults.flat();
       
       const attendanceMap: Record<string, any> = {};
-      attendanceSnap.docs.forEach(d => {
-        attendanceMap[d.data().staffId] = { id: d.id, ...d.data() };
+      attendanceList.forEach(item => {
+        attendanceMap[item.staffId] = item;
       });
       setAttendance(attendanceMap);
 
@@ -76,11 +97,15 @@ export default function ManagerAttendancePage() {
   };
 
   const toggleAttendance = async (staffId: string, currentStatus: string | undefined) => {
+    const staffMember = staff.find(s => s.id === staffId);
+    if (!staffMember) return;
+    
     const newStatus = currentStatus === 'present' ? 'absent' : 'present';
     const attendanceId = `${selectedDate}_${staffId}`;
+    const deptPrefix = getDeptPrefix(staffMember.department as StaffDept);
     
     try {
-      await setDoc(doc(db, 'hq_attendance', attendanceId), {
+      await setDoc(doc(db, `${deptPrefix}_attendance`, attendanceId), {
         staffId,
         date: selectedDate,
         status: newStatus,

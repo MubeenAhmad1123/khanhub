@@ -1,11 +1,11 @@
-// src/components/job-center/seeker-profile/DailySheetTab.tsx
+// d:\khanhub\apps\web\src\components\job-center\seeker-profile\ActivityLogTab.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/job-center';
 import { getDailyActivities, saveDailyActivity } from '@/lib/job-center/seekers';
-import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle, FileText, X } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, MinusCircle, FileText, X, ClipboardCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function DailySheetTab({ seekerId, session, readOnly = false }: { seekerId: string, session: any, readOnly?: boolean }) {
+export default function ActivityLogTab({ seekerId, session, readOnly = false }: { seekerId: string, session: any, readOnly?: boolean }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -14,7 +14,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
   const [records, setRecords] = useState<Record<string, DailyActivityRecord>>({});
   const [loading, setLoading] = useState(true);
   const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set());
-  const [noteModal, setNoteModal] = useState<{ type: 'counselling' | 'vital'; date: string; value: string } | null>(null);
+  const [noteModal, setNoteModal] = useState<{ type: 'counselling' | 'status'; date: string; value: string } | null>(null);
   const [noteSaving, setNoteSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
 
@@ -57,14 +57,15 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
     const key = `${dateStr}-${activityId}`;
     if (pendingSaves.has(key)) return;
 
-    // Special rows: counselling (#8) and vital sign (#11)
+    // Special rows: Career Counselling (#8) and Placement Status (#11)
     if (activityId === 8 || activityId === 11) {
       const currentRecord = records[dateStr];
       const currentActivities = currentRecord?.activities || [];
       const existingActivity = currentActivities.find(a => a.activityId === activityId);
-      const type = activityId === 8 ? 'counselling' : 'vital';
-      const existingNote = activityId === 8 ? (currentRecord?.counsellingSessionNotes || '') : (currentRecord?.vitalSignNotes || '');
+      const type = activityId === 8 ? 'counselling' : 'status';
+      const existingNote = activityId === 8 ? (currentRecord?.careerCounsellingNotes || '') : (currentRecord?.placementStatusNotes || '');
       setNoteModal({ type, date: dateStr, value: existingNote });
+      
       if (!existingActivity || existingActivity.status === 'na') {
         const newActivities = [...currentActivities];
         const actIndex = newActivities.findIndex(a => a.activityId === activityId);
@@ -72,7 +73,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
         else newActivities.push({ activityId, status: 'done' });
         setRecords(prev => ({
           ...prev,
-          [dateStr]: { ...prev[dateStr], date: dateStr, seekerId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
+          [dateStr]: { ...prev[dateStr], date: dateStr, seekerId, id: (prev[dateStr] as any)?.id || '', activities: newActivities, markedBy: session.uid, createdAt: (prev[dateStr] as any)?.createdAt || new Date() } as DailyActivityRecord
         }));
       }
       return;
@@ -96,7 +97,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
 
     setRecords(prev => ({
       ...prev,
-      [dateStr]: { ...prev[dateStr], date: dateStr, seekerId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
+      [dateStr]: { ...prev[dateStr], date: dateStr, seekerId, id: (prev[dateStr] as any)?.id || '', activities: newActivities, markedBy: session.uid, createdAt: (prev[dateStr] as any)?.createdAt || new Date() } as DailyActivityRecord
     }));
 
     try {
@@ -118,15 +119,17 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
       const dateStr = noteModal.date;
       const currentRecord = records[dateStr];
       const currentActivities = currentRecord?.activities || [];
-      const counsellingNotes = noteModal.type === 'counselling' ? noteModal.value : (currentRecord?.counsellingSessionNotes || '');
-      const vitalNotes = noteModal.type === 'vital' ? noteModal.value : (currentRecord?.vitalSignNotes || '');
-      await saveDailyActivity(seekerId, dateStr, currentActivities, session.uid, { counsellingNotes, vitalNotes });
+      const counsellingNotes = noteModal.type === 'counselling' ? noteModal.value : (currentRecord?.careerCounsellingNotes || '');
+      const statusNotes = noteModal.type === 'status' ? noteModal.value : (currentRecord?.placementStatusNotes || '');
+      
+      await saveDailyActivity(seekerId, dateStr, currentActivities, session.uid, { careerCounsellingNotes: counsellingNotes, placementStatusNotes: statusNotes });
+      
       setRecords(prev => ({
         ...prev,
-        [dateStr]: { ...prev[dateStr], counsellingSessionNotes: counsellingNotes, vitalSignNotes: vitalNotes } as DailyActivityRecord
+        [dateStr]: { ...prev[dateStr], careerCounsellingNotes: counsellingNotes, placementStatusNotes: statusNotes } as DailyActivityRecord
       }));
       setNoteModal(null);
-      toast.success('Notes saved');
+      toast.success('Activity notes saved');
     } catch (error) {
       toast.error('Failed to save notes');
     } finally {
@@ -135,15 +138,15 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
   };
 
   const getCellIcon = (status?: ActivityStatus, activityId?: number, dateStr?: string) => {
-    if (!status || status === 'na') return <MinusCircle className="w-4 h-4 text-gray-500" />;
+    if (!status || status === 'na') return <MinusCircle className="w-4 h-4 text-gray-300" />;
     if (status === 'done') {
       const hasNote = dateStr && records[dateStr] && (
-        (activityId === 8 && records[dateStr]?.counsellingSessionNotes) ||
-        (activityId === 11 && records[dateStr]?.vitalSignNotes)
+        (activityId === 8 && records[dateStr]?.careerCounsellingNotes) ||
+        (activityId === 11 && records[dateStr]?.placementStatusNotes)
       );
       return (
         <span className="relative">
-          <CheckCircle2 className="w-4 h-4 text-green-500" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           {hasNote && <FileText className="w-2.5 h-2.5 text-blue-500 absolute -top-1 -right-1" />}
         </span>
       );
@@ -176,7 +179,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
   };
 
   const completionColor = (pct: number) => {
-    if (pct >= 80) return 'text-green-600 bg-green-50';
+    if (pct >= 80) return 'text-emerald-600 bg-emerald-50';
     if (pct >= 50) return 'text-amber-600 bg-amber-50';
     return 'text-red-600 bg-red-50';
   };
@@ -188,7 +191,10 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-4">
-        <h2 className="text-xl font-black text-gray-900">Daily Activity Sheet</h2>
+        <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+          <ClipboardCheck className="text-orange-600" size={24} />
+          Daily Activity Log
+        </h2>
         <div className="flex items-center gap-3 bg-white p-1 rounded-2xl border border-gray-200/50 shadow-sm">
           <button onClick={() => changeMonth(-1)} className="p-2.5 rounded-xl hover:bg-gray-100 transition active:scale-95">
             <ChevronLeft size={18} className="text-gray-600" />
@@ -202,17 +208,18 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
         </div>
       </div>
 
-      <div className="flex items-center gap-6 text-sm bg-blue-50/50 p-4 rounded-2xl border border-blue-100 mb-4 justify-center md:justify-start">
-        <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> <span className="font-bold text-gray-700">Done</span></div>
+      <div className="flex items-center gap-6 text-sm bg-orange-50/50 p-4 rounded-2xl border border-orange-100 mb-4 justify-center md:justify-start">
+        <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> <span className="font-bold text-gray-700">Done</span></div>
         <div className="flex items-center gap-2"><XCircle className="w-4 h-4 text-red-500" /> <span className="font-bold text-gray-700">Not Done</span></div>
         <div className="flex items-center gap-2"><MinusCircle className="w-4 h-4 text-gray-300" /> <span className="text-gray-500">N/A</span></div>
-        {!readOnly && <span className="text-xs text-gray-400 font-bold">Click cells to cycle status</span>}
+        {!readOnly && <span className="text-xs text-gray-400 font-bold ml-auto hidden sm:block">Click cells to cycle status</span>}
       </div>
 
       {loading ? (
         <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-orange-600" /></div>
       ) : (
         <>
+        {/* Mobile View */}
         <div className="md:hidden space-y-4">
           <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-gray-200/60 shadow-sm">
             <button
@@ -269,12 +276,13 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
           </div>
         </div>
 
+        {/* Desktop View */}
         <div className="relative rounded-[2rem] border border-gray-200 bg-white overflow-hidden shadow-sm hidden md:block">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1200px]">
               <thead className="bg-gray-50 uppercase text-[9px] font-black text-gray-500 tracking-widest sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="px-5 py-4 border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-20 min-w-[200px]">Activity / Time</th>
+                  <th className="px-5 py-4 border-b border-r border-gray-200 sticky left-0 bg-gray-50 z-20 min-w-[200px]">Activity / Category</th>
                   {daysArray.map(day => (
                     <th key={day} className="px-2 py-4 border-b border-gray-200 text-center min-w-[44px]">{day}</th>
                   ))}
@@ -327,7 +335,7 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
                   );
                 })}
                 <tr className="bg-gray-50 font-black text-[10px] text-gray-500 uppercase tracking-widest">
-                  <td className="px-5 py-3 border-r border-gray-200 sticky left-0 bg-gray-50 z-10">Daily %</td>
+                  <td className="px-5 py-3 border-r border-gray-200 sticky left-0 bg-gray-50 z-10">Daily Efficiency</td>
                   {daysArray.map(day => {
                     const pct = getDayCompletion(day);
                     return (
@@ -355,23 +363,26 @@ export default function DailySheetTab({ seekerId, session, readOnly = false }: {
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-lg font-black text-gray-900">
-                {noteModal.type === 'counselling' ? '📝 Counselling Session Notes' : '📋 Vital Sign Notes'}
+                {noteModal.type === 'counselling' ? '📝 Career Counselling Session' : '💼 Placement Status Note'}
               </h2>
               <button onClick={() => setNoteModal(null)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <p className="text-xs text-gray-400 font-bold">{noteModal.date}</p>
+              <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400 font-black">
+                <span>Notes for seeker</span>
+                <span>{noteModal.date}</span>
+              </div>
               <textarea
                 value={noteModal.value}
                 onChange={e => setNoteModal({ ...noteModal, value: e.target.value })}
                 rows={6}
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
-                placeholder={noteModal.type === 'counselling' ? 'Write counselling session notes...' : 'Write vital sign observations...'}
+                placeholder={noteModal.type === 'counselling' ? 'Write career advice, interview feedback or guidance...' : 'Update on job applications, employer feedback or onboarding...'}
               />
               <div className="flex gap-2">
                 <button onClick={() => setNoteModal(null)} className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-xs font-black uppercase tracking-widest">Cancel</button>
-                <button onClick={handleSaveNote} disabled={noteSaving} className="flex-1 bg-orange-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50">
-                  {noteSaving ? 'Saving...' : 'Save Notes'}
+                <button onClick={handleSaveNote} disabled={noteSaving} className="flex-1 bg-orange-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-900/10 disabled:opacity-50">
+                  {noteSaving ? 'Saving...' : 'Save Activity Note'}
                 </button>
               </div>
             </div>

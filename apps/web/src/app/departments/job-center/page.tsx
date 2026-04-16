@@ -28,8 +28,6 @@ export default function JobCenterRootPage() {
         router.push(`/departments/job-center/dashboard/seeker/${user.seekerId}`);
       } else if (role === 'staff') {
         router.push('/departments/job-center/dashboard/staff');
-      } else if (role === 'cashier') {
-        router.push('/departments/job-center/dashboard/cashier');
       } else if (role === 'admin') {
         router.push('/departments/job-center/dashboard/admin');
       } else if (role === 'superadmin') {

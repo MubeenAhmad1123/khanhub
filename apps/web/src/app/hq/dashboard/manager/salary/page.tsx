@@ -3,27 +3,33 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  collection, getDocs, addDoc, updateDoc, doc, query, where
+  collection, getDocs, addDoc, updateDoc, doc, query, where, orderBy
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { Loader2, Plus, FileText, CheckCircle, DollarSign } from 'lucide-react';
 import type { HqStaff, SalarySlip } from '@/types/hq';
+import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
+
+const ALL_DEPTS: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
 
+// Extended slip type that carries the source collection so we can update it later
+type SlipWithCol = SalarySlip & { _col: string };
+
 export default function SalarySlipsPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
   const [staff, setStaff] = useState<HqStaff[]>([]);
-  const [slips, setSlips] = useState<SalarySlip[]>([]);
+  const [slips, setSlips] = useState<SlipWithCol[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth());
   const [generating, setGenerating] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [editingSlip, setEditingSlip] = useState<SalarySlip | null>(null);
+  const [editingSlip, setEditingSlip] = useState<SlipWithCol | null>(null);
   const [editValues, setEditValues] = useState({ bonus: 0, bonusReason: '', otherDeductions: 0, deductionReason: '' });
 
   useEffect(() => {
@@ -33,31 +39,42 @@ export default function SalarySlipsPage() {
 
   useEffect(() => {
     if (!session) return;
-    
-    const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
-    
+
     const fetchData = async () => {
       try {
-        const staffPromises = depts.map(d => 
-          getDocs(query(collection(db, d === 'hq' ? 'hq_staff' : `${d.replace('-', '_')}_staff`), where('isActive', '==', true)))
+        // Fetch all staff across all departments
+        const staffSnaps = await Promise.all(
+          ALL_DEPTS.map(d =>
+            getDocs(query(collection(db, getDeptCollection(d)), where('isActive', '==', true)))
+              .catch(() => ({ docs: [] } as any))
+          )
         );
-        const slipsSnap = await getDocs(collection(db, 'hq_salary_records'));
-        const staffSnaps = await Promise.all(staffPromises);
-        
+
         let allStaff: HqStaff[] = [];
         staffSnaps.forEach((snap, idx) => {
-          const dept = depts[idx];
-          allStaff = [...allStaff, ...snap.docs.map(d => ({ id: d.id, ...d.data(), department: dept } as HqStaff))];
+          const dept = ALL_DEPTS[idx];
+          allStaff = [...allStaff, ...snap.docs.map((d: any) => ({ id: d.id, ...d.data(), department: dept } as HqStaff))];
         });
-
         setStaff(allStaff);
-        setSlips(slipsSnap.docs.map(d => ({ id: d.id, ...d.data() } as SalarySlip)));
+
+        // Fetch salary slips from ALL department-specific collections
+        const slipSnaps = await Promise.all(
+          ALL_DEPTS.map(dept => {
+            const col = `${getDeptPrefix(dept)}_salary_records`;
+            return getDocs(query(collection(db, col), orderBy('createdAt', 'desc')))
+              .then(snap => snap.docs.map((d: any) => ({ id: d.id, _col: col, ...d.data() } as SlipWithCol)))
+              .catch(() => [] as SlipWithCol[]);
+          })
+        );
+
+        setSlips(slipSnaps.flat());
         setLoading(false);
       } catch (err) {
         console.error('Fetch error:', err);
+        setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [session]);
 
@@ -68,27 +85,27 @@ export default function SalarySlipsPage() {
     if (existing) return;
     setGenerating(member.id);
 
-    const dept = member.department || 'hq';
-    const colName = dept === 'hq' ? 'hq_attendance' : `${dept.replace('-', '_')}_attendance`;
+    const dept = (member.department as StaffDept) || 'hq';
+    const prefix = getDeptPrefix(dept);
+    const salaryCol = `${prefix}_salary_records`;
 
     const attSnap = await getDocs(
-      query(collection(db, colName), where('staffId', '==', member.id))
-    );
-    const monthAttendance = attSnap.docs
-      .map(d => d.data())
-      .filter(a => (a.date || '').startsWith(selectedMonth));
+      query(collection(db, `${prefix}_attendance`), where('staffId', '==', member.id))
+    ).catch(() => ({ docs: [] } as any));
 
-    const presentDays = monthAttendance.filter(a => a.status === 'present').length;
-    const paidLeaveDays = monthAttendance.filter(a => a.status === 'paid_leave').length;
-    const unpaidLeaveDays = monthAttendance.filter(a => a.status === 'unpaid_leave').length;
-    const legacyLeaveDays = monthAttendance.filter(a => a.status === 'leave').length;
-    const absentDays = monthAttendance.filter(a => a.status === 'absent').length;
-    
-    // Get actual days in the selected month
+    const monthAttendance = attSnap.docs
+      .map((d: any) => d.data())
+      .filter((a: any) => (a.date || '').startsWith(selectedMonth));
+
+    const presentDays = monthAttendance.filter((a: any) => a.status === 'present').length;
+    const paidLeaveDays = monthAttendance.filter((a: any) => a.status === 'paid_leave').length;
+    const unpaidLeaveDays = monthAttendance.filter((a: any) => a.status === 'unpaid_leave').length;
+    const legacyLeaveDays = monthAttendance.filter((a: any) => a.status === 'leave').length;
+    const absentDays = monthAttendance.filter((a: any) => a.status === 'absent').length;
+
     const [yearStr, monthStr] = selectedMonth.split('-');
     const workingDays = new Date(Number(yearStr), Number(monthStr), 0).getDate();
-    
-    // Formula: (Basic / ActualDays) * Paid Days
+
     const dailyWage = (member.monthlySalary || 0) / workingDays;
     const totalPaidDays = presentDays + paidLeaveDays;
     const basePay = Math.round(dailyWage * totalPaidDays);
@@ -108,7 +125,7 @@ export default function SalarySlipsPage() {
       leaveDays: paidLeaveDays + unpaidLeaveDays + legacyLeaveDays,
       paidLeaveDays,
       unpaidLeaveDays,
-      absentDeduction: 0, // Legacy field, keeping for schema safety
+      absentDeduction: 0,
       bonus: 0,
       bonusReason: '',
       otherDeductions: 0,
@@ -119,15 +136,15 @@ export default function SalarySlipsPage() {
       createdBy: session!.customId,
     };
 
-    const newDoc = await addDoc(collection(db, 'hq_salary_records'), slip);
-    setSlips(prev => [...prev, { id: newDoc.id, ...slip }]);
+    const newDoc = await addDoc(collection(db, salaryCol), slip);
+    setSlips(prev => [...prev, { id: newDoc.id, _col: salaryCol, ...slip }]);
     setGenerating(null);
   };
 
   const handleUpdateAdjustments = async () => {
     if (!editingSlip) return;
     const { bonus, bonusReason, otherDeductions, deductionReason } = editValues;
-    
+
     if (bonus > 0 && !bonusReason) {
       alert('Please provide a reason for the bonus.');
       return;
@@ -149,31 +166,31 @@ export default function SalarySlipsPage() {
       netSalary
     };
 
-    await updateDoc(doc(db, 'hq_salary_records', editingSlip.id), updates);
+    await updateDoc(doc(db, editingSlip._col, editingSlip.id), updates);
     setSlips(prev => prev.map(s => s.id === editingSlip.id ? { ...s, ...updates } : s));
     setEditingSlip(null);
     setActionLoading(null);
   };
 
-  const handleApprove = async (slipId: string) => {
+  const handleApprove = async (slip: SlipWithCol) => {
     if (session?.role !== 'superadmin') return;
-    setActionLoading(slipId);
-    await updateDoc(doc(db, 'hq_salary_records', slipId), {
+    setActionLoading(slip.id);
+    await updateDoc(doc(db, slip._col, slip.id), {
       status: 'approved',
       approvedBy: session.customId,
       approvedAt: new Date().toISOString(),
     });
-    setSlips(prev => prev.map(s => s.id === slipId ? { ...s, status: 'approved', approvedBy: session.customId } : s));
+    setSlips(prev => prev.map(s => s.id === slip.id ? { ...s, status: 'approved', approvedBy: session.customId } : s));
     setActionLoading(null);
   };
 
-  const handleMarkPaid = async (slipId: string) => {
-    setActionLoading(slipId);
-    await updateDoc(doc(db, 'hq_salary_records', slipId), {
+  const handleMarkPaid = async (slip: SlipWithCol) => {
+    setActionLoading(slip.id);
+    await updateDoc(doc(db, slip._col, slip.id), {
       status: 'paid',
       paidAt: new Date().toISOString(),
     });
-    setSlips(prev => prev.map(s => s.id === slipId ? { ...s, status: 'paid' } : s));
+    setSlips(prev => prev.map(s => s.id === slip.id ? { ...s, status: 'paid' } : s));
     setActionLoading(null);
   };
 
@@ -189,7 +206,7 @@ export default function SalarySlipsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Salary Slips</h1>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Monthly payroll management</p>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Monthly payroll management — All Departments</p>
           </div>
           <input
             type="month"
@@ -254,9 +271,9 @@ export default function SalarySlipsPage() {
                           slip.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                           'bg-amber-500/10 text-amber-400 border-amber-500/20'
                         }`}>{slip.status}</span>
-                        
+
                         {['manager', 'cashier'].includes(session?.role || '') && slip.status === 'draft' && (
-                          <button 
+                          <button
                             onClick={() => {
                               setEditingSlip(slip);
                               setEditValues({
@@ -273,12 +290,12 @@ export default function SalarySlipsPage() {
                         )}
 
                         {session?.role === 'superadmin' && slip.status === 'draft' && (
-                          <button disabled={!!actionLoading} onClick={() => { void handleApprove(slip.id); }} className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                          <button disabled={!!actionLoading} onClick={() => { void handleApprove(slip); }} className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
                             {actionLoading === slip.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />} Approve
                           </button>
                         )}
                         {slip.status === 'approved' && (
-                          <button disabled={!!actionLoading} onClick={() => { void handleMarkPaid(slip.id); }} className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-blue-500/20 text-emerald-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                          <button disabled={!!actionLoading} onClick={() => { void handleMarkPaid(slip); }} className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-blue-500/20 text-emerald-400 font-black text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
                             {actionLoading === slip.id ? <Loader2 size={10} className="animate-spin" /> : <DollarSign size={10} />} Mark Paid
                           </button>
                         )}
@@ -319,7 +336,7 @@ export default function SalarySlipsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Bonus (PKR)</label>
-                    <input 
+                    <input
                       type="number"
                       value={editValues.bonus}
                       onChange={(e) => setEditValues({ ...editValues, bonus: Number(e.target.value) })}
@@ -328,7 +345,7 @@ export default function SalarySlipsPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Deduction (PKR)</label>
-                    <input 
+                    <input
                       type="number"
                       value={editValues.otherDeductions}
                       onChange={(e) => setEditValues({ ...editValues, otherDeductions: Number(e.target.value) })}
@@ -339,7 +356,7 @@ export default function SalarySlipsPage() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Bonus Reason</label>
-                  <textarea 
+                  <textarea
                     value={editValues.bonusReason}
                     onChange={(e) => setEditValues({ ...editValues, bonusReason: e.target.value })}
                     placeholder="Why is this bonus being given?"
@@ -349,7 +366,7 @@ export default function SalarySlipsPage() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Deduction Reason</label>
-                  <textarea 
+                  <textarea
                     value={editValues.deductionReason}
                     onChange={(e) => setEditValues({ ...editValues, deductionReason: e.target.value })}
                     placeholder="Reason for deduction/fine?"
@@ -359,13 +376,13 @@ export default function SalarySlipsPage() {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button 
+                <button
                   onClick={() => setEditingSlip(null)}
                   className="flex-1 px-6 py-4 rounded-2xl border border-white/10 text-white font-black text-xs uppercase tracking-widest hover:bg-white/5 transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleUpdateAdjustments}
                   disabled={!!actionLoading}
                   className="flex-[2] bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-black font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2"

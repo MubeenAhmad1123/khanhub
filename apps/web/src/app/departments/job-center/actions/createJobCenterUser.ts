@@ -30,6 +30,7 @@ export async function createJobCenterUserServer(
   role: string,
   displayName: string,
   seekerId?: string,
+  employerId?: string,
   emailDomain: string = DOMAIN,
   userCollection: string = 'jobcenter_users'
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
@@ -70,10 +71,10 @@ export async function createJobCenterUserServer(
       const nextSeekerId = seekerId || null;
 
       if (!existingProfileSnap.exists) {
-        if (role === 'seeker') {
+        if (role === 'seeker' || role === 'employer') {
           return {
             success: false,
-            error: 'Login ID already exists. Please use a different Seeker Login ID.',
+            error: `Login ID already exists. Please use a different ${role === 'seeker' ? 'Seeker' : 'Employer'} Login ID.`,
           };
         }
 
@@ -83,6 +84,7 @@ export async function createJobCenterUserServer(
           displayName,
           password,
           seekerId: nextSeekerId,
+          employerId: employerId || null,
           isActive: true,
           createdAt: FieldValue.serverTimestamp(),
         });
@@ -105,6 +107,13 @@ export async function createJobCenterUserServer(
         };
       }
 
+      if (role === 'employer' && existingProfile?.employerId && existingProfile.employerId !== employerId) {
+        return {
+          success: false,
+          error: `This Employer Login ID is already assigned to another company.`,
+        };
+      }
+
       await adminDb.collection(userCollection).doc(existingUser.uid).set(
         {
           customId,
@@ -112,6 +121,7 @@ export async function createJobCenterUserServer(
           displayName,
           password,
           seekerId: nextSeekerId,
+          employerId: employerId || null,
           isActive: true,
         },
         { merge: true }
@@ -129,6 +139,7 @@ export async function createJobCenterUserServer(
       displayName,
       password,
       seekerId: seekerId || null,
+      employerId: employerId || null,
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
     });

@@ -6,6 +6,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { Loader2, Printer, Award } from 'lucide-react';
+import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
 import type { HqStaff } from '@/types/hq';
 
 export default function ManagerReportsPage() {
@@ -21,25 +22,52 @@ export default function ManagerReportsPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || !['manager', 'superadmin'].includes(session.role)) router.push('/hq/login');
+    if (!session || !['manager', 'superadmin'].includes(session.role)) {
+      router.push('/hq/login');
+    }
   }, [session, sessionLoading, router]);
 
   useEffect(() => {
     if (!session) return;
-    Promise.all([
-      getDocs(query(collection(db, 'hq_staff'), where('isActive', '==', true))),
-      getDocs(collection(db, 'hq_attendance')),
-      getDocs(collection(db, 'rehab_dress_logs')),
-      getDocs(collection(db, 'rehab_duty_logs')),
-      getDocs(collection(db, 'rehab_growth_points')),
-    ]).then(([staffSnap, attSnap, dressSnap, dutySnap, gpSnap]) => {
-      setStaff(staffSnap.docs.map(d => ({ id: d.id, ...d.data() } as HqStaff)));
-      setAttendance(attSnap.docs.map(d => d.data()));
-      setDressLogs(dressSnap.docs.map(d => d.data()));
-      setDutyLogs(dutySnap.docs.map(d => d.data()));
-      setGrowthPoints(gpSnap.docs.map(d => d.data()));
-      setLoading(false);
-    });
+    
+    const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'] as StaffDept[];
+    
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [staffSnaps, attSnaps, dressSnaps, dutySnaps, gpSnaps] = await Promise.all([
+          Promise.all(depts.map(d => getDocs(query(collection(db, getDeptCollection(d)), where('isActive', '==', true))))),
+          Promise.all(depts.map(d => getDocs(collection(db, `${getDeptPrefix(d)}_attendance`)))),
+          Promise.all(depts.map(d => getDocs(collection(db, `${getDeptPrefix(d)}_dress_logs`)))),
+          Promise.all(depts.map(d => getDocs(collection(db, `${getDeptPrefix(d)}_duty_logs`)))),
+          Promise.all(depts.map(d => getDocs(collection(db, `${getDeptPrefix(d)}_growth_points`)))),
+        ]);
+
+        const allStaff: HqStaff[] = [];
+        staffSnaps.forEach((snap, i) => {
+          snap.docs.forEach(d => {
+            allStaff.push({ id: d.id, dept: depts[i], ...d.data() } as HqStaff);
+          });
+        });
+
+        const allAtt = attSnaps.flatMap(snap => snap.docs.map(d => d.data()));
+        const allDress = dressSnaps.flatMap(snap => snap.docs.map(d => d.data()));
+        const allDuty = dutySnaps.flatMap(snap => snap.docs.map(d => d.data()));
+        const allGP = gpSnaps.flatMap(snap => snap.docs.map(d => d.data()));
+
+        setStaff(allStaff);
+        setAttendance(allAtt);
+        setDressLogs(allDress);
+        setDutyLogs(allDuty);
+        setGrowthPoints(allGP);
+      } catch (err) {
+        console.error("Error fetching report data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [session]);
 
   const getStaffStats = (staffId: string) => {
@@ -67,7 +95,11 @@ export default function ManagerReportsPage() {
     .sort((a, b) => (b.stats.gp + b.stats.attPct) - (a.stats.gp + a.stats.attPct));
 
   if (sessionLoading || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-950"><Loader2 className="animate-spin text-amber-500" size={32} /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <Loader2 className="animate-spin text-amber-500" size={32} />
+      </div>
+    );
   }
 
   return (
@@ -79,8 +111,16 @@ export default function ManagerReportsPage() {
             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Monthly performance overview</p>
           </div>
           <div className="flex items-center gap-3">
-            <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 [color-scheme:dark]" />
-            <button onClick={() => window.print()} className="bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white font-black text-xs uppercase tracking-widest px-4 py-3 rounded-2xl transition-all active:scale-95 flex items-center gap-2">
+            <input 
+              type="month" 
+              value={selectedMonth} 
+              onChange={e => setSelectedMonth(e.target.value)} 
+              className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-bold outline-none focus:border-amber-500/50 [color-scheme:dark]" 
+            />
+            <button 
+              onClick={() => window.print()} 
+              className="bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white font-black text-xs uppercase tracking-widest px-4 py-3 rounded-2xl transition-all active:scale-95 flex items-center gap-2"
+            >
               <Printer size={14} />
             </button>
           </div>
@@ -92,19 +132,17 @@ export default function ManagerReportsPage() {
             <h3 className="text-white font-black text-xs uppercase tracking-widest">Performance Leaderboard</h3>
           </div>
           <div className="overflow-x-auto">
-            <div className="table-responsive">
-
             <table className="w-full">
               <thead>
                 <tr className="bg-white/5 border-b border-white/5">
-                  {['#', 'Staff', 'Attendance', 'Dress Code', 'Duty', 'Growth Pts'].map(h => (
+                  {['#', 'Staff', 'Dept', 'Attendance', 'Dress Code', 'Duty', 'Growth Pts'].map(h => (
                     <th key={h} className="px-4 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {staffWithStats.map((member, index) => (
-                  <tr key={member.id} style={{ animationDelay: `${index * 40}ms` }} className="animate-in fade-in duration-300 hover:bg-white/5 transition-colors">
+                  <tr key={member.id} className="animate-in fade-in duration-300 hover:bg-white/5 transition-colors">
                     <td className="px-4 py-4">
                       <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-gray-400 text-black' : index === 2 ? 'bg-amber-800 text-white' : 'bg-white/5 text-gray-500'}`}>
                         {index + 1}
@@ -113,6 +151,11 @@ export default function ManagerReportsPage() {
                     <td className="px-4 py-4">
                       <p className="text-white font-bold text-sm">{member.name}</p>
                       <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{member.designation}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="px-2 py-1 rounded-lg bg-white/5 text-gray-400 text-[9px] font-black uppercase tracking-widest">
+                        {member.dept}
+                      </span>
                     </td>
                     {[
                       { value: member.stats.attPct, threshold: 80 },
@@ -135,7 +178,6 @@ export default function ManagerReportsPage() {
                 ))}
               </tbody>
             </table>
-              </div>
           </div>
         </div>
       </div>
