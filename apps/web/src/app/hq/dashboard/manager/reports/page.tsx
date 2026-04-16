@@ -71,21 +71,32 @@ export default function ManagerReportsPage() {
   }, [session]);
 
   const getStaffStats = (staffId: string) => {
-    const monthAtt = attendance.filter(a => a.staffId === staffId && (a.date || '').startsWith(selectedMonth));
+    const isSameMonth = (dateVal: any) => {
+      if (!dateVal) return false;
+      const dateStr = typeof dateVal === 'string' 
+        ? dateVal 
+        : (dateVal.toDate ? dateVal.toDate() : new Date(dateVal)).toISOString().slice(0, 10);
+      return dateStr.startsWith(selectedMonth);
+    };
+
+    const monthAtt = attendance.filter(a => a.staffId === staffId && isSameMonth(a.date));
     const present = monthAtt.filter(a => a.status === 'present').length;
     const total = monthAtt.length || 1;
     const attPct = Math.round((present / total) * 100);
 
-    const monthDress = dressLogs.filter(d => d.staffId === staffId && (d.date || '').startsWith(selectedMonth));
+    const monthDress = dressLogs.filter(d => d.staffId === staffId && isSameMonth(d.date));
     const dressCompliant = monthDress.filter(d => d.items?.every((i: any) => i.status === 'yes' || i.status === 'na')).length;
     const dressPct = monthDress.length > 0 ? Math.round((dressCompliant / monthDress.length) * 100) : 0;
 
-    const monthDuty = dutyLogs.filter(d => d.staffId === staffId && (d.date || '').startsWith(selectedMonth));
+    const monthDuty = dutyLogs.filter(d => d.staffId === staffId && isSameMonth(d.date));
     const dutyDone = monthDuty.filter(d => d.duties?.every((i: any) => i.status === 'done' || i.status === 'na')).length;
     const dutyPct = monthDuty.length > 0 ? Math.round((dutyDone / monthDuty.length) * 100) : 0;
 
     const gp = growthPoints
-      .filter(g => g.staffId === staffId && (g.month || '').startsWith(selectedMonth))
+      .filter(g => g.staffId === staffId && (
+        (g.month || '').startsWith(selectedMonth) || 
+        (g.date ? isSameMonth(g.date) : false)
+      ))
       .reduce((s, g) => s + (g.points || 0), 0);
 
     return { attPct, dressPct, dutyPct, gp, present, total };
