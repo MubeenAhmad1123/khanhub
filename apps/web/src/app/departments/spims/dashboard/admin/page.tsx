@@ -52,17 +52,10 @@ export default function AdminDashboardPage() {
       const studentsSnap = await getDocs(collection(db, 'spims_students'));
       const allStudents = studentsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
       
-      // Be lenient: count as active if status is 'Active' or missing (legacy) 
-      // but exclude those explicitly marked as Left, Dropped, or Pass (if desired)
-      // Usually users want to see everyone who is currently enrolled.
       const active = allStudents
-        .filter((s: any) => {
-          const st = (s.status || '').toLowerCase();
-          return st !== 'left' && st !== 'dropped';
-        })
         .sort((a: any, b: any) => String(a.name || '').localeCompare(String(b.name || '')));
 
-      setTotalPatients(active.length);
+      setTotalPatients(allStudents.length);
       setActivePatients(active.slice(0, 5));
 
     } catch (error) {

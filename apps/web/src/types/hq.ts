@@ -22,6 +22,7 @@ export interface HqSession {
   role: HqRole;
   loginTime: number;
   portal?: string;
+  email?: string;
 }
 
 export interface HqMeta {

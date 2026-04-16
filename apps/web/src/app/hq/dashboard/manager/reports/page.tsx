@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, Printer, Award, Clock } from 'lucide-react';
+import { Loader2, Printer, Award, Clock, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
 import type { HqStaff } from '@/types/hq';
@@ -299,12 +299,3 @@ export default function ManagerReportsPage() {
   );
 }
 
-function XCircle({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="m15 9-6 6" />
-      <path d="m9 9 6 6" />
-    </svg>
-  );
-}

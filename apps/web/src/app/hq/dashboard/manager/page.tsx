@@ -321,16 +321,19 @@ export default function ManagerOverviewPage() {
               return false;
             }).map(s => (
               <div key={s.id} className={`p-4 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700/50 hover:bg-zinc-800' : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:shadow-lg'}`}>
-                <div className="flex items-center gap-3">
+                <Link 
+                  href={`/hq/dashboard/manager/staff/${s.id}?dept=${s.department}`} 
+                  className="flex items-center gap-3 hover:opacity-75 transition-opacity"
+                >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs uppercase
                     ${isDark ? 'bg-zinc-700 text-zinc-300' : 'bg-white text-gray-400 shadow-sm'}`}>
                     {s.name?.[0] || 'S'}
                   </div>
                   <div>
-                    <p className="text-sm font-black">{s.name}</p>
+                    <p className="text-sm font-black text-blue-500 hover:underline">{s.name}</p>
                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{s.department}</p>
                   </div>
-                </div>
+                </Link>
                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {(!attMap.get(s.id)) && (
                     <div className="flex gap-1">

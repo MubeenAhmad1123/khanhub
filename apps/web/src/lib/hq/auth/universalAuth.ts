@@ -29,7 +29,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'hq_users',
     domain: '@hq.khanhub.com',
     dashboardPath: '/hq/dashboard',
-    sessionKey: 'hq_session'
+    sessionKey: 'hq_session',
+    prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
   },
   rehab: {
     id: 'rehab',
@@ -37,7 +38,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'rehab_users',
     domain: '@rehab.khanhub',
     dashboardPath: '/departments/rehab/dashboard',
-    sessionKey: 'rehab_session'
+    sessionKey: 'rehab_session',
+    prefixes: ['REHAB', 'PAT', 'PATIENT', 'FAM', 'FAMILY']
   },
   spims: {
     id: 'spims',
@@ -46,7 +48,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     domain: '@spims.khanhub',
     dashboardPath: '/departments/spims/dashboard',
     sessionKey: 'spims_session',
-    legacyDomain: '@spims.edu.pk'
+    legacyDomain: '@spims.edu.pk',
+    prefixes: ['SPIMS', 'STU', 'STUDENT']
   },
   hospital: {
     id: 'hospital',
@@ -55,7 +58,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     domain: '@hospital.khanhub',
     dashboardPath: '/departments/hospital/dashboard',
     sessionKey: 'hospital_session',
-    prefixes: ['HOS', 'HOSP']
+    prefixes: ['HOS', 'HOSP', 'PAT', 'PATIENT']
   },
   sukoon: {
     id: 'sukoon',
@@ -63,7 +66,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'sukoon_users',
     domain: '@sukoon.khanhub',
     dashboardPath: '/departments/sukoon/dashboard',
-    sessionKey: 'sukoon_session'
+    sessionKey: 'sukoon_session',
+    prefixes: ['SUK', 'RES', 'RESIDENT']
   },
   welfare: {
     id: 'welfare',
@@ -71,7 +75,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'welfare_users',
     domain: '@welfare.khanhub',
     dashboardPath: '/departments/welfare/dashboard',
-    sessionKey: 'welfare_session'
+    sessionKey: 'welfare_session',
+    prefixes: ['WEL', 'ORPH', 'CHILD']
   },
   'job-center': {
     id: 'job-center',
@@ -79,7 +84,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub',
     dashboardPath: '/departments/job-center/dashboard',
-    sessionKey: 'job-center_session'
+    sessionKey: 'job-center_session',
+    prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
   },
   'social-media': {
     id: 'social-media',
@@ -87,7 +93,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'media_users',
     domain: '@media.khanhub',
     dashboardPath: '/departments/social-media/dashboard',
-    sessionKey: 'social-media_session'
+    sessionKey: 'social-media_session',
+    prefixes: ['MED', 'SOC']
   },
   it: {
     id: 'it',
@@ -95,7 +102,8 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'it_users',
     domain: '@it.khanhub',
     dashboardPath: '/departments/it/dashboard',
-    sessionKey: 'it_session'
+    sessionKey: 'it_session',
+    prefixes: ['IT', 'DEV']
   }
 };
 
@@ -111,15 +119,24 @@ export async function discoverUser(rawId: string, deptHint?: string): Promise<{ 
   // Helper to search a specific department
   const performSearch = async (dept: (typeof DEPARTMENTS_AUTH)[keyof typeof DEPARTMENTS_AUTH]) => {
     try {
-      // 1. Try exact match
-      const q1 = query(collection(db, dept.collection), where('customId', '==', rawId.trim()), limit(1));
-      const snap1 = await getDocs(q1);
-      if (!snap1.empty) return { dept, data: snap1.docs[0].data(), uid: snap1.docs[0].id };
-      
-      // 2. Try lowercase match
-      const q2 = query(collection(db, dept.collection), where('customId', '==', normalizedId), limit(1));
-      const snap2 = await getDocs(q2);
-      if (!snap2.empty) return { dept, data: snap2.docs[0].data(), uid: snap2.docs[0].id };
+      const cleanId = rawId.trim();
+      const lowerId = cleanId.toLowerCase();
+      const upperId = cleanId.toUpperCase();
+
+      // We combine searches to identify the user record efficiently
+      const checks = [
+        query(collection(db, dept.collection), where('customId', '==', cleanId), limit(1)),
+        query(collection(db, dept.collection), where('customId', '==', lowerId), limit(1)),
+        query(collection(db, dept.collection), where('customId', '==', upperId), limit(1))
+      ];
+
+      const snapshots = await Promise.all(checks.map(q => getDocs(q)));
+      const found = snapshots.find(s => !s.empty);
+
+      if (found) {
+        const doc = found.docs[0];
+        return { dept, data: doc.data(), uid: doc.id };
+      }
       
       return null;
     } catch (e: any) {
@@ -309,10 +326,28 @@ function getDashboardPath(deptId: string, role: string, patientId?: string): str
   if (normalizedRole === 'admin') return `${base}/admin`;
   if (normalizedRole === 'cashier') return `${base}/cashier`;
   if (normalizedRole === 'superadmin') return `${base}/superadmin`;
+  if (normalizedRole === 'manager') return `${base}/manager`;
+
+  // Specific portal roles with sub-paths
   if (normalizedRole === 'family' && patientId) {
     const familyPath = deptId === 'hospital' ? 'patient' : 'family';
     return `${base}/${familyPath}/${patientId}`;
   }
-  
+  if (normalizedRole === 'student' && patientId) {
+    return `${base}/student/${patientId}`;
+  }
+  if (normalizedRole === 'seeker' && patientId) {
+    return `${base}/seeker/${patientId}`;
+  }
+  if (normalizedRole === 'patient' && patientId) {
+    return `${base}/patient/${patientId}`;
+  }
+  if (normalizedRole === 'resident' && patientId) {
+    return `${base}/resident/${patientId}`;
+  }
+  if (normalizedRole === 'child' && patientId) {
+    return `${base}/child/${patientId}`;
+  }
+
   return `${base}/${normalizedRole}`;
 }

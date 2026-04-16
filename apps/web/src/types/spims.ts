@@ -160,6 +160,7 @@ export interface SpimsStudent {
   createdAt: Timestamp | Date;
   updatedAt?: Timestamp | Date;
   createdBy?: string;
+  phone?: string;
 }
 
 /** One row in spims_fees (monthly / fee ledger) */
