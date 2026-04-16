@@ -170,7 +170,8 @@ export async function listStaffCards({
 export type StaffProfile = StaffCardRow & {
   email?: string;
   phone?: string;
-  customId?: string; // This is the Employee ID field
+  customId?: string; // This is the Login ID
+  employeeId?: string; // This is the Visual ID
   address?: string;
   cnic?: string;
   dob?: string;
@@ -222,7 +223,8 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     isActive: data.isActive !== false,
     email: data.email,
     phone: data.phone,
-    customId: data.customId || data.employeeId, // Unify employeeId/customId
+    customId: data.customId, // Login ID
+    employeeId: data.employeeId || data.customId, // Visual ID, fallback to customId
     address: data.address,
     cnic: data.cnic,
     dob: data.dob,

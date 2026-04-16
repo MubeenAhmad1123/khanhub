@@ -103,7 +103,8 @@ export default function StaffProfilePage() {
     dutyEndTime: '',
     isActive: true,
     phone: '',
-    customId: '', // Expose editable Employee ID
+    customId: '', // Login ID / Portal ID
+    employeeId: '', // Visual Employee ID (e.g. SPIMS-STF-001)
     cnic: '',
     dob: '',
     gender: 'male' as 'male' | 'female' | 'other',
@@ -221,6 +222,7 @@ export default function StaffProfilePage() {
         isActive: profile.isActive !== false,
         phone: profile.phone || '',
         customId: profile.customId || '',
+        employeeId: profile.employeeId || profile.customId || '',
         cnic: profile.cnic || '',
         dob: profile.dob || '',
         gender: (profile.gender as any) || 'male',
@@ -709,7 +711,7 @@ export default function StaffProfilePage() {
 
       const slip: Partial<SalarySlip> = {
         staffId: staff.staffId,
-        employeeId: staff.customId || '',
+        employeeId: staff.employeeId || staff.customId || '',
         staffName: staff.name || '',
         department: staff.dept,
         month: payrollForm.month,
@@ -964,7 +966,7 @@ export default function StaffProfilePage() {
               <div className="flex flex-wrap justify-center gap-2 mb-6">
                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-400' : 'bg-gray-50 border-gray-100 text-gray-500'
                   }`}>
-                  ID: {staff?.customId || 'N/A'}
+                  ID: {staff?.employeeId || staff?.customId || '—'}
                 </span>
                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${staff?.dept === 'rehab' ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' : (isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-gray-50 text-gray-600')
                   }`}>
@@ -1542,15 +1544,31 @@ export default function StaffProfilePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                   {/* Column 1: Identity & Credentials (4 cols) */}
                   <div className="lg:col-span-4 space-y-6">
-                    <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Employee ID (Editable)</label>
-                      <input
-                        type="text"
-                        value={editForm.customId}
-                        placeholder="KH-STAFF-001"
-                        onChange={e => setEditForm({ ...editForm, customId: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Employee ID</label>
+                        <input
+                          type="text"
+                          value={editForm.employeeId}
+                          placeholder="KH-STAFF-001"
+                          onChange={e => setEditForm({ ...editForm, employeeId: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2 ml-2">Visual ID for reporting</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] ml-2 mb-2 block flex items-center gap-2">
+                          <Lock size={10} /> Login ID / Portal ID
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.customId}
+                          placeholder="spims-admin"
+                          onChange={e => setEditForm({ ...editForm, customId: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-900 border-indigo-500/30 text-indigo-300 focus:border-indigo-500' : 'bg-indigo-50/30 border-indigo-100 text-indigo-700 focus:border-indigo-500'}`}
+                        />
+                        <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-2 ml-2">Warning: Changes affect login</p>
+                      </div>
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Full Legal Name</label>
