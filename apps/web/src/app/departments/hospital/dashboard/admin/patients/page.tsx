@@ -89,7 +89,7 @@ export default function TransactionRecordsPage() {
       );
 
       const snap = await getDocs(q);
-      let allTx = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let allTx = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
 
       // Client-side category filtering if not 'all'
       if (categoryFilter !== 'all') {
