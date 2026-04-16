@@ -95,7 +95,16 @@ export default function SalarySlipsPage() {
 
     const monthAttendance = attSnap.docs
       .map((d: any) => d.data())
-      .filter((a: any) => (a.date || '').startsWith(selectedMonth));
+      .filter((a: any) => {
+        const dateVal = a.date;
+        if (!dateVal) return false;
+        const dateStr = typeof dateVal === 'string' 
+          ? dateVal 
+          : (dateVal && typeof dateVal.toDate === 'function')
+            ? dateVal.toDate().toISOString()
+            : String(dateVal);
+        return dateStr.startsWith(selectedMonth);
+      });
 
     const presentDays = monthAttendance.filter((a: any) => a.status === 'present').length;
     const paidLeaveDays = monthAttendance.filter((a: any) => a.status === 'paid_leave').length;

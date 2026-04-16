@@ -59,7 +59,13 @@ export default function ManagerAttendancePage() {
       });
       
       const results = await Promise.all(staffPromises);
-      const staffList = results.flat();
+      const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'superadmin', 'doctor', 'nurse', 'counselor'];
+      
+      const staffList = results.flat().filter(s => {
+        const role = String(s.role || '').toLowerCase();
+        return STAFF_ROLES.includes(role);
+      });
+      
       setStaff(staffList);
 
       // 2. Fetch attendance for selected date across target departments

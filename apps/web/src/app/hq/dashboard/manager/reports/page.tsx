@@ -44,9 +44,17 @@ export default function ManagerReportsPage() {
         ]);
 
         const allStaff: HqStaff[] = [];
+        const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'superadmin', 'doctor', 'nurse', 'counselor'];
+
         staffSnaps.forEach((snap, i) => {
           snap.docs.forEach(d => {
-            allStaff.push({ id: d.id, department: depts[i], ...d.data() } as unknown as HqStaff);
+            const data = d.data() as any;
+            const role = String(data.role || '').toLowerCase();
+            
+            // Only include staff with names and valid staff roles
+            if (data.name && STAFF_ROLES.includes(role)) {
+              allStaff.push({ id: d.id, department: depts[i], ...data } as unknown as HqStaff);
+            }
           });
         });
 
@@ -73,10 +81,20 @@ export default function ManagerReportsPage() {
   const getStaffStats = (staffId: string) => {
     const isSameMonth = (dateVal: any) => {
       if (!dateVal) return false;
-      const dateStr = typeof dateVal === 'string' 
-        ? dateVal 
-        : (dateVal.toDate ? dateVal.toDate() : new Date(dateVal)).toISOString().slice(0, 10);
-      return dateStr.startsWith(selectedMonth);
+      try {
+        const dateStr = typeof dateVal === 'string' 
+          ? dateVal 
+          : (dateVal && typeof dateVal.toDate === 'function')
+            ? dateVal.toDate().toISOString()
+            : (dateVal instanceof Date)
+              ? dateVal.toISOString()
+              : String(dateVal);
+        
+        return String(dateStr || "").startsWith(String(selectedMonth || ""));
+      } catch (e) {
+        console.error("isSameMonth error:", e);
+        return false;
+      }
     };
 
     const monthAtt = attendance.filter(a => a.staffId === staffId && isSameMonth(a.date));
@@ -94,8 +112,9 @@ export default function ManagerReportsPage() {
 
     const gp = growthPoints
       .filter(g => g.staffId === staffId && (
-        (g.month || '').startsWith(selectedMonth) || 
-        (g.date ? isSameMonth(g.date) : false)
+        (typeof g.month === 'string' && g.month.startsWith(selectedMonth)) || 
+        (g.date ? isSameMonth(g.date) : false) ||
+        (g.month && typeof g.month.toDate === 'function' && g.month.toDate().toISOString().startsWith(String(selectedMonth || "")))
       ))
       .reduce((s, g) => s + (g.points || 0), 0);
 

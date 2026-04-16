@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, Plus, Search, GraduationCap } from 'lucide-react';
+import { Loader2, Plus, Search, GraduationCap, ArrowRight } from 'lucide-react';
 import { listStudents } from '@/lib/spims/students';
 import type { SpimsStudent } from '@/types/spims';
 import { formatDateDMY } from '@/lib/utils';
@@ -60,81 +60,89 @@ export default function SpimsStudentsListPage() {
   if (!session || loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-9 h-9 animate-spin text-[#1D9E75]" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-9 h-9 animate-spin text-[#1D9E75]" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#1D9E75]/60 animate-pulse">Fetching Students...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
+    <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-24">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2">
             <GraduationCap className="text-[#1D9E75]" size={32} /> Students
           </h1>
-          <p className="text-gray-500 font-medium mt-1">SPIMS college register</p>
+          <p className="text-gray-500 font-medium mt-1 text-sm">SPIMS college register</p>
         </div>
         <Link
           href="/departments/spims/dashboard/admin/students/new"
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1D9E75] text-white px-5 py-3 text-sm font-black shadow-lg shadow-[#1D9E75]/20"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1D9E75] text-white px-5 py-3 text-sm font-black shadow-lg shadow-[#1D9E75]/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
         >
           <Plus size={18} /> New admission
         </Link>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-        <input
-          className="w-full rounded-2xl border border-gray-200 pl-12 pr-4 py-3 text-sm font-semibold shadow-sm"
-          placeholder="Search name, roll, CNIC, course…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+      <div className="relative group">
+        <div className="absolute inset-0 bg-[#1D9E75]/5 rounded-3xl blur-2xl group-focus-within:bg-[#1D9E75]/10 transition-all opacity-0 group-focus-within:opacity-100" />
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#1D9E75]" />
+          <input
+            className="w-full rounded-2xl border border-gray-100 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl pl-12 pr-4 py-4 text-sm font-semibold shadow-sm focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75] outline-none transition-all"
+            placeholder="Search name, roll, CNIC, course…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
       </div>
 
-      <div className="rounded-[2.5rem] border border-gray-100 bg-white shadow-xl shadow-gray-200/50 overflow-hidden">
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
+      {/* Responsive Content */}
+      <div className="bg-gray-50/50 rounded-[2.5rem] overflow-hidden md:border border-gray-100">
+        {/* Desktop/Tablet Table View */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/50 text-[10px] font-black uppercase tracking-widest text-gray-400 text-left border-b border-gray-100">
-                <th className="px-6 py-4">Roll</th>
-                <th className="px-6 py-4">Name</th>
-                <th className="px-6 py-4">Course</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4">Admission</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+              <tr className="bg-white border-b border-gray-100">
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Roll No</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Student Name</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Course</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400">Session</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
-                    No students matching your search
+                  <td colSpan={5} className="px-6 py-20 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
+                    No students found matching your search
                   </td>
                 </tr>
               ) : (
                 filtered.map((st) => (
-                  <tr key={st.id} className="group hover:bg-[#1D9E75]/5 transition-all duration-300">
-                    <td className="px-6 py-5 font-mono font-black text-[#1D9E75]">{st.rollNo}</td>
+                  <tr key={st.id} className="bg-white hover:bg-gray-50/80 transition-all group">
                     <td className="px-6 py-5">
-                      <p className="font-black text-gray-900 leading-none">{st.name}</p>
-                      <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-tighter">{st.cnic}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <p className="text-xs font-black text-gray-700 uppercase">{st.course}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">{st.session}</p>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="inline-block text-[9px] font-black uppercase px-3 py-1.5 rounded-full bg-[#1D9E75]/10 text-[#1D9E75]">
-                        {st.status}
+                      <span className="text-[10px] font-black bg-[#1D9E75]/10 text-[#1D9E75] px-3 py-1 rounded-lg">
+                        {st.rollNo}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-gray-500 font-bold text-xs">{formatDateDMY(st.admissionDate)}</td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-gray-900 leading-none mb-1">{st.name}</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{st.phone}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-[10px] font-black uppercase text-gray-500 tracking-tight">{st.course}</span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider font-mono">{st.session}</span>
+                    </td>
                     <td className="px-6 py-5 text-right">
                       <Link
                         href={`/departments/spims/dashboard/admin/students/${st.id}`}
-                        className="inline-flex items-center gap-2 bg-[#1D9E75] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[#1D9E75]/20 scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300"
+                        className="inline-flex items-center gap-2 bg-[#1D9E75] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[#1D9E75]/20 transition-all duration-300 hover:scale-105 active:scale-95"
                       >
                         Profile
                       </Link>
@@ -146,34 +154,36 @@ export default function SpimsStudentsListPage() {
           </table>
         </div>
 
-        {/* Mobile Card View */}
-        <div className="md:hidden divide-y divide-gray-100">
+        {/* Improved Mobile View - No fixed height to allow full page scroll */}
+        <div className="sm:hidden space-y-4">
           {filtered.length === 0 ? (
-             <div className="px-6 py-20 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
-                No students found
+             <div className="py-20 text-center bg-white rounded-[2rem] border border-dashed border-gray-200">
+                <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">No students found</p>
              </div>
           ) : (
             filtered.map((st) => (
-              <div key={st.id} className="p-5 flex items-center justify-between gap-4 active:bg-gray-50 transition-colors">
+              <Link 
+                href={`/departments/spims/dashboard/admin/students/${st.id}`}
+                key={st.id} 
+                className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm active:scale-[0.97] transition-all flex items-center justify-between gap-4 group hover:border-[#1D9E75]/30"
+              >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="text-[9px] font-black bg-[#1D9E75]/10 text-[#1D9E75] px-2 py-0.5 rounded-md">{st.rollNo}</span>
                     <span className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">{st.course}</span>
                   </div>
-                  <h3 className="text-sm font-black text-gray-900 truncate">{st.name}</h3>
-                  <div className="flex items-center gap-3 mt-1.5">
+                  <h3 className="text-sm font-black text-gray-900 truncate mb-1">{st.name}</h3>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="text-[8px] font-black uppercase text-gray-500">{st.session}</span>
-                    <span className="w-1 h-1 rounded-full bg-gray-300" />
-                    <span className="text-[8px] font-black text-[#1D9E75] uppercase">{st.status}</span>
+                    <span className="w-0.5 h-0.5 rounded-full bg-gray-300" />
+                    <span className="text-[8px] font-black text-[#1D9E75] uppercase">{st.status || 'Active'}</span>
+                    <span className="text-[8px] font-black text-gray-400 font-mono">{st.phone}</span>
                   </div>
                 </div>
-                <Link
-                  href={`/departments/spims/dashboard/admin/students/${st.id}`}
-                  className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gray-50 border border-gray-100 text-[#1D9E75] font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all"
-                >
-                  View
-                </Link>
-              </div>
+                <div className="shrink-0 w-10 h-10 flex items-center justify-center rounded-2xl bg-gray-50 text-gray-400 group-active:bg-[#1D9E75] group-active:text-white transition-all transform group-hover:translate-x-1">
+                  <ArrowRight size={18} />
+                </div>
+              </Link>
             ))
           )}
         </div>

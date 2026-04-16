@@ -101,23 +101,28 @@ export default function ManagerOverviewPage() {
         });
 
         const staffSnaps = await Promise.all(staffQueries.map(sq => getDocs(sq.q)));
+        const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'superadmin', 'doctor', 'nurse', 'counselor'];
 
-        let totalStaff = 0;
         let allStaffDocs: any[] = [];
         const seenStaffIds = new Set<string>();
         
         staffSnaps.forEach((s, idx) => {
           const dept = staffQueries[idx].dept;
           s.docs.forEach(doc => {
-            const id = doc.id;
-            if (!seenStaffIds.has(id)) {
-              seenStaffIds.add(id);
-              totalStaff++;
-              allStaffDocs.push({ 
-                id, 
-                department: dept,
-                ...(doc.data() as any)
-              });
+            const data = doc.data() as any;
+            const role = String(data.role || '').toLowerCase();
+            
+            // Only include legitimate staff roles
+            if (STAFF_ROLES.includes(role)) {
+              const id = doc.id;
+              if (!seenStaffIds.has(id)) {
+                seenStaffIds.add(id);
+                allStaffDocs.push({ 
+                  id, 
+                  department: dept,
+                  ...data
+                });
+              }
             }
           });
         });
@@ -127,10 +132,11 @@ export default function ManagerOverviewPage() {
           depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))))
         );
 
+        const attendanceMap = new Map<string, string>();
         let presentCount = 0;
         let absentCount = 0;
         let leaveCount = 0;
-        totalStaff = allStaffDocs.length;
+        const totalStaff = allStaffDocs.length;
         
         const dStats: Record<string, { present: number, absent: number, leave: number, total: number }> = {};
         depts.forEach(d => {
@@ -143,7 +149,6 @@ export default function ManagerOverviewPage() {
           if (dStats[dept]) dStats[dept].total++;
         });
 
-        const attendanceMap = new Map<string, string>();
         attSnaps.forEach((snap, i) => {
           const dept = depts[i];
           snap.docs.forEach(d => {

@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
 
 export type StaffDept = 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'social-media' | 'it';
-export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'other';
+export type StaffRole = 'admin' | 'staff' | 'cashier' | 'superadmin' | 'manager' | 'doctor' | 'nurse' | 'counselor' | 'other';
 
 export function getDeptCollection(dept: StaffDept): string {
   if (dept === 'hq') return 'hq_users';
@@ -42,7 +42,8 @@ export type StaffCardRow = {
 
 function normalizeRole(raw: any): StaffRole {
   const r = String(raw || '').toLowerCase();
-  if (r === 'admin' || r === 'staff' || r === 'cashier' || r === 'superadmin' || r === 'manager') return r as StaffRole;
+  const STAFF_WHITELIST = ['admin', 'staff', 'cashier', 'superadmin', 'manager', 'doctor', 'nurse', 'counselor'];
+  if (STAFF_WHITELIST.includes(r)) return r as StaffRole;
   return 'other';
 }
 

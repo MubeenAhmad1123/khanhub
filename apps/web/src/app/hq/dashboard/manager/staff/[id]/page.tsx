@@ -453,14 +453,29 @@ export default function StaffProfilePage() {
 
       const prevRecord = attendanceMap[date] || {};
       
-      // Calculate punctuality dynamically based on current staff duty time config
+      const normalizeTime = (t: string) => {
+        if (!t) return '00:00';
+        if (t.includes('AM') || t.includes('PM')) {
+          const [time, modifier] = t.split(' ');
+          let [hours, minutes] = time.split(':');
+          if (hours === '12') hours = '00';
+          if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+          return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+        }
+        return t.padStart(5, '0');
+      };
+
+      const staffIn = normalizeTime(staff.dutyStartTime || '09:00');
+      const staffOut = normalizeTime(staff.dutyEndTime || '17:00');
+      const currentVal = normalizeTime(value);
+
       let arrivedOnTime = prevRecord.arrivedOnTime;
       let departedOnTime = prevRecord.departedOnTime;
 
       if (field === 'arrivalTime') {
-        arrivedOnTime = value <= (staff.dutyStartTime || '09:00');
+        arrivedOnTime = currentVal <= staffIn;
       } else if (field === 'departureTime') {
-        departedOnTime = value >= (staff.dutyEndTime || '17:00');
+        departedOnTime = currentVal >= staffOut;
       }
 
       const newRecord = {
@@ -487,11 +502,24 @@ export default function StaffProfilePage() {
 
   const handleAttendanceCell = (dateStr: string) => {
     const existing = attendanceMap[dateStr];
+    
+    const normalizeTime = (t: string) => {
+      if (!t) return '';
+      if (t.includes('AM') || t.includes('PM')) {
+        const [time, modifier] = t.split(' ');
+        let [hours, minutes] = time.split(':');
+        if (hours === '12') hours = '00';
+        if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+        return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+      }
+      return t;
+    };
+
     setTimePopup({
       isOpen: true,
       date: dateStr,
-      arrivalTime: existing?.arrivalTime || staff?.dutyStartTime || '09:00',
-      departureTime: existing?.departureTime || staff?.dutyEndTime || '17:00'
+      arrivalTime: existing?.arrivalTime || normalizeTime(staff?.dutyStartTime || '09:00'),
+      departureTime: existing?.departureTime || normalizeTime(staff?.dutyEndTime || '17:00')
     });
   };
 
@@ -505,9 +533,26 @@ export default function StaffProfilePage() {
       const uid = staff.staffId;
       const ref = doc(db, `${slug}_attendance`, `${uid}_${timePopup.date}`);
 
+      const normalizeTime = (t: string) => {
+        if (!t) return '00:00';
+        if (t.includes('AM') || t.includes('PM')) {
+          const [time, modifier] = t.split(' ');
+          let [hours, minutes] = time.split(':');
+          if (hours === '12') hours = '00';
+          if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+          return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+        }
+        return t.padStart(5, '0');
+      };
+
+      const staffIn = normalizeTime(staff.dutyStartTime || '09:00');
+      const staffOut = normalizeTime(staff.dutyEndTime || '17:00');
+      const arrival = normalizeTime(timePopup.arrivalTime);
+      const departure = normalizeTime(timePopup.departureTime);
+
       // Auto-calculate punctuality if times are set
-      const arrivedOnTime = timePopup.arrivalTime <= (staff.dutyStartTime || '09:00');
-      const departedOnTime = timePopup.departureTime >= (staff.dutyEndTime || '17:00');
+      const arrivedOnTime = arrival <= staffIn;
+      const departedOnTime = departure >= staffOut;
 
       const payload = {
         arrivalTime: timePopup.arrivalTime,
@@ -1096,16 +1141,18 @@ export default function StaffProfilePage() {
                       <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4">Punctuality Score</h4>
                       <div className="flex flex-wrap gap-2 mb-8">
                         <button
-                          onClick={() => togglePunctuality(todayStr, "arrivedOnTime", !attendanceMap[todayStr]?.arrivedOnTime)}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivedOnTime ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
+                          onClick={() => handleAttendanceCell(todayStr)}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.arrivalTime ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
                         >
-                          <Clock size={12} /> {attendanceMap[todayStr]?.arrivedOnTime ? "Arr On Time" : "Arr Timing"}
+                          <Clock size={12} />
+                          {attendanceMap[todayStr]?.arrivalTime || "Set Arrival"}
                         </button>
                         <button
-                          onClick={() => togglePunctuality(todayStr, "departedOnTime", !attendanceMap[todayStr]?.departedOnTime)}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.departedOnTime ? "bg-teal-600 text-white shadow-sm shadow-teal-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
+                          onClick={() => handleAttendanceCell(todayStr)}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${attendanceMap[todayStr]?.departureTime ? "bg-rose-600 text-white shadow-sm shadow-rose-500/20" : (isDark ? "bg-zinc-800 text-zinc-500" : "bg-gray-100 text-gray-400")}`}
                         >
-                          <Clock size={12} /> {attendanceMap[todayStr]?.departedOnTime ? "Dep On Time" : "Dep Timing"}
+                          <Clock size={12} />
+                          {attendanceMap[todayStr]?.departureTime || "Set Departure"}
                         </button>
                       </div>
 
