@@ -25,7 +25,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview',      href: '/departments/rehab/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
   { label: 'Patients',      href: '/departments/rehab/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
-  { label: 'Credentials',   href: '/departments/rehab/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/rehab/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'My Patient',    href: '/departments/rehab/dashboard/family',         icon: <User size={16}/>,            roles: ['family'] },
   { label: 'My Profile',    href: '/departments/rehab/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin'] },

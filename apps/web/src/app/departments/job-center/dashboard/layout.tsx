@@ -25,7 +25,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview',      href: '/departments/job-center/dashboard/admin',          icon: <LayoutDashboard size={16}/>, roles: ['admin', 'superadmin'] },
   { label: 'Seekers',      href: '/departments/job-center/dashboard/admin/seekers', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
-  { label: 'Credentials',   href: '/departments/job-center/dashboard/admin/passwords', icon: <Shield size={16}/>,         roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/job-center/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'My Portal',    href: '/departments/job-center/dashboard/seeker',         icon: <User size={16}/>,            roles: ['seeker'] },
   { label: 'My Profile',    href: '/departments/job-center/dashboard/profile',        icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'seeker', 'superadmin'] },

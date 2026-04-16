@@ -25,7 +25,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/departments/spims/dashboard/admin', icon: <LayoutDashboard size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Students', href: '/departments/spims/dashboard/admin/students', icon: <Heart size={16} />, roles: ['admin', 'superadmin'] },
-  { label: 'Credentials', href: '/departments/spims/dashboard/admin/passwords', icon: <Shield size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Attendance', href: '/departments/spims/dashboard/admin/attendance', icon: <CalendarDays size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'Tests', href: '/departments/spims/dashboard/admin/tests', icon: <ClipboardCheck size={16} />, roles: ['admin', 'superadmin'] },
   { label: 'My Attendance', href: '/departments/spims/dashboard/staff', icon: <CalendarDays size={16} />, roles: ['staff'] },
