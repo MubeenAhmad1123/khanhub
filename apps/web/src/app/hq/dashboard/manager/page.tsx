@@ -54,6 +54,10 @@ export default function ManagerOverviewPage() {
   const [pendingList, setPendingList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDark, setIsDark] = useState(false);
+  const [allStaff, setAllStaff] = useState<any[]>([]);
+  const [attMap, setAttMap] = useState<Map<string, string>>(new Map());
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const getMs = (dateInput: any): number => {
     if (!dateInput) return 0;
@@ -231,8 +235,9 @@ export default function ManagerOverviewPage() {
           urgentApprovals: urgent.length,
         });
 
+        setAllStaff(allStaffDocs);
+        setAttMap(attendanceMap);
         setDeptStats(dStats);
-
         setPendingList(enrichedList);
       } catch (err) {
         console.error('Fetch error:', err);
@@ -272,13 +277,137 @@ export default function ManagerOverviewPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard isDark={isDark} label="Total Staff" value={stats.totalStaff} icon={<Users size={18} />} color="bg-blue-500/10 text-blue-500" />
-        <StatCard isDark={isDark} label="Present" value={stats.presentToday} icon={<CheckCircle size={18} />} color="bg-emerald-500/10 text-emerald-500" />
-        <StatCard isDark={isDark} label="Absent" value={stats.absentToday} icon={<XCircle size={18} />} color="bg-rose-500/10 text-rose-500" />
-        <StatCard isDark={isDark} label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={18} />} color="bg-amber-500/10 text-amber-500" />
-        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-zinc-500/10 text-zinc-500" />
-        <StatCard isDark={isDark} label="Pending Tasks" value={stats.pendingApprovals} icon={<FileText size={18} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} />
+        <StatCard isDark={isDark} label="Total Staff" value={stats.totalStaff} icon={<Users size={18} />} color="bg-blue-500/10 text-blue-500" onClick={() => setSelectedMetric('total')} />
+        <StatCard isDark={isDark} label="Present" value={stats.presentToday} icon={<CheckCircle size={18} />} color="bg-emerald-500/10 text-emerald-500" onClick={() => setSelectedMetric('present')} />
+        <StatCard isDark={isDark} label="Absent" value={stats.absentToday} icon={<XCircle size={18} />} color="bg-rose-500/10 text-rose-500" onClick={() => setSelectedMetric('absent')} />
+        <StatCard isDark={isDark} label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={18} />} color="bg-amber-500/10 text-amber-500" onClick={() => setSelectedMetric('leave')} />
+        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-zinc-500/10 text-zinc-500" onClick={() => setSelectedMetric('notMarked')} />
+        <StatCard isDark={isDark} label="Pending Tasks" value={stats.pendingApprovals} icon={<FileText size={18} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} onClick={() => setSelectedMetric('pending')} />
       </div>
+
+      {/* Metric Detail View */}
+      {selectedMetric && (
+        <div className={`animate-in slide-in-from-top duration-500 p-6 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/80 border-zinc-800' : 'bg-white border-gray-100 shadow-xl'}`}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+                {selectedMetric === 'notMarked' ? 'Unmarked Attendance' : 
+                 selectedMetric === 'present' ? 'Present Staff' :
+                 selectedMetric === 'absent' ? 'Absent Staff' :
+                 selectedMetric === 'leave' ? 'Staff on Leave' : 'Staff List'}
+                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-gray-100 text-gray-500'}`}>
+                  {allStaff.filter(s => {
+                    const status = attMap.get(s.id);
+                    if (selectedMetric === 'notMarked') return !status;
+                    if (selectedMetric === 'present') return status === 'present';
+                    if (selectedMetric === 'absent') return status === 'absent';
+                    if (selectedMetric === 'leave') return status?.includes('leave');
+                    return true;
+                  }).length} Total
+                </span>
+              </h2>
+            </div>
+            <button onClick={() => setSelectedMetric(null)} className="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-rose-500 transition-colors">Close List</button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {allStaff.filter(s => {
+              const status = attMap.get(s.id);
+              if (selectedMetric === 'notMarked') return !status;
+              if (selectedMetric === 'present') return status === 'present';
+              if (selectedMetric === 'absent') return status === 'absent';
+              if (selectedMetric === 'leave') return status?.includes('leave');
+              if (selectedMetric === 'total') return true;
+              return false;
+            }).map(s => (
+              <div key={s.id} className={`p-4 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700/50 hover:bg-zinc-800' : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:shadow-lg'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs uppercase
+                    ${isDark ? 'bg-zinc-700 text-zinc-300' : 'bg-white text-gray-400 shadow-sm'}`}>
+                    {s.name?.[0] || 'S'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-black">{s.name}</p>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{s.department}</p>
+                  </div>
+                </div>
+                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {(!attMap.get(s.id)) && (
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            setActionLoading(s.id);
+                            const prefix = getDeptPrefix(s.department as any);
+                            const today = new Date().toISOString().split('T')[0];
+                            const { setDoc, doc, serverTimestamp } = await import('firebase/firestore');
+                            await setDoc(doc(db, `${prefix}_attendance`, `${s.id}_${today}`), {
+                              staffId: s.id,
+                              status: 'present',
+                              date: today,
+                              timestamp: serverTimestamp(),
+                              markedBy: session?.name || 'HQ Manager'
+                            }, { merge: true });
+                            const newMap = new Map(attMap);
+                            newMap.set(s.id, 'present');
+                            setAttMap(newMap);
+                            setStats(prev => ({ ...prev, presentToday: prev.presentToday + 1, notMarkedToday: prev.notMarkedToday - 1 }));
+                          } catch (e) {
+                            console.error(e);
+                          } finally {
+                            setActionLoading(null);
+                          }
+                        }}
+                        disabled={actionLoading === s.id}
+                        className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                      >
+                        {actionLoading === s.id ? '...' : 'Present'}
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            setActionLoading(s.id);
+                            const prefix = getDeptPrefix(s.department as any);
+                            const today = new Date().toISOString().split('T')[0];
+                            const { setDoc, doc, serverTimestamp } = await import('firebase/firestore');
+                            await setDoc(doc(db, `${prefix}_attendance`, `${s.id}_${today}`), {
+                              staffId: s.id,
+                              status: 'absent',
+                              date: today,
+                              timestamp: serverTimestamp(),
+                              markedBy: session?.name || 'HQ Manager'
+                            }, { merge: true });
+                            const newMap = new Map(attMap);
+                            newMap.set(s.id, 'absent');
+                            setAttMap(newMap);
+                            setStats(prev => ({ ...prev, absentToday: prev.absentToday + 1, notMarkedToday: prev.notMarkedToday - 1 }));
+                          } catch (e) {
+                            console.error(e);
+                          } finally {
+                            setActionLoading(null);
+                          }
+                        }}
+                        disabled={actionLoading === s.id}
+                        className="px-2 py-1 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                      >
+                        {actionLoading === s.id ? '...' : 'Absent'}
+                      </button>
+                    </div>
+                  )}
+                  {attMap.get(s.id) && (
+                    <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${attMap.get(s.id) === 'present' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {attMap.get(s.id)}
+                    </span>
+                  )}
+                  <Link href={`/hq/dashboard/manager/staff/${s.id}?dept=${s.department}`} className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Analytics & Reports Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -461,13 +590,15 @@ export default function ManagerOverviewPage() {
   );
 }
 
-function StatCard({ label, value, icon, color, urgent, isDark }: {
-  label: string; value: number; icon: React.ReactNode; color: string; urgent?: boolean; isDark?: boolean;
+function StatCard({ label, value, icon, color, urgent, isDark, onClick }: {
+  label: string; value: number; icon: React.ReactNode; color: string; urgent?: boolean; isDark?: boolean; onClick?: () => void;
 }) {
   return (
-    <div className={`rounded-3xl p-5 border transition-all duration-500 relative overflow-hidden group ${
+    <div 
+      onClick={onClick}
+      className={`rounded-3xl p-5 border transition-all duration-500 relative overflow-hidden group cursor-pointer ${
       isDark ? 'bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800/80 shadow-2xl shadow-black/50' : 'bg-white border-gray-100/80 hover:shadow-2xl shadow-sm'
-    } ${urgent ? 'ring-2 ring-rose-500 ring-offset-2 ring-offset-zinc-950 shadow-rose-900/20' : ''}`}>
+    } ${urgent ? 'ring-2 ring-rose-500 ring-offset-2 ring-offset-zinc-950 shadow-rose-900/20' : ''} active:scale-95`}>
       <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-10 rounded-full -mr-8 -mt-8 ${color.split(' ')[0]}`} />
       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-inner ${color}`}>
         {icon}

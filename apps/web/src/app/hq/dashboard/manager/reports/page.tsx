@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { Loader2, Printer, Award } from 'lucide-react';
+import { Loader2, Printer, Award, Clock } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
 import type { HqStaff } from '@/types/hq';
 
@@ -19,6 +20,7 @@ export default function ManagerReportsPage() {
   const [growthPoints, setGrowthPoints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [viewingStaff, setViewingStaff] = useState<any | null>(null);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -178,8 +180,8 @@ export default function ManagerReportsPage() {
                         {index + 1}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
-                      <p className="text-white font-bold text-sm">{member.name}</p>
+                    <td className="px-4 py-4 cursor-pointer group" onClick={() => setViewingStaff(member)}>
+                      <p className="text-white font-bold text-sm group-hover:text-amber-500 transition-colors">{member.name}</p>
                       <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{member.designation}</p>
                     </td>
                     <td className="px-4 py-4">
@@ -211,6 +213,98 @@ export default function ManagerReportsPage() {
           </div>
         </div>
       </div>
+
+      {/* Staff Detailed Report Modal */}
+      {viewingStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setViewingStaff(null)} />
+          <div className="relative bg-zinc-900 border border-white/10 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-8 space-y-8" id="staff-report-modal">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-2xl font-black text-black uppercase">
+                    {viewingStaff.name?.[0]}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-white">{viewingStaff.name}</h2>
+                    <p className="text-amber-500 text-xs font-black uppercase tracking-[0.2em]">{viewingStaff.designation}</p>
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">{viewingStaff.department} Department</p>
+                  </div>
+                </div>
+                <button onClick={() => setViewingStaff(null)} className="text-gray-500 hover:text-white transition-colors">
+                  <XCircle size={24} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: 'Attendance', val: `${viewingStaff.stats.attPct}%`, color: 'text-emerald-500' },
+                  { label: 'Dress Code', val: `${viewingStaff.stats.dressPct}%`, color: 'text-blue-500' },
+                  { label: 'Duty Done', val: `${viewingStaff.stats.dutyPct}%`, color: 'text-purple-500' },
+                  { label: 'Growth Pts', val: viewingStaff.stats.gp, color: 'text-amber-500' },
+                ].map(s => (
+                  <div key={s.label} className="bg-white/5 border border-white/5 rounded-2xl p-4 text-center">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{s.label}</p>
+                    <p className={`text-xl font-black ${s.color}`}>{s.val}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-white font-black text-xs uppercase tracking-widest flex items-center gap-2">
+                  <Clock size={14} className="text-amber-500" /> Recent Attendance Logs
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {attendance.filter(a => a.staffId === viewingStaff.id).slice(0, 10).map((a, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-xs font-bold text-gray-300">{a.date}</p>
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${a.status === 'present' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                        {a.status}
+                      </span>
+                    </div>
+                  ))}
+                  {attendance.filter(a => a.staffId === viewingStaff.id).length === 0 && (
+                    <p className="text-gray-500 text-xs italic text-center py-4">No recent logs available</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  onClick={() => {
+                    // Logic: at least one week of data in current month selection
+                    const attCount = attendance.filter(a => a.staffId === viewingStaff.id && String(a.date).startsWith(selectedMonth)).length;
+                    if (attCount < 7) {
+                       toast.error("Performance report requires at least 7 days of activity in the selected month");
+                       return;
+                    }
+                    window.print();
+                  }}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Printer size={16} /> Generate Performance Report
+                </button>
+                <button 
+                  onClick={() => router.push(`/hq/dashboard/manager/staff/${viewingStaff.id}?dept=${viewingStaff.department}`)}
+                  className="px-6 bg-white/5 hover:bg-white/10 text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all border border-white/10"
+                >
+                  Visit Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function XCircle({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="m15 9-6 6" />
+      <path d="m9 9 6 6" />
+    </svg>
   );
 }
