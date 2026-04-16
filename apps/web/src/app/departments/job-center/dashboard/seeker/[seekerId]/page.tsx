@@ -200,7 +200,7 @@ export default function SeekerPortalPage() {
         <div className="pb-24">
           {activeTab === 'overview' && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-               <RegistrationTab seeker={seeker} readOnly={true} />
+               <RegistrationTab seeker={seeker} onUpdate={() => {}} />
             </div>
           )}
 

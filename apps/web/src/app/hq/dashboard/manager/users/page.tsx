@@ -416,7 +416,7 @@ export default function ManagerUsersPage() {
     try {
       // Check for existing admin
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
-      const q = query(collection(db, deptDetails.collection), where('role', '==', 'admin'), where('isActive', '==', true));
+      const q = query(collection(db, getDeptCollection(deptDetails.id)), where('role', '==', 'admin'), where('isActive', '==', true));
       const snap = await getDocs(q);
       if (!snap.empty) {
         throw new Error('An active Admin account already exists. Only one primary Admin is allowed.');
@@ -490,7 +490,7 @@ export default function ManagerUsersPage() {
           `${formData.firstName} ${formData.lastName}`,
           undefined,
           deptDetails.emailDomain,
-          deptDetails.collection
+          getDeptCollection(deptDetails.id)
         );
 
         if (!res.success) throw new Error(res.error || 'Failed to create login account');

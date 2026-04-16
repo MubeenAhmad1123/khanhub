@@ -103,7 +103,7 @@ export default function ManagerApprovalsPage() {
   const handleApprove = async (id: string, dept: string) => {
     setActionLoading(id);
     try {
-      const col = `${getDeptPrefix(dept)}_contributions`;
+      const col = `${getDeptPrefix(dept as StaffDept)}_contributions`;
       await updateDoc(doc(db, col, id), {
         isApproved: true,
         points: 1,
@@ -123,7 +123,7 @@ export default function ManagerApprovalsPage() {
     if (!rejectReason.trim()) return;
     setActionLoading(id);
     try {
-      const col = `${getDeptPrefix(dept)}_contributions`;
+      const col = `${getDeptPrefix(dept as StaffDept)}_contributions`;
       await updateDoc(doc(db, col, id), {
         isApproved: false,
         status: 'rejected',

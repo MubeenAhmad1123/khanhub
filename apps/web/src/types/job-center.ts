@@ -58,11 +58,14 @@ export interface JobSeeker {
   // Basic Identity
   name: string;
   fatherName: string;
+  cnic?: string;
   dateOfBirth?: string;            // "YYYY-MM-DD"
   age?: number;
   gender: 'male' | 'female' | 'other';
   photoUrl?: string;
   email?: string;
+  maritalStatus?: string;
+  phone?: string;
 
   // Education & Skills
   education: string;               // e.g. "Matric", "Masters in CS"
@@ -72,6 +75,7 @@ export interface JobSeeker {
   // Job Preferences
   jobInterests: string[];          // what are they looking for?
   expectedSalary?: string;
+  preferredJobTypes?: string[];
   availability: 'immediate' | '1_week' | '2_plus_weeks';
 
   // Contact & Location
@@ -88,6 +92,8 @@ export interface JobSeeker {
   isActive: boolean;
   isEmployed: boolean;             // whether they found a job through us
   employedAt?: string;             // Employer ID if employed
+  loginId?: string;
+  notes?: string;
   createdAt: Timestamp | Date;
   createdBy?: string;               // admin uid
 }
@@ -339,10 +345,10 @@ export interface WeeklyProgress {
 
 export interface MonthlyGrowthPoints {
   id: string;
-  seekerId: string;
+  seekerId?: string;
   month: string;
-  totalPoints: number;
-  breakdown: {
+  totalPoints?: number;
+  breakdown?: {
     [category: string]: number;
   };
   staffId?: string;
@@ -353,6 +359,9 @@ export interface MonthlyGrowthPoints {
   contributions?: number;
   extra?: number;
   total?: number;
+  totalPossible?: number;
+  percentage?: number;
+  lastCalculatedAt?: string;
 }
 
 export interface DressCodeItem {

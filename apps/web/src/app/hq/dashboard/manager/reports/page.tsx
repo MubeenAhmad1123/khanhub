@@ -46,7 +46,7 @@ export default function ManagerReportsPage() {
         const allStaff: HqStaff[] = [];
         staffSnaps.forEach((snap, i) => {
           snap.docs.forEach(d => {
-            allStaff.push({ id: d.id, dept: depts[i], ...d.data() } as HqStaff);
+            allStaff.push({ id: d.id, department: depts[i], ...d.data() } as unknown as HqStaff);
           });
         });
 
@@ -154,7 +154,7 @@ export default function ManagerReportsPage() {
                     </td>
                     <td className="px-4 py-4">
                       <span className="px-2 py-1 rounded-lg bg-white/5 text-gray-400 text-[9px] font-black uppercase tracking-widest">
-                        {member.dept}
+                        {member.department}
                       </span>
                     </td>
                     {[
