@@ -62,6 +62,7 @@ export interface JobSeeker {
   age?: number;
   gender: 'male' | 'female' | 'other';
   photoUrl?: string;
+  email?: string;
 
   // Education & Skills
   education: string;               // e.g. "Matric", "Masters in CS"
