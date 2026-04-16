@@ -35,8 +35,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { title: 'Overview', href: '/departments/hospital/dashboard/admin', icon: LayoutDashboard, roles: ['admin'] },
   { title: 'SuperAdmin', href: '/departments/hospital/dashboard/superadmin', icon: ShieldCheck, roles: ['superadmin'] },
-  { title: 'Patients', href: '/departments/hospital/dashboard/admin/patients', icon: Users, roles: ['admin'] },
-  { title: 'Manage Staff', href: '/departments/hospital/dashboard/admin/staff', icon: UserCircle, roles: ['admin'] },
+  { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin'] },
   { title: 'My Duty', href: '/departments/hospital/dashboard/staff', icon: Activity, roles: ['staff'] },
   { title: 'Daily Report', href: '/departments/hospital/dashboard/staff/report', icon: ClipboardList, roles: ['staff'] },
   { title: 'My Hospital Profile', href: '/departments/hospital/dashboard/patient', icon: UserCircle, roles: ['family'] },

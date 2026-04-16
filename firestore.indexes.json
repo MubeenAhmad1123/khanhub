@@ -1041,6 +1041,22 @@
         { "fieldPath": "staffId", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "hospital_transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "departmentCode", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "hospital_transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "departmentCode", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
