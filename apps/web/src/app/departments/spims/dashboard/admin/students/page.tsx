@@ -92,52 +92,91 @@ export default function SpimsStudentsListPage() {
         />
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-500 text-left">
-              <th className="px-4 py-3">Roll</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Course</th>
-              <th className="px-4 py-3">Session</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Admission</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400 font-medium">
-                  No students found.
-                </td>
+      <div className="rounded-[2.5rem] border border-gray-100 bg-white shadow-xl shadow-gray-200/50 overflow-hidden">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50/50 text-[10px] font-black uppercase tracking-widest text-gray-400 text-left border-b border-gray-100">
+                <th className="px-6 py-4">Roll</th>
+                <th className="px-6 py-4">Name</th>
+                <th className="px-6 py-4">Course</th>
+                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4">Admission</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            ) : (
-              filtered.map((st) => (
-                <tr key={st.id} className="border-t border-gray-100 hover:bg-gray-50/80 transition-colors">
-                  <td className="px-4 py-3 font-mono font-bold text-gray-800">{st.rollNo}</td>
-                  <td className="px-4 py-3 font-bold text-gray-900">{st.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{st.course}</td>
-                  <td className="px-4 py-3 text-gray-600">{st.session}</td>
-                  <td className="px-4 py-3">
-                    <span className="text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-[#1D9E75]/10 text-[#1D9E75]">
-                      {st.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{formatDateDMY(st.admissionDate)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/departments/spims/dashboard/admin/students/${st.id}`}
-                      className="text-[#1D9E75] font-black text-xs uppercase tracking-wider hover:underline"
-                    >
-                      Open
-                    </Link>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-20 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
+                    No students matching your search
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filtered.map((st) => (
+                  <tr key={st.id} className="group hover:bg-[#1D9E75]/5 transition-all duration-300">
+                    <td className="px-6 py-5 font-mono font-black text-[#1D9E75]">{st.rollNo}</td>
+                    <td className="px-6 py-5">
+                      <p className="font-black text-gray-900 leading-none">{st.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-tighter">{st.cnic}</p>
+                    </td>
+                    <td className="px-6 py-5">
+                      <p className="text-xs font-black text-gray-700 uppercase">{st.course}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">{st.session}</p>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="inline-block text-[9px] font-black uppercase px-3 py-1.5 rounded-full bg-[#1D9E75]/10 text-[#1D9E75]">
+                        {st.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-gray-500 font-bold text-xs">{formatDateDMY(st.admissionDate)}</td>
+                    <td className="px-6 py-5 text-right">
+                      <Link
+                        href={`/departments/spims/dashboard/admin/students/${st.id}`}
+                        className="inline-flex items-center gap-2 bg-[#1D9E75] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[#1D9E75]/20 scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300"
+                      >
+                        Profile
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {filtered.length === 0 ? (
+             <div className="px-6 py-20 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
+                No students found
+             </div>
+          ) : (
+            filtered.map((st) => (
+              <div key={st.id} className="p-5 flex items-center justify-between gap-4 active:bg-gray-50 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[9px] font-black bg-[#1D9E75]/10 text-[#1D9E75] px-2 py-0.5 rounded-md">{st.rollNo}</span>
+                    <span className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">{st.course}</span>
+                  </div>
+                  <h3 className="text-sm font-black text-gray-900 truncate">{st.name}</h3>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="text-[8px] font-black uppercase text-gray-500">{st.session}</span>
+                    <span className="w-1 h-1 rounded-full bg-gray-300" />
+                    <span className="text-[8px] font-black text-[#1D9E75] uppercase">{st.status}</span>
+                  </div>
+                </div>
+                <Link
+                  href={`/departments/spims/dashboard/admin/students/${st.id}`}
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gray-50 border border-gray-100 text-[#1D9E75] font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all"
+                >
+                  View
+                </Link>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
