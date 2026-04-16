@@ -1,3 +1,5 @@
+import { StaffDept } from "@/lib/hq/superadmin/staff";
+
 export type HqRole = 'superadmin' | 'manager' | 'cashier';
 
 export interface HqUser {
@@ -30,23 +32,28 @@ export interface HqMeta {
 
 export interface HqStaff {
   id: string;
-  employeeId: string;
+  employeeId: string; // The "Employee ID" the user wants to see/edit
   name: string;
-  fatherName: string;
+  fatherName?: string;
   designation: string;
-  department: 'rehab' | 'spims' | 'job-center' | 'hq';
+  department: StaffDept; // Primary department
+  secondaryDepts?: StaffDept[]; // For multi-department support
   cnic: string;
   phone: string;
   address: string;
+  dob?: string;
+  gender: 'male' | 'female' | 'other';
+  bloodGroup?: string;
+  emergencyContact?: string;
   joiningDate: string;
-  dutyStart: string;
-  dutyEnd: string;
+  dutyStart: string; // 'HH:MM'
+  dutyEnd: string;   // 'HH:MM'
   monthlySalary: number;
-  gender: 'male' | 'female';
   photoUrl?: string;
   isActive: boolean;
   createdAt: string;
   loginUserId?: string;
+  basicInfoExtras?: Record<string, string>; // For "any custom field as well"
 }
 
 export interface HqAttendance {

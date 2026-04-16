@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 
 const FloatingAffiliateButton: React.FC = () => {
     return (
-        <div className="fixed bottom-[150px] right-14 z-[9999] pointer-events-none lg:bottom-28 lg:right-6 scale-[0.96] lg:scale-100">
+        <div className="fixed bottom-[160px] left-4 z-[9999] pointer-events-none lg:bottom-[104px] lg:left-6 scale-[0.96] lg:scale-100">
             <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}

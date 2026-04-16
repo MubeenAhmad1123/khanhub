@@ -96,16 +96,27 @@ export default function StaffProfilePage() {
   const [editForm, setEditForm] = useState({
     name: '',
     designation: '',
+    department: 'hq' as StaffDept,
+    secondaryDepts: [] as StaffDept[],
     monthlySalary: 0,
     dutyStartTime: '',
     dutyEndTime: '',
     isActive: true,
     phone: '',
-    customId: '',
+    customId: '', // Expose editable Employee ID
+    cnic: '',
+    dob: '',
+    gender: 'male' as 'male' | 'female' | 'other',
+    bloodGroup: '',
+    emergencyContact: '',
+    address: '',
     userId: '',
     dressCodeConfig: [] as { key: string; label: string }[],
-    dutyConfig: [] as { key: string; label: string }[]
+    dutyConfig: [] as { key: string; label: string }[],
+    basicInfoExtras: {} as Record<string, string>
   });
+
+  const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
 
   useEffect(() => {
     const saved = localStorage.getItem('hq_dark_mode') === 'true';
@@ -202,25 +213,24 @@ export default function StaffProfilePage() {
       setEditForm({
         name: profile.name || '',
         designation: profile.designation || '',
+        department: profile.dept || 'hq',
+        secondaryDepts: profile.secondaryDepts || [],
         monthlySalary: Number(profile.monthlySalary || 0),
         dutyStartTime: profile.dutyStartTime || '09:00',
         dutyEndTime: profile.dutyEndTime || '17:00',
         isActive: profile.isActive !== false,
         phone: profile.phone || '',
         customId: profile.customId || '',
+        cnic: profile.cnic || '',
+        dob: profile.dob || '',
+        gender: (profile.gender as any) || 'male',
+        bloodGroup: profile.bloodGroup || '',
+        emergencyContact: profile.emergencyContact || '',
+        address: profile.address || '',
         userId: profile.staffId || '',
-        dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : [
-          { key: 'pant', label: 'Dress Pant' },
-          { key: 'shirt', label: 'Uniform Shirt' },
-          { key: 'shoes', label: 'Black Shoes' },
-          { key: 'id_card', label: 'ID Card' }
-        ]),
-        dutyConfig: (profile.dutyConfig?.length ? profile.dutyConfig : [
-          { key: 'attendance_portal', label: 'Attendance Entry' },
-          { key: 'patient_vitals', label: 'Patient Vitals' },
-          { key: 'ward_round', label: 'Ward Round' },
-          { key: 'cleanliness', label: 'Area Cleanliness' }
-        ])
+        dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : []),
+        dutyConfig: (profile.dutyConfig?.length ? profile.dutyConfig : []),
+        basicInfoExtras: profile.basicInfoExtras || {}
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
@@ -359,8 +369,10 @@ export default function StaffProfilePage() {
 
       // Set default times if presenting for the first time
       if (next === 'present' && !prevRecord.arrivalTime) {
-        newRecord.arrivalTime = '09:00';
-        newRecord.departureTime = '17:00';
+        newRecord.arrivalTime = staff.dutyStartTime || '09:00';
+        newRecord.departureTime = staff.dutyEndTime || '17:00';
+        newRecord.arrivedOnTime = true;
+        newRecord.departedOnTime = true;
       }
 
       setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
@@ -390,8 +402,8 @@ export default function StaffProfilePage() {
       };
 
       if (newRecord.status === 'present' && !newRecord.arrivalTime) {
-        newRecord.arrivalTime = '09:00';
-        newRecord.departureTime = '17:00';
+        newRecord.arrivalTime = staff?.dutyStartTime || '09:00';
+        newRecord.departureTime = staff?.dutyEndTime || '17:00';
       }
 
       setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
@@ -440,15 +452,34 @@ export default function StaffProfilePage() {
       const ref = doc(db, `${slug}_attendance`, `${uid}_${date}`);
 
       const prevRecord = attendanceMap[date] || {};
+      
+      // Calculate punctuality dynamically based on current staff duty time config
+      let arrivedOnTime = prevRecord.arrivedOnTime;
+      let departedOnTime = prevRecord.departedOnTime;
+
+      if (field === 'arrivalTime') {
+        arrivedOnTime = value <= (staff.dutyStartTime || '09:00');
+      } else if (field === 'departureTime') {
+        departedOnTime = value >= (staff.dutyEndTime || '17:00');
+      }
+
       const newRecord = {
         ...prevRecord,
         [field]: value,
+        arrivedOnTime,
+        departedOnTime,
         status: prevRecord.status === 'unmarked' ? 'present' : prevRecord.status,
         updatedAt: new Date().toISOString()
       };
 
       setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
-      await setDoc(ref, { [field]: value, status: newRecord.status }, { merge: true });
+      await setDoc(ref, { 
+        [field]: value, 
+        status: newRecord.status,
+        arrivedOnTime: newRecord.arrivedOnTime,
+        departedOnTime: newRecord.departedOnTime,
+        updatedAt: newRecord.updatedAt 
+      }, { merge: true });
     } catch (err) {
       toast.error("Failed to update time");
     }
@@ -459,8 +490,8 @@ export default function StaffProfilePage() {
     setTimePopup({
       isOpen: true,
       date: dateStr,
-      arrivalTime: existing?.arrivalTime || '09:00',
-      departureTime: existing?.departureTime || '' // Per instructions: set to empty by default
+      arrivalTime: existing?.arrivalTime || staff?.dutyStartTime || '09:00',
+      departureTime: existing?.departureTime || staff?.dutyEndTime || '17:00'
     });
   };
 
@@ -474,10 +505,15 @@ export default function StaffProfilePage() {
       const uid = staff.staffId;
       const ref = doc(db, `${slug}_attendance`, `${uid}_${timePopup.date}`);
 
-      // Payloads are PURELY strings, NO date objects used to prevent double-day entries
+      // Auto-calculate punctuality if times are set
+      const arrivedOnTime = timePopup.arrivalTime <= (staff.dutyStartTime || '09:00');
+      const departedOnTime = timePopup.departureTime >= (staff.dutyEndTime || '17:00');
+
       const payload = {
         arrivalTime: timePopup.arrivalTime,
         departureTime: timePopup.departureTime,
+        arrivedOnTime,
+        departedOnTime,
         updatedAt: new Date().toISOString(),
         markedBy: session?.uid
       };
@@ -1238,19 +1274,19 @@ export default function StaffProfilePage() {
                             <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500/50">Shift In</span>
                           </td>
                           {daysInMonth().map(d => (
-                            <td
+                              <td
                               key={d}
                               className="px-1 py-4 text-center"
                             >
-                              <input
-                                type="time"
-                                value={attendanceMap[d]?.arrivalTime || ''}
-                                onChange={e => handleUpdateTime(d, 'arrivalTime', e.target.value)}
-                                className={`w-14 h-8 text-[10px] font-black text-center rounded-md border-none outline-none transition-all ${attendanceMap[d]?.arrivalTime
-                                    ? (isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600')
-                                    : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
-                                  }`}
-                              />
+                              <button
+                                onClick={() => handleAttendanceCell(d)}
+                                className={`px-2 py-1 rounded-md text-[10px] font-black transition-all hover:scale-105 ${attendanceMap[d]?.arrivalTime
+                                  ? (isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600')
+                                  : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
+                                }`}
+                              >
+                                {attendanceMap[d]?.arrivalTime || 'Set'}
+                              </button>
                             </td>
                           ))}
                         </tr>
@@ -1296,15 +1332,15 @@ export default function StaffProfilePage() {
                               key={d}
                               className="px-1 py-4 text-center"
                             >
-                              <input
-                                type="time"
-                                value={attendanceMap[d]?.departureTime || ''}
-                                onChange={e => handleUpdateTime(d, 'departureTime', e.target.value)}
-                                className={`w-14 h-8 text-[10px] font-black text-center rounded-md border-none outline-none transition-all ${attendanceMap[d]?.departureTime
-                                    ? (isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-rose-50 text-rose-600')
-                                    : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
-                                  }`}
-                              />
+                              <button
+                                onClick={() => handleAttendanceCell(d)}
+                                className={`px-2 py-1 rounded-md text-[10px] font-black transition-all hover:scale-105 ${attendanceMap[d]?.departureTime
+                                  ? (isDark ? 'bg-rose-500/20 text-rose-300' : 'bg-rose-50 text-rose-600')
+                                  : (isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400')
+                                }`}
+                              >
+                                {attendanceMap[d]?.departureTime || 'Set'}
+                              </button>
                             </td>
                           ))}
                         </tr>
@@ -1456,51 +1492,176 @@ export default function StaffProfilePage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {/* Column 1: Core Identity */}
                   <div className="space-y-6">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Employee ID (Editable)</label>
+                      <input
+                        type="text"
+                        value={editForm.customId}
+                        placeholder="KH-STAFF-001"
+                        onChange={e => setEditForm({ ...editForm, customId: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                      />
+                    </div>
                     <div>
                       <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Full Legal Name</label>
                       <input
                         type="text"
                         value={editForm.name}
                         onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                          }`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Official Designation</label>
-                      <input
-                        type="text"
-                        value={editForm.designation}
-                        onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                          }`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Monthly Gross Salary (₨)</label>
-                      <input
-                        type="number"
-                        value={editForm.monthlySalary}
-                        onChange={e => setEditForm({ ...editForm, monthlySalary: Number(e.target.value) })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                          }`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Custom ID</label>
-                      <input
-                        type="text"
-                        value={editForm.customId}
-                        onChange={e => setEditForm({ ...editForm, customId: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                          }`}
-                      />
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Departmental Assignment</label>
+                      <div className="grid grid-cols-1 gap-4">
+                        <select
+                          value={editForm.department}
+                          onChange={e => setEditForm({ ...editForm, department: e.target.value as StaffDept })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                        >
+                          {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
+                            <option key={d} value={d}>{d.toUpperCase()}</option>
+                          ))}
+                        </select>
+                        <div className="p-4 rounded-2xl border border-dashed border-indigo-500/30">
+                          <label className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2 block">Secondary Depts (Optional)</label>
+                          <div className="flex flex-wrap gap-2">
+                            {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
+                              <button
+                                key={d}
+                                onClick={() => {
+                                  const current = editForm.secondaryDepts || [];
+                                  if (current.includes(d as StaffDept)) {
+                                    setEditForm({ ...editForm, secondaryDepts: current.filter(x => x !== d) });
+                                  } else {
+                                    setEditForm({ ...editForm, secondaryDepts: [...current, d as StaffDept] });
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${editForm.secondaryDepts?.includes(d as StaffDept) ? 'bg-indigo-600 border-indigo-600 text-white' : (isDark ? 'border-zinc-700 text-zinc-500' : 'border-gray-200 text-gray-400')}`}
+                              >
+                                {d}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Column 2: Basic Info & Health */}
                   <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Date of Birth</label>
+                        <input
+                          type="date"
+                          value={editForm.dob}
+                          onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Gender</label>
+                        <select
+                          value={editForm.gender}
+                          onChange={e => setEditForm({ ...editForm, gender: e.target.value as any })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                        >
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
+                      <input
+                        type="text"
+                        placeholder="00000-0000000-0"
+                        value={editForm.cnic}
+                        onChange={e => setEditForm({ ...editForm, cnic: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Blood Group</label>
+                        <input
+                          type="text"
+                          placeholder="B+"
+                          value={editForm.bloodGroup}
+                          onChange={e => setEditForm({ ...editForm, bloodGroup: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Emergency Contact</label>
+                        <input
+                          type="text"
+                          placeholder="Name / Ph"
+                          value={editForm.emergencyContact}
+                          onChange={e => setEditForm({ ...editForm, emergencyContact: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 3: Custom Fields & Status */}
+                  <div className="space-y-6">
+                    <div className="p-6 rounded-3xl border border-indigo-500/10 bg-indigo-500/5">
+                      <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4">Custom Basic Info</h4>
+                      <div className="space-y-2 mb-4">
+                        {Object.entries(editForm.basicInfoExtras || {}).map(([key, val]) => (
+                          <div key={key} className="flex gap-2">
+                             <div className={`flex-1 p-3 rounded-xl text-[10px] font-black border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-gray-100'}`}>
+                               <span className="text-gray-500 mr-2">{key.toUpperCase()}:</span> {val}
+                             </div>
+                             <button
+                               onClick={() => {
+                                 const next = { ...editForm.basicInfoExtras };
+                                 delete next[key];
+                                 setEditForm({ ...editForm, basicInfoExtras: next });
+                               }}
+                               className="p-3 rounded-xl bg-rose-500/10 text-rose-500 outline-none"
+                             >
+                               <Trash2 size={12} />
+                             </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          placeholder="Field Label"
+                          className={`flex-1 min-w-0 p-3 rounded-xl text-[10px] font-black outline-none border ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-gray-100'}`}
+                          value={newExtraField.key}
+                          onChange={e => setNewExtraField({...newExtraField, key: e.target.value})}
+                        />
+                        <input
+                          placeholder="Value"
+                          className={`flex-1 min-w-0 p-3 rounded-xl text-[10px] font-black outline-none border ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-gray-100'}`}
+                          value={newExtraField.value}
+                          onChange={e => setNewExtraField({...newExtraField, value: e.target.value})}
+                        />
+                        <button
+                          onClick={() => {
+                            if (!newExtraField.key || !newExtraField.value) return;
+                            setEditForm({
+                              ...editForm,
+                              basicInfoExtras: { ...editForm.basicInfoExtras, [newExtraField.key.toLowerCase().replace(/\s+/g, '_')]: newExtraField.value }
+                            });
+                            setNewExtraField({ key: '', value: '' });
+                          }}
+                          className="px-4 rounded-xl bg-indigo-600 text-white"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Duty Start</label>
@@ -1508,8 +1669,7 @@ export default function StaffProfilePage() {
                           type="time"
                           value={editForm.dutyStartTime}
                           onChange={e => setEditForm({ ...editForm, dutyStartTime: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                            }`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
                         />
                       </div>
                       <div>
@@ -1518,41 +1678,9 @@ export default function StaffProfilePage() {
                           type="time"
                           value={editForm.dutyEndTime}
                           onChange={e => setEditForm({ ...editForm, dutyEndTime: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'
-                            }`}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
                         />
                       </div>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Operations Status</label>
-                      <div className="flex gap-4">
-                        <button
-                          onClick={() => setEditForm({ ...editForm, isActive: true })}
-                          className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${editForm.isActive
-                              ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
-                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
-                            }`}
-                        >Active</button>
-                        <button
-                          onClick={() => setEditForm({ ...editForm, isActive: false })}
-                          className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${!editForm.isActive
-                              ? 'bg-rose-500 border-rose-500 text-white shadow-lg'
-                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-100 text-gray-400')
-                            }`}
-                        >Inactive</button>
-                      </div>
-                    </div>
-                    <div className={`p-6 rounded-[2rem] border transition-colors ${isDark ? 'bg-indigo-500/5 border-indigo-500/10' : 'bg-indigo-50 border-indigo-100'}`}>
-                      <div className="flex items-center gap-3 mb-2 text-indigo-500">
-                        <Shield size={16} />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Security Credentials</p>
-                      </div>
-                      <p className={`text-[10px] font-bold leading-relaxed ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
-                        User Login: <span className={isDark ? 'text-white' : 'text-gray-900'}>{editForm.userId}</span><br />
-                        Internal ID: <span className={isDark ? 'text-white' : 'text-gray-900'}>{editForm.customId}</span>
-                        <br /><br />
-                        Unique identifiers are permanently locked to ensure data integrity across historical logs.
-                      </p>
                     </div>
                   </div>
                 </div>

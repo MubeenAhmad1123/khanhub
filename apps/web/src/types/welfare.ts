@@ -2,9 +2,9 @@
 
 import { Timestamp } from 'firebase/firestore';
 
-export type WelfareRole = 'admin' | 'staff' | 'family' | 'cashier' | 'superadmin';
+export type WelfareRole = 'admin' | 'staff' | 'family' | 'donor' | 'cashier' | 'superadmin';
 
-// ─── WELFARE USER (Auth) ───────────────────────────────────────────────────────
+// ─── WELFARE USER ─────────────────────────────────────────────────────────────
 
 export interface WelfareUser {
   uid: string;
@@ -13,20 +13,217 @@ export interface WelfareUser {
   displayName?: string;
   role: WelfareRole;
   isActive: boolean;
-  childId?: string;
+  childId?: string;       // for family role
+  donorId?: string;       // for donor role
   createdAt?: Timestamp | Date;
 }
+
+// ─── DONOR ────────────────────────────────────────────────────────────────────
+// Collection: welfare_donors
+
+export interface Donor {
+  id: string;
+  donorNumber: string;          // e.g. "WLF-DNR-001"
+  serialNumber: number;
+  fullName: string;
+  fatherName?: string;
+  cnic?: string;                // "XXXXX-XXXXXXX-X"
+  contactNumber: string;
+  whatsappNumber?: string;
+  address?: string;
+  email?: string;
+
+  // Donation Preference
+  donationScope: 'whole_welfare' | 'specific_child';
+  linkedChildId?: string;       // set if donationScope === 'specific_child'
+  linkedChildName?: string;     // denormalized for display
+
+  donationType: 'monthly_retainer' | 'one_time' | 'variable';
+  monthlyAmount?: number;       // set if donationType === 'monthly_retainer'
+  notes?: string;
+
+  isActive: boolean;
+  loginUserId?: string;         // uid in welfare_users if they have portal login
+  createdAt: Timestamp | Date;
+  createdBy?: string;
+}
+
+// ─── CHILD (Welfare Children's Home Admission) ────────────────────────────────
+// Collection: welfare_children
+
+export interface Child {
+  id: string;
+
+  // Identity
+  admissionNumber: string;          // e.g. "WLF-058"
+  serialNumber: number;
+  name: string;
+  fatherName: string;
+  motherName?: string;
+  dateOfBirth?: string;             // "YYYY-MM-DD"
+  age?: number;
+  gender: 'male' | 'female';
+  photoUrl?: string;
+
+  // Background
+  religion?: string;
+  caste?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+
+  // Education
+  educationLevel?: 'none' | 'primary' | 'middle' | 'secondary' | 'higher_secondary' | 'other';
+  currentClass?: string;            // e.g. "Class 5"
+  school?: string;
+
+  // Parent / Guardian Status
+  fatherStatus: 'alive' | 'deceased' | 'unknown';
+  motherStatus: 'alive' | 'deceased' | 'unknown';
+  parentsSeparated?: boolean;
+  guardianName?: string;
+  guardianRelationship?: string;   // e.g. "Uncle", "Maternal Aunt"
+  contactNumber: string;
+  whatsappNumber?: string;
+
+  // Admission Reason
+  reasonForAdmission?: string;     // free text — why they're in welfare home
+  admissionCategory?: 'orphan' | 'semi_orphan' | 'destitute' | 'abandoned' | 'other';
+
+  // Health
+  healthCondition?: 'healthy' | 'minor_issues' | 'chronic_condition' | 'disability';
+  healthNotes?: string;
+  hasDisability?: boolean;
+  disabilityDetails?: string;
+  bloodGroup?: string;
+
+  // Admission Details
+  admissionDate: Timestamp | Date;
+  durationMonths: number;           // planned stay duration
+  packageAmount: number;            // monthly support cost in PKR (internal — not paid by child)
+  otherExpenses?: number;
+
+  // Sponsor / Donor link
+  sponsorDonorId?: string;          // if a specific donor sponsors this child
+  sponsorDonorName?: string;        // denormalized
+
+  // Status
+  isActive: boolean;
+  dischargeDate?: Timestamp | Date;
+  dischargeReason?: string;
+  assignedStaffId?: string;
+  createdAt: Timestamp | Date;
+  createdBy?: string;
+}
+
+// ─── DAILY ACTIVITIES ─────────────────────────────────────────────────────────
+// Collection: welfare_daily_activities
+
+export const DAILY_ACTIVITIES = [
+  { id: 1,  name: 'Fajar Prayer' },
+  { id: 2,  name: 'Tilawat-e-Quran' },
+  { id: 3,  name: 'Morning Exercise' },
+  { id: 4,  name: 'Shower & Hygiene' },
+  { id: 5,  name: 'Breakfast' },
+  { id: 6,  name: 'Morning Medication' },
+  { id: 7,  name: 'School / Study Time' },
+  { id: 8,  name: 'Islamic Lecture' },
+  { id: 9,  name: 'Zohar Prayer' },
+  { id: 10, name: 'Lunch' },
+  { id: 11, name: 'Rest / Nap' },
+  { id: 12, name: 'Asar Prayer' },
+  { id: 13, name: 'Play / Recreation' },
+  { id: 14, name: 'Homework / Tuition' },
+  { id: 15, name: 'Dars-e-Quran' },
+  { id: 16, name: 'Maghrib Prayer' },
+  { id: 17, name: 'Dinner' },
+  { id: 18, name: 'Night Medication' },
+  { id: 19, name: 'Isha Prayer' },
+  { id: 20, name: 'Sleep' },
+] as const;
+
+export type ActivityStatus = 'done' | 'not_done' | 'na';
+
+export interface DailyActivityRecord {
+  id: string;
+  childId: string;
+  date: string;
+  activities: {
+    activityId: number;
+    status: ActivityStatus;
+    note?: string;
+  }[];
+  generalNotes?: string;
+  markedBy: string;
+  createdAt: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+}
+
+// ─── THERAPY / COUNSELLING SESSIONS ──────────────────────────────────────────
+// Collection: welfare_therapy_sessions
+
+export interface TherapySession {
+  id: string;
+  childId: string;
+  sessionNumber: number;
+  date: string;
+  therapistName?: string;
+  sessionNotes: string;
+  childMood?: string;
+  progressRating?: 1 | 2 | 3 | 4;
+  createdBy: string;
+  createdAt: Timestamp | Date;
+}
+
+// ─── MEDICATION RECORDS ───────────────────────────────────────────────────────
+// Collection: welfare_medication_records
+
+export interface MedicationRecord {
+  id: string;
+  childId: string;
+  date: string;
+  timing: string;
+  medications: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: Timestamp | Date;
+}
+
+// ─── WEEKLY PROGRESS ──────────────────────────────────────────────────────────
+// Collection: welfare_weekly_progress
+
+export interface WeeklyProgress {
+  id: string;
+  childId: string;
+  weekNumber: number;
+  weekStartDate: string;
+  weekEndDate: string;
+  score: 1 | 2 | 3 | 4;
+  notes?: string;
+  createdBy: string;
+  createdAt: Timestamp | Date;
+}
+
+// ─── TRANSACTION ──────────────────────────────────────────────────────────────
+// Collection: welfare_transactions
 
 export interface Transaction {
   id: string;
   childId?: string;
   childName?: string;
+  donorId?: string;
+  donorName?: string;
   staffId?: string;
   staffName?: string;
   amount: number;
   type: 'income' | 'expense';
   category: string;
+  categoryName?: string;
   txnDescription?: string;
+  // Donation-specific
+  donationScope?: 'whole_welfare' | 'specific_child';
+  donationType?: 'monthly_retainer' | 'one_time' | 'variable';
+  donationMonth?: string;           // "2026-04" — for monthly retainer tracking
   status: 'pending_cashier' | 'rejected_cashier' | 'pending' | 'approved' | 'rejected';
   createdBy?: string;
   createdByName?: string;
@@ -35,255 +232,20 @@ export interface Transaction {
   proofUrl?: string;
   proofMissingReason?: string;
   proofRequired?: boolean;
-  cashierRejectedAt?: Timestamp | Date;
-  cashierRejectedBy?: string;
-  cashierRejectedByName?: string;
-  cashierRejectReason?: string;
   approvedBy?: string;
   approvedAt?: Timestamp | Date;
   date: Date | Timestamp;
   createdAt?: Timestamp | Date;
 }
 
-export interface StaffDuty {
-  id: string;
-  dutyDescription: string;
-  startTime?: string;
-  endTime?: string;
-}
-
-// Update StaffContribution to add approval:
-export interface StaffContribution {
-  id: string;
-  staffId: string;
-  date: string;                 // "YYYY-MM-DD"
-  content?: string;             // support both 'content' and 'description'
-  description?: string;
-  contributionDescription?: string;
-  isApproved?: boolean;         // undefined = pending, true = approved, false = rejected
-  approvedBy?: string;          // manager uid
-  approvedAt?: any;             // support Timestamp or string
-  createdAt: any;               // support Timestamp or string
-  points?: number;
-  type?: 'service' | 'creative' | 'other';
-}
-
-// ─── PATIENT (Full Admission Form Data) ─────────────────────────────────────
-
-export interface Child {
-  id: string;
-
-  // Basic Identity
-  admissionNumber: string;         // e.g. "WELFARE-058"
-  serialNumber: number;            // 58, 60, 61 etc from records
-  name: string;
-  fatherName: string;
-  dateOfBirth?: string;            // "YYYY-MM-DD"
-  age?: number;
-  gender: 'male' | 'female' | 'other';
-  ethnicity?: string;
-  photoUrl?: string;
-
-  // Education & Work
-  education?: string;
-  institution?: string;
-  maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed';
-  profession?: string;
-  employerInfo?: string;
-  income?: string;
-
-  // Addiction Info
-  substanceOfAddiction: string;    // main substance
-  presentingComplaints?: string;
-  averageDailyIntake?: string;
-  durationOfUse?: string;
-
-  // Previous Treatment
-  previousTreatmentDuration?: string;
-  previousHospital?: string;
-
-  // Location
-  townPoliceStation?: string;
-  address?: string;
-
-  // Guardian / Family Contact
-  guardianName: string;
-  guardianRelationship: string;
-  contactNumber: string;
-  whatsappNumber?: string;
-  nameOfVisitors?: string;
-
-  // Admission Details
-  admissionDate: Timestamp | Date;
-  timeOfAdmission?: string;        // "14:30"
-  typeOfFacility?: string;
-  durationOfCurrentTreatment?: string;  // "3 months"
-  durationMonths: number;          // 1, 2, 3, 4 — for fee calculation
-
-  // Financial
-  packageAmount: number;           // monthly PKR fee (Total PKG)
-  otherExpenses?: number;          // extra charges like transport
-
-  // Health Status
-  healthStatus?: {
-    hasAsthma?: boolean;
-    hasFits?: boolean;
-    otherCondition?: string;
-    majorIllnessLast12Months?: boolean;
-    majorIllnessDetails?: string;
-    hivStatus?: 'positive' | 'negative' | 'not_known';
-    hbsagStatus?: 'positive' | 'negative' | 'not_known';
-    hcvStatus?: 'positive' | 'negative' | 'not_known';
-    tbStatus?: 'positive' | 'negative' | 'not_known';
-    stiStatus?: 'positive' | 'negative' | 'not_known';
-    hasDisability?: boolean;
-    disabilityCondition?: string;
-    everHospitalized?: boolean;
-    hospitalizationReason?: string;
-    hasBloodDonation?: boolean;
-  };
-
-  // Psychiatric Evaluation
-  psychiatricEvaluation?: {
-    generalAptitude?: string;
-    thoughtDisorder?: boolean;
-    moodEmotions?: string[];       // ['high', 'fear', 'appropriate', ...]
-    obsessiveThoughts?: boolean;
-    hallucinations?: boolean;
-    delusions?: boolean;
-    insights?: boolean;
-    insightsDetails?: string;
-    attentionConcentration?: string;
-    memory?: string;
-    intelligence?: string;
-    feelings?: string;
-    sensing?: string;
-    intuition?: string;
-  };
-
-  // Psychological Assessment
-  psychologicalAssessment?: {
-    physicalCondition?: string;
-    bodyAches?: string;
-    relapseAfterWeeks?: number;
-    abilityToSleep?: string;
-    mentalConditionOthers?: string;
-    problemsWithSpouse?: string;
-    problemsWithParents?: string;
-    problemsWithSiblings?: string;
-  };
-
-  // Status
-  isActive: boolean;
-  dischargeDate?: Timestamp | Date;
-  dischargeReason?: string;
-  assignedStaffId?: string;
-  createdAt: Timestamp | Date;
-  createdBy?: string;               // admin uid who created
-}
-
-// ─── DAILY ACTIVITY RECORD ───────────────────────────────────────────────────
-// One document per child per date
-// Collection: welfare_daily_activities
-
-export const DAILY_ACTIVITIES = [
-  { id: 1,  name: 'Fajar Prayer' },
-  { id: 2,  name: 'Tilawat-e-Quran' },
-  { id: 3,  name: 'Morning Fitness Exercise' },
-  { id: 4,  name: 'Shower' },
-  { id: 5,  name: 'Break Fast' },
-  { id: 6,  name: 'Morning Medication' },
-  { id: 7,  name: 'Islamic Lecture' },
-  { id: 8,  name: 'Counselling Session' },
-  { id: 9,  name: 'Zohar Prayer' },
-  { id: 10, name: 'Lunch' },
-  { id: 11, name: 'Vital Sign Check' },
-  { id: 12, name: 'Day Medication' },
-  { id: 13, name: 'Game' },
-  { id: 14, name: 'Exercise' },
-  { id: 15, name: 'Dars-e-Quran' },
-  { id: 16, name: 'Asar Prayer' },
-  { id: 17, name: 'Maghrib Prayer' },
-  { id: 18, name: 'Dinner' },
-  { id: 19, name: 'Night Medication' },
-  { id: 20, name: 'Isha Prayer' },
-  { id: 21, name: 'Sleep' },
-] as const;
-
-export type ActivityStatus = 'done' | 'not_done' | 'na';
-
-export interface DailyActivityRecord {
-  id: string;
-  childId: string;
-  date: string;                    // "YYYY-MM-DD"
-  activities: {
-    activityId: number;
-    status: ActivityStatus;        // 'done' | 'not_done' | 'na'
-    note?: string;                 // optional note per activity
-  }[];
-  counsellingSessionNotes?: string; // text area for counselling session (#8)
-  vitalSignNotes?: string;          // notes for vital sign check (#11)
-  markedBy: string;                 // admin uid
-  createdAt: Timestamp | Date;
-  updatedAt?: Timestamp | Date;
-}
-
-// ─── INDIVIDUAL THERAPY SESSION ───────────────────────────────────────────────
-// Collection: welfare_therapy_sessions
-
-export interface TherapySession {
-  id: string;
-  childId: string;
-  sessionNumber: number;           // 1, 2, 3, 4, 5, 6, 7...
-  date: string;                    // "YYYY-MM-DD"
-  therapistName?: string;
-  clinicalPsychologist?: string;
-  sessionNotes: string;            // main text area — what happened in session
-  childMood?: string;
-  progressRating?: 1 | 2 | 3 | 4; // 1=Static, 2=Slow, 3=Good, 4=Max
-  createdBy: string;               // admin uid
-  createdAt: Timestamp | Date;
-}
-
-// ─── MEDICATION ASSISTED THERAPY ─────────────────────────────────────────────
-// Collection: welfare_medication_records
-
-export interface MedicationRecord {
-  id: string;
-  childId: string;
-  date: string;                    // "YYYY-MM-DD"
-  timing: string;                  // "Morning", "Afternoon", "Night"
-  medications: string;             // list of meds as text
-  notes?: string;
-  medicalOfficerSig?: string;      // name of medical officer
-  dispenserSig?: string;           // name of dispenser
-  createdBy: string;
-  createdAt: Timestamp | Date;
-}
-
-// ─── WEEKLY PROGRESS RECORD ───────────────────────────────────────────────────
-// Collection: welfare_weekly_progress
-
-export interface WeeklyProgress {
-  id: string;
-  childId: string;
-  weekNumber: number;              // 1, 2, 3, 4...
-  weekStartDate: string;           // "YYYY-MM-DD"
-  weekEndDate: string;             // "YYYY-MM-DD"
-  score: 1 | 2 | 3 | 4;           // 1=Static, 2=Slow Progress, 3=Good Progress, 4=Max Progress
-  notes?: string;
-  createdBy: string;
-  createdAt: Timestamp | Date;
-}
-
-// ─── FEE RECORD (already exists, keep compatible) ────────────────────────────
+// ─── FEE RECORD ───────────────────────────────────────────────────────────────
 // Collection: welfare_fees
 
 export interface FeeRecord {
   id: string;
   childId: string;
-  month: string;                   // "2025-01"
-  packageAmount: number;           // monthly fee
+  month: string;
+  packageAmount: number;
   amountPaid: number;
   amountRemaining: number;
   payments: Payment[];
@@ -299,13 +261,13 @@ export interface Payment {
   note?: string;
 }
 
-// ─── CANTEEN RECORD (already exists, keep compatible) ────────────────────────
+// ─── CANTEEN ──────────────────────────────────────────────────────────────────
 // Collection: welfare_canteen
 
 export interface CanteenRecord {
   id: string;
   childId: string;
-  month: string;                   // "2025-01"
+  month: string;
   totalDeposited: number;
   totalSpent: number;
   balance: number;
@@ -321,128 +283,104 @@ export interface CanteenTransaction {
   cashierId: string;
 }
 
-// ─── STAFF MEMBER (Full Profile) ─────────────────────────────────────────────
+// ─── STAFF TYPES (keep existing — no change needed) ───────────────────────────
 
 export type StaffGender = 'male' | 'female';
 
 export interface DressCodeItem {
-  id: string;           // unique within this staff's dress code
-  name: string;         // e.g. "Dress Pant", "Tie", "Employee Card", "Abaya"
-  required: boolean;    // always true — all assigned items are required
-  isCustom: boolean;    // false = from preset list, true = manually added
+  id: string;
+  name: string;
+  required: boolean;
+  isCustom: boolean;
 }
 
 export interface StaffDutyAssigned {
   id: string;
-  name: string;             // e.g. "Clean all rooms before 8am"
+  name: string;
   description?: string;
-  assignedAt: string;       // ISO date string
-  assignedBy: string;       // manager uid
-  isActive: boolean;        // can be deactivated without deletion
+  assignedAt: string;
+  assignedBy: string;
+  isActive: boolean;
 }
 
 export interface StaffMember {
   id: string;
-
-  // Basic Info
   name: string;
   fatherName: string;
-  employeeId: string;           // e.g. "WELFARE-STF-001"
-  designation: string;          // e.g. "Counselor", "Security Guard", "Nurse"
-  department: 'welfare';          // for now always welfare
+  employeeId: string;
+  designation: string;
+  department: 'welfare';
   gender: StaffGender;
   phone?: string;
   photoUrl?: string;
-
-  // Duty Timing
-  dutyStartTime: string;        // "08:00" 24hr
-  dutyEndTime: string;          // "20:00" 24hr
-
-  // Dress Code (assigned per staff, differs by gender + custom)
+  dutyStartTime: string;
+  dutyEndTime: string;
   dressCode: DressCodeItem[];
-
-  // Duties (assigned list — manager adds/removes)
   duties: StaffDutyAssigned[];
-
-  // Financial
-  salary: number;               // monthly PKR
-
-  // Status
+  salary: number;
   isActive: boolean;
-  joiningDate: string;          // "YYYY-MM-DD"
-  loginUserId?: string;         // uid in welfare_users for portal login
-  role: WelfareRole;              // used for UI role indicators
-  customId?: string;            // unique staff identifier
-  createdAt: string;            // ISO
-  createdBy?: string;           // manager uid
+  joiningDate: string;
+  loginUserId?: string;
+  role: WelfareRole;
+  customId?: string;
+  createdAt: string;
+  createdBy?: string;
 }
 
-// ─── DAILY DUTY LOG ────────────────────────────────────────────────────────────
-// One doc per staff per date
-// Collection: welfare_duty_logs
+export interface StaffContribution {
+  id: string;
+  staffId: string;
+  date: string;
+  content?: string;
+  description?: string;
+  contributionDescription?: string;
+  isApproved?: boolean;
+  approvedBy?: string;
+  approvedAt?: any;
+  createdAt: any;
+  points?: number;
+  type?: 'service' | 'creative' | 'other';
+}
 
 export interface DailyDutyLog {
   id: string;
   staffId: string;
-  date: string;                 // "YYYY-MM-DD"
-  duties: {
-    dutyId: string;
-    dutyName: string;
-    status: 'done' | 'not_done' | 'na';
-    note?: string;              // optional performance note per duty
-  }[];
-  // UI helper fields for summaries:
+  date: string;
+  duties: { dutyId: string; dutyName: string; status: 'done' | 'not_done' | 'na'; note?: string }[];
   totalItems?: number;
   completedItems?: number;
-  items?: { description: string; completed: boolean }[]; // alias for component compatibility
-  overallPerformanceNote?: string;  // manager's general note for the day
-  markedBy: string;             // manager uid
+  items?: { description: string; completed: boolean }[];
+  overallPerformanceNote?: string;
+  markedBy: string;
   createdAt: string;
   updatedAt?: string;
 }
 
-// ─── DAILY DRESS CODE LOG ─────────────────────────────────────────────────────
-// One doc per staff per date
-// Collection: welfare_dress_logs
-
 export interface DailyDressLog {
   id: string;
   staffId: string;
-  date: string;                 // "YYYY-MM-DD"
-  items: {
-    itemId: string;
-    itemName: string;
-    wearing: boolean;           // true = wearing, false = not wearing
-  }[];
+  date: string;
+  items: { itemId: string; itemName: string; wearing: boolean }[];
   isPerfect?: boolean;
   remarks?: string;
   markedBy: string;
   createdAt: any;
 }
 
-// ─── MONTHLY GROWTH POINTS ────────────────────────────────────────────────────
-// Auto-calculated and stored monthly
-// Collection: welfare_growth_points
-// One doc per staff per month
-
 export interface MonthlyGrowthPoints {
   id: string;
   staffId: string;
-  month: string;                // "2025-01"
-
-  // Point breakdown (each = 0 or 1 per day, summed for month)
-  attendance: number;           // +1 per day present
-  punctuality: number;          // +1 per day on time (not late)
-  duties: number;               // +1 per day all duties done
-  dressCode: number;            // +1 per day full dress code followed
-  contributions: number;        // points from approved contributions
-  extra: number;                // bonus points from admin
-
-  total: number;                // sum of all above
-  totalPossible: number;        // max possible for the month
-  percentage: number;           // total / totalPossible * 100
-
-  lastCalculatedAt: string;     // ISO — recalculate on every mark action
+  month: string;
+  attendance: number;
+  punctuality: number;
+  duties: number;
+  dressCode: number;
+  contributions: number;
+  extra: number;
+  total: number;
+  totalPossible: number;
+  percentage: number;
+  lastCalculatedAt: string;
 }
 
 export interface AttendanceRecord {
@@ -450,10 +388,10 @@ export interface AttendanceRecord {
   staffId: string;
   date: string;
   status: 'present' | 'absent' | 'leave';
-  arrivalTime?: string;        // "09:15" — 24hr
-  departureTime?: string;      // "20:05"
-  isLate?: boolean;            // auto: arrivalTime > dutyStartTime
-  leftEarly?: boolean;         // auto: departureTime < dutyEndTime
+  arrivalTime?: string;
+  departureTime?: string;
+  isLate?: boolean;
+  leftEarly?: boolean;
   checkInTime?: any;
   checkOutTime?: any;
   lateByMinutes?: number;
@@ -480,4 +418,3 @@ export interface LeaveRecord {
   status?: string;
   [key: string]: any;
 }
-

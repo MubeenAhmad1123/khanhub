@@ -16,8 +16,6 @@ export default function MedicationTab({ childId, session }: { childId: string, s
   const [timing, setTiming] = useState('Morning');
   const [medications, setMedications] = useState('');
   const [notes, setNotes] = useState('');
-  const [medicalOfficerSig, setMedicalOfficerSig] = useState('');
-  const [dispenserSig, setDispenserSig] = useState('');
 
   const fetchRecords = useCallback(async () => {
     try {
@@ -52,8 +50,6 @@ export default function MedicationTab({ childId, session }: { childId: string, s
         timing,
         medications,
         notes: notes || undefined,
-        medicalOfficerSig: medicalOfficerSig || undefined,
-        dispenserSig: dispenserSig || undefined,
         createdBy: session.uid,
         createdAt: new Date(),
       };
@@ -113,23 +109,6 @@ export default function MedicationTab({ childId, session }: { childId: string, s
                   {r.notes}
                 </p>
               )}
-              <div className="grid grid-cols-1 gap-1 text-xs">
-                {r.medicalOfficerSig && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">MO:</span>
-                    <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded break-all">{r.medicalOfficerSig}</span>
-                  </div>
-                )}
-                {r.dispenserSig && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">Disp:</span>
-                    <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded break-all">{r.dispenserSig}</span>
-                  </div>
-                )}
-                {!r.medicalOfficerSig && !r.dispenserSig && (
-                  <span className="text-gray-300 italic">No signatures</span>
-                )}
-              </div>
             </div>
           ))}
         </div>
@@ -139,8 +118,7 @@ export default function MedicationTab({ childId, session }: { childId: string, s
             <thead className="bg-gray-50/80 text-gray-500 font-black uppercase tracking-widest text-[10px]">
               <tr>
                 <th className="px-6 py-4">Date & Time</th>
-                <th className="px-6 py-4 w-1/2">Medications</th>
-                <th className="px-6 py-4">Signatures</th>
+                <th className="px-6 py-4 w-full">Medications & Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -164,25 +142,6 @@ export default function MedicationTab({ childId, session }: { childId: string, s
                         {r.notes}
                       </p>
                     )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-2 text-xs">
-                      {r.medicalOfficerSig && (
-                         <div className="flex items-center gap-1.5">
-                            <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">MO:</span>
-                            <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded">{r.medicalOfficerSig}</span>
-                         </div>
-                      )}
-                      {r.dispenserSig && (
-                         <div className="flex items-center gap-1.5">
-                            <span className="text-gray-400 font-bold uppercase tracking-widest text-[9px] w-12">Disp:</span>
-                            <span className="font-mono text-gray-900 bg-gray-100 px-2 rounded">{r.dispenserSig}</span>
-                         </div>
-                      )}
-                      {!r.medicalOfficerSig && !r.dispenserSig && (
-                        <span className="text-gray-300 italic">No signatures</span>
-                      )}
-                    </div>
                   </td>
                 </tr>
               ))}
@@ -224,17 +183,6 @@ export default function MedicationTab({ childId, session }: { childId: string, s
               <div>
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Notes (Optional)</label>
                 <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Special instructions..." />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">M.O. Signature (Name)</label>
-                  <input value={medicalOfficerSig} onChange={e => setMedicalOfficerSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Name" />
-                </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Dispenser Signature (Name)</label>
-                  <input value={dispenserSig} onChange={e => setDispenserSig(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Name" />
-                </div>
               </div>
 
               <button type="submit" disabled={saving} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-lg shadow-teal-100 disabled:opacity-70 mt-4">

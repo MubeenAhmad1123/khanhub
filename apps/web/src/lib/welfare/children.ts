@@ -130,7 +130,7 @@ export async function saveDailyActivity(
   date: string,
   activities: DailyActivityRecord['activities'],
   markedBy: string,
-  extra?: { counsellingNotes?: string; vitalNotes?: string }
+  extra?: { generalNotes?: string }
 ): Promise<void> {
   // Check if doc exists for this childId+date
   const q = query(
@@ -148,8 +148,7 @@ export async function saveDailyActivity(
       activities,
       markedBy,
       updatedAt: Timestamp.now(),
-      ...(extra?.counsellingNotes !== undefined && { counsellingSessionNotes: extra.counsellingNotes }),
-      ...(extra?.vitalNotes !== undefined && { vitalSignNotes: extra.vitalNotes })
+      ...(extra?.generalNotes !== undefined && { generalNotes: extra.generalNotes })
     });
   } else {
     await addDoc(collection(db, 'welfare_daily_activities'), {
@@ -158,8 +157,7 @@ export async function saveDailyActivity(
       activities,
       markedBy,
       createdAt: Timestamp.now(),
-      counsellingSessionNotes: extra?.counsellingNotes || '',
-      vitalSignNotes: extra?.vitalNotes || ''
+      generalNotes: extra?.generalNotes || ''
     });
   }
 }
@@ -322,4 +320,41 @@ export async function getChildFeeRecords(childId: string): Promise<FeeRecord[]> 
       payments: data.payments.map((p: any) => ({ ...p, date: toDate(p.date) }))
     } as FeeRecord;
   });
+}
+
+// ─── DONORS ────────────────────────────────────────────────────────────────────
+
+export interface WelfareDonor {
+  id: string;
+  serialNumber: number;
+  name: string;
+  contactNumber?: string;
+  isActive: boolean;
+  createdAt: any;
+  [key: string]: any;
+}
+
+export async function getWelfareDonors(): Promise<WelfareDonor[]> {
+  const q = query(collection(db, 'welfare_donors'), orderBy('serialNumber', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WelfareDonor));
+}
+
+export async function getWelfareDonor(id: string): Promise<WelfareDonor | null> {
+  const snap = await getDoc(doc(db, 'welfare_donors', id));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as WelfareDonor;
+}
+
+export async function createWelfareDonor(data: Omit<WelfareDonor, 'id' | 'createdAt'>): Promise<string> {
+  const res = await addDoc(collection(db, 'welfare_donors'), {
+    ...data,
+    createdAt: Timestamp.now(),
+    isActive: true
+  });
+  return res.id;
+}
+
+export async function updateWelfareDonor(id: string, data: Partial<WelfareDonor>): Promise<void> {
+  await updateDoc(doc(db, 'welfare_donors', id), data);
 }

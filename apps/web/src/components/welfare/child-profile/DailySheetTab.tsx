@@ -1,4 +1,6 @@
 // src/components/welfare/child-profile/DailySheetTab.tsx
+'use client';
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyActivityRecord, DAILY_ACTIVITIES, ActivityStatus } from '@/types/welfare';
 import { getDailyActivities, saveDailyActivity } from '@/lib/welfare/children';
@@ -14,7 +16,7 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
   const [records, setRecords] = useState<Record<string, DailyActivityRecord>>({});
   const [loading, setLoading] = useState(true);
   const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set());
-  const [noteModal, setNoteModal] = useState<{ type: 'counselling' | 'vital'; date: string; value: string } | null>(null);
+  const [noteModal, setNoteModal] = useState<{ date: string; value: string } | null>(null);
   const [noteSaving, setNoteSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
 
@@ -57,27 +59,6 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
     const key = `${dateStr}-${activityId}`;
     if (pendingSaves.has(key)) return;
 
-    // Special rows: counselling (#8) and vital sign (#11)
-    if (activityId === 8 || activityId === 11) {
-      const currentRecord = records[dateStr];
-      const currentActivities = currentRecord?.activities || [];
-      const existingActivity = currentActivities.find(a => a.activityId === activityId);
-      const type = activityId === 8 ? 'counselling' : 'vital';
-      const existingNote = activityId === 8 ? (currentRecord?.counsellingSessionNotes || '') : (currentRecord?.vitalSignNotes || '');
-      setNoteModal({ type, date: dateStr, value: existingNote });
-      if (!existingActivity || existingActivity.status === 'na') {
-        const newActivities = [...currentActivities];
-        const actIndex = newActivities.findIndex(a => a.activityId === activityId);
-        if (actIndex >= 0) newActivities[actIndex] = { ...newActivities[actIndex], status: 'done' };
-        else newActivities.push({ activityId, status: 'done' });
-        setRecords(prev => ({
-          ...prev,
-          [dateStr]: { ...prev[dateStr], date: dateStr, childId, id: prev[dateStr]?.id || '', activities: newActivities, markedBy: session.uid, createdAt: prev[dateStr]?.createdAt || new Date() } as DailyActivityRecord
-        }));
-      }
-      return;
-    }
-
     const currentRecord = records[dateStr];
     let currentActivities = currentRecord?.activities || [];
     let existingActivity = currentActivities.find(a => a.activityId === activityId);
@@ -111,6 +92,11 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
     }
   };
 
+  const handleOpenGeneralNotes = (dateStr: string) => {
+    const existingNotes = records[dateStr]?.generalNotes || '';
+    setNoteModal({ date: dateStr, value: existingNotes });
+  };
+
   const handleSaveNote = async () => {
     if (!noteModal) return;
     setNoteSaving(true);
@@ -118,15 +104,13 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
       const dateStr = noteModal.date;
       const currentRecord = records[dateStr];
       const currentActivities = currentRecord?.activities || [];
-      const counsellingNotes = noteModal.type === 'counselling' ? noteModal.value : (currentRecord?.counsellingSessionNotes || '');
-      const vitalNotes = noteModal.type === 'vital' ? noteModal.value : (currentRecord?.vitalSignNotes || '');
-      await saveDailyActivity(childId, dateStr, currentActivities, session.uid, { counsellingNotes, vitalNotes });
+      await saveDailyActivity(childId, dateStr, currentActivities, session.uid, { generalNotes: noteModal.value });
       setRecords(prev => ({
         ...prev,
-        [dateStr]: { ...prev[dateStr], counsellingSessionNotes: counsellingNotes, vitalSignNotes: vitalNotes } as DailyActivityRecord
+        [dateStr]: { ...prev[dateStr], generalNotes: noteModal.value } as DailyActivityRecord
       }));
       setNoteModal(null);
-      toast.success('Notes saved');
+      toast.success('Daily notes saved');
     } catch (error) {
       toast.error('Failed to save notes');
     } finally {
@@ -134,20 +118,9 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
     }
   };
 
-  const getCellIcon = (status?: ActivityStatus, activityId?: number, dateStr?: string) => {
-    if (!status || status === 'na') return <MinusCircle className="w-4 h-4 text-gray-500" />;
-    if (status === 'done') {
-      const hasNote = dateStr && records[dateStr] && (
-        (activityId === 8 && records[dateStr]?.counsellingSessionNotes) ||
-        (activityId === 11 && records[dateStr]?.vitalSignNotes)
-      );
-      return (
-        <span className="relative">
-          <CheckCircle2 className="w-4 h-4 text-green-500" />
-          {hasNote && <FileText className="w-2.5 h-2.5 text-blue-500 absolute -top-1 -right-1" />}
-        </span>
-      );
-    }
+  const getCellIcon = (status?: ActivityStatus) => {
+    if (!status || status === 'na') return <MinusCircle className="w-4 h-4 text-gray-300" />;
+    if (status === 'done') return <CheckCircle2 className="w-4 h-4 text-green-500" />;
     if (status === 'not_done') return <XCircle className="w-4 h-4 text-red-500" />;
   };
 
@@ -206,7 +179,6 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
         <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> <span className="font-bold text-gray-700">Done</span></div>
         <div className="flex items-center gap-2"><XCircle className="w-4 h-4 text-red-500" /> <span className="font-bold text-gray-700">Not Done</span></div>
         <div className="flex items-center gap-2"><MinusCircle className="w-4 h-4 text-gray-300" /> <span className="text-gray-500">N/A</span></div>
-        {!readOnly && <span className="text-xs text-gray-400 font-bold">Click cells to cycle status</span>}
       </div>
 
       {loading ? (
@@ -254,19 +226,19 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
                       readOnly ? 'cursor-default' : 'hover:bg-gray-50'
                     }`}
                   >
-                    {isSaving ? <Loader2 className="w-4 h-4 text-teal-600 animate-spin" /> : getCellIcon(existing?.status, activity.id, selectedDateStr)}
+                    {isSaving ? <Loader2 className="w-4 h-4 text-teal-600 animate-spin" /> : getCellIcon(existing?.status)}
                   </button>
                 </div>
               );
             })}
           </div>
-
-          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 text-center">
-            <p className="text-[10px] uppercase tracking-widest text-gray-500 font-black">Daily Completion</p>
-            <p className={`text-lg font-black mt-1 ${selectedDayPct !== null ? completionColor(selectedDayPct).split(' ')[0] : 'text-gray-400'}`}>
-              {selectedDayPct !== null ? `${selectedDayPct}%` : 'N/A'}
-            </p>
-          </div>
+          
+          <button 
+            onClick={() => handleOpenGeneralNotes(selectedDateStr)}
+            className="w-full bg-white border border-gray-200 p-4 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <FileText size={16} /> {records[selectedDateStr]?.generalNotes ? 'Edit General Notes' : 'Add General Notes'}
+          </button>
         </div>
 
         <div className="relative rounded-[2rem] border border-gray-200 bg-white overflow-hidden shadow-sm hidden md:block">
@@ -305,12 +277,11 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
                               className={`w-full h-full min-h-[44px] flex items-center justify-center transition-colors active:scale-90 disabled:opacity-50 ${
                                 readOnly ? 'cursor-default' : 'hover:bg-gray-100'
                               }`}
-                              title={`${activity.name} — ${dateStr}`}
                             >
                               {isSaving ? (
                                 <Loader2 className="w-4 h-4 text-teal-600 animate-spin" />
                               ) : (
-                                getCellIcon(existing?.status, activity.id, dateStr)
+                                getCellIcon(existing?.status)
                               )}
                             </button>
                           </td>
@@ -326,6 +297,23 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
                     </tr>
                   );
                 })}
+                
+                <tr className="bg-blue-50/20">
+                  <td className="px-5 py-3 border-r border-gray-200 sticky left-0 bg-blue-50/50 z-10 font-black text-[10px] text-blue-600 uppercase tracking-widest">General Notes</td>
+                  {daysArray.map(day => {
+                    const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
+                    const hasNote = !!records[dateStr]?.generalNotes;
+                    return (
+                      <td key={day} className="text-center border-r border-gray-50">
+                        <button onClick={() => handleOpenGeneralNotes(dateStr)} className={`w-full h-full min-h-[44px] flex items-center justify-center ${hasNote ? 'text-blue-600' : 'text-gray-300'} hover:bg-blue-100 transition-colors`}>
+                          <FileText size={hasNote ? 18 : 14} />
+                        </button>
+                      </td>
+                    );
+                  })}
+                  <td></td>
+                </tr>
+
                 <tr className="bg-gray-50 font-black text-[10px] text-gray-500 uppercase tracking-widest">
                   <td className="px-5 py-3 border-r border-gray-200 sticky left-0 bg-gray-50 z-10">Daily %</td>
                   {daysArray.map(day => {
@@ -349,24 +337,21 @@ export default function DailySheetTab({ childId, session, readOnly = false }: { 
         </>
       )}
 
-      {/* Note Modal */}
       {noteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-black text-gray-900">
-                {noteModal.type === 'counselling' ? '📝 Counselling Session Notes' : '📋 Vital Sign Notes'}
-              </h2>
+              <h2 className="text-lg font-black text-gray-900">📝 Daily General Notes</h2>
               <button onClick={() => setNoteModal(null)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-xl"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <p className="text-xs text-gray-400 font-bold">{noteModal.date}</p>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{new Date(`${noteModal.date}T00:00:00`).toLocaleDateString('en-PK', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
               <textarea
                 value={noteModal.value}
                 onChange={e => setNoteModal({ ...noteModal, value: e.target.value })}
                 rows={6}
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none"
-                placeholder={noteModal.type === 'counselling' ? 'Write counselling session notes...' : 'Write vital sign observations...'}
+                placeholder="Write any specific observations, issues, or events of the day..."
               />
               <div className="flex gap-2">
                 <button onClick={() => setNoteModal(null)} className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl text-xs font-black uppercase tracking-widest">Cancel</button>

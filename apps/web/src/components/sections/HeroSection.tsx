@@ -441,7 +441,7 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.6 }}
-          className="fixed right-4 sm:right-8 bottom-2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 scale-[0.96] sm:scale-100"
+          className="fixed left-4 sm:left-8 bottom-2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-[999] scale-[0.96] sm:scale-100"
         >
           <Link
             href="tel:067-3364220"

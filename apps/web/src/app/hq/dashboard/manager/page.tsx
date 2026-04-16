@@ -44,10 +44,12 @@ export default function ManagerOverviewPage() {
     totalStaff: 0,
     presentToday: 0,
     absentToday: 0,
+    leaveToday: 0,
     notMarkedToday: 0,
     pendingApprovals: 0,
     urgentApprovals: 0,
   });
+  const [deptStats, setDeptStats] = useState<Record<string, { present: number, absent: number, leave: number, total: number }>>({});
   const [activities, setActivities] = useState<any[]>([]);
   const [pendingList, setPendingList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,25 +127,44 @@ export default function ManagerOverviewPage() {
           depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))))
         );
 
+        let presentCount = 0;
+        let absentCount = 0;
+        let leaveCount = 0;
+        totalStaff = allStaffDocs.length;
+        
+        const dStats: Record<string, { present: number, absent: number, leave: number, total: number }> = {};
+        depts.forEach(d => {
+          dStats[d] = { present: 0, absent: 0, leave: 0, total: 0 };
+        });
+
+        // Count staff per department
+        allStaffDocs.forEach(s => {
+          const dept = (s.dept as string) || 'hq';
+          if (dStats[dept]) dStats[dept].total++;
+        });
+
         const attendanceMap = new Map<string, string>();
-        attSnaps.forEach(snap => {
+        attSnaps.forEach((snap, i) => {
+          const dept = depts[i];
           snap.docs.forEach(d => {
             const data = d.data();
-            // Try both id and staffId field as mapping keys
             const key = data.staffId || d.id;
             attendanceMap.set(key, data.status);
+            
+            if (data.status === 'present') {
+              presentCount++;
+              if (dStats[dept]) dStats[dept].present++;
+            } else if (data.status === 'absent') {
+              absentCount++;
+              if (dStats[dept]) dStats[dept].absent++;
+            } else if (data.status && (data.status.includes('leave'))) {
+              leaveCount++;
+              if (dStats[dept]) dStats[dept].leave++;
+            }
           });
         });
 
-        let presentCount = 0;
-        let absentCount = 0;
-        
-        allStaffDocs.forEach(staff => {
-          // Check for loginUserId or id in the attendance map
-          const status = attendanceMap.get(staff.id) || attendanceMap.get(staff.loginUserId) || attendanceMap.get(staff.userId);
-          if (status === 'present') presentCount++;
-          else if (status === 'absent') absentCount++;
-        });
+        setDeptStats(dStats);
 
         // 3. Fetch Contributions (Pending)
         const contribSnaps = await Promise.all(
@@ -199,10 +220,13 @@ export default function ManagerOverviewPage() {
           totalStaff,
           presentToday: presentCount,
           absentToday: absentCount,
-          notMarkedToday: totalStaff - presentCount - absentCount,
+          leaveToday: leaveCount,
+          notMarkedToday: totalStaff - presentCount - absentCount - leaveCount,
           pendingApprovals: pendingCount,
           urgentApprovals: urgent.length,
         });
+
+        setDeptStats(dStats);
 
         setPendingList(enrichedList);
       } catch (err) {
@@ -242,16 +266,69 @@ export default function ManagerOverviewPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard isDark={isDark} label="Total Staff" value={stats.totalStaff} icon={<Users size={18} />} color="bg-blue-500/10 text-blue-500" />
         <StatCard isDark={isDark} label="Present" value={stats.presentToday} icon={<CheckCircle size={18} />} color="bg-emerald-500/10 text-emerald-500" />
         <StatCard isDark={isDark} label="Absent" value={stats.absentToday} icon={<XCircle size={18} />} color="bg-rose-500/10 text-rose-500" />
-        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-amber-500/10 text-amber-500" />
+        <StatCard isDark={isDark} label="On Leave" value={stats.leaveToday} icon={<AlertTriangle size={18} />} color="bg-amber-500/10 text-amber-500" />
+        <StatCard isDark={isDark} label="Not Marked" value={stats.notMarkedToday} icon={<Clock size={18} />} color="bg-zinc-500/10 text-zinc-500" />
         <StatCard isDark={isDark} label="Pending Tasks" value={stats.pendingApprovals} icon={<FileText size={18} />} color="bg-purple-500/10 text-purple-500" urgent={stats.urgentApprovals > 0} />
       </div>
 
-      {/* Main Content Layout */}
+      {/* Analytics & Reports Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Department Breakdown Report */}
+        <div className={`lg:col-span-2 rounded-[2.5rem] p-8 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
+          <div className="flex items-center justify-between mb-10">
+            <div>
+              <h3 className="text-xl font-black uppercase tracking-tight italic">Institutional Status Breakdown</h3>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-1">Real-time attendance velocity by department</p>
+            </div>
+            <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${isDark ? 'bg-zinc-800 text-zinc-500' : 'bg-gray-50 text-gray-400'}`}>
+              Today Snapshot
+            </div>
+          </div>
+
+          <div className="space-y-8">
+            {Object.entries(deptStats).map(([dept, data]) => (
+              <div key={dept} className="group">
+                <div className="flex items-center justify-between px-2 mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-500 group-hover:text-blue-500 transition-colors">{dept}</span>
+                  </div>
+                  <div className="flex gap-6">
+                    <div className="flex flex-col items-end">
+                      <span className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest leading-none mb-1">Present</span>
+                      <span className="text-sm font-black text-emerald-500">{data.present}</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest leading-none mb-1">Absent</span>
+                      <span className="text-sm font-black text-rose-500">{data.absent}</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[9px] font-black text-amber-500/60 uppercase tracking-widest leading-none mb-1">Leave</span>
+                      <span className="text-sm font-black text-amber-500">{data.leave}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={`h-3 w-full rounded-2xl flex overflow-hidden p-0.5 ${isDark ? 'bg-zinc-800/50' : 'bg-gray-100/50'}`}>
+                  {data.total > 0 ? (
+                    <>
+                      <div style={{ width: `${(data.present/data.total)*100}%` }} className="h-full bg-emerald-500 rounded-full mr-0.5 shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-1000" />
+                      <div style={{ width: `${(data.absent/data.total)*100}%` }} className="h-full bg-rose-500 rounded-full mr-0.5 shadow-[0_0_10px_rgba(244,63,94,0.3)] transition-all duration-1000" />
+                      <div style={{ width: `${(data.leave/data.total)*100}%` }} className="h-full bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.3)] transition-all duration-1000" />
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                       <span className="text-[8px] font-bold text-gray-400 uppercase italic">No active staff registered</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         
         {/* Left Column: Quick Actions & Pending List */}
         <div className="lg:col-span-2 space-y-8">

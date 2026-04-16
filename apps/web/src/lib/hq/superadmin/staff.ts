@@ -169,9 +169,13 @@ export async function listStaffCards({
 export type StaffProfile = StaffCardRow & {
   email?: string;
   phone?: string;
-  customId?: string;
+  customId?: string; // This is the Employee ID field
   address?: string;
   cnic?: string;
+  dob?: string;
+  gender?: string;
+  bloodGroup?: string;
+  emergencyContact?: string;
   joiningDate?: any;
   lastLoginAt?: any;
   photoUrl?: string;
@@ -180,6 +184,8 @@ export type StaffProfile = StaffCardRow & {
   dressCodeConfig?: { key: string; label: string }[];
   dutyStartTime?: string;
   dutyEndTime?: string;
+  secondaryDepts?: StaffDept[];
+  basicInfoExtras?: Record<string, string>;
 };
 
 export async function fetchStaffProfile(compositeId: string): Promise<StaffProfile | null> {
@@ -215,9 +221,13 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     isActive: data.isActive !== false,
     email: data.email,
     phone: data.phone,
-    customId: data.customId,
+    customId: data.customId || data.employeeId, // Unify employeeId/customId
     address: data.address,
     cnic: data.cnic,
+    dob: data.dob,
+    gender: data.gender,
+    bloodGroup: data.bloodGroup,
+    emergencyContact: data.emergencyContact,
     joiningDate: data.createdAt || data.joiningDate,
     lastLoginAt: data.lastLoginAt,
     photoUrl: data.photoUrl || data.photoURL,
@@ -234,6 +244,8 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     designation: data.designation || data.role || 'Staff Member',
     dutyStartTime: data.dutyStartTime || '09:00',
     dutyEndTime: data.dutyEndTime || '17:00',
+    secondaryDepts: data.secondaryDepts || [],
+    basicInfoExtras: data.basicInfoExtras || {},
   };
 }
 

@@ -1,7 +1,9 @@
 // src/components/welfare/child-profile/AdmissionTab.tsx
+'use client';
+
 import React, { useState } from 'react';
 import { Child } from '@/types/welfare';
-import { Edit3, Save, Loader2, User, Heart, Brain, Phone, Shield } from 'lucide-react';
+import { Edit3, Save, Loader2, User, Heart, Home, Phone, Shield, GraduationCap } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
@@ -18,18 +20,7 @@ export default function AdmissionTab({
   const [form, setForm] = useState<Partial<Child>>({ ...child });
 
   const handleChange = (field: keyof Child | string, value: any) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setForm((prev: any) => ({
-        ...prev,
-        [parent]: {
-          ...(prev[parent] || {}),
-          [child]: value
-        }
-      }));
-    } else {
-      setForm(prev => ({ ...prev, [field]: value }));
-    }
+    setForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
@@ -40,7 +31,7 @@ export default function AdmissionTab({
       });
       onUpdate(form);
       setIsEditing(false);
-      toast.success('Child admission details updated');
+      toast.success('Child details updated ✓');
     } catch (error) {
       console.error("Error updating child", error);
       toast.error('Failed to update details');
@@ -99,11 +90,11 @@ export default function AdmissionTab({
           <select 
             value={value ?? ''} 
             onChange={e => handleChange(fieldKey, e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px]"
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none h-[42px] capitalize"
           >
             <option value="">Select...</option>
             {options.map((opt: string) => (
-              <option key={opt} value={opt}>{opt}</option>
+              <option key={opt} value={opt} className="capitalize">{opt.replace('_', ' ')}</option>
             ))}
           </select>
         </div>
@@ -136,7 +127,7 @@ export default function AdmissionTab({
   return (
     <div className="animate-in fade-in duration-500">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-black text-gray-900">Admission Details</h2>
+        <h2 className="text-xl font-black text-gray-900">Child Discovery & Info</h2>
         {!isEditing ? (
           <button 
             onClick={() => setIsEditing(true)} 
@@ -169,57 +160,41 @@ export default function AdmissionTab({
 
       <div className="space-y-6">
         <SectionCard title="1. Identity & Demographics" icon={User}>
-          <Field label="Admission Number" value={form.admissionNumber} fieldKey="admissionNumber" />
-          <Field label="Name" value={form.name} fieldKey="name" />
-          <Field label="Father/Husband Name" value={form.fatherName} fieldKey="fatherName" />
+          <Field label="Admission ID" value={form.admissionNumber} fieldKey="admissionNumber" />
+          <Field label="Full Name" value={form.name} fieldKey="name" />
           <Field label="Date of Birth" value={form.dateOfBirth} type="date" fieldKey="dateOfBirth" />
           <Field label="Age" value={form.age} type="number" fieldKey="age" />
           <Field label="Gender" value={form.gender} type="select" options={['male', 'female', 'other']} fieldKey="gender" />
-          <Field label="Ethnicity/Caste" value={form.ethnicity} fieldKey="ethnicity" />
-          <Field label="Marital Status" value={form.maritalStatus} type="select" options={['single', 'married', 'divorced', 'widowed']} fieldKey="maritalStatus" />
-          <Field label="Education" value={form.education} fieldKey="education" />
-          <Field label="Profession" value={form.profession} fieldKey="profession" />
+          <Field label="Blood Group" value={form.bloodGroup} fieldKey="bloodGroup" />
         </SectionCard>
 
-        <SectionCard title="2. Guardian & Contact Info" icon={Phone}>
+        <SectionCard title="2. Family & Guardian Status" icon={Phone}>
+          <Field label="Father Status" value={form.fatherStatus} type="select" options={['alive', 'deceased', 'unknown']} fieldKey="fatherStatus" />
+          <Field label="Mother Status" value={form.motherStatus} type="select" options={['alive', 'deceased', 'unknown']} fieldKey="motherStatus" />
+          <Field label="Parents Separated?" value={form.parentsSeparated} type="boolean" fieldKey="parentsSeparated" />
           <Field label="Guardian Name" value={form.guardianName} fieldKey="guardianName" />
-          <Field label="Relationship (e.g. Father, Brother)" value={form.guardianRelationship} fieldKey="guardianRelationship" />
+          <Field label="Relationship" value={form.guardianRelationship} fieldKey="guardianRelationship" />
           <Field label="Contact Number" value={form.contactNumber} type="tel" fieldKey="contactNumber" />
-          <Field label="WhatsApp Number" value={form.whatsappNumber} type="tel" fieldKey="whatsappNumber" />
-          <Field label="Expected Names of Visitors" value={form.nameOfVisitors} type="textarea" fieldKey="nameOfVisitors" />
-          <Field label="Detailed Address" value={form.address} type="textarea" fieldKey="address" />
-          <Field label="Town / Police Station" value={form.townPoliceStation} fieldKey="townPoliceStation" />
+          <Field label="WhatsApp" value={form.whatsappNumber} type="tel" fieldKey="whatsappNumber" />
         </SectionCard>
 
-        <SectionCard title="3. Addiction & Treatment" icon={Shield}>
-          <Field label="Substance of Addiction" value={form.substanceOfAddiction} fieldKey="substanceOfAddiction" />
-          <Field label="Duration of Use" value={form.durationOfUse} fieldKey="durationOfUse" />
-          <Field label="Avg Daily Intake / Expense" value={form.averageDailyIntake} fieldKey="averageDailyIntake" />
-          <Field label="Presenting Complaints" value={form.presentingComplaints} type="textarea" fieldKey="presentingComplaints" />
-          <Field label="Previous Treatment Duration" value={form.previousTreatmentDuration} fieldKey="previousTreatmentDuration" />
-          <Field label="Previous Welfare Center" value={form.previousHospital} fieldKey="previousHospital" />
+        <SectionCard title="3. Admission Details" icon={Home}>
+          <Field label="Admission Category" value={form.admissionCategory} type="select" options={['orphan', 'semi_orphan', 'destitute', 'abandoned', 'other']} fieldKey="admissionCategory" />
+          <Field label="Reason & History" value={form.reasonForAdmission} type="textarea" fieldKey="reasonForAdmission" />
+          <Field label="Planned Stay (Months)" value={form.durationMonths} type="number" fieldKey="durationMonths" />
+          <Field label="Monthly Support Cost" value={form.packageAmount} type="number" fieldKey="packageAmount" />
         </SectionCard>
 
-        <SectionCard title="4. Health & Medical Status" icon={Heart}>
-          <Field label="Any Major Illness?" value={form.healthStatus?.majorIllnessLast12Months} type="boolean" fieldKey="healthStatus.majorIllnessLast12Months" />
-          <Field label="Asthma?" value={form.healthStatus?.hasAsthma} type="boolean" fieldKey="healthStatus.hasAsthma" />
-          <Field label="Fits / Seizures?" value={form.healthStatus?.hasFits} type="boolean" fieldKey="healthStatus.hasFits" />
-          <Field label="Physical Disability?" value={form.healthStatus?.hasDisability} type="boolean" fieldKey="healthStatus.hasDisability" />
-          <Field label="HBsAg Status" value={form.healthStatus?.hbsagStatus} type="select" options={['positive', 'negative', 'not_known']} fieldKey="healthStatus.hbsagStatus" />
-          <Field label="HCV Status" value={form.healthStatus?.hcvStatus} type="select" options={['positive', 'negative', 'not_known']} fieldKey="healthStatus.hcvStatus" />
-          <Field label="HIV Status" value={form.healthStatus?.hivStatus} type="select" options={['positive', 'negative', 'not_known']} fieldKey="healthStatus.hivStatus" />
-          <Field label="TB Status" value={form.healthStatus?.tbStatus} type="select" options={['positive', 'negative', 'not_known']} fieldKey="healthStatus.tbStatus" />
-          <Field label="Other Details / Aches" value={form.healthStatus?.otherCondition} type="textarea" fieldKey="healthStatus.otherCondition" />
+        <SectionCard title="4. Health & Wellness" icon={Heart}>
+          <Field label="Overall Health" value={form.healthCondition} type="select" options={['healthy', 'minor_issues', 'chronic_condition', 'disability']} fieldKey="healthCondition" />
+          <Field label="Disability?" value={form.hasDisability} type="boolean" fieldKey="hasDisability" />
+          <Field label="Disability Details" value={form.disabilityDetails} type="textarea" fieldKey="disabilityDetails" />
+          <Field label="Medical Notes" value={form.healthNotes} type="textarea" fieldKey="healthNotes" />
         </SectionCard>
 
-        <SectionCard title="5. Psychiatric Evaluation" icon={Brain}>
-          <Field label="General Aptitude" value={form.psychiatricEvaluation?.generalAptitude} fieldKey="psychiatricEvaluation.generalAptitude" />
-          <Field label="Thought Disorder" value={form.psychiatricEvaluation?.thoughtDisorder} type="boolean" fieldKey="psychiatricEvaluation.thoughtDisorder" />
-          <Field label="Hallucinations" value={form.psychiatricEvaluation?.hallucinations} type="boolean" fieldKey="psychiatricEvaluation.hallucinations" />
-          <Field label="Delusions" value={form.psychiatricEvaluation?.delusions} type="boolean" fieldKey="psychiatricEvaluation.delusions" />
-          <Field label="Insights" value={form.psychiatricEvaluation?.insights} type="boolean" fieldKey="psychiatricEvaluation.insights" />
-          <Field label="Memory" value={form.psychiatricEvaluation?.memory} fieldKey="psychiatricEvaluation.memory" />
-          <Field label="Intelligence Level" value={form.psychiatricEvaluation?.intelligence} fieldKey="psychiatricEvaluation.intelligence" />
+        <SectionCard title="5. Education & Progress" icon={GraduationCap}>
+          <Field label="Education Level" value={form.educationLevel} type="select" options={['none', 'primary', 'middle', 'secondary', 'higher_secondary', 'other']} fieldKey="educationLevel" />
+          <Field label="School / Madressah" value={form.school} fieldKey="school" />
         </SectionCard>
       </div>
     </div>

@@ -23,12 +23,13 @@ const DEPARTMENTS = [
   { code: 'spims', label: 'Spims', txCollection: 'spims_transactions', entityCollection: 'spims_students' },
   { code: 'hospital', label: 'Khan Hospital', txCollection: 'hospital_transactions', entityCollection: 'hospital_patients' },
   { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions', entityCollection: 'sukoon_clients' },
-  { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions', entityCollection: 'welfare_children' },
+  { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions', entityCollection: 'welfare_donors' },
   { code: 'job-center', label: 'Job Center', txCollection: 'job_center_transactions', entityCollection: 'job_center_seekers' },
 ];
 
 const BASE_CATEGORIES = [
   { id: 'fee', name: 'Admission / Fees', appliesTo: 'income' },
+  { id: 'donation', name: 'Donation', appliesTo: 'income' },
   { id: 'canteen', name: 'Canteen Funds', appliesTo: 'both' },
   { id: 'staff_salary', name: 'Staff Salary', appliesTo: 'expense' },
   { id: 'utilities', name: 'Utilities', appliesTo: 'expense' },
@@ -524,10 +525,19 @@ export default function CashierStationPage() {
         departmentName: activeDepartment.label,
         ...(isStaffMode
           ? { staffId: selectedEntity?.id, staffName: selectedEntity?.name || selectedEntity?.employeeId || 'Unknown' }
-          : { 
-              patientId: selectedEntity?.id || (departmentCode === 'hospital' ? 'hospital-general' : undefined), 
-              patientName: selectedEntity?.name || selectedEntity?.fullName || (departmentCode === 'hospital' ? 'General Hospital Account' : 'Unknown') 
-            }),
+          : departmentCode === 'welfare' 
+            ? { 
+                donorId: selectedEntity?.id, 
+                donorName: selectedEntity?.name || selectedEntity?.fullName || 'Unknown',
+                childId: selectedEntity?.linkedChildId || undefined,
+                childName: selectedEntity?.linkedChildName || undefined,
+                donationScope: selectedEntity?.donationScope || undefined,
+                donationType: selectedEntity?.donationType || undefined
+              }
+            : { 
+                patientId: selectedEntity?.id || (departmentCode === 'hospital' ? 'hospital-general' : undefined), 
+                patientName: selectedEntity?.name || selectedEntity?.fullName || (departmentCode === 'hospital' ? 'General Hospital Account' : 'Unknown') 
+              }),
         description,
         paymentMethod,
         referenceNo,
@@ -629,7 +639,7 @@ export default function CashierStationPage() {
       const q = searchQuery.trim().toLowerCase();
       if (!q) return true;
       
-      const searchStr = `${tx.patientName || ''} ${tx.patientId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase();
+      const searchStr = `${tx.patientName || ''} ${tx.patientId || ''} ${tx.donorName || ''} ${tx.donorId || ''} ${tx.staffName || ''} ${tx.staffId || ''} ${tx.categoryName || tx.category || ''} ${tx.description || ''}`.toLowerCase();
       return searchStr.includes(q);
     });
   }, [historyTxns, searchQuery]);
@@ -720,8 +730,8 @@ export default function CashierStationPage() {
                   <div key={tx.id} style={{ animationDelay: `${index * 60}ms` }} className="animate-in fade-in slide-in-from-bottom-2 duration-300 group bg-white/5 border border-white/8 rounded-2xl p-4 md:p-5 hover:bg-white/8 hover:border-amber-500/20 transition-all duration-300">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="text-sm font-black text-white truncate">{tx.patientName || 'Patient'}</div>
-                        <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.id}</div>
+                        <div className="text-sm font-black text-white truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
+                        <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.donorId || tx.id}</div>
                         <div className="text-xs font-bold text-teal-300 mt-1">Rs {Number(tx.amount || 0).toLocaleString()}</div>
                         <div className="text-[10px] font-semibold text-gray-300 mt-1 line-clamp-2">{tx.description || tx.note || ''}</div>
                         <span className={cn('mt-2 inline-flex px-2.5 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/15 text-amber-400 border-amber-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20')}>

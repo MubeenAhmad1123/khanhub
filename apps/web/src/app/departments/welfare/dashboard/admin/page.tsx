@@ -28,6 +28,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const [totalChildren, setTotalChildren] = useState(0);
+  const [totalDonors, setTotalDonors] = useState(0);
   const [activeChildren, setActiveChildren] = useState<any[]>([]);
 
   useEffect(() => {
@@ -58,6 +59,12 @@ export default function AdminDashboardPage() {
         id: d.id,
         ...d.data()
       })).slice(0, 5));
+
+      const donorsSnap = await getDocs(query(
+        collection(db, 'welfare_donors'),
+        where('isActive', '==', true)
+      ));
+      setTotalDonors(donorsSnap.size);
 
     } catch (error) {
       console.error('Dashboard load error:', error);
@@ -114,8 +121,8 @@ export default function AdminDashboardPage() {
             <Users className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <div className="text-xl md:text-4xl font-black text-gray-900">Child Focus</div>
-            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Management Mode</div>
+            <div className="text-xl md:text-4xl font-black text-gray-900">{totalDonors}</div>
+            <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Active Donors</div>
           </div>
         </div>
 
@@ -196,6 +203,16 @@ export default function AdminDashboardPage() {
                 <Users size={18} />
               </div>
               <span className="font-bold text-sm">Child Registry</span>
+            </Link>
+
+            <Link 
+              href="/departments/welfare/dashboard/admin/donors"
+              className="flex items-center gap-3 p-4 rounded-2xl bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors group active:scale-95"
+            >
+               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                <Heart size={18} />
+              </div>
+              <span className="font-bold text-sm">Donor Registry</span>
             </Link>
 
             <Link 
