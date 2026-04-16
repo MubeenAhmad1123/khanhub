@@ -130,7 +130,7 @@ export default function SpimsStudentsListPage() {
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-gray-900 leading-none mb-1">{st.name}</span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{st.phone}</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{st.contact || (st as any).phone || 'N/A'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
@@ -177,7 +177,7 @@ export default function SpimsStudentsListPage() {
                     <span className="text-[8px] font-black uppercase text-gray-500">{st.session}</span>
                     <span className="w-0.5 h-0.5 rounded-full bg-gray-300" />
                     <span className="text-[8px] font-black text-[#1D9E75] uppercase">{st.status || 'Active'}</span>
-                    <span className="text-[8px] font-black text-gray-400 font-mono">{st.phone}</span>
+                    <span className="text-[8px] font-black text-gray-400 font-mono">{st.contact || (st as any).phone || 'N/A'}</span>
                   </div>
                 </div>
                 <div className="shrink-0 w-10 h-10 flex items-center justify-center rounded-2xl bg-gray-50 text-gray-400 group-active:bg-[#1D9E75] group-active:text-white transition-all transform group-hover:translate-x-1">

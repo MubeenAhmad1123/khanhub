@@ -20,7 +20,7 @@ export default function ProfileHeader({ student }: ProfileHeaderProps) {
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-500/5 rounded-full -ml-24 -mb-24 blur-3xl" />
 
       <div className="relative p-5 md:p-10">
-        <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-center text-center md:text-left">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start text-center md:text-left">
           {/* Avatar Section */}
           <div className="relative group shrink-0">
             <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] bg-gradient-to-br from-[#1D9E75] to-teal-700 flex items-center justify-center text-white shadow-2xl shadow-[#1D9E75]/30 transform group-hover:rotate-3 transition-transform duration-500">
@@ -54,15 +54,15 @@ export default function ProfileHeader({ student }: ProfileHeaderProps) {
               <h1 className="text-2xl min-[400px]:text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-2">
                 {student.name}
               </h1>
-              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-gray-400 font-bold text-[10px] md:text-sm uppercase tracking-wider">
-                <p className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-gray-400 font-bold text-[10px] md:text-sm uppercase tracking-wider">
+                <p className="flex items-center gap-1.5 bg-gray-50 md:bg-transparent px-3 py-1.5 md:p-0 rounded-lg">
                   <GraduationCap size={14} className="text-[#1D9E75]" />
-                  Roll No {student.rollNo}
+                  Roll {student.rollNo}
                 </p>
-                <span className="hidden sm:block w-1 h-1 rounded-full bg-gray-200" />
-                <p className="flex items-center gap-1.5">
+                <span className="hidden md:block w-1 h-1 rounded-full bg-gray-200" />
+                <p className="flex items-center gap-1.5 bg-gray-50 md:bg-transparent px-3 py-1.5 md:p-0 rounded-lg">
                   <Phone size={14} className="text-[#1D9E75]" />
-                  {student.phone || 'No Phone'}
+                  {student.contact || (student as any).phone || 'No Phone'}
                 </p>
               </div>
             </div>

@@ -201,7 +201,8 @@ export default function FeeRecordTab({
       </div>
 
       <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-500 text-left">
@@ -245,18 +246,61 @@ export default function FeeRecordTab({
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap gap-6 px-4 py-4 bg-gray-50 border-t border-gray-100 text-sm">
-          <div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total received (approved)</div>
-            <div className="text-lg font-black text-[#1D9E75]">Rs {totalReceived.toLocaleString()}</div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {visibleRows.length === 0 ? (
+            <div className="px-4 py-10 text-center text-gray-400 font-medium text-sm">
+              No payments yet.
+            </div>
+          ) : (
+            visibleRows.map((r, idx) => (
+              <div key={r.id} className="p-5 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
+                      #{idx + 1} — {formatDateDMY(r.date)}
+                    </span>
+                    <h4 className="text-lg font-black text-gray-900">Rs {(Number(r.amount) || 0).toLocaleString()}</h4>
+                  </div>
+                  {!readOnlyStudent && (
+                    <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl border ${statusClass(r.status)}`}>
+                      {r.status.replace('_', ' ')}
+                    </span>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Remaining</span>
+                    <span className="text-xs font-bold text-amber-700">Rs {(Number(r.remaining) || 0).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Received by</span>
+                    <span className="text-xs font-bold text-gray-700">{r.receivedBy}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Payment Type</span>
+                    <span className="text-xs font-bold text-gray-600 capitalize">{r.type}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-x-8 gap-y-4 px-5 py-6 bg-gray-50 border-t border-gray-100">
+          <div className="min-w-[120px]">
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total received</div>
+            <div className="text-xl font-black text-[#1D9E75]">Rs {totalReceived.toLocaleString()}</div>
           </div>
-          <div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Package</div>
-            <div className="text-lg font-black text-gray-900">Rs {(Number(student.totalPackage) || 0).toLocaleString()}</div>
+          <div className="min-w-[120px]">
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Package</div>
+            <div className="text-xl font-black text-gray-900">Rs {(Number(student.totalPackage) || 0).toLocaleString()}</div>
           </div>
-          <div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Remaining (from ledger)</div>
-            <div className="text-lg font-black text-amber-700">Rs {displayRemaining.toLocaleString()}</div>
+          <div className="min-w-[120px]">
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Remaining</div>
+            <div className="text-xl font-black text-amber-700">Rs {displayRemaining.toLocaleString()}</div>
           </div>
         </div>
       </div>

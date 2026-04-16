@@ -43,6 +43,7 @@ export default function AdmissionTab({
   useEffect(() => {
     setForm({
       ...student,
+      contact: student.contact || (student as any).phone || '',
       dateOfBirth: student.dateOfBirth,
       admissionDate: student.admissionDate,
     });

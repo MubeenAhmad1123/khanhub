@@ -131,8 +131,8 @@ export default function ProfilePage() {
 
   const displayedPhone =
     session?.role === 'student'
-      ? (patientDoc?.contact || profile?.phone || null)
-      : (profile?.phone || null);
+      ? (patientDoc?.contact || profile?.contact || profile?.phone || null)
+      : (profile?.contact || profile?.phone || null);
 
   const displayedPhotoUrl =
     session?.role === 'student'
