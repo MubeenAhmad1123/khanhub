@@ -248,22 +248,57 @@ export async function loginUniversal(customId: string, password: string, deptHin
       dept = discovery.dept;
       finalData = discovery.data;
       uid = discovery.uid;
-      const email = `${customId.trim().toLowerCase()}${dept.domain}`;
-      console.log('[UniversalAuth] Attempting Firebase Auth with discovered user:', email);
+      // Collect potential email prefixes to try
+      const prefixes = Array.from(new Set([
+        customId.trim().toLowerCase(),
+        finalData.customId?.toLowerCase(),
+        finalData.employeeId?.toLowerCase()
+      ].filter(Boolean) as string[]));
       
-      try {
-        cred = await signInWithEmailAndPassword(auth, email, password);
-        console.log('[UniversalAuth] Auth successful, UID:', cred.user.uid);
-      } catch (e: any) {
-        if (dept.legacyDomain && (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-email')) {
-          const legacyEmail = `${customId.trim().toLowerCase()}${dept.legacyDomain}`;
-          console.log('[UniversalAuth] Attempting fallback with legacy domain:', legacyEmail);
-          cred = await signInWithEmailAndPassword(auth, legacyEmail, password);
-          console.log('[UniversalAuth] Legacy Auth successful, UID:', cred.user.uid);
-        } else {
-          throw e;
+      const domains = [dept.domain, dept.legacyDomain].filter(Boolean) as string[];
+      
+      let lastError: any;
+      console.log('[UniversalAuth] Attempting robust auth for discovered user');
+
+      // Try any explicit email stored in Firestore first
+      if (finalData.email && typeof finalData.email === 'string' && finalData.email.includes('@')) {
+        try {
+          console.log('[UniversalAuth] Trying Firestore email:', finalData.email);
+          cred = await signInWithEmailAndPassword(auth, finalData.email, password);
+        } catch (e: any) {
+          lastError = e;
         }
       }
+
+      // Then try combinations of prefixes and domains
+      if (!cred) {
+        for (const prefix of prefixes) {
+          for (const domain of domains) {
+            const email = `${prefix}${domain}`;
+            try {
+              console.log('[UniversalAuth] Trying generated email:', email);
+              cred = await signInWithEmailAndPassword(auth, email, password);
+              if (cred) break;
+            } catch (e: any) {
+              lastError = e;
+              // Continue if it's a credential error, otherwise throw
+              const isCredError = e.code === 'auth/invalid-credential' || 
+                                 e.code === 'auth/user-not-found' || 
+                                 e.code === 'auth/wrong-password' ||
+                                 e.code === 'auth/invalid-email';
+              if (!isCredError) throw e;
+            }
+          }
+          if (cred) break;
+        }
+      }
+
+      if (!cred) {
+        console.error('[UniversalAuth] All auth attempts failed. Final error:', lastError?.code);
+        throw lastError;
+      }
+      
+      console.log('[UniversalAuth] Auth successful, UID:', cred.user.uid);
     }
 
     // 2. Security checks
