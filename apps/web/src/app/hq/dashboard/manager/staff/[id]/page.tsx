@@ -1649,57 +1649,66 @@ export default function StaffProfilePage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                    <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Date of Birth</label>
-                      <input
-                        type="date"
-                        value={editForm.dob}
-                        onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
-                      />
+                  <div className="space-y-8">
+                    {/* Row 1: DOB & Gender */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Date of Birth</label>
+                        <input
+                          type="date"
+                          value={editForm.dob}
+                          onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Gender</label>
+                        <select
+                          value={editForm.gender}
+                          onChange={e => setEditForm({ ...editForm, gender: e.target.value as any })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        >
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
                     </div>
+
+                    {/* Row 2: CNIC / Passport (Full Width for clarity) */}
                     <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Gender</label>
-                      <select
-                        value={editForm.gender}
-                        onChange={e => setEditForm({ ...editForm, gender: e.target.value as any })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
-                      >
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2 lg:col-span-1 text-center lg:text-left">
-                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
-                       <input
-                         type="text"
-                         placeholder="00000-0000000-0"
-                         value={editForm.cnic}
-                         onChange={e => setEditForm({ ...editForm, cnic: e.target.value })}
-                         className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
-                       />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Blood Group</label>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
                       <input
                         type="text"
-                        placeholder="B+"
-                        value={editForm.bloodGroup}
-                        onChange={e => setEditForm({ ...editForm, bloodGroup: e.target.value })}
+                        placeholder="00000-0000000-0"
+                        value={editForm.cnic}
+                        onChange={e => setEditForm({ ...editForm, cnic: e.target.value })}
                         className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
                       />
                     </div>
-                    <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Emergency Contact</label>
-                      <input
-                        type="text"
-                        placeholder="Name / Ph"
-                        value={editForm.emergencyContact}
-                        onChange={e => setEditForm({ ...editForm, emergencyContact: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
-                      />
+
+                    {/* Row 3: Blood Group & Emergency Contact */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Blood Group</label>
+                        <input
+                          type="text"
+                          placeholder="B+"
+                          value={editForm.bloodGroup}
+                          onChange={e => setEditForm({ ...editForm, bloodGroup: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Emergency Contact</label>
+                        <input
+                          type="text"
+                          placeholder="Name / Ph"
+                          value={editForm.emergencyContact}
+                          onChange={e => setEditForm({ ...editForm, emergencyContact: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1721,8 +1730,9 @@ export default function StaffProfilePage() {
                     <div className="space-y-3 mb-8 min-h-[100px]">
                       {Object.entries(editForm.basicInfoExtras || {}).map(([key, val]) => (
                         <div key={key} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-                           <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
-                             <span className="text-gray-400 font-extrabold uppercase mr-1">{key.replace(/_/g, ' ')}:</span> {val}
+                           <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all flex flex-wrap gap-x-2 items-center ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
+                             <span className="text-gray-400 font-extrabold uppercase whitespace-nowrap">{key.replace(/_/g, ' ')}:</span>
+                             <span className="break-all">{val}</span>
                            </div>
                            <button
                              onClick={() => {
@@ -1785,7 +1795,7 @@ export default function StaffProfilePage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 h-full flex flex-col justify-center pb-10">
+                    <div className="space-y-6">
                       <div>
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Duty Start</label>
                         <input
