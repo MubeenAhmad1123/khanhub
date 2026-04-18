@@ -110,6 +110,8 @@ export default function StaffProfilePage() {
     gender: 'male' as 'male' | 'female' | 'other',
     bloodGroup: '',
     emergencyContact: '',
+    emergencyContactName: '',
+    emergencyPhone: '',
     address: '',
     userId: '',
     dressCodeConfig: [] as { key: string; label: string }[],
@@ -228,6 +230,8 @@ export default function StaffProfilePage() {
         gender: (profile.gender as any) || 'male',
         bloodGroup: profile.bloodGroup || '',
         emergencyContact: profile.emergencyContact || '',
+        emergencyContactName: profile.emergencyContactName || profile.emergencyContact || '',
+        emergencyPhone: profile.emergencyPhone || '',
         address: profile.address || '',
         userId: profile.staffId || '',
         dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : []),
@@ -1594,7 +1598,22 @@ export default function StaffProfilePage() {
                     </div>
                   </div>
 
-                  <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Monthly Salary (PKR)</label>
+                      <div className="relative">
+                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400">
+                          <DollarSign size={16} />
+                        </div>
+                        <input
+                          type="number"
+                          value={editForm.monthlySalary}
+                          onChange={e => setEditForm({ ...editForm, monthlySalary: Number(e.target.value) })}
+                          placeholder="50000"
+                          className={`w-full h-14 pl-14 pr-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
+                    </div>
                     <div>
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Primary Department</label>
                       <select
@@ -1608,14 +1627,15 @@ export default function StaffProfilePage() {
                       </select>
                     </div>
 
-                    <div className={`p-5 rounded-[2rem] border border-dashed ${isDark ? 'border-zinc-800 bg-zinc-900/20' : 'border-gray-200 bg-gray-50/50'}`}>
-                      <label className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-4 block flex items-center gap-2">
-                        <ArrowLeft size={12} className="rotate-180" /> Secondary Depts (Optional)
+                    <div className={`p-4 rounded-2xl border border-dashed flex flex-col justify-center ${isDark ? 'border-zinc-800 bg-zinc-900/20' : 'border-gray-200 bg-gray-50/50'}`}>
+                      <label className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                        <ArrowLeft size={10} className="rotate-180" /> Secondary Depts
                       </label>
-                      <div className="flex flex-wrap gap-2">
-                        {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
+                      <div className="flex flex-wrap gap-1">
+                        {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare'].map(d => (
                           <button
                             key={d}
+                            type="button"
                             onClick={() => {
                               const current = editForm.secondaryDepts || [];
                               if (current.includes(d as StaffDept)) {
@@ -1624,9 +1644,9 @@ export default function StaffProfilePage() {
                                 setEditForm({ ...editForm, secondaryDepts: [...current, d as StaffDept] });
                               }
                             }}
-                            className={`px-3 py-2 rounded-xl text-[8px] font-bold uppercase tracking-wider border transition-all ${editForm.secondaryDepts?.includes(d as StaffDept) 
-                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
-                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:border-zinc-500' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300')
+                            className={`px-2 py-1 rounded-lg text-[7px] font-bold uppercase tracking-wider border transition-all ${editForm.secondaryDepts?.includes(d as StaffDept) 
+                              ? 'bg-indigo-600 border-indigo-600 text-white' 
+                              : (isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-500' : 'bg-white border-gray-200 text-gray-400')
                             }`}
                           >
                             {d}
@@ -1699,15 +1719,27 @@ export default function StaffProfilePage() {
                           className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
                         />
                       </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Emergency Contact</label>
-                        <input
-                          type="text"
-                          placeholder="Name / Ph"
-                          value={editForm.emergencyContact}
-                          onChange={e => setEditForm({ ...editForm, emergencyContact: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Contact Person</label>
+                          <input
+                            type="text"
+                            placeholder="Name"
+                            value={editForm.emergencyContactName}
+                            onChange={e => setEditForm({ ...editForm, emergencyContactName: e.target.value })}
+                            className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-orange-500/20 text-white focus:border-orange-500' : 'bg-orange-50/30 border-orange-100 text-gray-900 focus:border-orange-500'}`}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Emergency Phone</label>
+                          <input
+                            type="text"
+                            placeholder="03xx-xxxxxxx"
+                            value={editForm.emergencyPhone}
+                            onChange={e => setEditForm({ ...editForm, emergencyPhone: e.target.value })}
+                            className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-orange-500/20 text-white focus:border-orange-500' : 'bg-orange-50/30 border-orange-100 text-gray-900 focus:border-orange-500'}`}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

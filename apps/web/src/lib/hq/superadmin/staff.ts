@@ -38,6 +38,8 @@ export type StaffCardRow = {
   photoUrl?: string;
   monthlySalary?: number;
   lastDutyLabel?: string;
+  emergencyContactName?: string;
+  emergencyPhone?: string;
 };
 
 function normalizeRole(raw: any): StaffRole {
@@ -180,6 +182,8 @@ export type StaffProfile = StaffCardRow & {
   gender?: string;
   bloodGroup?: string;
   emergencyContact?: string;
+  emergencyContactName?: string;
+  emergencyPhone?: string;
   joiningDate?: any;
   lastLoginAt?: any;
   photoUrl?: string;
@@ -233,6 +237,8 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     gender: data.gender,
     bloodGroup: data.bloodGroup,
     emergencyContact: data.emergencyContact,
+    emergencyContactName: data.emergencyContactName || data.emergencyContact,
+    emergencyPhone: data.emergencyPhone,
     joiningDate: data.createdAt || data.joiningDate,
     lastLoginAt: data.lastLoginAt,
     photoUrl: data.photoUrl || data.photoURL,
