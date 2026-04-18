@@ -1524,67 +1524,83 @@ export default function StaffProfilePage() {
             )}
 
             {activeTab === 'edit' && (
-              <div className={`rounded-[2.5rem] p-10 shadow-sm border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'
-                }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
-                  <div>
-                    <h3 className="text-xl font-black uppercase tracking-tight italic">Profile Optimization</h3>
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Surgical updates to staff credentials</p>
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {/* Header Section */}
+                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-xl shadow-blue-900/5'}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                    <div>
+                      <h3 className="text-2xl font-black uppercase tracking-tight italic flex items-center gap-3">
+                        <User className="text-indigo-500" size={24} />
+                        Profile Optimization
+                      </h3>
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1 ml-9">Surgical updates to staff credentials</p>
+                    </div>
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={saving}
+                      className="w-full sm:w-auto px-10 py-4 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
+                    >
+                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                      {saving ? 'Synchronizing...' : 'Save Changes'}
+                    </button>
                   </div>
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={saving}
-                    className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {saving ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                    {saving ? 'Synchronizing...' : 'Save Changes'}
-                  </button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Column 1: Identity & Credentials (4 cols) */}
-                  <div className="lg:col-span-4 space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Employee ID</label>
-                        <input
-                          type="text"
-                          value={editForm.employeeId}
-                          placeholder="KH-STAFF-001"
-                          onChange={e => setEditForm({ ...editForm, employeeId: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
-                        />
-                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2 ml-2">Visual ID for reporting</p>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] ml-2 mb-2 block flex items-center gap-2">
-                          <Lock size={10} /> Login ID / Portal ID
-                        </label>
-                        <input
-                          type="text"
-                          value={editForm.customId}
-                          placeholder="spims-admin"
-                          onChange={e => setEditForm({ ...editForm, customId: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-900 border-indigo-500/30 text-indigo-300 focus:border-indigo-500' : 'bg-indigo-50/30 border-indigo-100 text-indigo-700 focus:border-indigo-500'}`}
-                        />
-                        <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-2 ml-2">Warning: Changes affect login</p>
-                      </div>
+                {/* Section 1: Work Identity */}
+                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                      <Lock size={20} />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Full Legal Name</label>
+                      <h4 className="text-sm font-black uppercase tracking-widest">Work Identity</h4>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Authentication & Internal ID</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Employee ID</label>
+                      <input
+                        type="text"
+                        value={editForm.employeeId}
+                        placeholder="KH-STAFF-001"
+                        onChange={e => setEditForm({ ...editForm, employeeId: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                      />
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2 ml-2">Visual ID for reporting</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] ml-2 mb-2 block flex items-center gap-2">
+                        <Shield size={10} /> Login ID / Portal ID
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.customId}
+                        placeholder="spims-admin"
+                        onChange={e => setEditForm({ ...editForm, customId: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-900 border-indigo-500/30 text-indigo-300 focus:border-indigo-500' : 'bg-indigo-50 border-indigo-100 text-indigo-700 focus:border-indigo-500'}`}
+                      />
+                      <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-2 ml-2">Warning: Changes affect login</p>
+                    </div>
+                    <div className="md:col-span-2 lg:col-span-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Full Legal Name</label>
                       <input
                         type="text"
                         value={editForm.name}
                         onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
                       />
                     </div>
+                  </div>
+
+                  <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Primary Department</label>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Primary Department</label>
                       <select
                         value={editForm.department}
                         onChange={e => setEditForm({ ...editForm, department: e.target.value as StaffDept })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
                       >
                         {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
                           <option key={d} value={d}>{d.toUpperCase()}</option>
@@ -1594,7 +1610,7 @@ export default function StaffProfilePage() {
 
                     <div className={`p-5 rounded-[2rem] border border-dashed ${isDark ? 'border-zinc-800 bg-zinc-900/20' : 'border-gray-200 bg-gray-50/50'}`}>
                       <label className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-4 block flex items-center gap-2">
-                        <Shield size={12} /> Secondary Depts (Optional)
+                        <ArrowLeft size={12} className="rotate-180" /> Secondary Depts (Optional)
                       </label>
                       <div className="flex flex-wrap gap-2">
                         {['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'].map(d => (
@@ -1619,168 +1635,204 @@ export default function StaffProfilePage() {
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Column 2: Personal & Identity (4 cols) */}
-                  <div className="lg:col-span-4 space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Date of Birth</label>
-                        <input
-                          type="date"
-                          value={editForm.dob}
-                          onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Gender</label>
-                        <select
-                          value={editForm.gender}
-                          onChange={e => setEditForm({ ...editForm, gender: e.target.value as any })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
-                        >
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
+                {/* Section 2: Personal Information */}
+                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500">
+                      <User size={20} />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
-                      <input
-                        type="text"
-                        placeholder="00000-0000000-0"
-                        value={editForm.cnic}
-                        onChange={e => setEditForm({ ...editForm, cnic: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Blood Group</label>
-                        <input
-                          type="text"
-                          placeholder="B+"
-                          value={editForm.bloodGroup}
-                          onChange={e => setEditForm({ ...editForm, bloodGroup: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2 block">Emergency Contact</label>
-                        <input
-                          type="text"
-                          placeholder="Name / Ph"
-                          value={editForm.emergencyContact}
-                          onChange={e => setEditForm({ ...editForm, emergencyContact: e.target.value })}
-                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
-                        />
-                      </div>
+                      <h4 className="text-sm font-black uppercase tracking-widest">Personal Information</h4>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Biometric & Identity Details</p>
                     </div>
                   </div>
 
-                  {/* Column 3: Duty & Customization (4 cols) */}
-                  <div className="lg:col-span-4 space-y-6">
-                    <div className={`p-6 rounded-[2rem] border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-                      <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-5 flex items-center gap-2">
-                        <Plus size={12} /> Custom Basic Info
-                      </h4>
-                      <div className="space-y-2 mb-6">
-                        {Object.entries(editForm.basicInfoExtras || {}).map(([key, val]) => (
-                          <div key={key} className="flex gap-2 group">
-                             <div className={`flex-1 p-3 rounded-xl text-[9px] font-bold border transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
-                               <span className="text-gray-500 font-extrabold uppercase mr-1">{key.replace(/_/g, ' ')}:</span> {val}
-                             </div>
-                             <button
-                               onClick={() => {
-                                 const next = { ...editForm.basicInfoExtras };
-                                 delete next[key];
-                                 setEditForm({ ...editForm, basicInfoExtras: next });
-                               }}
-                               className="p-3 rounded-xl bg-rose-500/10 text-rose-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
-                             >
-                               <Trash2 size={12} />
-                             </button>
-                          </div>
-                        ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={editForm.dob}
+                        onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Gender</label>
+                      <select
+                        value={editForm.gender}
+                        onChange={e => setEditForm({ ...editForm, gender: e.target.value as any })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                      >
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2 lg:col-span-1 text-center lg:text-left">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
+                       <input
+                         type="text"
+                         placeholder="00000-0000000-0"
+                         value={editForm.cnic}
+                         onChange={e => setEditForm({ ...editForm, cnic: e.target.value })}
+                         className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                       />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Blood Group</label>
+                      <input
+                        type="text"
+                        placeholder="B+"
+                        value={editForm.bloodGroup}
+                        onChange={e => setEditForm({ ...editForm, bloodGroup: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Emergency Contact</label>
+                      <input
+                        type="text"
+                        placeholder="Name / Ph"
+                        value={editForm.emergencyContact}
+                        onChange={e => setEditForm({ ...editForm, emergencyContact: e.target.value })}
+                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Operations & Extensions */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Custom Basic Info */}
+                  <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                        <Plus size={20} />
                       </div>
-                      <div className="flex gap-2">
-                        <input
-                          placeholder="Label"
-                          className={`flex-1 min-w-0 p-3 rounded-xl text-[10px] font-bold outline-none border ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
-                          value={newExtraField.key}
-                          onChange={e => setNewExtraField({...newExtraField, key: e.target.value})}
-                        />
-                        <input
-                          placeholder="Value"
-                          className={`flex-1 min-w-0 p-3 rounded-xl text-[10px] font-bold outline-none border ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
-                          value={newExtraField.value}
-                          onChange={e => setNewExtraField({...newExtraField, value: e.target.value})}
-                        />
-                        <button
-                          onClick={() => {
-                            if (!newExtraField.key || !newExtraField.value) return;
-                            setEditForm({
-                              ...editForm,
-                              basicInfoExtras: { ...editForm.basicInfoExtras, [newExtraField.key.toLowerCase().replace(/\s+/g, '_')]: newExtraField.value }
-                            });
-                            setNewExtraField({ key: '', value: '' });
-                          }}
-                          className="px-4 rounded-xl bg-indigo-600 text-white hover:scale-105 transition-all shadow-lg shadow-indigo-500/20"
-                        >
-                          <Plus size={14} />
-                        </button>
+                      <div>
+                        <h4 className="text-sm font-black uppercase tracking-widest">Custom Basic Info</h4>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Extra Fields & Metadata</p>
                       </div>
                     </div>
 
-                    <div className={`p-6 rounded-[2rem] border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-                      <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-5 flex items-center gap-2">
-                        <Clock size={12} /> Shift Timing
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-2 block">Duty Start</label>
-                          <input
-                            type="time"
-                            value={editForm.dutyStartTime}
-                            onChange={e => setEditForm({ ...editForm, dutyStartTime: e.target.value })}
-                            className={`w-full h-12 px-4 rounded-xl text-xs font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-emerald-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-emerald-500'}`}
-                          />
+                    <div className="space-y-3 mb-8 min-h-[100px]">
+                      {Object.entries(editForm.basicInfoExtras || {}).map(([key, val]) => (
+                        <div key={key} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
+                           <div className={`flex-1 p-4 rounded-2xl text-[10px] font-bold border transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700 text-zinc-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}>
+                             <span className="text-gray-400 font-extrabold uppercase mr-1">{key.replace(/_/g, ' ')}:</span> {val}
+                           </div>
+                           <button
+                             onClick={() => {
+                               const next = { ...editForm.basicInfoExtras };
+                               delete next[key];
+                               setEditForm({ ...editForm, basicInfoExtras: next });
+                             }}
+                             className="p-4 rounded-2xl bg-rose-500/10 text-rose-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
+                           >
+                             <Trash2 size={16} />
+                           </button>
                         </div>
-                        <div>
-                          <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-2 block">Duty End</label>
-                          <input
-                            type="time"
-                            value={editForm.dutyEndTime}
-                            onChange={e => setEditForm({ ...editForm, dutyEndTime: e.target.value })}
-                            className={`w-full h-12 px-4 rounded-xl text-xs font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-emerald-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-emerald-500'}`}
-                          />
+                      ))}
+                      {Object.keys(editForm.basicInfoExtras || {}).length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+                          <AlertCircle size={32} className="opacity-20 mb-2" />
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40">No custom data strings</p>
                         </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-dashed border-gray-200">
+                      <input
+                        placeholder="Label"
+                        className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-amber-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500'}`}
+                        value={newExtraField.key}
+                        onChange={e => setNewExtraField({...newExtraField, key: e.target.value})}
+                      />
+                      <input
+                        placeholder="Value"
+                        className={`flex-1 min-w-0 h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-amber-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-amber-500'}`}
+                        value={newExtraField.value}
+                        onChange={e => setNewExtraField({...newExtraField, value: e.target.value})}
+                      />
+                      <button
+                        onClick={() => {
+                          if (!newExtraField.key || !newExtraField.value) return;
+                          setEditForm({
+                            ...editForm,
+                            basicInfoExtras: { ...editForm.basicInfoExtras, [newExtraField.key.toLowerCase().replace(/\s+/g, '_')]: newExtraField.value }
+                          });
+                          setNewExtraField({ key: '', value: '' });
+                        }}
+                        className="h-14 px-8 rounded-2xl bg-amber-500 text-white hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center"
+                      >
+                        <Plus size={20} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Shift Timing */}
+                  <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                        <Clock size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black uppercase tracking-widest">Shift Timing</h4>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Operational Hours</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 h-full flex flex-col justify-center pb-10">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Duty Start</label>
+                        <input
+                          type="time"
+                          value={editForm.dutyStartTime}
+                          onChange={e => setEditForm({ ...editForm, dutyStartTime: e.target.value })}
+                          className={`w-full h-16 px-6 rounded-[2rem] text-xl font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-emerald-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-emerald-500'}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Duty End</label>
+                        <input
+                          type="time"
+                          value={editForm.dutyEndTime}
+                          onChange={e => setEditForm({ ...editForm, dutyEndTime: e.target.value })}
+                          className={`w-full h-16 px-6 rounded-[2rem] text-xl font-black outline-none border-4 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-emerald-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-emerald-500'}`}
+                        />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Configuration Grids */}
-                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Section 4: Advanced Configuration */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Dress Code Config */}
-                  <div className={`p-8 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-50/50 border-gray-100'}`}>
-                    <div className="flex items-center justify-between mb-6">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Dress Code Items</h4>
+                  <div className={`p-10 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-100/50 border-gray-200'}`}>
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center">
+                          <Shield size={20} />
+                        </div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Dress Code</h4>
+                      </div>
                       <button
                         onClick={() => setAddingConfig({ type: 'dress', mode: 'select' })}
-                        className="p-2.5 rounded-xl bg-indigo-500 text-white hover:scale-105 transition-all shadow-lg shadow-indigo-500/20"
+                        className="p-3 rounded-2xl bg-indigo-500 text-white hover:scale-110 active:scale-90 transition-all shadow-lg shadow-indigo-500/20"
                       >
-                        <Plus size={14} />
+                        <Plus size={20} />
                       </button>
                     </div>
 
                     {addingConfig?.type === 'dress' && (
-                      <div className={`p-4 rounded-2xl border mb-6 transition-all ${isDark ? 'bg-zinc-900/80 border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'bg-white border-indigo-200 shadow-xl shadow-indigo-500/10'}`}>
-                        <div className="flex flex-col gap-3">
+                      <div className={`p-6 rounded-[2rem] border-2 mb-8 transition-all animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-900/80 border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.2)]' : 'bg-white border-indigo-200 shadow-xl shadow-indigo-500/10'}`}>
+                        <div className="flex flex-col gap-4">
                           {addingConfig.mode === 'select' ? (
                             <select
-                              className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-indigo-500'}`}
+                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
                               value={addingConfigSelection}
                               onChange={e => {
                                 if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
@@ -1796,21 +1848,21 @@ export default function StaffProfilePage() {
                               type="text"
                               placeholder="Type a new global dress code item (e.g. Scarf)"
                               autoFocus
-                              className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-indigo-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
+                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 focus:border-indigo-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
                               value={addingConfigCustom}
                               onChange={e => setAddingConfigCustom(e.target.value)}
                             />
                           )}
-                          <div className="flex gap-2 mt-1">
-                            <button onClick={handleAddConfig} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
-                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
+                          <div className="flex gap-3">
+                            <button onClick={handleAddConfig} className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 transition-all">Add to Profile</button>
+                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
                           </div>
                         </div>
                       </div>
                     )}
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {editForm.dressCodeConfig.map((item, idx) => (
-                        <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                        <div key={item.key} className={`flex items-center justify-between p-5 rounded-2xl border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-200'}`}>
                           <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
                           <button
                             onClick={() => {
@@ -1819,9 +1871,9 @@ export default function StaffProfilePage() {
                                 dressCodeConfig: prev.dressCodeConfig.filter((_, i) => i !== idx)
                               }));
                             }}
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
+                            className="p-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       ))}
@@ -1829,23 +1881,28 @@ export default function StaffProfilePage() {
                   </div>
 
                   {/* Duty Config */}
-                  <div className={`p-8 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-50/50 border-gray-100'}`}>
-                    <div className="flex items-center justify-between mb-6">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-500">Scheduled Duties</h4>
+                  <div className={`p-10 rounded-[2.5rem] border transition-all ${isDark ? 'bg-zinc-800/20 border-zinc-700/50' : 'bg-gray-100/50 border-gray-200'}`}>
+                    <div className="flex items-center justify-between mb-8">
+                       <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-teal-500 text-white flex items-center justify-center">
+                          <ClipboardList size={20} />
+                        </div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-500">Scheduled Duties</h4>
+                      </div>
                       <button
                         onClick={() => setAddingConfig({ type: 'duty', mode: 'select' })}
-                        className="p-2.5 rounded-xl bg-teal-500 text-white hover:scale-105 transition-all shadow-lg shadow-teal-500/20"
+                        className="p-3 rounded-2xl bg-teal-500 text-white hover:scale-110 active:scale-90 transition-all shadow-lg shadow-teal-500/20"
                       >
-                        <Plus size={14} />
+                        <Plus size={20} />
                       </button>
                     </div>
 
                     {addingConfig?.type === 'duty' && (
-                      <div className={`p-4 rounded-2xl border mb-6 transition-all ${isDark ? 'bg-zinc-900/80 border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.1)]' : 'bg-white border-teal-200 shadow-xl shadow-teal-500/10'}`}>
-                        <div className="flex flex-col gap-3">
+                      <div className={`p-6 rounded-[2rem] border-2 mb-8 transition-all animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-900/80 border-teal-500/30 shadow-[0_0_30px_rgba(20,184,166,0.2)]' : 'bg-white border-teal-200 shadow-xl shadow-teal-500/10'}`}>
+                        <div className="flex flex-col gap-4">
                           {addingConfig.mode === 'select' ? (
                             <select
-                              className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-teal-500' : 'bg-gray-50 border-gray-100 text-gray-900 focus:border-teal-500'}`}
+                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-teal-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500'}`}
                               value={addingConfigSelection}
                               onChange={e => {
                                 if (e.target.value === '__custom__') setAddingConfig({ ...addingConfig, mode: 'custom' });
@@ -1861,21 +1918,21 @@ export default function StaffProfilePage() {
                               type="text"
                               placeholder="Type a new global duty (e.g. Night Shift Guard)"
                               autoFocus
-                              className={`w-full p-3 rounded-xl text-xs font-bold outline-none border-2 focus:border-teal-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
+                              className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 focus:border-teal-500 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
                               value={addingConfigCustom}
                               onChange={e => setAddingConfigCustom(e.target.value)}
                             />
                           )}
-                          <div className="flex gap-2 mt-1">
-                            <button onClick={handleAddConfig} className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest bg-teal-500 hover:bg-teal-600 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
-                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
+                          <div className="flex gap-3">
+                            <button onClick={handleAddConfig} className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest bg-teal-500 hover:bg-teal-600 text-white rounded-2xl shadow-lg shadow-teal-500/20 transition-all">Add to Profile</button>
+                            <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
                           </div>
                         </div>
                       </div>
                     )}
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {editForm.dutyConfig.map((item, idx) => (
-                        <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'}`}>
+                        <div key={item.key} className={`flex items-center justify-between p-5 rounded-2xl border transition-all hover:scale-[1.02] ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-200'}`}>
                           <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>
                           <button
                             onClick={() => {
@@ -1884,16 +1941,18 @@ export default function StaffProfilePage() {
                                 dutyConfig: prev.dutyConfig.filter((_, i) => i !== idx)
                               }));
                             }}
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
+                            className="p-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
-                <div className="mt-12 flex items-center justify-between">
+
+                 {/* Bottom Synchronization Info */}
+                <div className="mt-12 flex items-center justify-between px-10">
                   <p className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-zinc-600' : 'text-gray-400'}`}>
                     Last synchronized with global KhanHub registry
                   </p>

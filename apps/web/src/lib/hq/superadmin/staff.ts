@@ -124,8 +124,10 @@ export async function listStaffCards({
     if (status === 'active' && !active) return false;
     if (status === 'inactive' && active) return false;
     const normalizedRole = normalizeRole(s.role);
+    if (normalizedRole === 'superadmin') return false;
+
     if (role === 'personnel') {
-      if (normalizedRole === 'other' || normalizedRole === 'superadmin') return false;
+      if (normalizedRole === 'other') return false;
     } else if (role !== 'all' && normalizedRole !== role) {
       return false;
     }

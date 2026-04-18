@@ -94,18 +94,13 @@ export default function ManagerOverviewPage() {
         const staffQueries: any[] = [];
         
         depts.forEach(d => {
-          // Main staff collection
+          // Main staff collection (Unified in _users)
           staffQueries.push({ dept: d, q: query(collection(db, getDeptCollection(d)), where('isActive', '==', true)) });
-          
-          // Legacy check for _staff collections where they exist (mostly for hospital/sukoon data compatibility)
-          const prefix = getDeptPrefix(d);
-          if (prefix !== 'hq') {
-             staffQueries.push({ dept: d, q: query(collection(db, `${prefix}_staff`), where('isActive', '==', true)) });
-          }
         });
 
         const staffSnaps = await Promise.all(staffQueries.map(sq => getDocs(sq.q)));
-        const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'superadmin', 'doctor', 'nurse', 'counselor'];
+        // Exclude superadmin as per user requirements
+        const STAFF_ROLES = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor'];
 
         let allStaffDocs: any[] = [];
         const seenStaffIds = new Set<string>();
@@ -116,8 +111,8 @@ export default function ManagerOverviewPage() {
             const data = doc.data() as any;
             const role = String(data.role || '').toLowerCase();
             
-            // Only include legitimate staff roles
-            if (STAFF_ROLES.includes(role)) {
+            // Only include legitimate staff roles (excluding superadmin)
+            if (STAFF_ROLES.includes(role) && role !== 'superadmin') {
               const id = doc.id;
               if (!seenStaffIds.has(id)) {
                 seenStaffIds.add(id);
