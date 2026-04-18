@@ -1379,7 +1379,8 @@ service cloud.firestore {
     }
 
     match /job_center_seekers/{seekerId} {
-      allow read: if isJobCenterAdminOrAbove()
+      allow read: if resource.data.isActive == true 
+        || isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId);
       allow create, update: if isJobCenterAdminOrAbove();
@@ -1387,9 +1388,26 @@ service cloud.firestore {
     }
 
     match /jobcenter_seekers/{seekerId} {
-      allow read: if isJobCenterAdminOrAbove()
+      allow read: if resource.data.isActive == true 
+        || isJobCenterAdminOrAbove()
         || isJobCenterRole('cashier')
         || (isJobCenterRole('seeker') && jobCenterSeekerId() == seekerId);
+      allow create, update: if isJobCenterAdminOrAbove();
+      allow delete: if isJobCenterSuperAdmin();
+    }
+
+    match /job_center_employers/{employerId} {
+      allow read: if resource.data.isActive == true 
+        || isJobCenterAdminOrAbove()
+        || isHqTier1();
+      allow create, update: if isJobCenterAdminOrAbove();
+      allow delete: if isJobCenterSuperAdmin();
+    }
+
+    match /jobcenter_employers/{employerId} {
+      allow read: if resource.data.isActive == true 
+        || isJobCenterAdminOrAbove()
+        || isHqTier1();
       allow create, update: if isJobCenterAdminOrAbove();
       allow delete: if isJobCenterSuperAdmin();
     }

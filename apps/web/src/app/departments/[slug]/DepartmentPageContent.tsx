@@ -10,6 +10,8 @@ import {
 import { Department, DepartmentTheme, Course } from '@/types/department';
 import InquiryForm from '@/components/forms/InquiryForm';
 import { cn } from '@/lib/utils';
+import JobCenterPublicDirectory from '@/components/departments/JobCenterPublicDirectory';
+
 
 interface Props {
     department: Department;
@@ -497,7 +499,15 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                 )
                             )}
 
+                            {/* Public Directory for Job Center */}
+                            {department.slug === 'job-placement' && (
+                                <div className="animate-fade-in mt-12">
+                                    <JobCenterPublicDirectory theme={theme} />
+                                </div>
+                            )}
+
                             {/* Campus Gallery */}
+
                             {department.gallery && department.gallery.length > 0 && (
                                 <div className="space-y-6">
                                     <h2 className="text-3xl font-bold text-neutral-900 font-display border-l-4 pl-4" style={{ borderColor: theme.primary }}>
