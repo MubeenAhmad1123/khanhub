@@ -86,7 +86,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     domain: '@jobcenter.khanhub',
     legacyDomain: '@job-center.khanhub',
     dashboardPath: '/departments/job-center/dashboard',
-    sessionKey: 'job-center_session',
+    sessionKey: 'jobcenter_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
   },
   'social-media': {
@@ -95,7 +95,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     collection: 'media_users',
     domain: '@media.khanhub',
     dashboardPath: '/departments/social-media/dashboard',
-    sessionKey: 'social-media_session',
+    sessionKey: 'mediacenter_session',
     prefixes: ['MED', 'SOC']
   },
   it: {
@@ -317,7 +317,10 @@ export async function loginUniversal(customId: string, password: string, deptHin
     };
     console.log('[UniversalAuth] Setting localStorage for:', dept.sessionKey);
     localStorage.setItem(dept.sessionKey, JSON.stringify(session));
-    localStorage.setItem(`${dept.id}_login_time`, Date.now().toString());
+    
+    // Normalize login time key (remove hyphens to match dashboard expectations)
+    const loginTimeKey = dept.sessionKey.replace('_session', '_login_time');
+    localStorage.setItem(loginTimeKey, Date.now().toString());
 
     // 4. Set HQ Cookie if needed
     if (dept.id === 'hq' || finalData.role === 'superadmin') {
