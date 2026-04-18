@@ -1196,6 +1196,13 @@ service cloud.firestore {
       allow delete: if isWelfareSuperAdmin();
     }
 
+    match /welfare_donors/{donorId} {
+      allow read: if isWelfareAdminOrAbove()
+        || isWelfareRole('cashier');
+      allow create, update: if isWelfareAdminOrAbove();
+      allow delete: if isWelfareSuperAdmin();
+    }
+
     match /welfare_fees/{docId} {
       allow read: if isWelfareAdminOrAbove()
         || (isWelfareRole('cashier'))
@@ -1644,6 +1651,11 @@ service cloud.firestore {
       allow update: if isHqSuperOrManager();
     }
     match /welfare_children/{childId} {
+      allow read: if isHqTier1();
+      allow create: if isHqSuperOrManager();
+      allow update: if isHqSuperOrManager();
+    }
+    match /welfare_donors/{donorId} {
       allow read: if isHqTier1();
       allow create: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager();

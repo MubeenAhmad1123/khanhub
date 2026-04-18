@@ -1,497 +1,551 @@
+// src/app/departments/welfare/dashboard/admin/children/new/page.tsx
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createWelfareUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
-import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { 
-  ArrowLeft, Heart, Save, Loader2, User, Upload, 
-  Camera, Phone, MapPin, Calendar, FileText, Users,
-  ChevronDown, Plus, X, Eye, EyeOff, Shield
+  Heart, User, Users, Home, GraduationCap, 
+  Baby, ShieldCheck, FileText, Save, Loader2,
+  ChevronLeft, AlertCircle, Calendar, Plus, Trash2,
+  Phone, MapPin, Briefcase, CreditCard
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function AdmitChildPage() {
+export default function NewChildAdmissionPage() {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
-  
-  // Auth & UI State
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('');
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState<any>(null);
 
+  // Form State
+  const [formData, setFormData] = useState({
+    // Section 1: Child Basic
+    fullName: '',
+    dob: '',
+    age: '',
+    gender: 'Boy',
+    bFormNumber: '',
+    nationality: 'Pakistani',
+    religion: 'Islam',
+    admissionClassRequested: '',
+    previousSchoolName: '',
+    previousClass: '',
+    previousClassResult: '',
 
-  // SECTION 1: Login Credentials
-  const [loginId, setLoginId] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+    // Section 2: Parents
+    fatherName: '',
+    fatherCnic: '',
+    fatherOccupation: '',
+    fatherContact: '',
+    motherName: '',
+    motherCnic: '',
+    motherOccupation: '',
+    status: 'Together', // Living Together, Deceased (Father), Deceased (Mother), Divorced
 
-  // SECTION 2: Child Information
-  const [name, setName] = useState('');
-  const [fatherName, setFatherName] = useState('');
-  const [age, setAge] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState('');
-  const [education, setEducation] = useState('');
-  const [maritalStatus, setMaritalStatus] = useState('');
-  const [children, setChildren] = useState('0');
-  const [address, setAddress] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState('');
+    // Section 3: Guardian
+    guardianName: '',
+    guardianRelation: '',
+    guardianContact: '',
+    guardianAddress: '',
 
-  // SECTION 3: Guardian / Family Information
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianFatherName, setGuardianFatherName] = useState('');
-  const [guardianRelation, setGuardianRelation] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [guardianCnic, setGuardianCnic] = useState('');
+    // Section 4: Financial
+    siblingsCount: '',
+    dependentsCount: '',
+    houseStatus: 'Rented', // Owned, Rented, Relative's
+    incomeSource: '',
+    monthlyIncome: '',
 
-  // SECTION 4: Admission Details
-  const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [treatmentDuration, setTreatmentDuration] = useState('3 Months');
-  const [customDuration, setCustomDuration] = useState('');
-  const [reasonsForAdmission, setReasonsForAdmission] = useState<string[]>([]);
-  const [conditionOnAdmission, setConditionOnAdmission] = useState('');
-  const [packageAmount, setPackageAmount] = useState('60000');
+    // Section 5: Educational / Welfare
+    admissionDate: new Date().toISOString().split('T')[0],
+    remarks: '',
 
-  // SECTION 5: Additional Notes
-  const [notes, setNotes] = useState('');
+    // Section 6: Health
+    bloodGroup: '',
+    chronicIllness: '',
+    allergies: '',
 
-  const admissionReasons = [
-    'Heroin', 'Ice (Crystal Meth)', 'Charas/Hashish', 'Opium', 
-    'Alcohol', 'Cigarette/Tobacco', 'Prescription Drugs', 
-    'Psychological', 'Other'
-  ];
+    // Section 7: Documents (JSON mapped from array)
+    documents: {
+      bForm: false,
+      fatherCnic: false,
+      motherCnic: false,
+      guardianCnic: false,
+      incomeCertificate: false,
+      schoolLeavingCertificate: false,
+      photos: false,
+    },
+
+    // Section 8: Status
+    isActive: true,
+    isApproved: false,
+  });
 
   useEffect(() => {
     const sessionData = localStorage.getItem('welfare_session');
-    if (!sessionData) {
-      router.push('/departments/welfare/login');
-      return;
-    }
+    if (!sessionData) { router.push('/departments/welfare/login'); return; }
     const parsed = JSON.parse(sessionData);
     if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
-      router.push('/departments/welfare/login');
-      return;
+      router.push('/departments/welfare/login'); return;
     }
-    setLoading(false);
+    setSession(parsed);
   }, [router]);
 
-  const toggleReason = (reason: string) => {
-    setReasonsForAdmission(prev => 
-      prev.includes(reason) 
-        ? prev.filter(r => r !== reason) 
-        : [...prev, reason]
-    );
+  // Auto-calculate Age
+  useEffect(() => {
+    if (formData.dob) {
+      const birthDate = new Date(formData.dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      setFormData(prev => ({ ...prev, age: age >= 0 ? age.toString() : '0' }));
+    }
+  }, [formData.dob]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (name: keyof typeof formData.documents) => {
+    setFormData(prev => ({
+      ...prev,
+      documents: {
+        ...prev.documents,
+        [name]: !prev.documents[name]
+      }
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate required fields
-    if (!loginId || !loginPassword || !name || !fatherName || 
-        !age || !dateOfBirth || !gender || !maritalStatus || !address || 
-        !guardianName || !guardianPhone || !guardianRelation || 
-        !admissionDate || reasonsForAdmission.length === 0) {
-      setError('Please fill all required fields');
-      toast.error('Missing required fields');
-      return;
-    }
-    if (loginPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    setSubmitting(true);
-    setError('');
+    if (!formData.fullName) { toast.error('Full Name is required'); return; }
 
     try {
-      // 1. Upload photo if selected
-      let photoUrl = null;
-      if (photoFile) {
-        setSubmitStatus('Uploading photo...');
-        photoUrl = await uploadToCloudinary(photoFile, 'khanhub/welfare/children');
-      }
-
-      // 2. Create child document in Firestore
-      setSubmitStatus('Creating child record...');
-      const childRef = await addDoc(collection(db, 'welfare_children'), {
-        name,
-        fatherName,
-        age: Number(age),
-        dateOfBirth,
-        gender,
-        education: education || null,
-        maritalStatus,
-        children: maritalStatus === 'Married' ? Number(children || 0) : 0,
-        address,
-        photoUrl,
-        guardianName,
-        guardianFatherName: guardianFatherName || null,
-        guardianRelation,
-        guardianPhone,
-        contactNumber: guardianPhone, // used by AdmissionTab profile editor
-        guardianCnic: guardianCnic || null,
-        admissionDate: Timestamp.fromDate(new Date(admissionDate)),
-        treatmentDuration: treatmentDuration === 'Custom' 
-          ? Number(customDuration) 
-          : parseInt(treatmentDuration),
-        reasonsForAdmission,
-        conditionOnAdmission: conditionOnAdmission || null,
-        conditionOnDischarge: null,
-        packageAmount: Number(packageAmount) || 60000,
-        notes: notes || null,
-        isActive: true,
-        loginId: loginId.toUpperCase(),
-        createdAt: Timestamp.now(),
+      setLoading(true);
+      
+      // Generate Custom ID (Optional, can be automated)
+      // For now, let firestore autogenerate ID, we can add a counter later
+      
+      const docRef = await addDoc(collection(db, 'welfare_children'), {
+        ...formData,
+        createdAt: serverTimestamp(),
+        createdBy: session.uid,
+        createdByName: session.displayName
       });
 
-      // 3. Create family login account linked to this child
-      setSubmitStatus('Creating family login...');
-      const result = await createWelfareUserServer(
-        loginId.toUpperCase(),
-        loginPassword,
-        'family',
-        name,
-        childRef.id
-      );
-
-      if (!result.success) {
-        // Roll back the child doc if the login account could not be created.
-        // This prevents "half-created" records from confusing future logins.
-        try {
-          await deleteDoc(doc(db, 'welfare_children', childRef.id));
-        } catch {}
-
-        setError(`Child admission failed: ${result.error}. Please choose a different Child Login ID.`);
-        toast.error('Login account creation failed');
-        setSubmitting(false);
-        return;
-      }
-
-      setSubmitStatus('Done!');
-      toast.success('Child admitted successfully ✓');
-      router.push(`/departments/welfare/dashboard/admin/children/${childRef.id}`);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || 'Something went wrong');
-      toast.error('Submission failed');
-      setSubmitting(false);
+      toast.success('Child admission recorded successfully!');
+      router.push(`/departments/welfare/dashboard/admin/children`);
+    } catch (error) {
+      console.error('Submit error:', error);
+      toast.error('Failed to save admission');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-      </div>
-    );
-  }
-
-  const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
-    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-      <Icon size={16} className="text-teal-500" />
-      <h3 className="font-black text-gray-700 text-sm uppercase tracking-widest">
-        {title}
-      </h3>
-    </div>
-  );
-
-  const inputStyle = "w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm transition-all";
+  const inputClass = "w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all";
+  const labelClass = "text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block ml-1";
+  const sectionClass = "bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-6 md:p-10 space-y-8";
+  const gridClass = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-8 pb-20">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <button 
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-gray-500 hover:text-teal-600 transition-colors font-bold text-sm mb-2"
+          >
+            <ChevronLeft size={16} /> Back to Registry
+          </button>
+          <h1 className="text-3xl md:text-4xl font-black text-gray-900 flex items-center gap-4">
+            <span className="w-12 h-12 bg-teal-600 text-white rounded-2xl flex items-center justify-center">
+              <Plus size={24} />
+            </span>
+            New Admission
+          </h1>
+          <p className="text-gray-500 font-medium mt-1 ml-16">Enter child details for welfare sponsorship enrollment.</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-8">
         
-        {/* Header */}
-        <div className="flex flex-col gap-4">
-          <Link href="/departments/welfare/dashboard/admin/children" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 transition-colors w-fit">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Children
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Plus className="w-6 h-6 text-teal-600" />
-              Admit New Child
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">Register a new child and set up family access.</p>
+        {/* Section 1: Child's Basic Information */}
+        <div className={sectionClass}>
+          <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8">
+            <div className="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center">
+              <Baby size={20} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">Child's Basic Information</h2>
+          </div>
+
+          <div className={gridClass}>
+            <div className="lg:col-span-2">
+              <label className={labelClass}>Full Name</label>
+              <input 
+                name="fullName" 
+                value={formData.fullName} 
+                onChange={handleChange} 
+                placeholder="Enter child's full name" 
+                className={inputClass}
+                required
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Date of Birth</label>
+              <div className="relative">
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                <input 
+                  type="date"
+                  name="dob" 
+                  value={formData.dob} 
+                  onChange={handleChange} 
+                  className={`${inputClass} pl-11`}
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Age (Auto)</label>
+              <input 
+                name="age" 
+                value={formData.age} 
+                readOnly 
+                className={`${inputClass} bg-gray-100 font-bold text-teal-600`}
+                placeholder="Auto-calculated"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Gender</label>
+              <select name="gender" value={formData.gender} onChange={handleChange} className={inputClass}>
+                <option value="Boy">Boy</option>
+                <option value="Girl">Girl</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>B-Form Number (NADRA)</label>
+              <input 
+                name="bFormNumber" 
+                value={formData.bFormNumber} 
+                onChange={handleChange} 
+                placeholder="XXXXX-XXXXXXX-X" 
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Nationality</label>
+              <select name="nationality" value={formData.nationality} onChange={handleChange} className={inputClass}>
+                <option value="Pakistani">Pakistani</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Religion</label>
+              <select name="religion" value={formData.religion} onChange={handleChange} className={inputClass}>
+                <option value="Islam">Islam</option>
+                <option value="Christian">Christian</option>
+                <option value="Hindu">Hindu</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Class Requested</label>
+              <select name="admissionClassRequested" value={formData.admissionClassRequested} onChange={handleChange} className={inputClass}>
+                <option value="">Select Class</option>
+                {['Nursery', 'KG', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div className="lg:col-span-1">
+              <label className={labelClass}>Previous School Name</label>
+              <input 
+                name="previousSchoolName" 
+                value={formData.previousSchoolName} 
+                onChange={handleChange} 
+                placeholder="Mention previous school if any" 
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Previous Class</label>
+              <input 
+                name="previousClass" 
+                value={formData.previousClass} 
+                onChange={handleChange} 
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Previous Result</label>
+              <select name="previousClassResult" value={formData.previousClassResult} onChange={handleChange} className={inputClass}>
+                <option value="N/A">N/A</option>
+                <option value="Pass">Pass</option>
+                <option value="Fail">Fail</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <form onSubmit={handleSubmit} className="p-6 md:p-8">
-            
-            {/* SECTION 1: Login Credentials */}
-            <div className="space-y-4">
-              <SectionHeader icon={Shield} title="Login Credentials" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Child Login ID *</label>
-                  <input required placeholder="e.g. WEL-CHI-001" className={inputStyle} value={loginId} onChange={e => setLoginId(e.target.value.toUpperCase())} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Login Password * (Min 6 chars)</label>
-                  <div className="relative">
-                    <input required type={showPassword ? "text" : "password"} placeholder="••••••••" className={inputStyle} value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[10px] text-gray-400 italic px-1">Family will use these to log in and view this child's profile</p>
+        {/* Section 2: Parents' Information */}
+        <div className={sectionClass}>
+          <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-blue-600">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+              <Users size={20} />
             </div>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">Parent's Information</h2>
+          </div>
 
-            {/* SECTION 2: Child Information */}
-            <div className="space-y-4 mt-8">
-              <SectionHeader icon={User} title="Child Information" />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Full Name *</label>
-                  <input required placeholder="Full Name" className={inputStyle} value={name} onChange={e => setName(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Father's Name *</label>
-                  <input required placeholder="Father's Name" className={inputStyle} value={fatherName} onChange={e => setFatherName(e.target.value)} />
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
+            {/* Father's Info */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-teal-600 mb-2 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div> Father Details
+              </h3>
+              <div>
+                <label className={labelClass}>Father's Name</label>
+                <input name="fatherName" value={formData.fatherName} onChange={handleChange} className={inputClass} />
               </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Age *</label>
-                  <input required type="number" min="1" max="120" placeholder="Age" className={inputStyle} value={age} onChange={e => setAge(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Gender *</label>
-                  <select required className={inputStyle} value={gender} onChange={e => setGender(e.target.value)}>
-                    <option value="">Select</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Education</label>
-                  <select className={inputStyle} value={education} onChange={e => setEducation(e.target.value)}>
-                    <option value="">Select</option>
-                    <option value="None">None</option>
-                    <option value="Primary">Primary</option>
-                    <option value="Middle">Middle</option>
-                    <option value="Matric">Matric</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Graduate">Graduate</option>
-                    <option value="Post-Graduate">Post-Graduate</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Marital Status *</label>
-                  <select required className={inputStyle} value={maritalStatus} onChange={e => setMaritalStatus(e.target.value)}>
-                    <option value="">Select</option>
-                    <option value="Unmarried">Unmarried</option>
-                    <option value="Married">Married</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 mt-2">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Date of Birth *</label>
-                <input required type="date" className={inputStyle} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
-              </div>
-
-              {maritalStatus === 'Married' && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Number of Children</label>
-                  <input type="number" min="0" className={inputStyle} value={children} onChange={e => setChildren(e.target.value)} />
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Address *</label>
-                <textarea required rows={2} className={inputStyle} placeholder="Full Address" value={address} onChange={e => setAddress(e.target.value)} />
-              </div>
-
-              {/* PHOTO UPLOAD */}
-              <div className="flex items-center gap-4 py-2">
-                <div 
-                  onClick={() => fileRef.current?.click()}
-                  className="w-24 h-24 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 transition-all overflow-hidden flex-shrink-0"
-                >
-                  {photoPreview ? (
-                    <img src={photoPreview} className="w-full h-full object-cover" alt="Preview" />
-                  ) : (
-                    <>
-                      <Camera size={24} className="text-gray-400 mb-1" />
-                      <span className="text-[10px] text-gray-400 font-bold">Upload Photo</span>
-                    </>
-                  )}
-                </div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setPhotoFile(file);
-                  setPhotoPreview(URL.createObjectURL(file));
-                }} />
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">Child Photo</p>
-                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG up to 5MB</p>
-                  {photoPreview && (
-                    <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview('') }} className="text-xs text-red-400 mt-1 hover:text-red-600 font-semibold">Remove</button>
-                  )}
+                  <label className={labelClass}>Father's CNIC</label>
+                  <input name="fatherCnic" value={formData.fatherCnic} onChange={handleChange} placeholder="00000-0000000-0" className={inputClass} />
                 </div>
+                <div>
+                  <label className={labelClass}>Occupation</label>
+                  <input name="fatherOccupation" value={formData.fatherOccupation} onChange={handleChange} className={inputClass} />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Contact number</label>
+                <input name="fatherContact" value={formData.fatherContact} onChange={handleChange} className={inputClass} />
               </div>
             </div>
 
-            {/* SECTION 3: Guardian Information */}
-            <div className="space-y-4 mt-8">
-              <SectionHeader icon={Users} title="Guardian / Family Information" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian Name *</label>
-                  <input required placeholder="Parent or responsible person" className={inputStyle} value={guardianName} onChange={e => setGuardianName(e.target.value)} />
+            {/* Mother's Info */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-pink-500 mb-2 flex items-center gap-2">
+                 <div className="w-1.5 h-1.5 rounded-full bg-pink-500"></div> Mother Details
+              </h3>
+              <div>
+                <label className={labelClass}>Mother's Name</label>
+                <input name="motherName" value={formData.motherName} onChange={handleChange} className={inputClass} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Mother's CNIC</label>
+                  <input name="motherCnic" value={formData.motherCnic} onChange={handleChange} className={inputClass} />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian's Father Name</label>
-                  <input placeholder="Optional" className={inputStyle} value={guardianFatherName} onChange={e => setGuardianFatherName(e.target.value)} />
+                <div>
+                  <label className={labelClass}>Occupation</label>
+                  <input name="motherOccupation" value={formData.motherOccupation} onChange={handleChange} className={inputClass} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Relation *</label>
-                  <select required className={inputStyle} value={guardianRelation} onChange={e => setGuardianRelation(e.target.value)}>
-                    <option value="">Select</option>
-                    <option value="Father">Father</option>
-                    <option value="Mother">Mother</option>
-                    <option value="Brother">Brother</option>
-                    <option value="Sister">Sister</option>
-                    <option value="Son">Son</option>
-                    <option value="Daughter">Daughter</option>
-                    <option value="Spouse">Spouse</option>
-                    <option value="Uncle">Uncle</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian Phone *</label>
-                  <div className="relative">
-                    <Phone size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input required className={`${inputStyle} pl-10`} placeholder="+92XXXXXXXXXX" value={guardianPhone} onChange={e => setGuardianPhone(e.target.value)} />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Guardian CNIC</label>
-                  <input className={inputStyle} placeholder="XXXXX-XXXXXXX-X" value={guardianCnic} onChange={e => setGuardianCnic(e.target.value)} />
-                </div>
+              <div>
+                <label className={labelClass}>Family Status</label>
+                <select name="status" value={formData.status} onChange={handleChange} className={inputClass}>
+                  <option value="Together">Living Together</option>
+                  <option value="Father Deceased">Father Deceased</option>
+                  <option value="Mother Deceased">Mother Deceased</option>
+                  <option value="Both Deceased">Orphan (Both Deceased)</option>
+                  <option value="Divorced">Divorced / Separated</option>
+                </select>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* SECTION 4: Admission Details */}
-            <div className="space-y-4 mt-8">
-              <SectionHeader icon={Calendar} title="Admission Details" />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Admission Date *</label>
-                  <input required type="date" className={inputStyle} value={admissionDate} onChange={e => setAdmissionDate(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Planned Duration</label>
-                  <select className={inputStyle} value={treatmentDuration} onChange={e => setTreatmentDuration(e.target.value)}>
-                    <option value="1 Month">1 Month</option>
-                    <option value="2 Months">2 Months</option>
-                    <option value="3 Months">3 Months</option>
-                    <option value="6 Months">6 Months</option>
-                    <option value="Custom">Custom Months</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Monthly Package *</label>
-                  <input required type="number" className={inputStyle} value={packageAmount} onChange={e => setPackageAmount(e.target.value)} />
-                </div>
+        {/* Section 3: Guardian's Information */}
+        <div className={sectionClass}>
+          <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-amber-600">
+            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+              <ShieldCheck size={20} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">Guardian / Reference Information</h2>
+          </div>
+
+          <div className={gridClass}>
+            <div>
+              <label className={labelClass}>Guardian Name</label>
+              <input name="guardianName" value={formData.guardianName} onChange={handleChange} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Relation with child</label>
+              <input name="guardianRelation" value={formData.guardianRelation} onChange={handleChange} placeholder="e.g. Uncle, Grandparent" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Contact Number</label>
+              <input name="guardianContact" value={formData.guardianContact} onChange={handleChange} className={inputClass} />
+            </div>
+            <div className="lg:col-span-3">
+              <label className={labelClass}>Residential Address</label>
+              <textarea 
+                name="guardianAddress" 
+                value={formData.guardianAddress} 
+                onChange={handleChange} 
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: Financial Background */}
+        <div className={sectionClass}>
+          <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-emerald-600">
+            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+              <Home size={20} />
+            </div>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">Financial & Family Background</h2>
+          </div>
+
+          <div className={gridClass}>
+            <div>
+              <label className={labelClass}>Total Siblings</label>
+              <input type="number" name="siblingsCount" value={formData.siblingsCount} onChange={handleChange} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Total Dependents</label>
+              <input type="number" name="dependentsCount" value={formData.dependentsCount} onChange={handleChange} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Residence Status</label>
+              <select name="houseStatus" value={formData.houseStatus} onChange={handleChange} className={inputClass}>
+                <option value="Rented">Rented</option>
+                <option value="Owned">Owned</option>
+                <option value="Relative's">Relative's / Shared</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Major Source of Income</label>
+              <input name="incomeSource" value={formData.incomeSource} onChange={handleChange} placeholder="e.g. Daily Wages, Job" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Approx. Monthly Income (Rs)</label>
+              <input type="number" name="monthlyIncome" value={formData.monthlyIncome} onChange={handleChange} className={inputClass} />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 5: Education & Section 6: Health */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className={sectionClass}>
+            <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-purple-600">
+              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+                <GraduationCap size={20} />
               </div>
+              <h2 className="text-xl font-black text-gray-900 tracking-tight">Academic History</h2>
+            </div>
+            <div className="space-y-6">
+              <div>
+                <label className={labelClass}>Admission Date</label>
+                <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleChange} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Remarks / Case History</label>
+                <textarea name="remarks" value={formData.remarks} onChange={handleChange} rows={4} className={`${inputClass} resize-none`} placeholder="Mention why this child needs support..." />
+              </div>
+            </div>
+          </div>
 
-              {treatmentDuration === 'Custom' && (
-                <div className="space-y-1.5 max-w-xs">
-                  <label className="text-xs font-bold text-gray-500 uppercase px-1">Duration in Months</label>
-                  <input type="number" className={inputStyle} value={customDuration} onChange={e => setCustomDuration(e.target.value)} />
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Reasons for Admission *</label>
-                <div className="flex flex-wrap gap-2">
-                  {admissionReasons.map(r => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => toggleReason(r)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
-                        reasonsForAdmission.includes(r)
-                          ? 'bg-teal-600 text-white border-teal-600 shadow-md'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-200'
-                      }`}
-                    >
-                      {r}
-                    </button>
+          <div className={sectionClass}>
+            <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-red-600">
+              <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
+                <Heart size={20} />
+              </div>
+              <h2 className="text-xl font-black text-gray-900 tracking-tight">Medical Information</h2>
+            </div>
+            <div className="space-y-6">
+              <div>
+                <label className={labelClass}>Blood Group</label>
+                <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} className={inputClass}>
+                  <option value="">Select</option>
+                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                    <option key={bg} value={bg}>{bg}</option>
                   ))}
-                </div>
+                </select>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase px-1">Condition on Admission</label>
-                <textarea rows={2} className={inputStyle} placeholder="Physical and mental condition on arrival..." value={conditionOnAdmission} onChange={e => setConditionOnAdmission(e.target.value)} />
+              <div>
+                <label className={labelClass}>Chronic Illness (if any)</label>
+                <input name="chronicIllness" value={formData.chronicIllness} onChange={handleChange} placeholder="e.g. Diabetes, Asthma" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Known Allergies</label>
+                <input name="allergies" value={formData.allergies} onChange={handleChange} className={inputClass} />
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* SECTION 5: Additional Notes */}
-            <div className="space-y-4 mt-8">
-              <SectionHeader icon={FileText} title="Additional Notes" />
-              <textarea rows={3} className={inputStyle} placeholder="History, special requests, or medical notes..." value={notes} onChange={e => setNotes(e.target.value)} />
+        {/* Section 7: Documents Checklist */}
+        <div className={sectionClass}>
+          <div className="flex items-center gap-3 border-b border-gray-50 pb-6 mb-8 text-indigo-600">
+            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+              <FileText size={20} />
             </div>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">Document Checklist (Physical Copies Verified)</h2>
+          </div>
 
-            {error && (
-              <div className="mt-6 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3 text-red-700 text-sm font-semibold">
-                <AlertTriangle size={18} />
-                {error}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Object.entries(formData.documents).map(([key, value]) => (
+              <label 
+                key={key} 
+                className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                  value ? 'bg-teal-50 border-teal-200 text-teal-900' : 'bg-white border-gray-50 grayscale hover:grayscale-0'
+                }`}
+              >
+                <input 
+                  type="checkbox" 
+                  checked={value} 
+                  onChange={() => handleCheckboxChange(key as any)}
+                  className="w-5 h-5 rounded-lg border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <span className="text-sm font-bold capitalize">
+                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Submit Bar */}
+        <div className="sticky bottom-8 z-20">
+          <div className="bg-gray-900/95 backdrop-blur-md p-6 rounded-[2rem] border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                <ShieldCheck className="text-teal-400" size={24} />
               </div>
-            )}
-
-            <div className="mt-10 flex flex-col items-center gap-4">
+              <div>
+                <p className="text-white font-black text-sm">Save Admission Data</p>
+                <p className="text-white/50 text-[10px] uppercase font-black tracking-widest">Verify all information before submitting</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="flex-1 md:flex-none px-8 py-4 bg-white/5 text-white rounded-2xl text-sm font-black hover:bg-white/10 transition-colors uppercase tracking-widest"
+              >
+                Cancel
+              </button>
               <button
                 type="submit"
-                disabled={submitting}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-900/10 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+                disabled={loading}
+                className="flex-1 md:flex-none px-12 py-4 bg-teal-500 text-white rounded-2xl text-sm font-black hover:bg-teal-400 transition-all shadow-lg shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 uppercase tracking-widest"
               >
-                {submitting ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span className="animate-pulse">{submitStatus}</span>
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} className="group-hover:scale-110 transition-transform" />
-                    Admit Child
-                  </>
-                )}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={20} />}
+                Submit Case
               </button>
-              <Link href="/departments/welfare/dashboard/admin/children" className="text-gray-400 font-bold text-xs uppercase hover:text-gray-600 transition-colors">
-                Cancel Registration
-              </Link>
             </div>
-
-          </form>
+          </div>
         </div>
-      </div>
+
+      </form>
     </div>
   );
-}
-
-function AlertTriangle({ size, className }: { size: number, className?: string }) {
-  return <X size={size} className={className} />;
 }

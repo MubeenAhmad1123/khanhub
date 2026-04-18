@@ -35,7 +35,7 @@ export default function AdminDashboardPage() {
     const sessionData = localStorage.getItem('welfare_session');
     if (!sessionData) { router.push('/departments/welfare/login'); return; }
     const parsed = JSON.parse(sessionData);
-    if (parsed.role !== 'admin') {
+    if (parsed.role !== 'admin' && parsed.role !== 'superadmin') {
       router.push('/departments/welfare/login'); return;
     }
     setSession(parsed);
