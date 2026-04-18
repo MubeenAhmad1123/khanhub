@@ -12,7 +12,7 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import { formatDateDMY } from '@/lib/utils';
 import Link from 'next/link';
 import {
-  Target, Camera,
+  Target, Camera, Activity,
   ArrowLeft, Award, Clock, Calendar, Shield, DollarSign,
   Loader2, TrendingUp, ChevronDown, ChevronUp, RefreshCw,
   User, ClipboardList, CheckCircle2, XCircle, AlertCircle, MinusCircle,
@@ -88,7 +88,7 @@ export default function StaffProfilePage() {
   const { session, loading: sessionLoading } = useHqSession();
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll'>('edit');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -1031,13 +1031,13 @@ export default function StaffProfilePage() {
             <div className={`p-1 rounded-[1.2rem] md:rounded-[1.5rem] border flex flex-wrap items-center justify-center gap-1 transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
               }`}>
               {[
-                { id: 'overview', label: 'History', icon: <Clock size={12} /> },
+                { id: 'edit', label: 'Profile', icon: <User size={12} /> },
+                { id: 'overview', label: 'Actions', icon: <Activity size={12} /> },
                 { id: 'attendance', label: 'Attendance', icon: <Calendar size={12} /> },
                 { id: 'payroll', label: 'Payroll', icon: <DollarSign size={12} /> },
                 { id: 'dress', label: 'Dress Code', icon: <Shield size={12} /> },
                 { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12} /> },
                 { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12} /> },
-                { id: 'edit', label: 'Edit Profile', icon: <User size={12} /> },
               ].map(tab => (
                 <button
                   key={tab.id}

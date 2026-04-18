@@ -25,8 +25,8 @@ export default function AdminDashboardPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const [totalPatients, setTotalPatients] = useState(0);
-  const [activePatients, setActivePatients] = useState<any[]>([]);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [activeStudents, setActiveStudents] = useState<any[]>([]);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('spims_session');
@@ -55,8 +55,8 @@ export default function AdminDashboardPage() {
       const active = allStudents
         .sort((a: any, b: any) => String(a.name || '').localeCompare(String(b.name || '')));
 
-      setTotalPatients(allStudents.length);
-      setActivePatients(active.slice(0, 5));
+      setTotalStudents(allStudents.length);
+      setActiveStudents(active.slice(0, 5));
 
     } catch (error) {
       console.error('Dashboard load error:', error);
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
             <Heart className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <div className="text-2xl md:text-4xl font-black text-gray-900">{totalPatients}</div>
+            <div className="text-2xl md:text-4xl font-black text-gray-900">{totalStudents}</div>
             <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Active students</div>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function AdminDashboardPage() {
             <Users className="w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
-            <div className="text-xl md:text-4xl font-black text-gray-900">Patient Focus</div>
+            <div className="text-xl md:text-4xl font-black text-gray-900">Student Focus</div>
             <div className="text-[9px] md:text-sm text-gray-500 font-black uppercase tracking-widest mt-1">Management Mode</div>
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-        {/* Recent Patients */}
+        {/* Recent Students */}
         <div className="lg:col-span-2 bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-4 md:p-8 border-b border-gray-50 flex items-center justify-between">
             <h2 className="font-black text-gray-900 flex items-center gap-3 text-sm md:text-base">
@@ -141,26 +141,26 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
           <div className="p-3 md:p-4">
-            {activePatients.length === 0 ? (
+            {activeStudents.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-gray-400 text-sm font-medium">No active students found.</p>
                 <Link href="/departments/spims/dashboard/admin/students/new" className="text-teal-600 text-sm font-bold mt-2 inline-block">New admission</Link>
               </div>
             ) : (
                 <div className="grid grid-cols-1 gap-2">
-                  {activePatients.map(patient => (
+                  {activeStudents.map(student => (
                     <Link 
-                      key={patient.id} 
-                      href={`/departments/spims/dashboard/admin/students/${patient.id}`}
+                      key={student.id} 
+                      href={`/departments/spims/dashboard/admin/students/${student.id}`}
                       className="flex items-center justify-between p-3 md:p-4 rounded-2xl hover:bg-gray-50 transition-colors group active:bg-gray-100"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 font-black text-sm group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors flex-shrink-0">
-                          {patient.name?.[0]?.toUpperCase()}
+                          {student.name?.[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900 text-sm">{patient.name}</p>
-                          <p className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">{patient.rollNo || patient.id}</p>
+                          <p className="font-bold text-gray-900 text-sm">{student.name}</p>
+                          <p className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">{student.rollNo || student.id}</p>
                         </div>
                       </div>
                       <ChevronRight size={16} className="text-gray-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
