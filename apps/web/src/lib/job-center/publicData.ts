@@ -80,9 +80,14 @@ export async function fetchPublicEmployers(): Promise<PublicEmployer[]> {
   const sortedDocs = snap.docs
     .map(doc => ({ id: doc.id, ...doc.data() } as Employer & { id: string }))
     .sort((a, b) => {
-      const dateA = a.createdAt?.toDate?.() || new Date(0);
-      const dateB = b.createdAt?.toDate?.() || new Date(0);
-      return dateB.getTime() - dateA.getTime();
+      const getMillis = (val: any) => {
+        if (!val) return 0;
+        if (typeof val.toMillis === 'function') return val.toMillis();
+        if (val instanceof Date) return val.getTime();
+        if (val.seconds) return val.seconds * 1000;
+        return 0;
+      };
+      return getMillis(b.createdAt) - getMillis(a.createdAt);
     });
 
   return sortedDocs.map(data => {
