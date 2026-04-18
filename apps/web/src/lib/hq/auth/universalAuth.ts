@@ -28,6 +28,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'HQ',
     collection: 'hq_users',
     domain: '@hq.khanhub.com',
+    legacyDomain: '@khanhub.io',
     dashboardPath: '/hq/dashboard',
     sessionKey: 'hq_session',
     prefixes: ['HQ', 'SUPER', 'MGR', 'MNG']
@@ -83,6 +84,7 @@ export const DEPARTMENTS_AUTH: Record<string, DepartmentAuthInfo> = {
     name: 'Job Center',
     collection: 'jobcenter_users',
     domain: '@jobcenter.khanhub',
+    legacyDomain: '@job-center.khanhub',
     dashboardPath: '/departments/job-center/dashboard',
     sessionKey: 'job-center_session',
     prefixes: ['JC', 'JOB', 'SEEK', 'SEEKER']
