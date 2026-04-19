@@ -106,6 +106,7 @@ export default function StaffProfilePage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [processingConfig, setProcessingConfig] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
   const [editForm, setEditForm] = useState({
@@ -313,7 +314,8 @@ export default function StaffProfilePage() {
   }, [staffId, router, daysInMonth]);
 
   const handleAddConfig = async () => {
-    if (!staff || !addingConfig) return;
+    if (!staff || !addingConfig || processingConfig) return;
+    setProcessingConfig(true);
     const { type, mode } = addingConfig;
 
     let newItem: { key: string, label: string } | null = null;
@@ -360,6 +362,7 @@ export default function StaffProfilePage() {
     setAddingConfig(null);
     setAddingConfigSelection('');
     setAddingConfigCustom('');
+    setProcessingConfig(false);
   };
 
 
@@ -1977,7 +1980,10 @@ export default function StaffProfilePage() {
                               }}
                             >
                               <option value="" disabled>Select a preset dress item...</option>
-                              {availableDress.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                              {availableDress
+                                .filter(o => !editForm.dressCodeConfig.find(existing => existing.key === o.key))
+                                .map(o => <option key={o.key} value={o.key}>{o.label}</option>)
+                              }
                               <option value="__custom__">+ Create Custom Label...</option>
                             </select>
                           ) : (
@@ -1991,7 +1997,13 @@ export default function StaffProfilePage() {
                             />
                           )}
                           <div className="flex gap-3">
-                            <button onClick={handleAddConfig} className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 transition-all">Add to Profile</button>
+                            <button 
+                              onClick={handleAddConfig} 
+                              disabled={processingConfig || (addingConfig.mode === 'select' && !addingConfigSelection) || (addingConfig.mode === 'custom' && !addingConfigCustom.trim())}
+                              className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
+                            >
+                              {processingConfig ? 'Processing...' : 'Add to Profile'}
+                            </button>
                             <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
                           </div>
                         </div>
@@ -2047,7 +2059,10 @@ export default function StaffProfilePage() {
                               }}
                             >
                               <option value="" disabled>Select a preset duty...</option>
-                              {availableDuties.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                              {availableDuties
+                                .filter(o => !editForm.dutyConfig.find(existing => existing.key === o.key))
+                                .map(o => <option key={o.key} value={o.key}>{o.label}</option>)
+                              }
                               <option value="__custom__">+ Create Custom Duty...</option>
                             </select>
                           ) : (
@@ -2061,7 +2076,13 @@ export default function StaffProfilePage() {
                             />
                           )}
                           <div className="flex gap-3">
-                            <button onClick={handleAddConfig} className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest bg-teal-500 hover:bg-teal-600 text-white rounded-2xl shadow-lg shadow-teal-500/20 transition-all">Add to Profile</button>
+                            <button 
+                              onClick={handleAddConfig} 
+                              disabled={processingConfig || (addingConfig.mode === 'select' && !addingConfigSelection) || (addingConfig.mode === 'custom' && !addingConfigCustom.trim())}
+                              className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest bg-teal-500 hover:bg-teal-600 text-white rounded-2xl shadow-lg shadow-teal-500/20 transition-all disabled:opacity-50"
+                            >
+                              {processingConfig ? 'Processing...' : 'Add to Profile'}
+                            </button>
                             <button onClick={() => { setAddingConfig(null); setAddingConfigSelection(''); setAddingConfigCustom(''); }} className={`px-8 h-14 text-[10px] font-black uppercase tracking-widest border-2 rounded-2xl transition-all ${isDark ? 'border-zinc-700 text-zinc-400 hover:bg-zinc-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Cancel</button>
                           </div>
                         </div>

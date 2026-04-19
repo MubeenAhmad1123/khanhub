@@ -123,6 +123,7 @@ export default function ManagerUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [processingConfig, setProcessingConfig] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -239,7 +240,8 @@ export default function ManagerUsersPage() {
   }, []);
 
   const handleAddConfig = async () => {
-    if (!addingConfig) return;
+    if (!addingConfig || processingConfig) return;
+    setProcessingConfig(true);
     const { type, mode } = addingConfig;
     let newItem: {key: string, label: string} | null = null;
 
@@ -282,6 +284,7 @@ export default function ManagerUsersPage() {
     setAddingConfig(null);
     setAddingConfigSelection('');
     setAddingConfigCustom('');
+    setProcessingConfig(false);
   };
 
   const generateEmployeeId = () => {
@@ -1140,7 +1143,10 @@ export default function ManagerUsersPage() {
                                        }}
                                      >
                                        <option value="" disabled>Select from presets...</option>
-                                       {availableDuties.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                       {availableDuties
+                                         .filter(o => !formData.dutyConfig.find(existing => existing.key === o.key))
+                                         .map(o => <option key={o.key} value={o.key}>{o.label}</option>)
+                                       }
                                        <option value="__custom__">+ Create New Item...</option>
                                      </select>
                                    ) : (
@@ -1154,7 +1160,13 @@ export default function ManagerUsersPage() {
                                      />
                                    )}
                                    <div className="flex gap-2">
-                                     <button onClick={handleAddConfig} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-purple-500 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                                     <button 
+                                       onClick={handleAddConfig} 
+                                       disabled={processingConfig || (addingConfig.mode === 'select' && !addingConfigSelection) || (addingConfig.mode === 'custom' && !addingConfigCustom.trim())}
+                                       className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-purple-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
+                                     >
+                                       {processingConfig ? 'Processing...' : 'Save & Add'}
+                                     </button>
                                      <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-zinc-500">Cancel</button>
                                    </div>
                                  </div>
@@ -1213,7 +1225,10 @@ export default function ManagerUsersPage() {
                                    }}
                                  >
                                    <option value="" disabled>Select from presets...</option>
-                                   {availableDress.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                                   {availableDress
+                                     .filter(o => !formData.dressCodeConfig.find(existing => existing.key === o.key))
+                                     .map(o => <option key={o.key} value={o.key}>{o.label}</option>)
+                                   }
                                    <option value="__custom__">+ Create New Item...</option>
                                  </select>
                                ) : (
@@ -1227,7 +1242,13 @@ export default function ManagerUsersPage() {
                                  />
                                )}
                                <div className="flex gap-2">
-                                 <button onClick={handleAddConfig} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white rounded-xl shadow-lg transition-all">Save & Add</button>
+                                 <button 
+                                   onClick={handleAddConfig} 
+                                   disabled={processingConfig || (addingConfig.mode === 'select' && !addingConfigSelection) || (addingConfig.mode === 'custom' && !addingConfigCustom.trim())}
+                                   className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
+                                 >
+                                   {processingConfig ? 'Processing...' : 'Save & Add'}
+                                 </button>
                                  <button onClick={() => setAddingConfig(null)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border-2 rounded-xl border-zinc-700 text-zinc-500">Cancel</button>
                                </div>
                              </div>
