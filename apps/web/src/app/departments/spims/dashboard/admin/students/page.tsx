@@ -15,6 +15,9 @@ export default function SpimsStudentsListPage() {
   const [students, setStudents] = useState<SpimsStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('all');
+  const [selectedSession, setSelectedSession] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
   useEffect(() => {
     const raw = localStorage.getItem('spims_session');
@@ -43,19 +46,44 @@ export default function SpimsStudentsListPage() {
     }
   }
 
+  const allCourses = useMemo(() => Array.from(new Set(students.map(s => s.course))).sort(), [students]);
+  const allSessions = useMemo(() => Array.from(new Set(students.map(s => s.session))).sort(), [students]);
+  const allStatuses = ['Active', 'Pass', '1st Year Supply', '2nd Year Supply', 'Fail', 'Left'];
+
   const filtered = useMemo(() => {
+    let list = students;
+
+    // Filter by Course
+    if (selectedCourse !== 'all') {
+      list = list.filter(st => st.course === selectedCourse);
+    }
+
+    // Filter by Session
+    if (selectedSession !== 'all') {
+      list = list.filter(st => st.session === selectedSession);
+    }
+
+    // Filter by Status
+    if (selectedStatus !== 'all') {
+      list = list.filter(st => (st.status || 'Active') === selectedStatus);
+    }
+
+    // Search Query
     const s = q.trim().toLowerCase();
-    if (!s) return students;
-    return students.filter(
-      (st) =>
-        (st.name || '').toLowerCase().includes(s) ||
-        (st.rollNo || '').toLowerCase().includes(s) ||
-        (st.cnic || '').toLowerCase().includes(s) ||
-        (st.course || '').toLowerCase().includes(s) ||
-        (st.session || '').toLowerCase().includes(s) ||
-        st.id.toLowerCase().includes(s)
-    );
-  }, [students, q]);
+    if (s) {
+      list = list.filter(
+        (st) =>
+          (st.name || '').toLowerCase().includes(s) ||
+          (st.rollNo || '').toLowerCase().includes(s) ||
+          (st.cnic || '').toLowerCase().includes(s) ||
+          (st.course || '').toLowerCase().includes(s) ||
+          (st.session || '').toLowerCase().includes(s) ||
+          st.id.toLowerCase().includes(s)
+      );
+    }
+
+    return list;
+  }, [students, q, selectedCourse, selectedSession, selectedStatus]);
 
   if (!session || loading) {
     return (
@@ -85,16 +113,56 @@ export default function SpimsStudentsListPage() {
         </Link>
       </div>
 
-      <div className="relative group">
-        <div className="absolute inset-0 bg-[#1D9E75]/5 rounded-3xl blur-2xl group-focus-within:bg-[#1D9E75]/10 transition-all opacity-0 group-focus-within:opacity-100" />
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#1D9E75]" />
-          <input
-            className="w-full rounded-2xl border border-gray-100 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl pl-12 pr-4 py-4 text-sm font-semibold shadow-sm focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75] outline-none transition-all"
-            placeholder="Search name, roll, CNIC, course…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+      <div className="space-y-4">
+        <div className="relative group">
+          <div className="absolute inset-0 bg-[#1D9E75]/5 rounded-3xl blur-2xl group-focus-within:bg-[#1D9E75]/10 transition-all opacity-0 group-focus-within:opacity-100" />
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-[#1D9E75]" />
+            <input
+              className="w-full rounded-2xl border border-gray-100 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl pl-12 pr-4 py-4 text-sm font-semibold shadow-sm focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75] outline-none transition-all"
+              placeholder="Search name, roll, CNIC, course…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+           <div className="relative">
+              <select
+                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+              >
+                <option value="all">All Courses</option>
+                {allCourses.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
+           </div>
+
+           <div className="relative">
+              <select
+                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                value={selectedSession}
+                onChange={(e) => setSelectedSession(e.target.value)}
+              >
+                <option value="all">All Sessions</option>
+                {allSessions.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
+           </div>
+
+           <div className="relative">
+              <select
+                className="w-full appearance-none bg-white border border-gray-100 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] transition-all"
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+              >
+                <option value="all">All Statuses</option>
+                {allStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
+           </div>
         </div>
       </div>
 
