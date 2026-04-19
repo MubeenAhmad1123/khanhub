@@ -8,6 +8,8 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import { Loader2, Eye, EyeOff, Copy, Check, Shield, ArrowLeft, Key, Lock, Search } from 'lucide-react';
 import Link from 'next/link';
 import { resetPortalUserPassword } from '@/app/hq/actions/resetPortalUserPassword';
+import { logoutPortalUser } from '@/app/hq/actions/logoutPortalUser';
+import { LogOut } from 'lucide-react';
 
 type CredentialUser = {
   id: string;
@@ -40,6 +42,7 @@ export default function HqPasswordsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [resettingId, setResettingId] = useState<string | null>(null);
+  const [loggingOutId, setLoggingOutId] = useState<string | null>(null);
 
   useEffect(() => {
     const isDark = localStorage.getItem('hq_dark_mode') === 'true';
@@ -141,6 +144,25 @@ export default function HqPasswordsPage() {
       window.alert('Failed to reset password.');
     } finally {
       setResettingId(null);
+    }
+  };
+
+  const handleLogout = async (u: CredentialUser) => {
+    const uid = u.id.includes('_') ? u.id.split('_').slice(1).join('_') : u.id;
+    if (!window.confirm(`Force logout user ${u.name} (${u.customId})? This will revoke all their active sessions.`)) return;
+
+    try {
+      setLoggingOutId(u.id);
+      const res = await logoutPortalUser(uid, u.portal);
+      if (!res.success) {
+        window.alert(res.error || 'Failed to logout user.');
+        return;
+      }
+      window.alert('User tokens revoked successfully. They will be logged out on their next action.');
+    } catch {
+      window.alert('Failed to logout user.');
+    } finally {
+      setLoggingOutId(null);
     }
   };
 
@@ -318,6 +340,14 @@ export default function HqPasswordsPage() {
                         >
                           {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
                           {copiedId === u.id ? 'Secured' : 'Extract'}
+                        </button>
+                        <button
+                          onClick={() => handleLogout(u)}
+                          disabled={loggingOutId === u.id}
+                          className="px-6 py-4 rounded-2xl border border-rose-100 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {loggingOutId === u.id ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={14} />}
+                          Logout
                         </button>
                         <button
                           onClick={() => handleResetPassword(u)}

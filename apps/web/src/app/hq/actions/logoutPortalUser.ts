@@ -37,29 +37,29 @@ const COLLECTION_BY_PORTAL: Record<Portal, string> = {
   welfare: 'welfare_users',
 };
 
-export async function resetPortalUserPassword(
+export async function logoutPortalUser(
   uid: string,
-  portal: Portal,
-  newPassword: string
+  portal: Portal
 ): Promise<{ success: boolean; error?: string }> {
-  if (!newPassword || newPassword.length < 6) {
-    return { success: false, error: 'Password must be at least 6 characters.' };
-  }
-
   try {
     const app = getAdminApp();
-    await getAuth(app).updateUser(uid, { password: newPassword });
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    // Also update plaintext password in Firestore for display in Credential Hub
+    // 1. Revoke tokens in Firebase Auth
+    await auth.revokeRefreshTokens(uid);
+
+    // 2. Mark in Firestore for immediate client-side detection (if implemented in hooks)
     const col = COLLECTION_BY_PORTAL[portal];
     if (col) {
-      await getFirestore(app).collection(col).doc(uid).update({
-        password: newPassword
+      await db.collection(col).doc(uid).update({
+        forceLogoutAt: new Date().toISOString()
       });
     }
 
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to reset password.' };
+    console.error('Logout user error:', err);
+    return { success: false, error: err?.message || 'Failed to logout user.' };
   }
 }
