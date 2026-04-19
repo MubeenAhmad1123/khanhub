@@ -11,7 +11,7 @@ import { db } from '@/lib/firebase';
 import { 
   ArrowLeft, User, DollarSign, ShoppingCart, Video, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
-  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList
+  ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, CheckCircle2
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
@@ -126,6 +126,13 @@ export default function PatientDetailPage() {
   const [deletingPayment, setDeletingPayment] = useState<any>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
+
+  // Discharge Modal State
+  const [showDischargeModal, setShowDischargeModal] = useState(false);
+  const [dDate, setDDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dAmount, setDAmount] = useState('');
+  const [dNote, setDNote] = useState('Final Settlement');
+  const [isDischarging, setIsDischarging] = useState(false);
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -576,21 +583,71 @@ export default function PatientDetailPage() {
     }
   };
 
-  const handleDischarge = async () => {
-    if (!window.confirm("Are you sure you want to discharge this patient?")) return;
+  const handleDischarge = () => {
+    // Reset modal and open
+    const today = new Date().toISOString().split('T')[0];
+    setDDate(today);
+    setDAmount('');
+    setShowDischargeModal(true);
+  };
+
+  const handleDischargeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!window.confirm("Confirm discharge? This will mark the patient as inactive.")) return;
+
     try {
-      setDeactivating(true);
+      setIsDischarging(true);
+      
+      const dischargeDateObj = new Date(dDate);
+      const admissionDateObj = patient.admissionDate?.toDate?.() ? patient.admissionDate.toDate() : new Date(patient.admissionDate);
+      
+      const diffTimeMs = dischargeDateObj.getTime() - admissionDateObj.getTime();
+      const actualDays = diffTimeMs > 0 ? Math.ceil(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+      
+      // 1. If there's an amount, record it as a transaction
+      const amount = Number(dAmount) || 0;
+      if (amount > 0) {
+        const setupSnap = await getDoc(doc(db, 'rehab_meta', 'setup'));
+        const setupData = setupSnap.data() as any;
+        const cashierId = String(setupData?.cashierCustomId || '').toUpperCase() || 'CASHIER';
+
+        await addDoc(collection(db, 'rehab_transactions'), {
+          type: 'income',
+          amount,
+          category: 'fee',
+          categoryName: 'Discharge Settlement',
+          departmentCode: 'rehab',
+          departmentName: 'Rehab Center',
+          patientId: patientId,
+          patientName: patient?.name || '',
+          status: 'approved', // Auto-approve discharge payments since it's a final step
+          cashierId: cashierId,
+          description: dNote || 'Final Settlement',
+          date: Timestamp.fromDate(dischargeDateObj),
+          transactionDate: Timestamp.now(),
+          createdBy: session.uid,
+          createdByName: session?.displayName || session?.name || 'Rehab Admin',
+          createdAt: Timestamp.now()
+        });
+      }
+
+      // 2. Update patient record
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         isActive: false,
-        dischargeDate: Timestamp.now(),
-        dischargeReason: null
+        dischargeDate: Timestamp.fromDate(dischargeDateObj),
+        dischargeAmount: amount,
+        dischargeNote: dNote || null,
+        totalStayDays: actualDays
       });
-      toast.success('Patient discharged');
+
+      toast.success('Patient discharged successfully ✓');
+      setShowDischargeModal(false);
       router.push('/departments/rehab/dashboard/admin/patients');
     } catch (error) {
       console.error("Discharge error", error);
       toast.error('Discharge failed');
-      setDeactivating(false);
+    } finally {
+      setIsDischarging(false);
     }
   };
 
@@ -1843,6 +1900,112 @@ export default function PatientDetailPage() {
                   >
                     {isDeletingTransaction ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 size={18} />}
                     Confirm Delete
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discharge Modal */}
+      {showDischargeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Discharge Patient</h2>
+                  <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">Final Settlement & Checkout</p>
+                </div>
+                <button onClick={() => setShowDischargeModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleDischargeSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Discharge Date</label>
+                    <input
+                      type="date"
+                      value={dDate}
+                      onChange={(e) => setDDate(e.target.value)}
+                      required
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Settlement Amount (₨)</label>
+                    <input
+                      type="number"
+                      value={dAmount}
+                      onChange={(e) => setDAmount(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Calculation Box */}
+                <div className="bg-teal-50/50 rounded-2xl p-4 border border-teal-100/50 space-y-2">
+                  {(() => {
+                    const dDateObj = new Date(dDate);
+                    const admDateObj = patient.admissionDate?.toDate?.() ? patient.admissionDate.toDate() : new Date(patient.admissionDate);
+                    const diff = dDateObj.getTime() - admDateObj.getTime();
+                    const days = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
+                    const due = days * (patient.dailyRate || 0);
+                    const remainingBefore = due - (patient.overallReceived || 0);
+                    const remainingAfter = remainingBefore - (Number(dAmount) || 0);
+
+                    return (
+                      <>
+                        <div className="flex justify-between text-[10px] font-bold text-teal-700/60 uppercase tracking-wider">
+                          <span>Total Stay:</span>
+                          <span className="font-black text-teal-700">{days} Days</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] font-bold text-teal-700/60 uppercase tracking-wider">
+                          <span>Dues till {dDate}:</span>
+                          <span className="font-black text-teal-700">₨{due.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] font-bold text-teal-700/60 uppercase tracking-wider pt-2 border-t border-teal-100">
+                          <span>Remaining Balance:</span>
+                          <span className={`font-black ${remainingBefore > 0 ? 'text-red-600' : 'text-green-600'}`}>₨{remainingBefore.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-black text-teal-900 pt-1">
+                          <span>Balance After Payment:</span>
+                          <span className={remainingAfter > 0 ? 'text-red-600' : 'text-green-600'}>₨{remainingAfter.toLocaleString()}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Notes / Reason</label>
+                  <textarea
+                    value={dNote}
+                    onChange={(e) => setDNote(e.target.value)}
+                    placeholder="E.g. Full recovery, Discharged on request..."
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all min-h-[80px] resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDischargeModal(false)}
+                    className="flex-1 px-6 py-4 rounded-2xl border border-gray-100 text-gray-400 font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isDischarging}
+                    className="flex-[2] bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/20"
+                  >
+                    {isDischarging ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                    Final Discharge
                   </button>
                 </div>
               </form>
