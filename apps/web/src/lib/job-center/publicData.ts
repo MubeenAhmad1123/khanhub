@@ -37,6 +37,7 @@ export interface PublicEmployer {
     position?: string | null;
   };
   isActive: boolean;
+  openJobsCount: number;
 }
 
 export async function fetchPublicSeekers(): Promise<PublicJobSeeker[]> {
@@ -90,6 +91,14 @@ export async function fetchPublicEmployers(): Promise<PublicEmployer[]> {
       return getMillis(b.createdAt) - getMillis(a.createdAt);
     });
 
+    const jobsQ = query(collection(db, 'jobcenter_jobs'), where('status', '==', 'open'));
+    const jobsSnap = await getDocs(jobsQ);
+    const jobsCountMap: Record<string, number> = {};
+    jobsSnap.docs.forEach(d => {
+      const eid = d.data().employerId;
+      jobsCountMap[eid] = (jobsCountMap[eid] || 0) + 1;
+    });
+
   return sortedDocs.map(data => {
     return {
       id: data.id,
@@ -103,7 +112,8 @@ export async function fetchPublicEmployers(): Promise<PublicEmployer[]> {
         name: data.contactPerson.name,
         position: data.contactPerson.position
       },
-      isActive: data.isActive
+      isActive: data.isActive,
+      openJobsCount: jobsCountMap[data.id] || 0
     };
   });
 }

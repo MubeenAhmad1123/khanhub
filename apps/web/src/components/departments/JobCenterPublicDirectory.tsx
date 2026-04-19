@@ -43,6 +43,9 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSkill, setSelectedSkill] = useState('all');
   const [selectedIndustry, setSelectedIndustry] = useState('all');
+  const [selectedExp, setSelectedExp] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all'); // all, hired, looking
+  const [selectedHiring, setSelectedHiring] = useState('all'); // all, hiring, filled
 
   useEffect(() => {
     async function loadData() {
@@ -69,21 +72,42 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           s.jobInterests.some(i => i.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesSkill = selectedSkill === 'all' || s.skills.includes(selectedSkill);
-    return matchesSearch && matchesSkill;
+    
+    // Experience Filter logic
+    let matchesExp = true;
+    if (selectedExp !== 'all') {
+      const years = parseInt(s.experience || '0');
+      if (selectedExp === '<1') matchesExp = years < 1;
+      else if (selectedExp === '1-3') matchesExp = years >= 1 && years <= 3;
+      else if (selectedExp === '3+') matchesExp = years > 3;
+    }
+
+    // Status Filter
+    const matchesStatus = selectedStatus === 'all' || 
+                         (selectedStatus === 'hired' && s.isEmployed) || 
+                         (selectedStatus === 'looking' && !s.isEmployed);
+
+    return matchesSearch && matchesSkill && matchesExp && matchesStatus;
   });
 
   const filteredCompanies = companies.filter(c => {
     const matchesSearch = c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           c.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesIndustry = selectedIndustry === 'all' || c.industry === selectedIndustry;
-    return matchesSearch && matchesIndustry;
+    
+    // Hiring Status Filter
+    const matchesHiring = selectedHiring === 'all' || 
+                         (selectedHiring === 'hiring' && (c.openJobsCount || 0) > 0) || 
+                         (selectedHiring === 'filled' && (c.openJobsCount || 0) === 0);
+
+    return matchesSearch && matchesIndustry && matchesHiring;
   });
 
   const handleContact = (item: PublicJobSeeker | PublicEmployer, type: 'seeker' | 'employer') => {
     const phone = '923006395220';
     const name = type === 'seeker' ? (item as PublicJobSeeker).name : (item as PublicEmployer).companyName;
     const rawId = type === 'seeker' ? (item as PublicJobSeeker).seekerNumber : (item as PublicEmployer).id;
-    const id = rawId || `ID-${item.id.slice(-6).toUpperCase()}`;
+    const id = (rawId && rawId !== 'undefined') ? rawId : `ID-${item.id?.slice(-6).toUpperCase() || 'UNKNOWN'}`;
     const url = window.location.href;
     
     const message = `I want to see the contact information for ${name} (ID: ${id}). Page: ${url}`;
@@ -153,31 +177,75 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
           />
         </div>
 
-        <div className="flex gap-4 w-full md:w-auto">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
           {view === 'seekers' ? (
-            <div className="relative w-full md:w-48">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-              <select
-                className="w-full pl-10 pr-4 py-3 bg-neutral-50 rounded-2xl appearance-none focus:outline-none focus:ring-2 font-medium text-sm text-neutral-700"
-                value={selectedSkill}
-                onChange={(e) => setSelectedSkill(e.target.value)}
-              >
-                <option value="all">All Skills</option>
-                {allSkills.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
+            <>
+              <div className="relative flex-1 md:w-40">
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                <select
+                  className="w-full pl-10 pr-4 py-3 bg-neutral-50 rounded-2xl appearance-none focus:outline-none focus:ring-2 font-bold text-[10px] uppercase tracking-widest text-neutral-600 border border-neutral-100"
+                  value={selectedSkill}
+                  onChange={(e) => setSelectedSkill(e.target.value)}
+                >
+                  <option value="all">Skills (All)</option>
+                  {allSkills.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              <div className="relative flex-1 md:w-40">
+                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                <select
+                  className="w-full pl-10 pr-4 py-3 bg-neutral-50 rounded-2xl appearance-none focus:outline-none focus:ring-2 font-bold text-[10px] uppercase tracking-widest text-neutral-600 border border-neutral-100"
+                  value={selectedExp}
+                  onChange={(e) => setSelectedExp(e.target.value)}
+                >
+                  <option value="all">Exp (Any)</option>
+                  <option value="<1">Entry Level</option>
+                  <option value="1-3">1-3 Years</option>
+                  <option value="3+">3+ Years</option>
+                </select>
+              </div>
+
+              <div className="relative flex-1 md:w-40">
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                <select
+                  className="w-full pl-10 pr-4 py-3 bg-neutral-50 rounded-2xl appearance-none focus:outline-none focus:ring-2 font-bold text-[10px] uppercase tracking-widest text-neutral-600 border border-neutral-100"
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                >
+                  <option value="all">Status (All)</option>
+                  <option value="looking">Available</option>
+                  <option value="hired">Placed/Hired</option>
+                </select>
+              </div>
+            </>
           ) : (
-            <div className="relative w-full md:w-48">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-              <select
-                className="w-full pl-10 pr-4 py-3 bg-neutral-50 rounded-2xl appearance-none focus:outline-none focus:ring-2 font-medium text-sm text-neutral-700"
-                value={selectedIndustry}
-                onChange={(e) => setSelectedIndustry(e.target.value)}
-              >
-                <option value="all">All Industries</option>
-                {allIndustries.map(i => <option key={i} value={i}>{i}</option>)}
-              </select>
-            </div>
+            <>
+              <div className="relative flex-1 md:w-48">
+                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                <select
+                  className="w-full pl-10 pr-4 py-3 bg-neutral-50 rounded-2xl appearance-none focus:outline-none focus:ring-2 font-bold text-[10px] uppercase tracking-widest text-neutral-600 border border-neutral-100"
+                  value={selectedIndustry}
+                  onChange={(e) => setSelectedIndustry(e.target.value)}
+                >
+                  <option value="all">All Industries</option>
+                  {allIndustries.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+
+              <div className="relative flex-1 md:w-48">
+                <Cpu className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                <select
+                  className="w-full pl-10 pr-4 py-3 bg-neutral-50 rounded-2xl appearance-none focus:outline-none focus:ring-2 font-bold text-[10px] uppercase tracking-widest text-neutral-600 border border-neutral-100"
+                  value={selectedHiring}
+                  onChange={(e) => setSelectedHiring(e.target.value)}
+                >
+                  <option value="all">Hiring (All)</option>
+                  <option value="hiring">Now Hiring</option>
+                  <option value="filled">Fully Staffed</option>
+                </select>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -191,8 +259,18 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
               className="group bg-white rounded-[2.5rem] border border-neutral-100 overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
             >
               {/* ID Badge */}
-              <div className="absolute top-4 left-4 z-10 bg-white/70 backdrop-blur-md px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-neutral-900 border border-white/50 shadow-sm">
-                {s.seekerNumber || `S-${s.id.slice(-4).toUpperCase()}`}
+              <div className="absolute top-4 left-4 z-10 bg-white/70 backdrop-blur-md px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-neutral-900 border border-white/50 shadow-sm flex items-center gap-2">
+                <span className="opacity-40">#</span> {s.seekerNumber || `S-${s.id.slice(-4).toUpperCase()}`}
+              </div>
+
+              {/* Status Badge */}
+              <div className={cn(
+                "absolute top-4 right-4 z-10 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-lg transition-transform group-hover:scale-110",
+                s.isEmployed 
+                  ? "bg-emerald-500 border-emerald-400 text-white" 
+                  : "bg-amber-500 border-amber-400 text-white"
+              )}>
+                {s.isEmployed ? 'Hired / Placed' : 'Actively Looking'}
               </div>
 
               <div className="relative aspect-[4/5] w-full bg-neutral-100 overflow-hidden">
@@ -207,11 +285,14 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
                   <div className="h-full w-full flex items-center justify-center text-neutral-300">
                     <User size={100} strokeWidth={1} />
                   </div>
-                )/* Slide-up info overlay on hover */}
+                )}
+                
+                {/* Overlay Info */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
+                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">Interests</p>
                   <div className="flex flex-wrap gap-2 mb-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-100">
-                    {s.jobInterests.slice(0, 2).map(interest => (
-                      <span key={interest} className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[10px] font-bold rounded-full border border-white/20">
+                    {s.jobInterests.slice(0, 3).map(interest => (
+                      <span key={interest} className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10">
                         {interest}
                       </span>
                     ))}
@@ -251,14 +332,18 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
                   </div>
                   
                   {s.experience && (
-                    <div className="p-4 bg-neutral-100/50 rounded-2xl border border-neutral-100/50 relative overflow-hidden group-hover:bg-white transition-colors">
-                      <div className="text-xs text-neutral-700 font-bold leading-relaxed relative z-10">
+                    <div className="p-5 rounded-2xl border transition-all duration-300 bg-neutral-100 border-neutral-200 group-hover:bg-white group-hover:border-primary-100">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Briefcase size={16} className="text-primary-500" style={{ color: theme.primary }} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.1em] text-neutral-400">Work Experience</span>
+                      </div>
+                      <div className="text-xs text-neutral-700 font-bold leading-relaxed">
                         {/^\d+$/.test(s.experience) ? (
-                          <span className="flex items-center gap-2 text-primary-600 font-black" style={{ color: theme.primary }}>
-                             <Briefcase size={14} /> {s.experience} Years Experience
+                          <span className="text-sm font-black text-neutral-900">
+                             {s.experience} Years Professional Experience
                           </span>
                         ) : (
-                          <span className="italic">&ldquo;{s.experience}&rdquo;</span>
+                          <span className="italic text-neutral-600">&ldquo;{s.experience}&rdquo;</span>
                         )}
                       </div>
                     </div>
@@ -282,6 +367,16 @@ export default function JobCenterPublicDirectory({ theme }: Props) {
               className="group bg-white rounded-[2.5rem] border border-neutral-100 overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 transition-all duration-500 flex flex-col"
             >
               <div className="relative h-56 w-full bg-neutral-50 flex items-center justify-center p-12 transition-colors group-hover:bg-white">
+                {/* Hiring Status Badge */}
+                <div className={cn(
+                  "absolute top-4 right-4 z-10 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-lg",
+                  (c.openJobsCount || 0) > 0 
+                    ? "bg-indigo-500 border-indigo-400 text-white" 
+                    : "bg-zinc-100 border-zinc-200 text-zinc-400"
+                )}>
+                  {(c.openJobsCount || 0) > 0 ? `Now Hiring (${c.openJobsCount} Vacancies)` : 'Fully Staffed'}
+                </div>
+
                 {c.logoUrl ? (
                   <div className="relative w-full h-full transition-transform duration-700 group-hover:scale-110">
                     <Image
