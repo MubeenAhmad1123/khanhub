@@ -14,6 +14,7 @@ import { ActivityDetailModal } from '@/components/hq/superadmin/ActivityDetailMo
 import { ClientsFlowModal } from '@/components/hq/superadmin/ClientsFlowModal';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -75,12 +76,17 @@ export default function HqSuperadminPage() {
       router.push('/hq/login');
       return;
     }
-    // Whitelist check — verify the logged-in Firebase user's email
-    const firebaseUser = auth.currentUser;
-    if (!firebaseUser || !isSuperadminEmail(firebaseUser.email)) {
-      console.warn('[Superadmin] Email not in whitelist, redirecting.');
-      router.push('/hq/login');
-    }
+    // Wait for Firebase Auth to fully initialize before checking the email whitelist.
+    // auth.currentUser can be null right after mount (async restore from storage).
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser || !isSuperadminEmail(firebaseUser.email)) {
+        console.warn('[Superadmin] Email not in whitelist, redirecting.');
+        router.push('/hq/login');
+      }
+      // Once resolved, we don't need to keep listening
+      unsub();
+    });
+    return () => unsub();
   }, [sessionLoading, session, router]);
 
   useEffect(() => {
