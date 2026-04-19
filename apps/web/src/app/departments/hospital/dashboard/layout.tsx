@@ -22,7 +22,7 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { HospitalRole } from '@/types/hospital';
 
 interface NavItem {
@@ -108,6 +108,24 @@ export default function HospitalDashboardLayout({
 
     checkSession();
   }, [router]);
+
+  useEffect(() => {
+    if (!user || !user.uid) return;
+    if (user.role === 'superadmin') return;
+
+    const unsub = onSnapshot(doc(db, 'hospital_users', user.uid), (snap) => {
+      const data = snap.data();
+      if (data?.forceLogoutAt) {
+        const logoutTime = new Date(data.forceLogoutAt).getTime();
+        const loginTimeStr = localStorage.getItem('hospital_login_time');
+        const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
+        if (logoutTime > loginTime) {
+          handleSignOut();
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   const handleSignOut = async () => {
     try {

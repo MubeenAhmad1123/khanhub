@@ -10,7 +10,9 @@ import {
   Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { doc, onSnapshot } from 'firebase/firestore';
 import type { HqRole, HqSession } from '@/types/hq';
+import { db } from '@/lib/firebase';
 import { HqNotificationBell } from '@/components/hq/HqNotificationBell';
 import { HqSuperadminApprovalsNavBadge } from '@/components/hq/HqSuperadminApprovalsNavBadge';
 import { useFcmNotifications } from '@/hooks/hq/useFcmNotifications';
@@ -170,7 +172,20 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
     }
   }, [router]);
 
+  useEffect(() => {
+    if (!user || !user.uid) return;
 
+    const unsub = onSnapshot(doc(db, 'hq_users', user.uid), (snap) => {
+      const data = snap.data();
+      if (data?.forceLogoutAt) {
+        const logoutTime = new Date(data.forceLogoutAt).getTime();
+        if (logoutTime > user.loginTime) {
+          handleSignOut();
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   if (isChecking) {
     return (

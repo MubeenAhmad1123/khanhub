@@ -10,7 +10,7 @@ import {
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2, Briefcase
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { JobCenterRole } from '@/types/job-center';
 
@@ -135,6 +135,24 @@ export default function JobCenterDashboardLayout({ children }: { children: React
 
     performAuthCheck();
   }, [router]);
+
+  useEffect(() => {
+    if (!user || !user.uid) return;
+    if (user.role === 'superadmin') return;
+
+    const unsub = onSnapshot(doc(db, 'jobcenter_users', user.uid), (snap) => {
+      const data = snap.data();
+      if (data?.forceLogoutAt) {
+        const logoutTime = new Date(data.forceLogoutAt).getTime();
+        const loginTimeStr = localStorage.getItem('jobcenter_login_time');
+        const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
+        if (logoutTime > loginTime) {
+          handleSignOut();
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   const handleSignOut = () => {
     localStorage.removeItem('jobcenter_session');

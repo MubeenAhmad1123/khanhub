@@ -10,7 +10,7 @@ import {
   ChevronLeft, ExternalLink, Building2, GraduationCap, TrendingUp, Calculator, FileText, BarChart2
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type RehabRole = 'admin' | 'staff' | 'family' | 'superadmin';
@@ -131,6 +131,24 @@ export default function SukoonDashboardLayout({ children }: { children: React.Re
 
     performAuthCheck();
   }, [router]);
+
+  useEffect(() => {
+    if (!user || !user.uid) return;
+    if (user.role === 'superadmin') return;
+
+    const unsub = onSnapshot(doc(db, 'sukoon_users', user.uid), (snap) => {
+      const data = snap.data();
+      if (data?.forceLogoutAt) {
+        const logoutTime = new Date(data.forceLogoutAt).getTime();
+        const loginTimeStr = localStorage.getItem('sukoon_login_time');
+        const loginTime = loginTimeStr ? parseInt(loginTimeStr) : 0;
+        if (logoutTime > loginTime) {
+          handleSignOut();
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   const handleSignOut = () => {
     localStorage.removeItem('sukoon_session');
