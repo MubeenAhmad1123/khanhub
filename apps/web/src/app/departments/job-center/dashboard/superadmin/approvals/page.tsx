@@ -194,7 +194,7 @@ export default function ApprovalsPage() {
                   amount: tx.amount,
                   date: txDate,
                   transactionId: txId,
-                  approvedBy: session?.uid,
+                  approvedBy: session?.uid || null,
                 }],
                 lastPaymentDate: serverTimestamp(),
                 lastPaymentAmount: tx.amount,
@@ -216,7 +216,7 @@ export default function ApprovalsPage() {
                   amount: tx.amount,
                   date: txDate,
                   transactionId: txId,
-                  approvedBy: session?.uid,
+                  approvedBy: session?.uid || null,
                 }],
               });
             }
@@ -290,7 +290,7 @@ export default function ApprovalsPage() {
                 amount: tx.amount,
                 transactionId: txId,
                 paidAt: serverTimestamp(),
-                approvedBy: session?.uid,
+                approvedBy: session?.uid || null,
               });
             } else {
               await updateDoc(doc(db, 'jobcenter_salary_records', salarySnap.docs[0].id), {

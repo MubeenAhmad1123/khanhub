@@ -127,7 +127,7 @@ export default function RegisterSeekerPage() {
       const seekerData: Omit<JobSeeker, 'id'> = {
         name,
         fatherName,
-        email: email || undefined,
+        email: email || null,
         age: Number(age),
         dateOfBirth,
         gender: gender as any,

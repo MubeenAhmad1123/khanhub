@@ -270,7 +270,7 @@ export default function SeekerDetailPage() {
       await addDoc(collection(db, 'jobcenter_transactions'), {
         type: 'income',
         amount,
-        category: 'fee',
+        category: 'seeker_fee',
         categoryName: 'Admission / Fees',
         departmentCode: 'job-center',
         departmentName: 'Job Center',
@@ -320,7 +320,7 @@ export default function SeekerDetailPage() {
       await addDoc(collection(db, 'jobcenter_transactions'), {
         type: 'income',
         amount,
-        category: 'fee',
+        category: 'seeker_fee',
         categoryName: 'Admission / Fees',
         departmentCode: 'job-center',
         departmentName: 'Job Center',
