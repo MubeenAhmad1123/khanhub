@@ -44,6 +44,7 @@ import {
 
 // Define unified icons for tasks
 import { Sparkles, Save, X } from 'lucide-react';
+import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS } from '@/data/hqConfig';
 
 interface Staff {
   id?: string;
@@ -81,6 +82,20 @@ function formatStaffDate(input: any): string {
   return formatDateDMY(input);
 }
 
+function calculateDutyHours(start: string, end: string) {
+  if (!start || !end) return { total: '0.0', text: '0h 0m' };
+  const [sH, sM] = start.split(':').map(Number);
+  const [eH, eM] = end.split(':').map(Number);
+  let totalMinutes = (eH * 60 + eM) - (sH * 60 + sM);
+  if (totalMinutes < 0) totalMinutes += 24 * 60; // Handle overnight shifts
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return { 
+    total: (totalMinutes / 60).toFixed(1),
+    text: `${hours}h ${minutes}m`
+  };
+}
+
 export default function StaffProfilePage() {
   const router = useRouter();
   const params = useParams();
@@ -88,7 +103,7 @@ export default function StaffProfilePage() {
   const { session, loading: sessionLoading } = useHqSession();
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll'>('edit');
+  const [activeTab, setActiveTab] = useState<'profile' | 'overview' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -254,22 +269,16 @@ export default function StaffProfilePage() {
         getDocs(query(collection(db, `${prefix}_growth_points`), where('staffId', '==', uid), limit(1))).catch(e => { console.error('points fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_salary_records`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('salary fail', e); return { docs: [] } as any; }),
         getDocs(query(collection(db, `${prefix}_special_tasks`), where('staffId', '==', uid), orderBy('createdAt', 'desc'))).catch(e => { console.error('tasks fail', e); return { docs: [] } as any; }),
-        getDoc(doc(db, `${prefix}_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
+        getDoc(doc(db, `hq_meta`, 'config')).catch(e => { console.error('meta fail', e); return { exists: () => false } as any; })
       ]);
 
       const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
       setAvailableDuties([
-        { key: 'attendance_portal', label: 'Attendance Entry' },
-        { key: 'patient_vitals', label: 'Patient Vitals' },
-        { key: 'ward_round', label: 'Ward Round' },
-        { key: 'cleanliness', label: 'Area Cleanliness' },
+        ...GLOBAL_DUTIES.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
         ...(metaData.customDuties || [])
       ]);
       setAvailableDress([
-        { key: 'pant', label: 'Dress Pant' },
-        { key: 'shirt', label: 'Uniform Shirt' },
-        { key: 'shoes', label: 'Black Shoes' },
-        { key: 'id_card', label: 'ID Card' },
+        ...GLOBAL_DRESS_ITEMS.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
         ...(metaData.customDress || [])
       ]);
 
@@ -317,10 +326,9 @@ export default function StaffProfilePage() {
       const key = label.toLowerCase().replace(/\s+/g, '_');
       newItem = { key, label };
 
-      // Save backend to `_meta/config`
+      // Save backend to `hq_meta/config`
       try {
-        const slug = getDeptPrefix(staff.dept);
-        const metaRef = doc(db, `${slug}_meta`, 'config');
+        const metaRef = doc(db, `hq_meta`, 'config');
         const metaDoc = await getDoc(metaRef);
         const field = type === 'duty' ? 'customDuties' : 'customDress';
         const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
@@ -1031,7 +1039,8 @@ export default function StaffProfilePage() {
             <div className={`p-1 rounded-[1.2rem] md:rounded-[1.5rem] border flex flex-wrap items-center justify-center gap-1 transition-colors ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100'
               }`}>
               {[
-                { id: 'edit', label: 'Profile', icon: <User size={12} /> },
+                { id: 'profile', label: 'View Profile', icon: <User size={12} /> },
+                { id: 'edit', label: 'Edit Profile', icon: <Lock size={12} /> },
                 { id: 'overview', label: 'Actions', icon: <Activity size={12} /> },
                 { id: 'attendance', label: 'Attendance', icon: <Calendar size={12} /> },
                 { id: 'payroll', label: 'Payroll', icon: <DollarSign size={12} /> },
@@ -1053,6 +1062,102 @@ export default function StaffProfilePage() {
             </div>
 
             {/* Panels */}
+            {activeTab === 'profile' && (
+              <div className="space-y-6 animate-in fade-in duration-500">
+                <div className={`rounded-[2.5rem] p-10 border transition-all ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className="flex items-center justify-between mb-10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                        <User size={24} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black uppercase tracking-tight">Staff Information Card</h3>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Public profile details</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setActiveTab('edit')} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isDark ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}>
+                      Request Update
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Full Identity Name</p>
+                      <p className="text-sm font-black">{staff?.name || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Professional Designation</p>
+                      <p className="text-sm font-black">{staff?.designation || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Primary Department</p>
+                      <p className="text-sm font-black uppercase">{staff?.dept || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Contact Phone</p>
+                      <p className="text-sm font-black">{staff?.phone || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Gender Identification</p>
+                      <p className="text-sm font-black capitalize">{staff?.gender || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Blood Group</p>
+                      <p className="text-sm font-black uppercase">{staff?.bloodGroup || '—'}</p>
+                    </div>
+                  </div>
+
+                  <div className={`mt-10 p-8 rounded-3xl border border-dashed flex flex-col md:flex-row items-center justify-between gap-6 ${isDark ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                        <Clock size={28} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Calculated Shift Duration</p>
+                        <h4 className="text-2xl font-[1000] tracking-tighter text-emerald-700 dark:text-emerald-400">
+                          {calculateDutyHours(staff?.dutyStartTime || '09:00', staff?.dutyEndTime || '17:00').text}
+                        </h4>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-8">
+                       <div className="text-center">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duty In</p>
+                          <p className="text-sm font-black">{staff?.dutyStartTime || '09:00'}</p>
+                       </div>
+                       <div className="w-px h-8 bg-emerald-500/20" />
+                       <div className="text-center">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duty Out</p>
+                          <p className="text-sm font-black">{staff?.dutyEndTime || '17:00'}</p>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                        <Shield size={14} className="text-indigo-500" /> Active Dress Code
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                         {staff?.dressCodeConfig?.length ? staff.dressCodeConfig.map(i => (
+                           <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
+                         )) : <p className="text-xs text-gray-400 italic">No configuration found</p>}
+                      </div>
+                   </div>
+                   <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                        <ClipboardList size={14} className="text-teal-500" /> Operational Duties
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                         {staff?.dutyConfig?.length ? staff.dutyConfig.map(i => (
+                           <span key={i.key} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-gray-50 border-gray-100'}`}>{i.label}</span>
+                         )) : <p className="text-xs text-gray-400 italic">No configuration found</p>}
+                      </div>
+                   </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'overview' && (
               <div className="space-y-6">
 
@@ -1164,12 +1269,7 @@ export default function StaffProfilePage() {
 
                       <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Operational Duties</h4>
                       <div className="space-y-2">
-                        {(staff?.dutyConfig?.length ? staff.dutyConfig : [
-                          { key: 'attendance_portal', label: 'Attendance Entry' },
-                          { key: 'patient_vitals', label: 'Patient Vitals' },
-                          { key: 'ward_round', label: 'Ward Round' },
-                          { key: 'cleanliness', label: 'Area Cleanliness' }
-                        ]).map((duty: any) => {
+                        {(staff?.dutyConfig?.length ? staff.dutyConfig : GLOBAL_DUTIES.slice(0, 4).map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d }))).map((duty: any) => {
                           const dayRecord = dutyMap[todayStr];
                           const status = dayRecord?.duties?.find((i: any) => i.key === duty.key)?.status || 'na';
                           return (
@@ -1440,12 +1540,7 @@ export default function StaffProfilePage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(staff?.dressCodeConfig?.length ? staff.dressCodeConfig : [
-                          { key: 'pant', label: 'Dress Pant' },
-                          { key: 'shirt', label: 'Uniform Shirt' },
-                          { key: 'shoes', label: 'Black Shoes' },
-                          { key: 'id_card', label: 'ID Card' }
-                        ]).map((dress: { key: string; label: string }) => (
+                        {(staff?.dressCodeConfig?.length ? staff.dressCodeConfig : GLOBAL_DRESS_ITEMS.slice(0, 4).map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d }))).map((dress: { key: string; label: string }) => (
                           <tr key={dress.key} className="border-t border-zinc-800/10">
                             <td className="sticky left-0 z-10 bg-inherit pr-8 py-6 text-left">
                               <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{dress.label}</span>
@@ -1494,12 +1589,7 @@ export default function StaffProfilePage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(staff?.dutyConfig?.length ? staff.dutyConfig : [
-                          { key: 'attendance_portal', label: 'Attendance Entry' },
-                          { key: 'patient_vitals', label: 'Patient Vitals' },
-                          { key: 'ward_round', label: 'Ward Round' },
-                          { key: 'cleanliness', label: 'Area Cleanliness' }
-                        ]).map((duty: { key: string; label: string }) => (
+                        {(staff?.dutyConfig?.length ? staff.dutyConfig : GLOBAL_DUTIES.slice(0, 4).map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d }))).map((duty: { key: string; label: string }) => (
                           <tr key={duty.key} className="border-t border-zinc-800/10">
                             <td className="sticky left-0 z-10 bg-inherit pr-8 py-6 text-left">
                               <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{duty.label}</span>
@@ -1823,7 +1913,12 @@ export default function StaffProfilePage() {
                       </div>
                       <div>
                         <h4 className="text-sm font-black uppercase tracking-widest">Shift Timing</h4>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Operational Hours</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                          Operational Hours — 
+                          <span className="text-emerald-500 ml-1">
+                            {calculateDutyHours(editForm.dutyStartTime, editForm.dutyEndTime).text} total
+                          </span>
+                        </p>
                       </div>
                     </div>
 

@@ -68,6 +68,7 @@ import { createRehabUserServer, createStaffMemberServer } from '@/app/department
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import toast from 'react-hot-toast';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
+import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS, UNIFORM_RULES } from '@/data/hqConfig';
 
 type TabType = 'admin' | 'staff' | 'client';
 
@@ -83,45 +84,9 @@ const DEPARTMENTS = [
   { id: 'it' as StaffDept, name: 'IT Department', fullName: 'IT Department', icon: ShieldCheck, color: 'indigo', emailDomain: '@it.khanhub', prefix: 'IT' },
 ];
 
-const COMMON_DUTIES = [
-  "Morning Prayer Supervision", "Fajar Wake-up Round", "Medication Distribution (Morning)",
-  "Medication Distribution (Night)", "Meal Supervision (Breakfast)", "Meal Supervision (Lunch)",
-  "Meal Supervision (Dinner)", "Patient Activity Monitoring", "Counselling Session Support",
-  "Vital Signs Check", "Night Security Round", "Gate/Entry Management",
-  "Cleaning Supervision", "Visitor Management"
-];
-
 const DOCUMENT_TYPES = [
   "CNIC Copy (Front)", "CNIC Copy (Back)", "Educational Certificate",
   "Medical Certificate", "Police Clearance", "Contract/Agreement", "Other"
-];
-
-const UNIFORM_RULES: Record<string, string[]> = {
-  'hospital_male_doctor': ['ID Card'],
-  'hospital_female_doctor': ['ID Card'],
-  'hospital_male_staff': ['Black OT Kit', 'White Overall', 'Shoes', 'ID Card'],
-  'hospital_female_staff': ['Black OT Kit', 'White Overall', 'Shoes', 'ID Card', 'Hijab'],
-  'spims_male_teacher': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'White Overall', 'ID Card'],
-  'spims_female_teacher': ['White Overall', 'ID Card'],
-  'rehab_male_admin': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'rehab_female_doctor': ['White Overall', 'ID Card', 'Shoes'],
-  'rehab_male_reception': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'rehab_female_reception': ['Black OT Kit', 'Hijab', 'White Overall', 'Shoes', 'ID Card'],
-  'rehab_male_security': ['Security Uniform', 'Shoes', 'ID Card', 'Security Cap'],
-  'rehab_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'sukoon-center_female_admin': ['ID Card'],
-  'sukoon-center_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'social-media_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'it_male_default': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'welfare_male_admin': ['ID Card'],
-  'hq_male_cashier': ['Dress Pant', 'Dress Shirt', 'Tie', 'Shoes', 'ID Card'],
-  'security_male_default': ['Security Uniform', 'Shoes', 'ID Card', 'Security Cap', 'Torch', 'Whistle'],
-  'security_female_default': ['ID Card'],
-};
-
-const ALL_DRESS_ITEMS = [
-  'Dress Pant', 'Dress Shirt', 'Tie', 'ID Card', 'Shoes', 'White Overall',
-  'Black OT Kit', 'Hijab', 'Lab Coat', 'Security Uniform', 'Security Cap', 'Torch', 'Whistle'
 ];
 
 const DEFAULT_DUTY_TIMES: Record<string, { start: string; end: string }> = {
@@ -184,8 +149,8 @@ export default function ManagerUsersPage() {
     salary: '',
     dutyStartTime: '08:00',
     dutyEndTime: '20:00',
-    duties: [] as string[],
-    dressCode: [] as string[],
+    dutyConfig: [] as { key: string; label: string }[],
+    dressCodeConfig: [] as { key: string; label: string }[],
     documents: [] as { type: string, url: string, name: string }[],
     createAccount: true,
     patientId: '',
@@ -250,32 +215,28 @@ export default function ManagerUsersPage() {
     fetchCounts();
   }, [session, formData.department, activeTab]);
 
-  // Fetch departmental meta config
+  // Fetch global HQ meta config
   useEffect(() => {
     const fetchMeta = async () => {
-      const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-      if (!deptDetails) return;
-      
-      const slug = getDeptPrefix(deptDetails.id);
       try {
-        const metaDoc = await getDoc(doc(db, `${slug}_meta`, 'config'));
+        const metaDoc = await getDoc(doc(db, `hq_meta`, 'config'));
         const metaData = metaDoc.exists() ? metaDoc.data() : { customDuties: [], customDress: [] };
         
         setAvailableDuties([
-          ...COMMON_DUTIES.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
+          ...GLOBAL_DUTIES.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
           ...(metaData.customDuties || [])
         ]);
         
         setAvailableDress([
-          ...ALL_DRESS_ITEMS.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
+          ...GLOBAL_DRESS_ITEMS.map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d })),
           ...(metaData.customDress || [])
         ]);
       } catch (err) {
-        console.error("Error fetching meta config:", err);
+        console.error("Error fetching global meta config:", err);
       }
     };
     fetchMeta();
-  }, [formData.department]);
+  }, []);
 
   const handleAddConfig = async () => {
     if (!addingConfig) return;
@@ -290,30 +251,31 @@ export default function ManagerUsersPage() {
        const key = label.toLowerCase().replace(/\s+/g, '_');
        newItem = { key, label };
 
-       // Save to DB globally
+       // Save to DB globally (hq_meta)
        try {
-         const deptDetails = DEPARTMENTS.find(d => d.id === formData.department);
-         if (deptDetails) {
-           const slug = getDeptPrefix(deptDetails.id);
-           const metaRef = doc(db, `${slug}_meta`, 'config');
-           const metaDoc = await getDoc(metaRef);
-           const field = type === 'duty' ? 'customDuties' : 'customDress';
-           const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
-           if (!existing.find((e: any) => e.key === key)) {
-              await setDoc(metaRef, { [field]: [...existing, newItem] }, { merge: true });
-           }
+         const metaRef = doc(db, `hq_meta`, 'config');
+         const metaDoc = await getDoc(metaRef);
+         const field = type === 'duty' ? 'customDuties' : 'customDress';
+         const existing = metaDoc.exists() ? (metaDoc.data()[field] || []) : [];
+         if (!existing.find((e: any) => e.key === key)) {
+            await setDoc(metaRef, { [field]: [...existing, newItem] }, { merge: true });
+            toast.success(`${type === 'duty' ? 'Duty' : 'Dress Item'} stored globally!`);
+            
+            // Update local available list immediately
+            if (type === 'duty') setAvailableDuties(prev => [...prev, newItem!]);
+            else setAvailableDress(prev => [...prev, newItem!]);
          }
        } catch (err) { console.error(err); }
     }
 
     if (newItem) {
       if (type === 'duty') {
-        if (!formData.duties.includes(newItem.label)) {
-          setFormData(prev => ({ ...prev, duties: [...prev.duties, newItem!.label] }));
+        if (!formData.dutyConfig.find(d => d.key === newItem!.key)) {
+          setFormData(prev => ({ ...prev, dutyConfig: [...prev.dutyConfig, newItem!] }));
         }
       } else {
-        if (!formData.dressCode.includes(newItem.label)) {
-          setFormData(prev => ({ ...prev, dressCode: [...prev.dressCode, newItem!.label] }));
+        if (!formData.dressCodeConfig.find(d => d.key === newItem!.key)) {
+          setFormData(prev => ({ ...prev, dressCodeConfig: [...prev.dressCodeConfig, newItem!] }));
         }
       }
     }
@@ -376,10 +338,19 @@ export default function ManagerUsersPage() {
     const key = getDressCodeKey(formData.department, formData.gender, formData.designation);
     const suggested = UNIFORM_RULES[key] ||
       (formData.gender === 'male'
-        ? ['Dress Pant', 'Dress Shirt', 'Tie', 'ID Card', 'Shoes']
-        : ['ID Card', 'Shoes']);
+        ? [
+            { key: 'dress_pant', label: 'Dress Pant' },
+            { key: 'dress_shirt', label: 'Dress Shirt' },
+            { key: 'tie', label: 'Tie' },
+            { key: 'id_card', label: 'ID Card' },
+            { key: 'shoes', label: 'Shoes' }
+          ]
+        : [
+            { key: 'id_card', label: 'ID Card' },
+            { key: 'shoes', label: 'Shoes' }
+          ]);
 
-    setFormData(prev => ({ ...prev, dressCode: suggested }));
+    setFormData(prev => ({ ...prev, dressCodeConfig: suggested }));
   }, [formData.department, formData.gender, formData.designation]);
 
   const validateCustomId = (id: string) => /^[a-zA-Z0-9_-]{3,15}$/.test(id);
@@ -521,8 +492,8 @@ export default function ManagerUsersPage() {
         salary: Number(formData.salary) || 0,
         dutyStartTime: formData.dutyStartTime,
         dutyEndTime: formData.dutyEndTime,
-        duties: formData.duties,
-        dressCode: formData.dressCode,
+        dutyConfig: formData.dutyConfig,
+        dressCodeConfig: formData.dressCodeConfig,
         documents: formData.documents,
         loginUserId: loginUserId,
         isActive: true,
@@ -545,7 +516,7 @@ export default function ManagerUsersPage() {
       setFormData(prev => ({
         ...prev,
         firstName: '', lastName: '', password: '', photoUrl: '', phone: '', cnic: '', dateOfBirth: '',
-        designation: '', salary: '', duties: [], documents: [], patientId: '',
+        designation: '', salary: '', dutyConfig: [], dressCodeConfig: [], documents: [], patientId: '',
         userId: '', employeeId: ''
       }));
 
@@ -1190,18 +1161,18 @@ export default function ManagerUsersPage() {
                                </div>
                              )}
 
-                            {formData.duties.map(duty => (
+                            {formData.dutyConfig.map(duty => (
                               <button
-                                key={duty}
+                                key={duty.key}
                                 onClick={() => {
                                   setFormData({
                                     ...formData,
-                                    duties: formData.duties.filter(d => d !== duty)
+                                    dutyConfig: formData.dutyConfig.filter(d => d.key !== duty.key)
                                   });
                                 }}
                                 className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-500/30"
                               >
-                                {duty}
+                                {duty.label}
                               </button>
                             ))}
                           </div>
@@ -1263,13 +1234,13 @@ export default function ManagerUsersPage() {
                            </div>
                          )}
 
-                        {formData.dressCode.map((item) => (
+                        {formData.dressCodeConfig.map((item) => (
                             <button
-                              key={item}
+                              key={item.key}
                               onClick={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  dressCode: prev.dressCode.filter(i => i !== item)
+                                  dressCodeConfig: prev.dressCodeConfig.filter(i => i.key !== item.key)
                                 }));
                               }}
                               className="flex items-center gap-3 px-5 py-3 rounded-2xl border border-orange-500/30 bg-orange-500/10 text-orange-600 transition-all"
@@ -1277,7 +1248,7 @@ export default function ManagerUsersPage() {
                               <div className="w-5 h-5 rounded-lg flex items-center justify-center bg-orange-500 text-white">
                                 <CheckCircle size={12} />
                               </div>
-                              <span className="text-[10px] font-black uppercase tracking-widest">{item}</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
                             </button>
                         ))}
                       </div>

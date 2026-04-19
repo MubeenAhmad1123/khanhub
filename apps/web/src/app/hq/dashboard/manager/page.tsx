@@ -260,13 +260,23 @@ export default function ManagerOverviewPage() {
           <h1 className="text-3xl font-[1000] tracking-tight bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent">Manager Overview</h1>
           <p className="text-gray-500 text-sm font-medium mt-1">Global Departmental Oversight & Real-time Metrics</p>
         </div>
-        <div className={`flex items-center gap-4 px-4 py-2 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Connected Live</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <Link 
+            href="/hq/dashboard/manager/reports/daily"
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-lg hover:-translate-y-1 ${
+              isDark ? 'bg-zinc-100 text-black hover:bg-white' : 'bg-gray-900 text-white hover:bg-black shadow-gray-200'
+            }`}
+          >
+            <TrendingUp size={18} /> Generate Today's Report
+          </Link>
+          <div className={`flex items-center gap-4 px-4 py-2 rounded-2xl border ${isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Connected Live</p>
+            </div>
+            <div className="w-px h-4 bg-gray-200" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
           </div>
-          <div className="w-px h-4 bg-gray-200" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
         </div>
       </div>
 
@@ -317,7 +327,7 @@ export default function ManagerOverviewPage() {
             }).map(s => (
               <div key={s.id} className={`p-4 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-zinc-800/50 border-zinc-700/50 hover:bg-zinc-800' : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:shadow-lg'}`}>
                 <Link 
-                  href={`/hq/dashboard/manager/staff/${s.id}?dept=${s.department}`} 
+                  href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} 
                   className="flex items-center gap-3 hover:opacity-75 transition-opacity"
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs uppercase
@@ -397,7 +407,7 @@ export default function ManagerOverviewPage() {
                       {attMap.get(s.id)}
                     </span>
                   )}
-                  <Link href={`/hq/dashboard/manager/staff/${s.id}?dept=${s.department}`} className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
+                  <Link href={`/hq/dashboard/manager/staff/${s.department}_${s.id}`} className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
                     <ArrowRight size={14} />
                   </Link>
                 </div>
