@@ -12,6 +12,8 @@ import { StatCard } from '@/components/hq/superadmin/StatCard';
 import { InlineLoading } from '@/components/hq/superadmin/DataState';
 import { ActivityDetailModal } from '@/components/hq/superadmin/ActivityDetailModal';
 import { ClientsFlowModal } from '@/components/hq/superadmin/ClientsFlowModal';
+import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
+import { auth } from '@/lib/firebase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -69,7 +71,16 @@ export default function HqSuperadminPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || session.role !== 'superadmin') router.push('/hq/login');
+    if (!session || session.role !== 'superadmin') {
+      router.push('/hq/login');
+      return;
+    }
+    // Whitelist check — verify the logged-in Firebase user's email
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !isSuperadminEmail(firebaseUser.email)) {
+      console.warn('[Superadmin] Email not in whitelist, redirecting.');
+      router.push('/hq/login');
+    }
   }, [sessionLoading, session, router]);
 
   useEffect(() => {

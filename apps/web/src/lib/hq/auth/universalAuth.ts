@@ -10,6 +10,7 @@ import {
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
+import { isSuperadminEmail } from './superadminWhitelist';
 
 export interface DepartmentAuthInfo {
   id: string;
@@ -305,6 +306,22 @@ export async function loginUniversal(customId: string, password: string, deptHin
 
     // 2. Security checks
     if (finalData.isActive === false) return { success: false, error: 'Your account is currently inactive.' };
+
+    // Block superadmin login via ID/Password — only Google (whitelist) is allowed
+    if (dept.id === 'hq' && finalData.role === 'superadmin') {
+      return {
+        success: false,
+        error: 'HQ Superadmin access requires Google Sign-in. Please use the "Continue with Google" button at khanhub.com.pk/auth/signin',
+      };
+    }
+
+    // Block any non-whitelisted email from claiming superadmin role via ID/pass
+    if (finalData.role === 'superadmin' && finalData.email && !isSuperadminEmail(finalData.email)) {
+      return {
+        success: false,
+        error: 'Unauthorized superadmin access attempt.',
+      };
+    }
 
     // 3. Set Local Session
     const session = {
