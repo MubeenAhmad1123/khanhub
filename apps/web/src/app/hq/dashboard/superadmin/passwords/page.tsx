@@ -377,6 +377,86 @@ export default function HqPasswordsPage() {
             </div>
           )}
         </div>
+
+        {/* Mobile Credentials List */}
+        <div className="md:hidden flex flex-col gap-4">
+          {filtered.map((u) => (
+            <div key={u.id} className="p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black shadow-sm flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-[1.25rem] flex items-center justify-center font-black text-sm bg-black dark:bg-white text-white dark:text-black shadow-sm shrink-0">
+                  {u.name.charAt(0)}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-black text-black dark:text-white uppercase tracking-tight">{u.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{PORTAL_LABELS[u.portal]}</span>
+                    <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{u.role}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-3 p-4 rounded-[1.5rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Access ID</span>
+                  <div className="flex items-center gap-2 font-black text-[10px] text-gray-600 dark:text-gray-300 uppercase tracking-widest">
+                    <Shield size={12} className="opacity-40" />
+                    {u.customId}
+                  </div>
+                </div>
+                <div className="h-px w-full bg-gray-100 dark:bg-white/5" />
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Key</span>
+                  <div className="flex items-center gap-2 group">
+                    <span className="font-mono text-xs font-black tracking-widest text-black dark:text-white">
+                      {visiblePasswords[u.id] ? u.password : '••••••••'}
+                    </span>
+                    <button
+                      onClick={() => togglePassword(u.id)}
+                      className="p-2 rounded-xl bg-white dark:bg-black border border-gray-100 dark:border-white/10 text-gray-400 hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm"
+                    >
+                      {visiblePasswords[u.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button
+                  onClick={() => copyToClipboard(u.id, u.customId, u.password)}
+                  className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm ${
+                    copiedId === u.id
+                      ? 'bg-black text-white dark:bg-white dark:text-black'
+                      : 'bg-black text-white dark:bg-white dark:text-black hover:scale-105'
+                  }`}
+                >
+                  {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedId === u.id ? 'Secured' : 'Extract'}
+                </button>
+                <button
+                  onClick={() => handleLogout(u)}
+                  disabled={loggingOutId === u.id}
+                  className="flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-rose-100 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 text-[9px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {loggingOutId === u.id ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
+                  Logout
+                </button>
+                <button
+                  onClick={() => handleResetPassword(u)}
+                  disabled={resettingId === u.id}
+                  className="col-span-2 flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-black text-[9px] font-black uppercase tracking-widest text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {resettingId === u.id ? <Loader2 size={14} className="animate-spin" /> : 'Reset Password'}
+                </button>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className={`p-10 rounded-[2rem] text-center border border-gray-100 dark:border-white/10 ${darkMode ? 'bg-white/[0.02]' : 'bg-slate-50/50'}`}>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-30">No Matching Nodes</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
