@@ -8,9 +8,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { loginUniversal } from '@/lib/hq/auth/universalAuth';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
+import { provisionSuperadminAndSetSession } from '@/app/hq/actions/auth';
 import { Info, Lock, User as UserIcon, Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function SignInPage() {
@@ -55,46 +53,27 @@ export default function SignInPage() {
 
             // ── Superadmin whitelist check ──────────────────────────────
             if (isSuperadminEmail(firebaseUser.email)) {
-                // This is a whitelisted superadmin — provision HQ session
-                const userRef = doc(db, 'hq_users', firebaseUser.uid);
-                const userSnap = await getDoc(userRef);
+                // Get ID token and provision via Server Action (bypasses Firestore rules)
+                const idToken = await firebaseUser.getIdToken();
+                const result = await provisionSuperadminAndSetSession(idToken);
 
-                let finalData: Record<string, any>;
-                if (!userSnap.exists()) {
-                    finalData = {
-                        name: firebaseUser.displayName || 'Super Admin',
-                        email: firebaseUser.email,
-                        role: 'superadmin',
-                        isActive: true,
-                        photoUrl: firebaseUser.photoURL,
-                        createdAt: new Date().toISOString(),
-                        customId: 'SUPER-ADMIN',
-                    };
-                    await setDoc(userRef, finalData);
-                } else {
-                    finalData = userSnap.data();
-                    // Ensure role is superadmin in Firestore
-                    if (finalData.role !== 'superadmin') {
-                        await updateDoc(userRef, { role: 'superadmin' });
-                        finalData.role = 'superadmin';
-                    }
+                if (!result.success) {
+                    toast.error(result.error || 'Failed to set up admin session.');
+                    return;
                 }
 
-                // Set local HQ session
+                // Set local HQ session from what the server returned
                 const session = {
                     uid: firebaseUser.uid,
-                    customId: finalData.customId || 'SUPER-ADMIN',
-                    name: finalData.name,
+                    customId: result.session?.customId || 'SUPER-ADMIN',
+                    name: result.session?.name || firebaseUser.displayName || 'Super Admin',
                     role: 'superadmin',
                     loginTime: Date.now(),
-                    ...finalData,
+                    email: firebaseUser.email,
+                    photoUrl: firebaseUser.photoURL,
                 };
                 localStorage.setItem('hq_session', JSON.stringify(session));
                 localStorage.setItem('hq_login_time', Date.now().toString());
-
-                // Set server-side HQ cookie
-                const idToken = await firebaseUser.getIdToken();
-                await setHqSessionCookieFromIdToken(idToken);
 
                 toast.success('Welcome, Super Admin!');
                 window.location.href = '/hq/dashboard/superadmin';
