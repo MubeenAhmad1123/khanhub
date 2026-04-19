@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { formatDateDMY } from '@/lib/utils';
 import { 
   Heart, Plus, Search, ChevronRight, User, Calendar, Loader2, 
-  Phone, DollarSign, CheckCircle, AlertCircle, X
+  Phone, DollarSign, CheckCircle, AlertCircle, X, Filter
 } from 'lucide-react';
 import { Patient } from '@/types/rehab';
 
@@ -29,6 +29,8 @@ export default function PatientsListPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [allPatients, setAllPatients] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [sortMethod, setSortMethod] = useState<string>('newest'); // 'newest' | 'oldest' | 'admission_desc' | 'admission_asc'
+  const [yearFilter, setYearFilter] = useState<string>('all');
 
   useEffect(() => {
     const sessionData = localStorage.getItem('rehab_session');
@@ -74,8 +76,8 @@ export default function PatientsListPage() {
         const pFees = feesMap[d.id] || [];
         const pCanteen = canteenMap[d.id] || [];
         
-        // Dynamic calculation based on days since admission
-        const dailyRate = Math.round(Number(data.monthlyPackage || data.packageAmount || 0) / 30);
+        const pkgAmount = Number(data.monthlyPackage) || Number(data.packageAmount) || 0;
+        const dailyRate = Math.round(pkgAmount / 30);
         const daysSinceAdmission = Math.max(0, Math.floor((Date.now() - admissionDate.getTime()) / (1000 * 60 * 60 * 24)));
         const totalDueTillDate = dailyRate * daysSinceAdmission;
         
@@ -88,8 +90,8 @@ export default function PatientsListPage() {
 
         const remaining = totalDueTillDate - totalReceived;
 
-        const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (c.totalDeposited || 0), 0);
-        const totalCanteenSpent = pCanteen.reduce((a, c) => a + (c.totalSpent || 0), 0);
+        const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (Number(c.totalDeposited) || 0), 0);
+        const totalCanteenSpent = pCanteen.reduce((a, c) => a + (Number(c.totalSpent) || 0), 0);
         const canteenBalance = totalCanteenDeposited - totalCanteenSpent;
 
         const months = Math.floor(daysSinceAdmission / 30);
@@ -104,22 +106,21 @@ export default function PatientsListPage() {
           fatherName: data.fatherName || '',
           photoUrl: data.photoUrl || null,
           admissionDate,
-          monthlyPackage: Number(data.monthlyPackage || data.packageAmount) || 0,
+          monthlyPackage: pkgAmount,
           inpatientNumber: data.inpatientNumber || '',
-          serialNumber: data.serialNumber || 0,
+          serialNumber: Number(data.serialNumber) || 0,
           substanceOfAddiction: data.substanceOfAddiction || '',
           isActive: data.isActive !== false,
           contactNumber: data.contactNumber || '',
-          remaining,
-          canteenBalance,
+          remaining: Number.isNaN(remaining) ? 0 : remaining,
+          canteenBalance: Number.isNaN(canteenBalance) ? 0 : canteenBalance,
           totalPkg: totalDueTillDate,
           totalReceived,
           daysSinceAdmission,
           durationFormatted,
           createdAt: toDate(data.createdAt),
         };
-      })
-      .sort((a, b) => b.serialNumber - (a.serialNumber || 0));
+      });
 
       setPatients(all);
       setAllPatients(all);
@@ -153,16 +154,31 @@ export default function PatientsListPage() {
     );
   }
 
-  const filteredPatients = patients.filter(p => {
+  const availableYears = Array.from(new Set(patients.map(p => p.admissionDate.getFullYear()))).sort((a, b) => b - a);
+
+  let filteredPatients = patients.filter(p => {
     if (statusFilter === 'active' && !p.isActive) return false;
     if (statusFilter === 'discharged' && p.isActive) return false;
-    const s = searchQuery.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(s) ||
-      p.inpatientNumber.toLowerCase().includes(s) ||
-      p.substanceOfAddiction.toLowerCase().includes(s) ||
-      p.fatherName.toLowerCase().includes(s)
-    );
+    if (yearFilter !== 'all' && p.admissionDate.getFullYear().toString() !== yearFilter) return false;
+    
+    if (searchQuery) {
+      const s = searchQuery.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(s) ||
+        p.inpatientNumber.toLowerCase().includes(s) ||
+        p.substanceOfAddiction.toLowerCase().includes(s) ||
+        p.fatherName.toLowerCase().includes(s)
+      );
+    }
+    return true;
+  });
+
+  filteredPatients.sort((a, b) => {
+    if (sortMethod === 'newest') return b.createdAt.getTime() - a.createdAt.getTime();
+    if (sortMethod === 'oldest') return a.createdAt.getTime() - b.createdAt.getTime();
+    if (sortMethod === 'admission_desc') return b.admissionDate.getTime() - a.admissionDate.getTime();
+    if (sortMethod === 'admission_asc') return a.admissionDate.getTime() - b.admissionDate.getTime();
+    return b.serialNumber - a.serialNumber;
   });
 
   const totalActive = patients.filter(p => p.isActive).length;
@@ -272,20 +288,49 @@ export default function PatientsListPage() {
             )}
           </div>
 
-          <div className="flex gap-2 p-1.5 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm">
-            {['all', 'active', 'discharged'].map(f => (
-              <button
-                key={f}
-                onClick={() => setStatusFilter(f)}
-                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                  statusFilter === f 
-                    ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/10' 
-                    : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:items-center">
+            <div className="flex gap-2 p-1.5 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm">
+              {['all', 'active', 'discharged'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setStatusFilter(f)}
+                  className={`px-4 sm:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                    statusFilter === f 
+                      ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/10' 
+                      : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2 flex-1 sm:flex-none">
+              <select 
+                value={yearFilter}
+                onChange={e => setYearFilter(e.target.value)}
+                className="bg-white border border-gray-100 rounded-xl px-4 py-2 text-xs font-black text-gray-600 uppercase tracking-widest shadow-sm outline-none focus:border-teal-500 cursor-pointer"
               >
-                {f}
-              </button>
-            ))}
+                <option value="all">All Years</option>
+                {availableYears.map(y => (
+                  <option key={y} value={y.toString()}>{y}</option>
+                ))}
+              </select>
+
+              <div className="relative flex-1 sm:flex-none flex items-center bg-white border border-gray-100 rounded-xl shadow-sm px-2">
+                <Filter className="w-3 h-3 text-gray-400 ml-2 absolute pointer-events-none" />
+                <select 
+                  value={sortMethod}
+                  onChange={e => setSortMethod(e.target.value)}
+                  className="w-full bg-transparent border-none rounded-xl pl-8 pr-4 py-2 text-xs font-black text-gray-600 uppercase tracking-widest outline-none cursor-pointer appearance-none"
+                >
+                  <option value="newest">Added: Newest</option>
+                  <option value="oldest">Added: Oldest</option>
+                  <option value="admission_desc">Admission: Latest</option>
+                  <option value="admission_asc">Admission: Oldest</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
