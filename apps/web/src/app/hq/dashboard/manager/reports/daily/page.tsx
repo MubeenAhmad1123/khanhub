@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { 
   FileText, ArrowLeft, Loader2, Search, Filter, 
   Calendar, CheckCircle, XCircle, Info, Download, 
-  Printer, TrendingUp, Shield, AlertTriangle
+  Printer, TrendingUp, Shield, AlertTriangle, Clock
 } from 'lucide-react';
 import { getDeptPrefix, getDeptCollection, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
@@ -142,7 +142,7 @@ export default function DailyReportPage() {
           attendance: att?.status || 'unmarked',
           uniformScore,
           dutyScore,
-          contributionScore,
+          contributionScore: contribScore,
           totalScore: attScore + uniformScore + dutyScore + contribScore,
           fines: totalFine,
           details: {
