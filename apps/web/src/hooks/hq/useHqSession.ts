@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import type { HqSession } from '@/types/hq';
 
 const SESSION_KEY = 'hq_session';
