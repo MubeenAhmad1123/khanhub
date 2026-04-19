@@ -132,7 +132,8 @@ export default function StaffProfilePage() {
     userId: '',
     dressCodeConfig: [] as { key: string; label: string }[],
     dutyConfig: [] as { key: string; label: string }[],
-    basicInfoExtras: {} as Record<string, string>
+    basicInfoExtras: {} as Record<string, string>,
+    joiningDate: ''
   });
 
   const [newExtraField, setNewExtraField] = useState({ key: '', value: '' });
@@ -252,7 +253,8 @@ export default function StaffProfilePage() {
         userId: profile.staffId || '',
         dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : []),
         dutyConfig: (profile.dutyConfig?.length ? profile.dutyConfig : []),
-        basicInfoExtras: profile.basicInfoExtras || {}
+        basicInfoExtras: profile.basicInfoExtras || {},
+        joiningDate: profile.joiningDate ? (typeof profile.joiningDate === 'string' ? profile.joiningDate.slice(0, 10) : new Date(profile.joiningDate).toISOString().slice(0, 10)) : ''
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────
@@ -1108,6 +1110,10 @@ export default function StaffProfilePage() {
                       <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Blood Group</p>
                       <p className="text-sm font-black uppercase">{staff?.bloodGroup || '—'}</p>
                     </div>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Joining Date</p>
+                      <p className="text-sm font-black uppercase">{staff?.joiningDate ? (typeof staff.joiningDate === 'string' ? staff.joiningDate.slice(0, 10) : new Date(staff.joiningDate).toISOString().slice(0, 10)) : '—'}</p>
+                    </div>
                   </div>
 
                   <div className={`mt-10 p-8 rounded-3xl border border-dashed flex flex-col md:flex-row items-center justify-between gap-6 ${isDark ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-emerald-50 border-emerald-100'}`}>
@@ -1788,16 +1794,27 @@ export default function StaffProfilePage() {
                       </div>
                     </div>
 
-                    {/* Row 2: CNIC / Passport (Full Width for clarity) */}
-                    <div>
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
-                      <input
-                        type="text"
-                        placeholder="00000-0000000-0"
-                        value={editForm.cnic}
-                        onChange={e => setEditForm({ ...editForm, cnic: e.target.value })}
-                        className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
-                      />
+                    {/* Row 2: CNIC / Passport & Joining Date */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">CNIC / Passport</label>
+                        <input
+                          type="text"
+                          placeholder="00000-0000000-0"
+                          value={editForm.cnic}
+                          onChange={e => setEditForm({ ...editForm, cnic: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2 mb-2 block">Joining Date</label>
+                        <input
+                          type="date"
+                          value={editForm.joiningDate}
+                          onChange={e => setEditForm({ ...editForm, joiningDate: e.target.value })}
+                          className={`w-full h-14 px-6 rounded-2xl text-sm font-black outline-none border-2 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white focus:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500'}`}
+                        />
+                      </div>
                     </div>
 
                     {/* Row 3: Blood Group & Emergency Contact */}

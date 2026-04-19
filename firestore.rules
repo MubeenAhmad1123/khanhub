@@ -232,7 +232,8 @@ service cloud.firestore {
     match /rehab_users/{uid} {
       allow read: if (request.auth != null
         && (request.auth.uid == uid || isRehabAdminOrAbove()))
-        || isDiscoveryQuery();
+        || isDiscoveryQuery()
+        || isHqSuperOrManager();
       allow create: if isRehabSuperAdmin() || isHqSuperOrManager();
       allow delete: if isRehabSuperAdmin() || isHqSuperOrManager();
       allow update: if (request.auth != null
@@ -1047,8 +1048,10 @@ service cloud.firestore {
     }
 
     match /sukoon_users/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid || isSukoonAdminOrAbove());
+      allow read: if (request.auth != null
+        && (request.auth.uid == uid || isSukoonAdminOrAbove()))
+        || isDiscoveryQuery()
+        || isHqSuperOrManager();
       allow create: if isSukoonSuperAdmin() || isHqSuperOrManager();
       allow delete: if isSukoonSuperAdmin() || isHqSuperOrManager();
       allow update: if (request.auth != null

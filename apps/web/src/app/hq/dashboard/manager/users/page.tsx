@@ -1051,6 +1051,10 @@ export default function ManagerUsersPage() {
                               className={`w-full h-14 px-5 rounded-2xl outline-none transition-all font-bold text-sm ${darkMode ? 'bg-white/5 focus:bg-white/10 border-white/5 focus:border-blue-500' : 'bg-gray-50 focus:bg-white border-gray-100 focus:border-blue-500'}`}
                             >
                               <option value="Worker">Worker / Junior</option>
+                              <option value="Internee Staff">Internee Staff</option>
+                              <option value="Trial Base Staff">Trial Base Staff</option>
+                              <option value="Contract Staff">Contract Staff</option>
+                              <option value="Volunteer">Volunteer</option>
                               <option value="Doctor">Doctor / Clinical</option>
                               <option value="Nurse">Medical Staff / Nurse</option>
                               <option value="Supervisor">Supervisor</option>
