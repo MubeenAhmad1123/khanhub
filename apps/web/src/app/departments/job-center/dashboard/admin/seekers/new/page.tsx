@@ -122,7 +122,15 @@ export default function RegisterSeekerPage() {
         photoUrl = await uploadToCloudinary(photoFile, 'khanhub/jobcenter/seekers');
       }
 
-      // 2. Create seeker document in Firestore
+      // 2. Generate Seeker Number
+      setSubmitStatus('Generating Seeker ID...');
+      const seekersQuery = query(collection(db, 'jobcenter_seekers'), orderBy('serialNumber', 'desc'), limit(1));
+      const seekersSnap = await getDocs(seekersQuery);
+      const lastSeeker = seekersSnap.docs[0]?.data();
+      const nextSerial = (lastSeeker?.serialNumber || 0) + 1;
+      const seekerNumber = `JC-S-${String(nextSerial).padStart(3, '0')}`;
+
+      // 3. Create seeker document in Firestore
       setSubmitStatus('Creating Job Seeker record...');
       const seekerData: Omit<JobSeeker, 'id'> = {
         name,
@@ -144,6 +152,8 @@ export default function RegisterSeekerPage() {
         notes: notes || null,
         isActive: true,
         loginId: loginId.toUpperCase(),
+        seekerNumber,
+        serialNumber: nextSerial,
         createdAt: Timestamp.now(),
       } as unknown as JobSeeker;
 
