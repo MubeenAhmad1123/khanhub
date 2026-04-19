@@ -688,7 +688,7 @@ export default function ChildDetailPage() {
               <img src={child.photoUrl} alt={child.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
             ) : (
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
-                {child.name.charAt(0).toUpperCase()}
+                {child.name?.charAt(0)?.toUpperCase() || '?'}
               </div>
             )}
           </div>

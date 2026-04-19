@@ -258,7 +258,7 @@ export default function SalarySlipsPage() {
                 <div key={member.id} style={{ animationDelay: `${index * 40}ms` }} className="animate-in fade-in duration-300 flex flex-col md:flex-row md:items-center justify-between gap-4 px-5 py-4 hover:bg-white/5 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-black text-sm flex-shrink-0">
-                      {member.name[0]}
+                      {member.name?.[0] || '?'}
                     </div>
                     <div>
                       <p className="text-white font-bold text-sm">{member.name}</p>
