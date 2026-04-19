@@ -58,23 +58,23 @@ export interface JobSeeker {
   // Basic Identity
   name: string;
   fatherName: string;
-  cnic?: string;
-  dateOfBirth?: string;            // "YYYY-MM-DD"
-  age?: number;
+  cnic?: string | null;
+  dateOfBirth?: string | null;            // "YYYY-MM-DD"
+  age?: number | null;
   gender: 'male' | 'female' | 'other';
-  photoUrl?: string;
-  email?: string;
-  maritalStatus?: string;
-  phone?: string;
+  photoUrl?: string | null;
+  email?: string | null;
+  maritalStatus?: string | null;
+  phone?: string | null;
 
   // Education & Skills
   education: string;               // e.g. "Matric", "Masters in CS"
   skills: string[];                // e.g. ["Driving", "Tailoring", "React"]
-  experience?: string;             // summary of work history
+  experience?: string | null;             // summary of work history
   
   // Job Preferences
   jobInterests: string[];          // what are they looking for?
-  expectedSalary?: string;
+  expectedSalary?: string | null;
   preferredJobTypes?: string[];
   availability: 'immediate' | '1_week' | '2_plus_weeks';
 
@@ -92,10 +92,10 @@ export interface JobSeeker {
   isActive: boolean;
   isEmployed: boolean;             // whether they found a job through us
   employedAt?: string;             // Employer ID if employed
-  loginId?: string;
-  notes?: string;
+  loginId?: string | null;
+  notes?: string | null;
   createdAt: Timestamp | Date;
-  createdBy?: string;               // admin uid
+  createdBy?: string | null;               // admin uid
 }
 
 // Legacy alias for Seeker
@@ -111,16 +111,16 @@ export interface Employer {
   companyName: string;
   industry: string;                // e.g. "IT", "Healthcare"
   address: string;
-  email?: string;
-  website?: string;
-  logoUrl?: string;
-  companySize?: string;            // e.g. "1-10", "11-50"
-  description?: string;
+  email?: string | null;
+  website?: string | null;
+  logoUrl?: string | null;
+  companySize?: string | null;            // e.g. "1-10", "11-50"
+  description?: string | null;
 
   // Contact Person
   contactPerson: {
     name: string;
-    position?: string;
+    position?: string | null;
     phone: string;
   };
 

@@ -2028,13 +2028,9 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  JOB CENTER PORTAL HELPERS
+    //  JOB CENTER PORTAL COLLECTIONS (NEW)
     // ═══════════════════════════════════════════════════════════
 
-    function isJobCenterAuth() {
-      return request.auth != null;
-    }
-    
     function jobCenterUserDoc() {
       return get(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)).data;
     }

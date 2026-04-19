@@ -14,10 +14,10 @@ export interface PublicJobSeeker {
   seekerNumber: string;
   name: string;
   gender: 'male' | 'female' | 'other';
-  photoUrl?: string;
+  photoUrl?: string | null;
   education: string;
   skills: string[];
-  experience?: string;
+  experience?: string | null;
   jobInterests: string[];
   availability: string;
   isActive: boolean;
@@ -28,13 +28,13 @@ export interface PublicEmployer {
   id: string;
   companyName: string;
   industry: string;
-  website?: string;
-  logoUrl?: string;
-  companySize?: string;
-  description?: string;
+  website?: string | null;
+  logoUrl?: string | null;
+  companySize?: string | null;
+  description?: string | null;
   contactPerson: {
     name: string;
-    position?: string;
+    position?: string | null;
   };
   isActive: boolean;
 }

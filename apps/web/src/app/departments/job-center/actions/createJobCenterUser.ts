@@ -7,7 +7,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 const DOMAIN = '@jobcenter.khanhub';
 
 function getAdminApp(): App {
-  const existing = getApps().find(a => a.name === 'job-center-admin');
+  const existing = getApps().find((a: any) => a.name === 'job-center-admin');
   if (existing) return existing;
 
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
