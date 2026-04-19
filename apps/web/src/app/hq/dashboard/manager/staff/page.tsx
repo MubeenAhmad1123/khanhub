@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
@@ -11,7 +12,7 @@ import {
   Filter, Plus, Download, LayoutGrid, List as ListIcon,
   Activity, Clock, Star, Loader2, AlertCircle
 } from 'lucide-react';
-import { listStaffCards, type StaffCardRow } from '@/lib/hq/superadmin/staff';
+import { listStaffCards, type StaffCardRow, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
 
 export default function ManagerStaffPage() {
@@ -64,9 +65,28 @@ export default function ManagerStaffPage() {
         setStaff(unified);
 
         // Stats Aggregation
+        const today = new Date().toISOString().split('T')[0];
+        const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
+        
+        // Fetch Today's Attendance for all departments
+        const attSnaps = await Promise.all(
+          depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_attendance`), where('date', '==', today))))
+        );
+
+        const attendanceMap = new Map<string, string>();
+        attSnaps.forEach(snap => {
+          snap.docs.forEach(d => {
+            const data = d.data();
+            const key = data.staffId || d.id;
+            attendanceMap.set(key, data.status);
+          });
+        });
+
+        const presentToday = unified.filter(s => attendanceMap.get(s.staffId) === 'present').length;
+
         setStats({
           total: unified.length,
-          present: unified.filter(s => s.isActive).length,
+          present: presentToday,
           multiRole: unified.filter(s => s.role === 'admin' || s.role === 'manager').length
         });
 

@@ -567,7 +567,7 @@ export default function ManagerOverviewPage() {
                 )}
               </div>
               <div className={`p-4 bg-gray-50 dark:bg-zinc-800/50 border-t ${isDark ? 'border-zinc-800' : 'border-gray-100'}`}>
-                 <Link href="/hq/dashboard/audit" className="block text-center text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-blue-500 transition-colors">
+                 <Link href="/hq/dashboard/superadmin/audit" className="block text-center text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-blue-500 transition-colors">
                     View Full Audit Trail
                  </Link>
               </div>

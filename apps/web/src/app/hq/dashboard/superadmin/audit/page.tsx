@@ -87,12 +87,12 @@ export default function SuperadminAuditPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session || session.role !== 'superadmin') router.push('/hq/login');
+    if (!session || (session.role !== 'superadmin' && session.role !== 'manager')) router.push('/hq/login');
   }, [sessionLoading, session, router]);
 
   // Load Retention Settings
   useEffect(() => {
-    if (!session || session.role !== 'superadmin') return;
+    if (!session || (session.role !== 'superadmin' && session.role !== 'manager')) return;
     getDoc(doc(db, 'hqSettings', 'auditRetention')).then(snap => {
       if (snap.exists()) {
         setRetentionDays(snap.data().days);
@@ -109,7 +109,7 @@ export default function SuperadminAuditPage() {
   };
 
   useEffect(() => {
-    if (!session || session.role !== 'superadmin') return;
+    if (!session || (session.role !== 'superadmin' && session.role !== 'manager')) return;
     setLoading(true);
     return subscribeUnifiedAuditFeed({
       limitCount: 150, // Higher depth for better filtering

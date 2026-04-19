@@ -2027,6 +2027,97 @@ service cloud.firestore {
       allow write: if isHqSuperOrManager();
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  JOB CENTER PORTAL HELPERS
+    // ═══════════════════════════════════════════════════════════
+
+    function isJobCenterAuth() {
+      return request.auth != null;
+    }
+    
+    function jobCenterUserDoc() {
+      return get(/databases/$(database)/documents/jobcenter_users/$(request.auth.uid)).data;
+    }
+    
+    function isJobCenterAdmin() {
+      return isJobCenterAuth() && (jobCenterUserDoc().role == 'admin' || jobCenterUserDoc().role == 'superadmin');
+    }
+    
+    function isJobCenterStaff() {
+      return isJobCenterAuth() && (jobCenterUserDoc().role == 'staff' || isJobCenterAdmin());
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JOB CENTER PORTAL COLLECTIONS
+    // ═══════════════════════════════════════════════════════════
+
+    match /jobcenter_users/{uid} {
+      allow read: if isJobCenterAuth() && (request.auth.uid == uid || isJobCenterAdmin());
+      allow write: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_seekers/{seekerId} {
+      allow read: if isJobCenterAuth();
+      allow create, update: if isJobCenterAdmin();
+      allow delete: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_employers/{employerId} {
+      allow read: if isJobCenterAuth();
+      allow create, update: if isJobCenterAdmin();
+      allow delete: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_jobs/{jobId} {
+      allow read: if true; // Public or seeker access
+      allow create, update: if isJobCenterAdmin() || (isJobCenterAuth() && jobCenterUserDoc().role == 'employer');
+      allow delete: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_transactions/{docId} {
+      allow read: if isJobCenterAuth();
+      allow create: if isJobCenterStaff();
+      allow update: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_attendance/{docId} {
+      allow read: if isJobCenterAuth();
+      allow write: if isJobCenterStaff();
+    }
+
+    match /jobcenter_daily_activities/{docId} {
+      allow read: if isJobCenterAuth();
+      allow write: if isJobCenterStaff();
+    }
+
+    match /jobcenter_contributions/{docId} {
+      allow read: if isJobCenterAuth();
+      allow create: if isJobCenterStaff();
+      allow update, delete: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_audit/{docId} {
+      allow read: if isJobCenterAdmin();
+      allow create: if isJobCenterAuth();
+    }
+
+    match /jobcenter_videos/{docId} {
+      allow read: if true;
+      allow create: if isJobCenterAuth();
+      allow update, delete: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_meetings/{docId} {
+      allow read: if isJobCenterAuth();
+      allow create, update: if isJobCenterStaff();
+      allow delete: if isJobCenterAdmin();
+    }
+
+    match /jobcenter_staff/{docId} {
+      allow read: if isJobCenterAuth();
+      allow write: if isJobCenterAdmin();
+    }
+
   }
 }
 
