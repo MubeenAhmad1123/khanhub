@@ -117,7 +117,7 @@ export async function listStaffCards({
     targetDepts.map(async (d) => {
       const col = getDeptCollection(d);
       const snap = await getDocs(query(collection(db, col), orderBy('createdAt', 'desc'), limit(500))).catch(() => ({ docs: [] } as any));
-      return snap.docs.map((docSnap: any) => ({ _dept: d, id: docSnap.id, ...docSnap.data() }));
+      return snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
     })
   );
 

@@ -117,9 +117,9 @@ export default function ManagerOverviewPage() {
               if (!seenStaffIds.has(id)) {
                 seenStaffIds.add(id);
                 allStaffDocs.push({ 
+                  ...data,
                   id, 
-                  department: dept,
-                  ...data
+                  department: dept
                 });
               }
             }
@@ -177,12 +177,8 @@ export default function ManagerOverviewPage() {
 
         let allContribs: any[] = [];
         contribSnaps.forEach((snap, i) => {
-          const dept = depts[i];
-          const docs = snap.docs.map(docSnap => ({ 
-            id: docSnap.id, 
-            ...docSnap.data(), 
-            dept 
-          }));
+          const d = depts[i];
+          const docs = snap.docs.map((docSnap: any) => ({ ...docSnap.data(), _dept: d, id: docSnap.id }));
           allContribs = [...allContribs, ...docs];
         });
 

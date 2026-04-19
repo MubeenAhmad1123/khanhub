@@ -178,7 +178,7 @@ export default function ManagerStaffPage() {
                 {unmarkedStaff.slice(0, 5).map(s => (
                   <Link 
                     key={s.id} 
-                    href={`/hq/dashboard/manager/staff/${s.id}?collection=${s._origin}`} 
+                    href={`/hq/dashboard/manager/staff/${s.id}?collection=${s.dept}`} 
                     className={`text-[10px] px-2 py-1 rounded-lg font-black border transition-all ${
                       darkMode 
                         ? 'bg-white/5 text-orange-400 border-orange-500/30 hover:bg-orange-500/10' 
