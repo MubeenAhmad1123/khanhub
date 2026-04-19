@@ -14,7 +14,8 @@ import {
   ExternalLink,
   ChevronRight,
   User,
-  Globe
+  Globe,
+  Check
 } from 'lucide-react';
 import { 
   fetchPublicSeekers, 

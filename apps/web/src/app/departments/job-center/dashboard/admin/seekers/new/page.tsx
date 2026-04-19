@@ -4,14 +4,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { collection, addDoc, Timestamp, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, doc, deleteDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createJobCenterUserServer } from '@/app/departments/job-center/actions/createJobCenterUser';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import {
   ArrowLeft, Heart, Save, Loader2, User, Upload,
   Camera, Phone, MapPin, Calendar, FileText, Users,
-  ChevronDown, Plus, X, Eye, EyeOff, Shield, Mail, Briefcase, DollarSign
+  ChevronDown, Plus, X, Eye, EyeOff, Shield, Mail, Briefcase, DollarSign, Check
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { JobSeeker } from '@/types/job-center';
