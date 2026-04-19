@@ -149,7 +149,14 @@ export default function HqPasswordsPage() {
 
   const handleLogout = async (u: CredentialUser) => {
     const uid = u.id.includes('_') ? u.id.split('_').slice(1).join('_') : u.id;
-    if (!window.confirm(`Force logout user ${u.name} (${u.customId})? This will revoke all their active sessions.`)) return;
+    
+    // Safety check: Prevent self-logout from the hub
+    if (uid === session?.uid && u.portal === 'hq') {
+      window.alert("Security Guard: You cannot remotely log out your own active session from the Credential Hub. Please use the standard logout button if you wish to exit.");
+      return;
+    }
+
+    if (!window.confirm(`Force logout user ${u.name} (${u.customId})? This will revoke all their active sessions immediately.`)) return;
 
     try {
       setLoggingOutId(u.id);

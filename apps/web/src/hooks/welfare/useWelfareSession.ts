@@ -1,5 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { auth, db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 
 export interface WelfareSession {
   uid: string;
@@ -7,6 +10,7 @@ export interface WelfareSession {
   role: string;
   displayName: string;
   childId?: string | null;
+  loginTime: number;
 }
 
 export function useWelfareSession() {
@@ -14,17 +18,34 @@ export function useWelfareSession() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('welfare_session');
-      if (raw) {
-        setSession(JSON.parse(raw));
-      }
-    } catch {
-      setSession(null);
-    } finally {
-      setLoading(false);
+    const raw = localStorage.getItem('welfare_session');
+    const parsed = raw ? (JSON.parse(raw) as WelfareSession) : null;
+    if (parsed) {
+      setSession(parsed);
     }
+    setLoading(false);
+
+    // Real-time remote logout listener
+    let unsubDoc: (() => void) | undefined;
+    if (parsed?.uid) {
+      unsubDoc = onSnapshot(doc(db, 'welfare_users', parsed.uid), (snap) => {
+        const data = snap.data();
+        if (data?.forceLogoutAt) {
+          const logoutTime = new Date(data.forceLogoutAt).getTime();
+          if (logoutTime > parsed.loginTime) {
+            localStorage.removeItem('welfare_session');
+            setSession(null);
+            signOut(auth).catch(() => {});
+          }
+        }
+      });
+    }
+
+    return () => {
+      if (unsubDoc) unsubDoc();
+    };
   }, []);
 
   return { session, loading };
 }
+

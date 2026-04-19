@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import type { HqSession } from '@/types/hq';
 
 const SESSION_KEY = 'hq_session';
@@ -54,7 +54,29 @@ export function useHqSession() {
       setLoading(false);
     });
 
-    return () => unsub();
+    // Real-time remote logout listener
+    let unsubDoc: (() => void) | undefined;
+    const raw = localStorage.getItem(SESSION_KEY);
+    const parsed = raw ? (JSON.parse(raw) as HqSession) : null;
+    
+    if (parsed?.uid) {
+      unsubDoc = onSnapshot(doc(db, 'hq_users', parsed.uid), (snap) => {
+        const data = snap.data();
+        if (data?.forceLogoutAt) {
+          const logoutTime = new Date(data.forceLogoutAt).getTime();
+          if (logoutTime > parsed.loginTime) {
+            localStorage.removeItem(SESSION_KEY);
+            setSession(null);
+            signOut(auth).catch(() => {});
+          }
+        }
+      });
+    }
+
+    return () => {
+      unsub();
+      if (unsubDoc) unsubDoc();
+    };
   }, []);
 
   return { session, loading, clearSession };
