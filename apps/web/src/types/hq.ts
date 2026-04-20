@@ -331,6 +331,7 @@ export interface HqSpecialTask {
   status: 'assigned' | 'acknowledged' | 'completed';
   assignedBy: string; // manager/superadmin uid
   assignedByName?: string;
+  recurrence?: 'once' | 'weekly' | 'monthly';
   createdAt: string; // ISO string 
   completedAt?: string; // ISO string
 }

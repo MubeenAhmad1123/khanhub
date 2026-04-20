@@ -78,7 +78,12 @@ export default function PatientsListPage() {
         
         const pkgAmount = Number(data.monthlyPackage) || Number(data.packageAmount) || 0;
         const dailyRate = Math.round(pkgAmount / 30);
-        const daysSinceAdmission = Math.max(0, Math.floor((Date.now() - admissionDate.getTime()) / (1000 * 60 * 60 * 24)));
+        
+        const endDate = data.isActive === false && data.dischargeDate 
+          ? toDate(data.dischargeDate) 
+          : new Date();
+          
+        const daysSinceAdmission = Math.max(0, Math.floor((endDate.getTime() - admissionDate.getTime()) / (1000 * 60 * 60 * 24)));
         const totalDueTillDate = dailyRate * daysSinceAdmission;
         
         let totalReceived = 0;

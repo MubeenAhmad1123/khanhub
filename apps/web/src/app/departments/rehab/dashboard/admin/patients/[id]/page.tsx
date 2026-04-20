@@ -164,7 +164,11 @@ export default function PatientDetailPage() {
       
       // Calculate Financial Stats & Remaining Days
       const admission = data.admissionDate?.toDate() || new Date();
-      const diffTimeMs = new Date().getTime() - admission.getTime();
+      const endDate = data.isActive === false && data.dischargeDate 
+        ? (data.dischargeDate?.toDate?.() || new Date(data.dischargeDate)) 
+        : new Date();
+      
+      const diffTimeMs = endDate.getTime() - admission.getTime();
       const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
       
       const monthsAdmitted = Math.floor(daysAdmitted / 30);
@@ -535,7 +539,11 @@ export default function PatientDetailPage() {
 
       setPatient((prev: any) => {
         const admission = new Date(editForm.admissionDate);
-        const diffTimeMs = new Date().getTime() - admission.getTime();
+        const endDate = prev.isActive === false && prev.dischargeDate 
+          ? (prev.dischargeDate?.toDate?.() || new Date(prev.dischargeDate)) 
+          : new Date();
+          
+        const diffTimeMs = endDate.getTime() - admission.getTime();
         const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
         const monthsAdmitted = Math.floor(daysAdmitted / 30);
         const extraAdmittedDays = daysAdmitted % 30;

@@ -9,6 +9,7 @@ import { formatDateDMY } from '@/lib/utils';
 import { Loader2, CheckCircle, XCircle, AlertTriangle, Filter } from 'lucide-react';
 
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
+import { awardStaffPoint } from '@/app/hq/actions/points';
 
 type FilterType = 'all' | 'hq' | 'rehab' | 'spims' | 'hospital' | 'sukoon' | 'welfare' | 'job-center' | 'urgent';
 
@@ -110,6 +111,16 @@ export default function ManagerApprovalsPage() {
         approvedBy: session?.customId,
         approvedAt: new Date().toISOString(),
       });
+
+      // Award Growth Point
+      const contribSnap = await getDocs(query(collection(db, col), where('__name__', '==', id)));
+      if (!contribSnap.empty) {
+        const cData = contribSnap.docs[0].data();
+        if (cData.staffId && cData.date) {
+          await awardStaffPoint(cData.staffId, dept, 'contribution', cData.date);
+        }
+      }
+
       setTransactions(prev => prev.filter(t => t.id !== id));
       setMessage({ type: 'success', text: 'Contribution approved (+1 point awarded)' });
     } catch (err: any) {

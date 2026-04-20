@@ -41,6 +41,7 @@ import {
   HqSpecialTask,
   SalarySlip
 } from '@/types/hq';
+import { awardStaffPoint } from '@/app/hq/actions/points';
 
 // Define unified icons for tasks
 import { Sparkles, Save, X } from 'lucide-react';
@@ -161,6 +162,7 @@ export default function StaffProfilePage() {
   // Special Tasks State
   const [specialTasks, setSpecialTasks] = useState<HqSpecialTask[]>([]);
   const [newTaskText, setNewTaskText] = useState('');
+  const [newTaskRecurrence, setNewTaskRecurrence] = useState<'once' | 'weekly' | 'monthly'>('once');
   const [creatingTask, setCreatingTask] = useState(false);
 
   // Custom Config Add States
@@ -396,6 +398,11 @@ export default function StaffProfilePage() {
 
       setAttendanceMap(prev => ({ ...prev, [date]: newRecord }));
       await setDoc(ref, newRecord, { merge: true });
+
+      // Award Point if present
+      if (next === 'present') {
+        await awardStaffPoint(uid, staff.dept, 'attendance', date);
+      }
     } catch (err) {
       toast.error("Update failed");
       fetchData(); // Rollback
@@ -635,6 +642,18 @@ export default function StaffProfilePage() {
 
       setDressMap(prev => ({ ...prev, [date]: newRecord }));
       await setDoc(ref, newRecord, { merge: true });
+
+      // Check if ALL dress items are ticked (yes)
+      const config = staff.dressCodeConfig || [];
+      if (config.length > 0) {
+        const allTicked = config.every(c => {
+          const item = nextItems.find(i => i.key === c.key);
+          return item && item.status === 'yes';
+        });
+        if (allTicked) {
+          await awardStaffPoint(uid, staff.dept, 'dress', date);
+        }
+      }
     } catch (err) {
       toast.error("Update failed");
       fetchData();
@@ -668,6 +687,18 @@ export default function StaffProfilePage() {
 
       setDutyMap(prev => ({ ...prev, [date]: newRecord }));
       await setDoc(ref, newRecord, { merge: true });
+
+      // Check if ALL duties are marked as 'done'
+      const config = staff.dutyConfig || [];
+      if (config.length > 0) {
+        const allDone = config.every(c => {
+          const item = nextDuties.find(d => d.key === c.key);
+          return item && item.status === 'done';
+        });
+        if (allDone) {
+          await awardStaffPoint(uid, staff.dept, 'duty', date);
+        }
+      }
     } catch (err) {
       toast.error("Update failed");
       fetchData();
@@ -683,6 +714,7 @@ export default function StaffProfilePage() {
         staffId: staff.staffId,
         description: newTaskText,
         status: 'assigned',
+        recurrence: newTaskRecurrence,
         assignedBy: session?.uid || '',
         assignedByName: session?.name || '',
         createdAt: new Date().toISOString(),
@@ -690,6 +722,7 @@ export default function StaffProfilePage() {
       const docRef = await addDoc(collection(db, `${slug}_special_tasks`), newTask);
       setSpecialTasks([{ id: docRef.id, ...newTask } as HqSpecialTask, ...specialTasks]);
       setNewTaskText('');
+      setNewTaskRecurrence('once');
       toast.success("Special Task Assigned!");
     } catch (e) {
       toast.error("Failed to assign task");
@@ -1187,6 +1220,15 @@ export default function StaffProfilePage() {
                       value={newTaskText}
                       onChange={e => setNewTaskText(e.target.value)}
                     />
+                    <select
+                      className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none border-none ${isDark ? 'bg-zinc-800 text-purple-400' : 'bg-gray-50 text-purple-600'}`}
+                      value={newTaskRecurrence}
+                      onChange={e => setNewTaskRecurrence(e.target.value as any)}
+                    >
+                      <option value="once">Once</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
                     <button
                       onClick={handleCreateSpecialTask}
                       disabled={creatingTask || !newTaskText.trim()}
@@ -1206,7 +1248,14 @@ export default function StaffProfilePage() {
                           }`}>
                           <div>
                             <p className={`text-sm font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.description}</p>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Assigned by {task.assignedByName}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">By {task.assignedByName}</p>
+                              {task.recurrence && task.recurrence !== 'once' && (
+                                <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-500 text-[8px] font-black uppercase tracking-tighter border border-purple-500/20">
+                                  {task.recurrence}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${task.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600' :

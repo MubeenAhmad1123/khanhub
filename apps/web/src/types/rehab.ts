@@ -372,6 +372,7 @@ export interface StaffMember {
   loginUserId?: string;         // uid in rehab_users for portal login
   role: RehabRole;              // used for UI role indicators
   customId?: string;            // unique staff identifier
+  totalGrowthPoints?: number;   // total points across all time
   createdAt: string;            // ISO
   createdBy?: string;           // manager uid
 }

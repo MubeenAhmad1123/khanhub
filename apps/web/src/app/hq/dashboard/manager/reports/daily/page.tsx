@@ -26,6 +26,7 @@ interface DailyReportRow {
   dutyScore: number;
   contributionScore: number;
   totalScore: number;
+  totalGrowthPoints: number;
   fines: number;
   details: {
     uniformMissing: string[];
@@ -82,6 +83,7 @@ export default function DailyReportPage() {
       const dutySnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_duty_logs`), where('date', '==', reportDate)))));
       const fineSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_fines`), where('date', '==', reportDate)))));
       const contribSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, `${getDeptPrefix(d)}_contributions`), where('date', '==', reportDate), where('isApproved', '==', true)))));
+      const gpSnaps = await Promise.all(depts.map(d => getDocs(collection(db, `${getDeptPrefix(d)}_growth_points`))));
 
       // Maps for fast lookup
       const attMap = new Map();
@@ -89,6 +91,7 @@ export default function DailyReportPage() {
       const dutyMap = new Map();
       const fineMap = new Map();
       const contribMap = new Map();
+      const gpMap = new Map();
 
       attSnaps.forEach(snap => snap.docs.forEach(d => attMap.set(d.data().staffId || d.id, d.data())));
       dressSnaps.forEach(snap => snap.docs.forEach(d => dressMap.set(d.data().staffId || d.id, d.data())));
@@ -103,6 +106,14 @@ export default function DailyReportPage() {
         const existing = contribMap.get(sid) || 0;
         contribMap.set(sid, existing + 1);
       }));
+      gpSnaps.forEach(snap => snap.docs.forEach(d => {
+        const data = d.data();
+        const sid = data.staffId;
+        if (sid) {
+          const existing = gpMap.get(sid) || 0;
+          gpMap.set(sid, existing + (data.points || 0));
+        }
+      }));
 
       // 3. Process Report Rows
       const rows: DailyReportRow[] = allStaff.map(s => {
@@ -112,6 +123,7 @@ export default function DailyReportPage() {
         const duty = dutyMap.get(sid);
         const finesList = fineMap.get(sid) || [];
         const contribCount = contribMap.get(sid) || 0;
+        const totalGP = gpMap.get(sid) || 0;
 
         // Attendance Score (1 if present)
         const attScore = (att?.status === 'present') ? 1 : 0;
@@ -151,6 +163,7 @@ export default function DailyReportPage() {
           dutyScore,
           contributionScore: contribScore,
           totalScore: attScore + uniformScore + dutyScore + contribScore,
+          totalGrowthPoints: totalGP,
           fines: totalFine,
           details: {
             uniformMissing,
@@ -326,6 +339,7 @@ export default function DailyReportPage() {
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Duties</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Contribution</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Daily Score</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-center">Growth Pts</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-right">Fines/Deduction</th>
                 </tr>
               </thead>
@@ -397,11 +411,19 @@ export default function DailyReportPage() {
                       </span>
                     </td>
                     <td className="px-6 py-6 text-center">
-                      <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-black text-lg ${
-                        row.totalScore === 4 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' :
-                        row.totalScore >= 2 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-400 dark:bg-zinc-800'
-                      }`}>
-                        {row.totalScore}
+                      <div className="flex flex-col items-center">
+                        <span className={`text-md font-black ${row.totalScore > 0 ? 'text-blue-500' : 'text-gray-300'}`}>
+                          {row.totalScore}
+                        </span>
+                        <span className="text-[7px] font-black uppercase tracking-widest mt-0.5 opacity-50">Daily Score</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-center">
+                      <div className="flex flex-col items-center">
+                        <span className={`text-md font-[1000] ${row.totalGrowthPoints > 0 ? 'text-blue-500' : 'text-gray-300'}`}>
+                          {row.totalGrowthPoints}
+                        </span>
+                        <span className="text-[7px] font-black uppercase tracking-widest mt-0.5 opacity-50">Total Acc.</span>
                       </div>
                     </td>
                     <td className="px-6 py-6 text-right">

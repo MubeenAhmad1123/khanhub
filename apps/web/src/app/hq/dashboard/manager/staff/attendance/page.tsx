@@ -13,6 +13,7 @@ import {
   Filter, CheckSquare, Square, ChevronRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { awardStaffPoint } from '@/app/hq/actions/points';
 
 export default function AttendanceMarkingPage() {
   const router = useRouter();
@@ -184,6 +185,11 @@ export default function AttendanceMarkingPage() {
           updatedAt: now,
           department: s.department
         }, { merge: true });
+
+        // Award Point if present
+        if (rec.status === 'present') {
+          await awardStaffPoint(s.id, s.department, 'attendance', today);
+        }
       }
 
       await batch.commit();

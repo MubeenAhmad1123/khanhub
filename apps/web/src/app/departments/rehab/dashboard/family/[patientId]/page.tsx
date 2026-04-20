@@ -44,7 +44,11 @@ export default function FamilyPatientViewPage() {
       const data = pDoc.data() as Patient;
       
       const admissionDate = toDate(data.admissionDate);
-      const diffMs = new Date().getTime() - admissionDate.getTime();
+      const endDate = data.isActive === false && data.dischargeDate 
+        ? toDate(data.dischargeDate) 
+        : new Date();
+        
+      const diffMs = endDate.getTime() - admissionDate.getTime();
       const daysSince = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
       const months = Math.floor(daysSince / 30);
       const days = daysSince % 30;
