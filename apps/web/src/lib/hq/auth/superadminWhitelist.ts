@@ -10,6 +10,7 @@ export const SUPERADMIN_WHITELIST: string[] = [
   'mk.rana.0301@gmail.com',
   'mubeenahma1123@gmail.com',
   'khanhubnetwork@gmail.com',
+  'dilshad4408@gmail.com',
   // Add more emails here when needed
 ];
 

@@ -2006,20 +2006,15 @@ export default function PatientDetailPage() {
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Discharge Date</label>
                     <input
-                      type="text"
-                      placeholder="DD MM YYYY"
-                      value={dDateInput}
-                      onChange={(e) => setDDateInput(e.target.value)}
-                      onBlur={e => {
-                        const parsed = parseDateDMY(e.target.value);
-                        if (parsed) {
-                          const iso = parsed.toISOString().split('T')[0];
-                          setDDate(iso);
-                          setDDateInput(formatDateDMY(iso));
-                        }
+                      type="date"
+                      value={dDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDDate(val);
+                        setDDateInput(formatDateDMY(val));
                       }}
                       required
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-teal-500 transition-all dark:text-white"
                     />
                   </div>
                   <div className="space-y-1.5">

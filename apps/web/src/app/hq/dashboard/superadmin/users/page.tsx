@@ -90,11 +90,10 @@ export default function SuperadminUsersPage() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${
-              tab === t 
-                ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white transform scale-105 z-10' 
+            className={`h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${tab === t
+                ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white transform scale-105 z-10'
                 : 'bg-white dark:bg-black text-gray-400 dark:text-gray-500 border-gray-100 dark:border-white/10 hover:border-black dark:hover:border-white'
-            }`}
+              }`}
           >
             {t}
           </button>
@@ -116,53 +115,72 @@ export default function SuperadminUsersPage() {
         ) : !filtered.length ? (
           <EmptyState title="No users" message="No users match your search." />
         ) : (
-          <div className="space-y-3">
-            {filtered.map((u) => (
-              <div
-                key={u.id}
-                className="rounded-[2rem] border border-gray-50 bg-white p-5 shadow-sm transition-all hover:translate-x-1 hover:border-black dark:hover:border-white dark:border-white/[0.02] dark:bg-white/[0.03]"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <button type="button" onClick={() => setSelected(u)} className="min-w-0 text-left group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-white/5 flex items-center justify-center border border-gray-100 dark:border-white/10">
-                        <User className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+          <div className="mt-5">
+            {loading ? (
+              <InlineLoading label="Loading users…" />
+            ) : !filtered.length ? (
+              <EmptyState title="No users" message="No users match your search." />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filtered.map((u) => (
+                  <div
+                    key={u.id}
+                    className="group relative rounded-[2.5rem] border border-gray-100 dark:border-white/5 bg-white dark:bg-black p-8 shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/5 dark:hover:shadow-white/5 overflow-hidden"
+                  >
+                    {/* Visual Accent */}
+                    <div className={`absolute -top-12 -right-12 w-32 h-32 blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${u.isActive ? 'bg-primary-500' : 'bg-rose-500'}`} />
+
+                    <div className="relative z-10 flex flex-col h-full space-y-6">
+                      <div className="flex justify-between items-start">
+                        <button type="button" onClick={() => setSelected(u)} className="flex items-center gap-4 group/btn">
+                          <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-white/5 flex items-center justify-center border border-gray-100 dark:border-white/10 group-hover/btn:border-black dark:group-hover/btn:border-white transition-colors shadow-inner">
+                            <User className="h-8 w-8 text-gray-400 dark:text-gray-500 group-hover/btn:text-black dark:group-hover/btn:text-white transition-colors" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-xl font-black text-black dark:text-white uppercase tracking-tight leading-none">{u.name}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-white/10 text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{u.role}</span>
+                              <span className="text-[9px] font-bold text-gray-300 dark:text-gray-700">/</span>
+                              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 tracking-wider truncate max-w-[100px]">{u.customId || u.uid.slice(0, 8)}</span>
+                            </div>
+                          </div>
+                        </button>
+
+                        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${u.isActive
+                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-100 dark:border-emerald-500/20'
+                            : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 border-rose-100 dark:border-rose-500/20'
+                          }`}>
+                          {u.isActive ? 'Active' : 'Locked'}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-base font-black text-black dark:text-white group-hover:text-primary-500 transition-colors uppercase tracking-tight">{u.name}</p>
-                        <p className="mt-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                          {u.role} <span className="mx-1 text-gray-200 dark:text-gray-800">/</span> {u.customId || u.email || u.uid}
-                        </p>
+
+                      <div className="pt-6 border-t border-gray-50 dark:border-white/5 flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setResetTarget(u)}
+                          className="flex-1 inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-gray-100 bg-white px-4 text-[10px] font-black uppercase tracking-widest text-black dark:border-white/10 dark:bg-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all active:scale-95 shadow-sm"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          Reset
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyUid === u.uid}
+                          onClick={() => onToggleActive(u)}
+                          className={`flex-1 inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95 disabled:opacity-50 ${u.isActive
+                              ? 'bg-black text-white dark:bg-white dark:text-black'
+                              : 'bg-rose-500 text-white'
+                            }`}
+                        >
+                          {u.isActive ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+                          {u.isActive ? 'Suspend' : 'Unlock'}
+                        </button>
                       </div>
                     </div>
-                  </button>
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setResetTarget(u)}
-                      className="inline-flex h-12 items-center gap-2 rounded-2xl border border-gray-100 bg-white px-4 text-[10px] font-black uppercase tracking-widest text-black dark:border-white/10 dark:bg-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all active:scale-95 shadow-sm"
-                    >
-                      <KeyRound className="h-4 w-4" />
-                      Reset
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busyUid === u.uid}
-                      onClick={() => onToggleActive(u)}
-                      className={`inline-flex h-12 items-center gap-2 rounded-2xl px-5 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95 ${
-                        u.isActive 
-                          ? 'bg-black text-white dark:bg-white dark:text-black' 
-                          : 'bg-rose-500 text-white border-rose-500'
-                      }`}
-                    >
-                      {u.isActive ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
-                      {u.isActive ? 'Active' : 'Locked'}
-                    </button>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

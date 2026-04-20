@@ -178,7 +178,8 @@
   --tooltip-bg: #ffffff;
 }
 
-:dark {
+.dark {
+  color-scheme: dark;
   --surface-default: #000000;
   --surface-subtle: rgba(255, 255, 255, 0.05);
   --surface-overlay: rgba(0, 0, 0, 0.9);
@@ -194,15 +195,56 @@
   background-size: 1000px 100%;
 }
 
+/* ─── Custom Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-neutral-200);
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-neutral-300);
+}
+
+:where(.dark) ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+:where(.dark) ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 /* ─── Base Reset ─── */
 @layer base {
   html {
     scroll-behavior: smooth;
+    transition: color 0.3s, background-color 0.3s;
   }
 
   body {
-    @apply font-body bg-white text-neutral-900 dark:bg-gray-950 dark:text-gray-100 antialiased transition-colors duration-300;
+    font-family: var(--font-body);
+    background-color: var(--color-white);
+    color: var(--color-neutral-900);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: color 0.3s, background-color 0.3s;
     font-feature-settings: 'kern' 1, 'liga' 1;
+  }
+
+  :where(.dark) body {
+    background-color: var(--color-black);
+    color: var(--color-gray-100);
   }
 
   h1,
@@ -211,12 +253,21 @@
   h4,
   h5,
   h6 {
-    @apply font-display text-neutral-900 dark:text-white;
+    font-family: var(--font-display);
+    color: var(--color-neutral-900);
+  }
+
+  :where(.dark) :is(h1, h2, h3, h4, h5, h6) {
+    color: var(--color-white);
   }
 
   * {
     box-sizing: border-box;
-    @apply border-neutral-200 dark:border-white/10;
+    border-color: var(--color-neutral-200);
+  }
+
+  :where(.dark) * {
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   input,
