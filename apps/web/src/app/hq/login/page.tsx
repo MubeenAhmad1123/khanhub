@@ -3,9 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { setHqSessionCookieFromIdToken } from '@/app/hq/actions/auth';
+import { auth } from '@/lib/firebase';
+import { provisionSuperadminAndSetSession } from '@/app/hq/actions/auth';
 import EyePasswordInput from '@/components/spims/EyePasswordInput';
 import type { HqSession, HqRole } from '@/types/hq';
 import { loginUniversal } from '@/lib/hq/auth/universalAuth';
@@ -110,45 +109,22 @@ export default function HqLoginPage() {
         return;
       }
 
-      // Check if they exist in hq_users, if not, create
-      const userRef = doc(db, 'hq_users', user.uid);
-      const userSnap = await getDoc(userRef);
+      // Provision user and set session cookie via Server Action (Safe from permission errors)
+      const idToken = await user.getIdToken();
+      const provisionResult = await provisionSuperadminAndSetSession(idToken);
 
-      let finalData: any;
-      if (!userSnap.exists()) {
-        finalData = {
-          name: user.displayName || 'Super Admin',
-          email: user.email,
-          role: 'superadmin',
-          isActive: true,
-          photoUrl: user.photoURL,
-          createdAt: new Date().toISOString(),
-          customId: 'SUPER-' + Math.floor(Math.random() * 10000)
-        };
-        await setDoc(userRef, finalData);
-      } else {
-        finalData = userSnap.data();
-        if (finalData.role !== 'superadmin') {
-          await updateDoc(userRef, { role: 'superadmin' });
-          finalData.role = 'superadmin';
-        }
+      if (!provisionResult.success) {
+        await signOut(auth);
+        setError(provisionResult.error || 'Failed to initialize superadmin session.');
+        setLoading(false);
+        return;
       }
 
-      // Set Local Session
-      const session = {
-        uid: user.uid,
-        customId: finalData.customId,
-        name: finalData.name,
-        role: finalData.role,
-        loginTime: Date.now(),
-        ...finalData
-      };
-      localStorage.setItem('hq_session', JSON.stringify(session));
-      localStorage.setItem('hq_login_time', Date.now().toString());
-
-      // Set cookie
-      const idToken = await user.getIdToken();
-      await setHqSessionCookieFromIdToken(idToken);
+      // Set Local Session for client-side persistence
+      if (provisionResult.session) {
+        localStorage.setItem('hq_session', JSON.stringify(provisionResult.session));
+        localStorage.setItem('hq_login_time', Date.now().toString());
+      }
 
       window.location.href = '/hq/dashboard/superadmin';
     } catch (err: any) {

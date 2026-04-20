@@ -112,16 +112,16 @@ export function useDashboardPath() {
         return;
       }
 
-      // 1. Check department sessions in localStorage (Fastest)
-      const deptPath = resolveActiveDashboard();
-      if (deptPath !== '/dashboard') {
-        if (isMounted) setDashboardPath(deptPath);
+      // 1. Client-side Whitelist check (Fast track for superadmins - HIGHEST PRIORITY)
+      if (isSuperadminEmail(user.email)) {
+        if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
         return;
       }
 
-      // 2. Client-side Whitelist check (Fast track for superadmins)
-      if (isSuperadminEmail(user.email)) {
-        if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
+      // 2. Check department sessions in localStorage (Uses existing portal session)
+      const deptPath = resolveActiveDashboard();
+      if (deptPath !== '/dashboard') {
+        if (isMounted) setDashboardPath(deptPath);
         return;
       }
 
