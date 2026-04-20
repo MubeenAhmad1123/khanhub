@@ -98,10 +98,10 @@ export default function AdminDashboardPage() {
       {/* Greeting Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">
+          <h1 className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
             {getGreeting()}, {session?.displayName?.split(' ')[0]} 👋
           </h1>
-          <p className="text-sm text-gray-500 font-bold uppercase tracking-[0.15em] mt-1 flex items-center gap-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-[0.15em] mt-1 flex items-center gap-2">
             <Calendar size={14} className="text-blue-500" />
             {formatDateDMY(new Date())}
           </p>
@@ -127,50 +127,50 @@ export default function AdminDashboardPage() {
       {/* High-Level Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Seeker Stat */}
-        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 flex items-center gap-6 group hover:border-blue-200 transition-all hover:shadow-lg">
-          <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+        <div className="bg-white dark:bg-white/5 rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm p-8 flex items-center gap-6 group hover:border-blue-200 dark:hover:border-blue-500/30 transition-all hover:shadow-lg">
+          <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
             <Users size={28} strokeWidth={2.5} />
           </div>
           <div>
-            <div className="text-4xl font-black text-gray-900">{totalSeekers}</div>
-            <div className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-1">Active Seekers</div>
+            <div className="text-4xl font-black text-gray-900 dark:text-white">{totalSeekers}</div>
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 font-black uppercase tracking-[0.2em] mt-1">Active Seekers</div>
           </div>
         </div>
 
         {/* Employer Stat */}
-        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 flex items-center gap-6 group hover:border-indigo-200 transition-all hover:shadow-lg">
-          <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+        <div className="bg-white dark:bg-white/5 rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm p-8 flex items-center gap-6 group hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-all hover:shadow-lg">
+          <div className="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
             <Building2 size={28} strokeWidth={2.5} />
           </div>
           <div>
-            <div className="text-4xl font-black text-gray-900">{totalEmployers}</div>
-            <div className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-1">Registered Companies</div>
+            <div className="text-4xl font-black text-gray-900 dark:text-white">{totalEmployers}</div>
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 font-black uppercase tracking-[0.2em] mt-1">Registered Companies</div>
           </div>
         </div>
 
         {/* System Health */}
-        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 flex items-center gap-6 group hover:border-green-200 transition-all hover:shadow-lg sm:col-span-2 lg:col-span-1 text-black">
-          <div className="w-16 h-16 rounded-3xl bg-green-50 text-green-600 flex items-center justify-center flex-shrink-0 group-hover:rotate-12 transition-all duration-300">
+        <div className="bg-white dark:bg-white/5 rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm p-8 flex items-center gap-6 group hover:border-green-200 dark:hover:border-green-500/30 transition-all hover:shadow-lg sm:col-span-2 lg:col-span-1">
+          <div className="w-16 h-16 rounded-3xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center flex-shrink-0 group-hover:rotate-12 transition-all duration-300">
             <Activity size={28} strokeWidth={2.5} />
           </div>
           <div>
-            <div className="text-xl font-black text-gray-900">System Live</div>
-            <div className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-1">Real-time matching</div>
+            <div className="text-xl font-black text-gray-900 dark:text-white">System Live</div>
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 font-black uppercase tracking-[0.2em] mt-1">Real-time matching</div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Seekers List */}
-        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+        <div className="bg-white dark:bg-white/5 rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden flex flex-col">
+          <div className="p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
                 <Search size={20} />
               </div>
-              <h2 className="font-black text-gray-900 tracking-tight">Recent Job Seekers</h2>
+              <h2 className="font-black text-gray-900 dark:text-white tracking-tight">Recent Job Seekers</h2>
             </div>
-            <Link href="/departments/job-center/dashboard/admin/seekers" className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform group">
+            <Link href="/departments/job-center/dashboard/admin/seekers" className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform group">
               View All <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -184,18 +184,18 @@ export default function AdminDashboardPage() {
                 <Link 
                   key={seeker.id} 
                   href={`/departments/job-center/dashboard/admin/seekers/${seeker.id}`}
-                  className="flex items-center justify-between p-4 rounded-3xl hover:bg-blue-50/50 transition-all group border border-transparent hover:border-blue-100"
+                  className="flex items-center justify-between p-4 rounded-3xl hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all group border border-transparent hover:border-blue-100 dark:hover:border-blue-500/30"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 font-black group-hover:bg-white group-hover:shadow-sm overflow-hidden">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-400 dark:text-gray-500 font-black group-hover:bg-white dark:group-hover:bg-white/20 group-hover:shadow-sm overflow-hidden">
                       {seeker.photoUrl ? <img src={seeker.photoUrl} alt="" className="w-full h-full object-cover" /> : seeker.name?.[0]?.toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900 leading-none">{seeker.name}</p>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5">{seeker.loginId || 'ID PENDING'}</p>
+                      <p className="font-bold text-gray-900 dark:text-white leading-none">{seeker.name}</p>
+                      <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1.5">{seeker.loginId || 'ID PENDING'}</p>
                     </div>
                   </div>
-                  <ArrowUpRight size={18} className="text-gray-300 group-hover:text-blue-600 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
+                  <ArrowUpRight size={18} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
                 </Link>
               ))
             )}
@@ -203,15 +203,15 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Recent Employers List */}
-        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+        <div className="bg-white dark:bg-white/5 rounded-[2.5rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden flex flex-col">
+          <div className="p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <Building size={20} />
               </div>
-              <h2 className="font-black text-gray-900 tracking-tight">Recent Companies</h2>
+              <h2 className="font-black text-gray-900 dark:text-white tracking-tight">Recent Companies</h2>
             </div>
-            <Link href="/departments/job-center/dashboard/admin/employers" className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform group">
+            <Link href="/departments/job-center/dashboard/admin/employers" className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1 hover:translate-x-1 transition-transform group">
               View All <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -225,18 +225,18 @@ export default function AdminDashboardPage() {
                 <Link 
                   key={emp.id} 
                   href={`/departments/job-center/dashboard/admin/employers/${emp.id}`}
-                  className="flex items-center justify-between p-4 rounded-3xl hover:bg-indigo-50/50 transition-all group border border-transparent hover:border-indigo-100"
+                  className="flex items-center justify-between p-4 rounded-3xl hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 transition-all group border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/30"
                 >
-                  <div className="flex items-center gap-4 text-black">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 font-black group-hover:bg-white group-hover:shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-400 dark:text-gray-500 font-black group-hover:bg-white dark:group-hover:bg-white/20 group-hover:shadow-sm overflow-hidden">
                       {emp.logoUrl ? <img src={emp.logoUrl} alt="" className="w-full h-full object-cover" /> : emp.companyName?.[0]?.toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900 leading-none">{emp.companyName}</p>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5">{emp.industry || 'No Industry Set'}</p>
+                      <p className="font-bold text-gray-900 dark:text-white leading-none">{emp.companyName}</p>
+                      <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1.5">{emp.industry || 'No Industry Set'}</p>
                     </div>
                   </div>
-                  <ArrowUpRight size={18} className="text-gray-300 group-hover:text-indigo-600 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
+                  <ArrowUpRight size={18} className="text-gray-300 dark:text-gray-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
                 </Link>
               ))
             )}
@@ -247,19 +247,19 @@ export default function AdminDashboardPage() {
       {/* Shortcuts & Info */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Link href="/departments/job-center/dashboard/admin/seekers/new" className="bg-blue-50 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:bg-blue-600 hover:text-white transition-all group shadow-sm hover:shadow-lg">
+          <Link href="/departments/job-center/dashboard/admin/seekers/new" className="bg-blue-50 dark:bg-blue-500/10 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-all group shadow-sm hover:shadow-lg">
             <UserPlus size={24} className="group-hover:scale-110 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-widest">Add Seeker</span>
           </Link>
-          <Link href="/departments/job-center/dashboard/admin/employers/new" className="bg-indigo-50 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:bg-indigo-600 hover:text-white transition-all group shadow-sm hover:shadow-lg">
+          <Link href="/departments/job-center/dashboard/admin/employers/new" className="bg-indigo-50 dark:bg-indigo-500/10 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:bg-indigo-600 dark:hover:bg-indigo-600 hover:text-white transition-all group shadow-sm hover:shadow-lg">
             <Building size={24} className="group-hover:scale-110 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-widest">Add Employer</span>
           </Link>
-          <Link href="/departments/job-center/dashboard/admin/staff" className="bg-gray-50 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:bg-gray-900 hover:text-white transition-all group shadow-sm hover:shadow-lg text-black">
+          <Link href="/departments/job-center/dashboard/admin/staff" className="bg-gray-50 dark:bg-white/10 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:bg-gray-900 dark:hover:bg-white/20 hover:text-white transition-all group shadow-sm hover:shadow-lg text-black dark:text-gray-300">
             <Users size={24} className="group-hover:scale-110 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-widest">Manage Staff</span>
           </Link>
-          <Link href="/departments/job-center/dashboard/profile" className="bg-gray-50 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:bg-gray-900 hover:text-white transition-all group shadow-sm hover:shadow-lg text-black">
+          <Link href="/departments/job-center/dashboard/profile" className="bg-gray-50 dark:bg-white/10 p-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:bg-gray-900 dark:hover:bg-white/20 hover:text-white transition-all group shadow-sm hover:shadow-lg text-black dark:text-gray-300">
             <Activity size={24} className="group-hover:scale-110 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-widest">My Profile</span>
           </Link>

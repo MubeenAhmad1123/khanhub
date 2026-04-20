@@ -8,8 +8,9 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
-  ArrowRight, Loader2, AlertTriangle, TrendingUp
+  ArrowRight, Loader2, AlertTriangle, TrendingUp, Sun, Moon
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 
 function timeAgo(dateInput: any): string {
@@ -53,7 +54,10 @@ export default function ManagerOverviewPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [pendingList, setPendingList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDark, setIsDark] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const isDark = mounted && resolvedTheme === 'dark';
+
   const [allStaff, setAllStaff] = useState<any[]>([]);
   const [attMap, setAttMap] = useState<Map<string, string>>(new Map());
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
@@ -68,8 +72,7 @@ export default function ManagerOverviewPage() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem('hq_dark_mode') === 'true';
-    setIsDark(saved);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -240,16 +243,16 @@ export default function ManagerOverviewPage() {
     fetchData();
   }, [session]);
 
-  if (sessionLoading || loading) {
+  if (sessionLoading || loading || !mounted) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
-        <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
+      <div className={`min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950`}>
+        <Loader2 className={`w-8 h-8 animate-spin text-gray-400 dark:text-zinc-500`} />
       </div>
     );
   }
 
   return (
-    <div className={`space-y-6 md:space-y-8 pb-12 p-4 md:p-8 min-h-screen transition-colors duration-300 w-full overflow-x-hidden ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
+    <div className={`space-y-6 md:space-y-8 pb-12 p-4 md:p-8 min-h-screen transition-colors duration-300 w-full overflow-x-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white`}>
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -572,8 +575,8 @@ export default function ManagerOverviewPage() {
                   </div>
                 )}
               </div>
-              <div className={`p-4 bg-gray-50 dark:bg-zinc-800/50 border-t ${isDark ? 'border-zinc-800' : 'border-gray-100'}`}>
-                 <Link href="/hq/dashboard/superadmin/audit" className="block text-center text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-blue-500 transition-colors">
+              <div className={`p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800`}>
+                 <Link href="/hq/dashboard/superadmin/audit" className="block text-center text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest hover:text-blue-500 transition-colors">
                     View Full Audit Trail
                  </Link>
               </div>

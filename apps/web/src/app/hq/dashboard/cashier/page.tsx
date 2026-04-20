@@ -11,6 +11,7 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
+import { useTheme } from 'next-themes';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
 
 type TxnType = 'income' | 'expense';
@@ -55,6 +56,9 @@ function getLocalDateString(val: any): string {
 export default function CashierStationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const isDark = mounted && resolvedTheme === 'dark';
 
   const [incomingFeeReqs, setIncomingFeeReqs] = useState<any[]>([]);
   const [incomingLoading, setIncomingLoading] = useState(false);
@@ -219,6 +223,7 @@ export default function CashierStationPage() {
   }, [session, historyDateMode, historyFrom, historyTo, historyStatus, historyType, historyDepartment]);
 
   useEffect(() => {
+    setMounted(true);
     if (sessionLoading) return;
     if (!session || (session.role !== 'cashier' && session.role !== 'superadmin')) {
       router.push('/hq/login');
@@ -650,44 +655,44 @@ export default function CashierStationPage() {
     return { income, expense, net: income - expense };
   }, [historyFiltered]);
 
-  if (sessionLoading) {
+  if (sessionLoading || !mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <Loader2 className="w-10 h-10 animate-spin text-teal-400" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <Loader2 className="w-10 h-10 animate-spin text-purple-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-gray-100 pb-24 md:pb-8">
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-gray-950/80 border-b border-white/5 px-4 py-4 md:px-8 md:py-6">
+    <div className="min-h-screen md:pl-0 overflow-x-hidden bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 pb-24 md:pb-8">
+      <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-b border-gray-100 dark:border-white/10 px-4 py-4 md:px-8 md:py-6">
         <div className="max-w-7xl mx-auto flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center text-white shrink-0">
+          <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center text-white shrink-0">
             <CreditCard size={20} />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">Cashier Station</h1>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight truncate">Cashier Station</h1>
             <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">Terminal ID: {session?.customId || 'HQ-CASHIER'}</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <Link 
               href="/hq/dashboard/cashier/history"
-              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
             >
-              <History size={14} className="text-teal-400" />
+              <History size={14} className="text-purple-500" />
               <span className="hidden md:inline">History</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/daily-report"
-              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
             >
               <LayoutDashboard size={14} className="text-indigo-400" />
               <span className="hidden md:inline">Report</span>
             </Link>
             <Link 
               href="/hq/dashboard/cashier/reconciliation"
-              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-300 transition-all active:scale-95"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 transition-all active:scale-95"
             >
               <ShieldCheck size={14} className="text-emerald-400" />
               <span className="hidden md:inline">Audit</span>
@@ -705,7 +710,7 @@ export default function CashierStationPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-4 space-y-4 min-w-0">
-          <div className="bg-white/5 border border-white/8 rounded-3xl p-5 md:p-7">
+          <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-sm">
             <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
               <Plus size={14} /> Admin Fee Requests
@@ -717,24 +722,24 @@ export default function CashierStationPage() {
               </div>
             ) : null}
             {incomingLoading ? (
-              <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 flex items-center justify-center">
-                <Loader2 size={18} className="animate-spin text-teal-400" />
+              <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center">
+                <Loader2 size={18} className="animate-spin text-purple-500" />
               </div>
             ) : incomingFeeReqs.length === 0 ? (
-              <div className="p-4 rounded-xl bg-[#1a1f2a] border border-white/10 text-xs font-bold text-gray-400">
+              <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-xs font-bold text-gray-400">
                 No incoming fee requests.
               </div>
             ) : (
               <div className="space-y-3 max-h-[320px] overflow-y-auto">
                 {incomingFeeReqs.map((tx, index) => (
-                  <div key={tx.id} style={{ animationDelay: `${index * 60}ms` }} className="animate-in fade-in slide-in-from-bottom-2 duration-300 group bg-white/5 border border-white/8 rounded-2xl p-4 md:p-5 hover:bg-white/8 hover:border-amber-500/20 transition-all duration-300">
+                  <div key={tx.id} style={{ animationDelay: `${index * 60}ms` }} className="animate-in fade-in slide-in-from-bottom-2 duration-300 group bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-4 md:p-5 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-purple-500/20 transition-all duration-300">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-sm font-black text-white truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-black text-gray-900 dark:text-white truncate">{tx.patientName || tx.donorName || 'Entity'}</div>
                         <div className="text-[10px] font-bold text-gray-400 truncate">{tx.patientId || tx.donorId || tx.id}</div>
-                        <div className="text-xs font-bold text-teal-300 mt-1">Rs {Number(tx.amount || 0).toLocaleString()}</div>
-                        <div className="text-[10px] font-semibold text-gray-300 mt-1 line-clamp-2">{tx.description || tx.note || ''}</div>
-                        <span className={cn('mt-2 inline-flex px-2.5 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/15 text-amber-400 border-amber-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20')}>
+                        <div className="text-xs font-bold text-purple-600 dark:text-purple-400 mt-1">Rs {Number(tx.amount || 0).toLocaleString()}</div>
+                        <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{tx.description || tx.note || ''}</div>
+                        <span className={cn('mt-2 inline-flex px-2.5 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border', tx.status === 'pending_cashier' ? 'bg-amber-500/15 text-amber-500 border-amber-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20')}>
                           {tx.status || 'pending_cashier'}
                         </span>
                       </div>
@@ -743,7 +748,7 @@ export default function CashierStationPage() {
                           type="button"
                           disabled={incomingActionId === tx.id}
                           onClick={() => openForwardModal(tx)}
-                          className="min-h-[44px] px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
+                          className="min-h-[44px] px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px] md:text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
                         >
                           {incomingActionId === tx.id ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
                         </button>
@@ -766,13 +771,13 @@ export default function CashierStationPage() {
             </p>
           </div>
 
-          <div className="bg-white/5 border border-white/8 rounded-3xl p-5 md:p-7">
+          <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-3xl p-5 md:p-7 shadow-sm">
             <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-5 flex items-center gap-2">
               <Search size={14} /> {isStaffMode ? 'Search Staff' : 'Search Account'}
             </h2>
             <div className="space-y-3">
-              <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-amber-500/60 focus:bg-white/8 transition-all duration-200 placeholder-gray-600">
-                {DEPARTMENTS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
+              <select value={departmentCode} onChange={(e) => setDepartmentCode(e.target.value)} className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-gray-900 dark:text-white text-sm font-medium outline-none focus:border-purple-500/60 focus:bg-white dark:focus:bg-white/8 transition-all duration-200">
+                {DEPARTMENTS.map((d) => <option key={d.code} value={d.code} className="bg-white dark:bg-gray-800">{d.label}</option>)}
               </select>
               {departmentCode !== 'hospital' && (
                 <div className="relative w-full">

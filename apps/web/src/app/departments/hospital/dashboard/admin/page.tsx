@@ -205,10 +205,10 @@ export default function AdminDashboardPage() {
       {/* Greeting & Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
             {getGreeting()}, {session?.displayName?.split(' ')[0]} 👋
           </h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
@@ -236,59 +236,59 @@ export default function AdminDashboardPage() {
 
       {/* Row 1: 4 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+        <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-md group">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <TrendingUp size={24} />
             </div>
-            <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full uppercase tracking-widest">Income</span>
+            <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">Income</span>
           </div>
-          <div className="text-2xl font-black text-gray-900 truncate">₨ {stats.todayIncome.toLocaleString()}</div>
-          <div className="text-xs text-gray-400 font-bold mt-1 uppercase tracking-tight">Today's Total</div>
+          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">₨ {stats.todayIncome.toLocaleString()}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">Today's Total</div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+        <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-md group">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <TrendingDown size={24} />
             </div>
-            <span className="text-[10px] font-black text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full uppercase tracking-widest">Expense</span>
+            <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">Expense</span>
           </div>
-          <div className="text-2xl font-black text-gray-900 truncate">₨ {stats.todayExpense.toLocaleString()}</div>
-          <div className="text-xs text-gray-400 font-bold mt-1 uppercase tracking-tight">Today's Total</div>
+          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">₨ {stats.todayExpense.toLocaleString()}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">Today's Total</div>
         </div>
 
-        <div className={`bg-white p-6 rounded-3xl border ${netProfit >= 0 ? 'border-emerald-100' : 'border-rose-100'} shadow-sm transition-all hover:shadow-md group`}>
+        <div className={`bg-white dark:bg-white/5 p-6 rounded-3xl border ${netProfit >= 0 ? 'border-emerald-100 dark:border-emerald-500/30' : 'border-rose-100 dark:border-rose-500/30'} shadow-sm transition-all hover:shadow-md group`}>
           <div className="flex items-center justify-between mb-4">
-            <div className={`w-12 h-12 rounded-2xl ${netProfit >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+            <div className={`w-12 h-12 rounded-2xl ${netProfit >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
               {netProfit >= 0 ? <ArrowUpRight size={24} /> : <ArrowDownRight size={24} />}
             </div>
-            <span className={`text-[10px] font-black ${netProfit >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'} px-2.5 py-1 rounded-full uppercase tracking-widest`}>Net status</span>
+            <span className={`text-[10px] font-black ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10'} px-2.5 py-1 rounded-full uppercase tracking-widest`}>Net status</span>
           </div>
-          <div className={`text-2xl font-black ${netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'} truncate`}>
+          <div className={`text-2xl font-black ${netProfit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'} truncate`}>
             ₨ {Math.abs(netProfit).toLocaleString()}
           </div>
-          <div className="text-xs text-gray-400 font-bold mt-1 uppercase tracking-tight">{netProfit >= 0 ? 'Net Profit' : 'Net Loss'}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">{netProfit >= 0 ? 'Net Profit' : 'Net Loss'}</div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+        <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-md group">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Users size={24} />
             </div>
-            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-widest">Patients</span>
+            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest">Patients</span>
           </div>
-          <div className="text-2xl font-black text-gray-900 truncate">{stats.opdCount}</div>
-          <div className="text-xs text-gray-400 font-bold mt-1 uppercase tracking-tight">Total OPD Today</div>
+          <div className="text-2xl font-black text-gray-900 dark:text-white truncate">{stats.opdCount}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-tight">Total OPD Today</div>
         </div>
       </div>
 
       {/* Row 2: Chart & Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left (2/3 width): Bar Chart */}
-        <div className="lg:col-span-2 bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden p-6 md:p-8">
+        <div className="lg:col-span-2 bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden p-6 md:p-8">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="font-black text-gray-900 flex items-center gap-3">
+            <h2 className="font-black text-gray-900 dark:text-white flex items-center gap-3">
               <Activity className="w-5 h-5 text-emerald-500" /> Income vs Expense (Last 7 Days)
             </h2>
             <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
@@ -300,7 +300,7 @@ export default function AdminDashboardPage() {
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={session?.darkMode ? '#333' : '#f1f5f9'} />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
@@ -315,8 +315,9 @@ export default function AdminDashboardPage() {
                   tickFormatter={(val) => `₨${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`}
                 />
                 <Tooltip 
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: '#f8fafc', opacity: 0.1 }}
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#1f2937', color: '#fff' }}
+                  itemStyle={{ color: '#fff' }}
                   formatter={(val: any) => [`₨ ${val.toLocaleString()}`, '']}
                 />
                 <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} barSize={16} />
@@ -327,49 +328,49 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Right (1/3 width): Today's Breakdown */}
-        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 md:p-8">
-          <h2 className="font-black text-gray-900 mb-6 flex items-center gap-3">
+        <div className="bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm p-6 md:p-8">
+          <h2 className="font-black text-gray-900 dark:text-white mb-6 flex items-center gap-3">
             <LayoutDashboard className="w-5 h-5 text-blue-500" /> Today's Breakdown
           </h2>
           
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-white hover:border-emerald-100 hover:shadow-sm transition-all underline-offset-4 cursor-default">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-emerald-100 dark:hover:border-emerald-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">OPD Morning</p>
-                <p className="font-bold text-gray-900">{stats.opdBreakdown.morning.count} Patients</p>
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">OPD Morning</p>
+                <p className="font-bold text-gray-900 dark:text-white">{stats.opdBreakdown.morning.count} Patients</p>
               </div>
               <div className="text-right">
-                <p className="text-emerald-600 font-black">₨ {stats.opdBreakdown.morning.amount.toLocaleString()}</p>
+                <p className="text-emerald-600 dark:text-emerald-400 font-black">₨ {stats.opdBreakdown.morning.amount.toLocaleString()}</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-white hover:border-emerald-100 hover:shadow-sm transition-all underline-offset-4 cursor-default">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-emerald-100 dark:hover:border-emerald-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">OPD Evening</p>
-                <p className="font-bold text-gray-900">{stats.opdBreakdown.evening.count} Patients</p>
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">OPD Evening</p>
+                <p className="font-bold text-gray-900 dark:text-white">{stats.opdBreakdown.evening.count} Patients</p>
               </div>
               <div className="text-right">
-                <p className="text-emerald-600 font-black">₨ {stats.opdBreakdown.evening.amount.toLocaleString()}</p>
+                <p className="text-emerald-600 dark:text-emerald-400 font-black">₨ {stats.opdBreakdown.evening.amount.toLocaleString()}</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all underline-offset-4 cursor-default">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-blue-100 dark:hover:border-blue-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Lab Tests</p>
-                <p className="font-bold text-gray-900">{stats.labBreakdown.count} Tests</p>
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Lab Tests</p>
+                <p className="font-bold text-gray-900 dark:text-white">{stats.labBreakdown.count} Tests</p>
               </div>
               <div className="text-right">
-                <p className="text-blue-600 font-black">₨ {stats.labBreakdown.amount.toLocaleString()}</p>
+                <p className="text-blue-600 dark:text-blue-400 font-black">₨ {stats.labBreakdown.amount.toLocaleString()}</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-white hover:border-purple-100 hover:shadow-sm transition-all underline-offset-4 cursor-default">
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-between group hover:bg-white dark:hover:bg-white/10 hover:border-purple-100 dark:hover:border-purple-500/30 hover:shadow-sm transition-all underline-offset-4 cursor-default">
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Operations</p>
-                <p className="font-bold text-gray-900">{stats.opBreakdown.count} Cases</p>
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Operations</p>
+                <p className="font-bold text-gray-900 dark:text-white">{stats.opBreakdown.count} Cases</p>
               </div>
               <div className="text-right">
-                <p className="text-purple-600 font-black">₨ {stats.opBreakdown.amount.toLocaleString()}</p>
+                <p className="text-purple-600 dark:text-purple-400 font-black">₨ {stats.opBreakdown.amount.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -389,9 +390,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Row 3: Recent Transactions Table */}
-      <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6 md:p-8 border-b border-gray-50 flex items-center justify-between">
-          <h2 className="font-black text-gray-900 flex items-center gap-3">
+      <div className="bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden">
+        <div className="p-6 md:p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
+          <h2 className="font-black text-gray-900 dark:text-white flex items-center gap-3">
             <FileText className="w-5 h-5 text-emerald-500" /> Recent Daily Transactions
           </h2>
           <Link 
@@ -405,15 +406,15 @@ export default function AdminDashboardPage() {
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50">Time</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50">Service</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50">Patient Name</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50">Amount</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 text-center">Status</th>
+              <tr className="bg-slate-50/50 dark:bg-white/5">
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Time</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Service</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Patient Name</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5">Amount</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-gray-50 dark:border-white/5 text-center">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-white/5">
               {recentTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-400 text-sm font-medium">
@@ -422,20 +423,20 @@ export default function AdminDashboardPage() {
                 </tr>
               ) : (
                 recentTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50 transition-colors group">
+                  <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
                     <td className="px-6 py-4">
-                      <p className="text-xs font-bold text-slate-900">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">
                         {toDate(tx.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                       </p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-xs font-bold text-slate-700">{CATEGORY_LABELS[tx.category] || tx.category}</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-gray-300">{CATEGORY_LABELS[tx.category] || tx.category}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-xs font-medium text-slate-600">{tx.patientName || tx.otherMeta?.paidTo || '—'}</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-gray-400">{tx.patientName || tx.otherMeta?.paidTo || '—'}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className={`text-xs font-black ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      <p className={`text-xs font-black ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {tx.type === 'income' ? '+' : '-'}₨ {Number(tx.amount).toLocaleString()}
                       </p>
                     </td>
