@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, toDate } from '@/lib/utils';
 import Link from 'next/link';
 import {
   Target, Camera, Activity,
@@ -256,7 +256,7 @@ export default function StaffProfilePage() {
         dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : []),
         dutyConfig: (profile.dutyConfig?.length ? profile.dutyConfig : []),
         basicInfoExtras: profile.basicInfoExtras || {},
-        joiningDate: profile.joiningDate ? (typeof profile.joiningDate === 'string' ? profile.joiningDate.slice(0, 10) : new Date(profile.joiningDate).toISOString().slice(0, 10)) : ''
+        joiningDate: profile.joiningDate ? toDate(profile.joiningDate).toISOString().slice(0, 10) : ''
       });
 
       // ─── Fetch Monthly Logs ───────────────────────────────────────────────

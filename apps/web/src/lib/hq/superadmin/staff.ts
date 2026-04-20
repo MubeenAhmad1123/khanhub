@@ -94,7 +94,8 @@ async function loadLastDuty(dept: StaffDept, staffId: string) {
   );
   if (!snap.docs.length) return undefined;
   const d = snap.docs[0].data();
-  const when = toDate(d.createdAt);
+  const when = toDate(d.createdAt || d.date);
+  if (isNaN(when.getTime())) return 'No Date • Duty Log';
   return `${when.toISOString().slice(0, 10)} • ${String(d.title || d.note || d.action || 'Duty log')}`;
 }
 

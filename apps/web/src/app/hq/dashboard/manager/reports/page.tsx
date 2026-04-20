@@ -117,7 +117,7 @@ export default function ManagerReportsPage() {
       .filter(g => g.staffId === staffId && (
         (typeof g.month === 'string' && g.month.startsWith(selectedMonth)) || 
         (g.date ? isSameMonth(g.date) : false) ||
-        (g.month && typeof g.month.toDate === 'function' && g.month.toDate().toISOString().startsWith(String(selectedMonth || "")))
+        (g.month && typeof g.month.toDate === 'function' && !isNaN(g.month.toDate().getTime()) && g.month.toDate().toISOString().startsWith(String(selectedMonth || "")))
       ))
       .reduce((s, g) => s + (g.points || 0), 0);
 
