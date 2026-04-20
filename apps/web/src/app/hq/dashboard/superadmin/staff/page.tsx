@@ -107,34 +107,82 @@ export default function SuperadminStaffPage() {
           ) : !filtered.length ? (
             <EmptyState title="Registry Empty" message="No personnel records match current filter parameters." />
           ) : (
-            <div className="overflow-hidden rounded-[2.5rem] border border-gray-100 dark:border-white/10 bg-white dark:bg-black shadow-xl">
-              <div className="divide-y divide-gray-50 dark:divide-white/5">
-                {filtered.map((r) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((r) => {
+                const deptColor = 
+                  r.dept === 'hq' ? 'border-black dark:border-white' :
+                  r.dept === 'rehab' ? 'border-teal-500' :
+                  r.dept === 'spims' ? 'border-sky-500' :
+                  'border-gray-200 dark:border-white/10';
+                
+                const deptText = 
+                  r.dept === 'hq' ? 'text-black dark:text-white' :
+                  r.dept === 'rehab' ? 'text-teal-600 dark:text-teal-400' :
+                  r.dept === 'spims' ? 'text-sky-600 dark:text-sky-400' :
+                  'text-gray-500';
+
+                const deptBg = 
+                  r.dept === 'hq' ? 'bg-black/5 dark:bg-white/5' :
+                  r.dept === 'rehab' ? 'bg-teal-500/5' :
+                  r.dept === 'spims' ? 'bg-sky-500/5' :
+                  'bg-gray-50 dark:bg-white/5';
+
+                return (
                   <Link
                     key={r.id}
                     href={`/hq/dashboard/superadmin/staff/${r.id}`}
-                    className="block p-4 transition-colors hover:bg-white/5 active:bg-white/10 cursor-pointer"
+                    className={`group relative overflow-hidden rounded-[2.5rem] border-2 ${deptColor} ${deptBg} p-6 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-black/5`}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="truncate text-base font-black text-black dark:text-white">
-                          {r.name} <span className="text-gray-300 dark:text-gray-700 mx-1">/</span> <span className="text-gray-400 dark:text-gray-500 text-xs">{String(r.dept).toUpperCase()}</span>
-                        </p>
-                        <p className="mt-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                          {r.role} • <span className="text-black dark:text-white">{r.presentCount}P</span> • <span className="text-gray-400 dark:text-gray-600">{r.lateCount}L</span> • <span className="text-gray-300 dark:text-gray-700">{r.absentCount}A</span>
-                        </p>
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <Users2 size={40} className={deptText} />
+                    </div>
+
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border ${deptColor} ${deptText}`}>
+                          {String(r.dept).toUpperCase()}
+                        </span>
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                          ID: {r.id.slice(0, 4)}
+                        </span>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-xs font-black text-black dark:text-white">GP: {r.growthPointsTotal}</p>
-                        <p className="mt-1 text-[10px] font-black text-black dark:text-white uppercase tracking-widest italic opacity-40">Fines: {Number(r.totalFines || 0).toLocaleString('en-PK')}</p>
+
+                      <h3 className="text-xl font-black text-black dark:text-white leading-tight mb-1 group-hover:text-black dark:group-hover:text-white">
+                        {r.name}
+                      </h3>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-6 italic">
+                        {r.role}
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-2 mb-6">
+                        <div className="text-center p-2 rounded-2xl bg-white dark:bg-black/40 border border-gray-100 dark:border-white/5">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">P</p>
+                          <p className="text-sm font-black text-emerald-500">{r.presentCount}</p>
+                        </div>
+                        <div className="text-center p-2 rounded-2xl bg-white dark:bg-black/40 border border-gray-100 dark:border-white/5">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">L</p>
+                          <p className="text-sm font-black text-amber-500">{r.lateCount}</p>
+                        </div>
+                        <div className="text-center p-2 rounded-2xl bg-white dark:bg-black/40 border border-gray-100 dark:border-white/5">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">A</p>
+                          <p className="text-sm font-black text-rose-500">{r.absentCount}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/10">
+                        <div>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Growth Points</p>
+                          <p className="text-lg font-black text-black dark:text-white">{r.growthPointsTotal}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fines</p>
+                          <p className="text-sm font-black text-rose-500">₨{Number(r.totalFines || 0).toLocaleString()}</p>
+                        </div>
                       </div>
                     </div>
-                    {r.lastDutyLabel ? (
-                      <p className="mt-2 text-[11px] text-gray-500 line-clamp-1 italic">{r.lastDutyLabel}</p>
-                    ) : null}
                   </Link>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
         </div>

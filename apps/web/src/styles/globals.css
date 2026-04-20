@@ -99,8 +99,8 @@
   --shadow-primary-md: 0 4px 16px rgba(0, 94, 184, 0.12);
   --shadow-primary-lg: 0 8px 32px rgba(0, 94, 184, 0.16);
 
-  /* Dark Mode Configuration for v4 */
-  --variant-dark: (&:where(.dark, .dark *));
+  /* Dark Mode Configuration for v4 - Class-based */
+  --variant-dark: .dark &;
 
   --shadow-success-sm: 0 2px 8px rgba(40, 167, 69, 0.08);
   --shadow-success-md: 0 4px 16px rgba(40, 167, 69, 0.12);

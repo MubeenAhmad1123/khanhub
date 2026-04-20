@@ -136,7 +136,7 @@ export default function OverviewPage() {
 
   if (loading || sessionLoading) {
     return (
-      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-white dark:bg-[#050505] flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500/50">Initializing Core...</p>
       </div>
@@ -153,11 +153,11 @@ export default function OverviewPage() {
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">System Link Active</span>
             </div>
-            <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">Enterprise Hub</h1>
+            <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-black dark:text-white">Enterprise Hub</h1>
             <p className="unit-label mt-2">Global Operations Monitoring & Governance</p>
           </div>
           
-          <div className="glass-card !py-4 !px-6 border-emerald-500/20 bg-emerald-500/5 min-w-[200px]">
+          <div className="glass-card !py-4 !px-6 border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/5 min-w-[200px]">
             <p className="unit-label">Stability Index</p>
             <div className="flex items-center gap-3">
               <span className="text-3xl font-black text-emerald-400">99.8%</span>

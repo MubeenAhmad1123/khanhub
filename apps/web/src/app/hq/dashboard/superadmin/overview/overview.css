@@ -28,19 +28,29 @@
 }
 
 .overview-container {
-  --bg-deep: #050505;
-  --bg-card: rgba(15, 15, 15, 0.7);
+  --bg-deep: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.7);
   --accent-green: #10b981;
   --accent-orange: #f59e0b;
   --text-dim: #6b7280;
+  --text-main: #000000;
+  --card-border: rgba(0, 0, 0, 0.1);
   
   background-color: var(--bg-deep);
   min-height: 100vh;
-  color: white;
+  color: var(--text-main);
   padding: 1.5rem;
   font-family: 'Inter', system-ui, sans-serif;
   position: relative;
   overflow-x: hidden;
+  transition: all 0.3s ease;
+}
+
+.dark .overview-container {
+  --bg-deep: #050505;
+  --bg-card: rgba(15, 15, 15, 0.7);
+  --text-main: #ffffff;
+  --card-border: rgba(255, 255, 255, 0.1);
 }
 
 /* Futuristic Scanline Effect Overlay */
@@ -62,7 +72,7 @@
   background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--card-border);
   border-radius: 20px;
   padding: 1.5rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -181,6 +191,6 @@
 .unit-id {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-dim);
   margin-top: 4px;
 }

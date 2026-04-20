@@ -59,7 +59,15 @@ function pktEndOfToday(): Date {
   return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
 }
 
+let cachedStats: { data: OverviewStats; timestamp: number } | null = null;
+const CACHE_TTL = 60000; // 1 minute
+
 export async function fetchOverviewStats(): Promise<OverviewStats> {
+  const now = Date.now();
+  if (cachedStats && now - cachedStats.timestamp < CACHE_TTL) {
+    return cachedStats.data;
+  }
+
   const PENDING_LIST = ['pending', 'pending_cashier'];
 
   const [
@@ -99,7 +107,7 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
   const txToday = await fetchTodayTxAmount();
   const activeStaffCount = await fetchActiveStaffCount();
 
-  return {
+  const data = {
     rehabPatientsTotal,
     spimsStudentsTotal,
     jobSeekersTotal,
@@ -111,6 +119,9 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     activeStaffCount,
     pendingReconciliations: pendingRecs,
   };
+
+  cachedStats = { data, timestamp: now };
+  return data;
 }
 
 export async function fetchTodayTxAmount(): Promise<number> {
