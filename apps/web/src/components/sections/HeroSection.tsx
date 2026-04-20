@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { motion, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardPath } from '@/hooks/useDashboardPath';
+import { cn } from '@/lib/utils';
 
 // Department images configuration
 const DEPARTMENT_IMAGES = [
