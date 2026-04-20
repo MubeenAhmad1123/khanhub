@@ -1,10 +1,8 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { canAccessHqPortal } from '@/lib/hqPortalAccess';
+import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
 // ─── Department session registry ──────────────────────────────────────────────
 const DEPT_SESSION_RESOLVERS: {
@@ -105,107 +103,26 @@ export function useDashboardPath() {
   const [dashboardPath, setDashboardPath] = useState('/dashboard');
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function detect() {
-      if (!user) {
-        if (isMounted) setDashboardPath('/dashboard');
-        return;
-      }
-
-      // 1. Check department sessions in localStorage (Fastest)
-      const deptPath = resolveActiveDashboard();
-      if (deptPath !== '/dashboard') {
-        if (isMounted) setDashboardPath(deptPath);
-        return;
-      }
-
-      // 2. Check HQ portal access by email (Allowlist fallback)
-      if (canAccessHqPortal(user.email)) {
-        if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
-        return;
-      }
-
-      // 3. Deep Detection - Check common user collections (Slow but thorough)
-      // Only check if no localStorage session is found.
-      try {
-        // Check HQ Users first
-        const hqDoc = await getDoc(doc(db, 'hq_users', user.uid));
-        if (hqDoc.exists()) {
-          const data = hqDoc.data();
-          const role = String(data.role || '').toLowerCase();
-          if (role === 'superadmin') {
-             if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
-             return;
-          }
-          if (role === 'manager') {
-             if (isMounted) setDashboardPath('/hq/dashboard/manager');
-             return;
-          }
-          if (role === 'cashier') {
-             if (isMounted) setDashboardPath('/hq/dashboard/cashier');
-             return;
-          }
-        }
-
-        // Check Rehab Users
-        const rehabDoc = await getDoc(doc(db, 'rehab_users', user.uid));
-        if (rehabDoc.exists()) {
-          const data = rehabDoc.data();
-          const role = String(data.role || '').toLowerCase();
-          if (role === 'admin') {
-             if (isMounted) setDashboardPath('/departments/rehab/dashboard/admin');
-             return;
-          }
-          if (role === 'cashier') {
-             if (isMounted) setDashboardPath('/departments/rehab/dashboard/cashier');
-             return;
-          }
-          if (role === 'staff') {
-             if (isMounted) setDashboardPath('/departments/rehab/dashboard/staff');
-             return;
-          }
-          if (role === 'superadmin') {
-             if (isMounted) setDashboardPath('/departments/rehab/dashboard/superadmin');
-             return;
-          }
-          if (role === 'family') {
-            const path = data.patientId ? `/departments/rehab/dashboard/family/${data.patientId}` : '/departments/rehab/dashboard';
-            if (isMounted) setDashboardPath(path);
-            return;
-          }
-        }
-
-        // Check SPIMS Users
-        const spimsDoc = await getDoc(doc(db, 'spims_users', user.uid));
-        if (spimsDoc.exists()) {
-          const data = spimsDoc.data();
-          const role = String(data.role || '').toLowerCase();
-          if (role === 'admin') {
-             if (isMounted) setDashboardPath('/departments/spims/dashboard/admin');
-             return;
-          }
-          if (role === 'student') {
-             if (isMounted) setDashboardPath('/departments/spims/dashboard/student');
-             return;
-          }
-          if (role === 'staff') {
-             if (isMounted) setDashboardPath('/departments/spims/dashboard/staff');
-             return;
-          }
-        }
-
-      } catch (err) {
-        console.error('Deep dashboard detection failed:', err);
-      }
-
-      // 4. Default: generic dashboard for Google-only users
-      if (isMounted) setDashboardPath('/dashboard');
+    if (!user) {
+      setDashboardPath('/dashboard');
+      return;
     }
 
-    detect();
+    // 1. Check department sessions in localStorage (Fastest & most reliable for current active session)
+    const deptPath = resolveActiveDashboard();
+    if (deptPath !== '/dashboard') {
+      setDashboardPath(deptPath);
+      return;
+    }
 
-    return () => { isMounted = false; };
+    // 2. Fallback: Check Superadmin whitelist (For users who haven't portal-logged-in yet)
+    if (isSuperadminEmail(user.email)) {
+      setDashboardPath('/hq/dashboard/superadmin');
+      return;
+    }
+
+    // 3. Default: generic dashboard for Google-only users
+    setDashboardPath('/dashboard');
   }, [user]);
 
   return dashboardPath;

@@ -354,17 +354,17 @@ export default function Navbar() {
                 );
               })}
 
-              {/* Login / Dashboard Mobile Icon */}
+              {/* Login / Portal Mobile Icon */}
               <Link
-                href={dashboardHref}
+                href="/login"
                 className="flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-lg text-primary-600 hover:text-primary-700 transition-all duration-300 flex-shrink-0 min-w-[32px] group"
-                aria-label={user ? "My Dashboard" : "Login to Portal"}
+                aria-label="Login to Portal"
               >
-                <div className="animate-bounce transition-transform group-hover:scale-110">
+                <div className="animate-pulse transition-transform group-hover:scale-110">
                   <CgLogIn className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
                 </div>
                 <span className="text-[7px] font-black uppercase tracking-tighter leading-none whitespace-nowrap">
-                  {user ? "Dashboard" : "Login"}
+                  Login
                 </span>
               </Link>
 
