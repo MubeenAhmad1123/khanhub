@@ -14,6 +14,7 @@ import {
 import { getDeptPrefix, getDeptCollection, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
 import { HqDailyAttendanceRecord, HqDailyDressCodeRecord, HqDailyDutyRecord } from '@/types/hq';
+import { toPng } from 'html-to-image';
 
 interface DailyReportRow {
   id: string;
@@ -42,6 +43,7 @@ export default function DailyReportPage() {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [isDark, setIsDark] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     setIsDark(localStorage.getItem('hq_dark_mode') === 'true');
@@ -60,12 +62,17 @@ export default function DailyReportPage() {
       setLoading(true);
       const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center'];
       
-      // 1. Fetch All Staff
       const staffSnaps = await Promise.all(depts.map(d => getDocs(query(collection(db, getDeptCollection(d)), where('isActive', '==', true)))));
       const allStaff: any[] = [];
+      const staffRoles = ['admin', 'staff', 'cashier', 'manager', 'doctor', 'nurse', 'counselor', 'personnel'];
+      
       staffSnaps.forEach((snap, i) => {
         snap.docs.forEach(doc => {
-          allStaff.push({ id: doc.id, department: depts[i], ...doc.data() });
+          const data = doc.data();
+          const role = String(data.role || '').toLowerCase();
+          if (staffRoles.includes(role)) {
+            allStaff.push({ id: doc.id, department: depts[i], ...data });
+          }
         });
       });
 
@@ -180,6 +187,39 @@ export default function DailyReportPage() {
     window.print();
   };
 
+  const handleDownloadImage = async () => {
+    const element = document.getElementById('daily-performance-report-content');
+    if (!element) return;
+
+    try {
+      setDownloading(true);
+      toast.loading("Preparing high-quality image...", { id: 'download-image' });
+      
+      // Ensure element is visible and styles are loaded
+      const dataUrl = await toPng(element, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: isDark ? '#0A0A0A' : '#F8FAFC',
+        style: {
+          padding: '20px',
+          borderRadius: '0'
+        }
+      });
+
+      const link = document.createElement('a');
+      link.download = `HQ_Daily_Report_${reportDate}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      toast.success("Report downloaded successfully!", { id: 'download-image' });
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.error("Failed to generate image", { id: 'download-image' });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (sessionLoading || loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-[#F8FAFC]'}`}>
@@ -190,7 +230,7 @@ export default function DailyReportPage() {
 
   return (
     <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8FAFC] text-gray-900'}`}>
-      <div className="max-w-7xl mx-auto space-y-8 print:p-0">
+      <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-8 print:p-0">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
@@ -217,6 +257,18 @@ export default function DailyReportPage() {
                  className="bg-transparent border-none outline-none font-black text-sm uppercase tracking-widest"
                />
             </div>
+            <button 
+              onClick={handleDownloadImage}
+              disabled={downloading}
+              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-black transition-all shadow-lg ${
+                isDark 
+                  ? 'bg-zinc-800 text-white hover:bg-zinc-700 shadow-zinc-950/20' 
+                  : 'bg-white text-gray-900 border border-gray-100 hover:shadow-xl'
+              }`}
+            >
+              {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} className="text-blue-500" />}
+              Save as Image
+            </button>
             <button 
               onClick={handlePrint}
               className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-900/20"
