@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { canAccessHqPortal } from '@/lib/hqPortalAccess';
+import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
 import { useEffect, useState } from 'react';
 import { resolveDashboardPathOnServer } from '@/app/actions/resolveDashboard';
 
@@ -112,32 +112,39 @@ export function useDashboardPath() {
         return;
       }
 
-      // 1. Check department sessions in localStorage (Fastest - uses existing session)
+      // 1. Check department sessions in localStorage (Fastest)
       const deptPath = resolveActiveDashboard();
       if (deptPath !== '/dashboard') {
         if (isMounted) setDashboardPath(deptPath);
         return;
       }
 
-      // 2. Check HQ portal access by email (Allowlist fallback - very fast)
-      if (canAccessHqPortal(user.email)) {
+      // 2. Client-side Whitelist check (Fast track for superadmins)
+      if (isSuperadminEmail(user.email)) {
         if (isMounted) setDashboardPath('/hq/dashboard/superadmin');
         return;
       }
 
-      // 3. Deep Detection - Check common user collections (Server-side to bypass permission issues)
-      // This is slow but thorough, only runs if no local session or email match is found.
+      // 3. Check Session Cache (To prevent redundant server calls on same session)
+      const cached = sessionStorage.getItem(`dashboard_path_${user.uid}`);
+      if (cached && isMounted) {
+        setDashboardPath(cached);
+        return;
+      }
+
+      // 4. Deep Detection (Server Action - uses Admin SDK)
       try {
         const path = await resolveDashboardPathOnServer(user.uid);
         if (path && isMounted) {
           setDashboardPath(path);
+          sessionStorage.setItem(`dashboard_path_${user.uid}`, path);
           return;
         }
       } catch (err) {
         console.error('Deep dashboard detection failed:', err);
       }
 
-      // 4. Default: generic dashboard for Google-only users
+      // 5. Default
       if (isMounted) setDashboardPath('/dashboard');
     }
 
