@@ -98,6 +98,10 @@
   --shadow-primary-sm: 0 2px 8px rgba(0, 94, 184, 0.08);
   --shadow-primary-md: 0 4px 16px rgba(0, 94, 184, 0.12);
   --shadow-primary-lg: 0 8px 32px rgba(0, 94, 184, 0.16);
+
+  /* Dark Mode Configuration for v4 */
+  --variant-dark: (&:where(.dark, .dark *));
+
   --shadow-success-sm: 0 2px 8px rgba(40, 167, 69, 0.08);
   --shadow-success-md: 0 4px 16px rgba(40, 167, 69, 0.12);
   --shadow-success-lg: 0 8px 32px rgba(40, 167, 69, 0.16);
@@ -217,11 +221,11 @@
   background-color: var(--color-neutral-300);
 }
 
-:where(.dark) ::-webkit-scrollbar-thumb {
+.dark ::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-:where(.dark) ::-webkit-scrollbar-thumb:hover {
+.dark ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -242,7 +246,7 @@
     font-feature-settings: 'kern' 1, 'liga' 1;
   }
 
-  :where(.dark) body {
+  .dark body {
     background-color: var(--color-black);
     color: var(--color-gray-100);
   }
@@ -257,7 +261,7 @@
     color: var(--color-neutral-900);
   }
 
-  :where(.dark) :is(h1, h2, h3, h4, h5, h6) {
+  .dark :is(h1, h2, h3, h4, h5, h6) {
     color: var(--color-white);
   }
 
@@ -266,14 +270,34 @@
     border-color: var(--color-neutral-200);
   }
 
-  :where(.dark) * {
+  .dark * {
     border-color: rgba(255, 255, 255, 0.1);
   }
 
   input,
   textarea,
   select {
-    @apply font-body text-neutral-900 bg-white dark:bg-gray-800 dark:text-white;
+    @apply bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm transition-all;
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-neutral-200);
+    border-radius: 20px;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-neutral-800);
   }
 }
 
